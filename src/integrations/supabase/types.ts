@@ -14,7 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clients: {
+        Row: {
+          address: string | null
+          business_type: string | null
+          city: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          business_type?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          business_type?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      islands: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          order_index: number
+          tour_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number
+          tour_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number
+          tour_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "islands_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos: {
+        Row: {
+          file_path: string
+          file_url: string
+          filename: string | null
+          id: string
+          island_id: string | null
+          latitude: number | null
+          longitude: number | null
+          size_bytes: number | null
+          status: string
+          tour_id: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          file_path: string
+          file_url: string
+          filename?: string | null
+          id?: string
+          island_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          size_bytes?: number | null
+          status?: string
+          tour_id: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          file_path?: string
+          file_url?: string
+          filename?: string | null
+          id?: string
+          island_id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          size_bytes?: number | null
+          status?: string
+          tour_id?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_island_id_fkey"
+            columns: ["island_id"]
+            isOneToOne: false
+            referencedRelation: "islands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_tour_id_fkey"
+            columns: ["tour_id"]
+            isOneToOne: false
+            referencedRelation: "tours"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          credits: number
+          dark_mode: boolean
+          email: string | null
+          id: string
+          name: string | null
+          onboarding_dismissed: boolean
+          plan: string
+          trial_ends_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          credits?: number
+          dark_mode?: boolean
+          email?: string | null
+          id: string
+          name?: string | null
+          onboarding_dismissed?: boolean
+          plan?: string
+          trial_ends_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          credits?: number
+          dark_mode?: boolean
+          email?: string | null
+          id?: string
+          name?: string | null
+          onboarding_dismissed?: boolean
+          plan?: string
+          trial_ends_at?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount_inr: number | null
+          created_at: string
+          end_date: string | null
+          id: string
+          plan: string
+          razorpay_subscription_id: string | null
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_inr?: number | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          plan: string
+          razorpay_subscription_id?: string | null
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_inr?: number | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          plan?: string
+          razorpay_subscription_id?: string | null
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tours: {
+        Row: {
+          address: string | null
+          cid: string | null
+          client_id: string | null
+          created_at: string
+          google_place_id: string | null
+          google_place_url: string | null
+          id: string
+          name: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          cid?: string | null
+          client_id?: string | null
+          created_at?: string
+          google_place_id?: string | null
+          google_place_url?: string | null
+          id?: string
+          name: string
+          status?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          cid?: string | null
+          client_id?: string | null
+          created_at?: string
+          google_place_id?: string | null
+          google_place_url?: string | null
+          id?: string
+          name?: string
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tours_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
