@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /tours
+Disallow: /clients
+Disallow: /settings
+Disallow: /analytics
+
+Sitemap: /sitemap.xml

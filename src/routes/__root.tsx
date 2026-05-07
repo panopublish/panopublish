@@ -72,11 +72,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "TourVista — Google Street View Tours for Indian Businesses" },
+      { name: "description", content: "Publish your business on Google Maps in minutes. Manage 360° Street View tours for clients across India." },
+      { name: "author", content: "TourVista" },
+      { property: "og:title", content: "TourVista — Google Street View Tours for Indian Businesses" },
+      { property: "og:description", content: "Publish your business on Google Maps in minutes. Manage 360° Street View tours for clients across India." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -108,12 +108,18 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/lib/auth";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AuthProvider>
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
