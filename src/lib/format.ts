@@ -9,5 +9,5 @@ export const formatDateIN = (d: string | Date) => {
   return `${dd}/${mm}/${yy}`;
 };
 
-export const SUPPORT_PHONE = "919999999999"; // replace with real number
+export const SUPPORT_PHONE = "+916394611967"; // replace with real number
 export const waLink = (msg: string) => `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(msg)}`;
