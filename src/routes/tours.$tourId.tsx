@@ -50,7 +50,7 @@ function TourDetail() {
     const counts = new Map<string, number>();
     (ps ?? []).forEach((p) => { if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1); });
     setIslands((is ?? []).map((i) => ({ ...i, photo_count: counts.get(i.id) ?? 0 })));
-    setPhotos(ps ?? []);
+    setPhotos((ps as any) ?? []);
   };
 
   useEffect(() => { load(); }, [user, tourId]);
