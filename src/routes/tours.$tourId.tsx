@@ -144,9 +144,11 @@ function TourDetail() {
               <MapPin className="h-3.5 w-3.5" /> {tour.address ?? "No address"} • {tour.client?.name ?? "No client"}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => fileInput.current?.click()}><UploadIcon className="h-4 w-4 mr-1" /> Upload Photos</Button>
-            <Button onClick={() => setShowPublish(true)} className="bg-success text-success-foreground hover:bg-success/90">Publish to Google Street View</Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm"><Link to="/tours/$tourId/location" params={{ tourId }}><MapPinned className="h-4 w-4 mr-1" /> Location</Link></Button>
+            <Button asChild variant="outline" size="sm"><Link to="/tours/$tourId/connections" params={{ tourId }}><Link2 className="h-4 w-4 mr-1" /> Connections</Link></Button>
+            <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()}><UploadIcon className="h-4 w-4 mr-1" /> Upload</Button>
+            <Button asChild size="sm" className="bg-success text-success-foreground hover:bg-success/90"><Link to="/tours/$tourId/publish" params={{ tourId }}><Send className="h-4 w-4 mr-1" /> Publish to Google</Link></Button>
             <input ref={fileInput} type="file" hidden multiple accept=".jpg,.jpeg" onChange={(e) => onPickFiles(e.target.files)} />
           </div>
         </div>
