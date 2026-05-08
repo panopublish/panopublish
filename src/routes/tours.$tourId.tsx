@@ -312,13 +312,6 @@ function TourDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Photo preview */}
-      <Dialog open={!!previewPhoto} onOpenChange={(o) => !o && setPreviewPhoto(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader><DialogTitle>{previewPhoto?.filename}</DialogTitle></DialogHeader>
-          {previewPhoto && <img src={previewPhoto.file_url} alt="" className="w-full rounded-lg" />}
-        </DialogContent>
-      </Dialog>
 
       {/* Publish modal */}
       <Dialog open={showPublish} onOpenChange={setShowPublish}>
