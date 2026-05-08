@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 
 
-export const Route = createFileRoute("/tours/$tourId")({
+export const Route = createFileRoute("/tours/$tourId/")({
   head: () => ({ meta: [{ title: "Tour — TourVista" }] }),
   component: TourDetail,
 });
