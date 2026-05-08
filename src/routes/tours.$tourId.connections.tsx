@@ -49,7 +49,6 @@ type Constellation = { id: string; name: string };
 
 declare global {
   interface Window {
-    pannellum?: any;
     google?: any;
     initTourVistaMap?: () => void;
   }
