@@ -49,35 +49,68 @@ export type Database = {
       }
       connections: {
         Row: {
+          constellation_id: string | null
           created_at: string
           from_photo_id: string
           group_name: string | null
           heading: number | null
           id: string
+          is_locked: boolean
           pitch: number | null
+          spacing: string | null
           to_photo_id: string
           tour_id: string
           user_id: string
         }
         Insert: {
+          constellation_id?: string | null
           created_at?: string
           from_photo_id: string
           group_name?: string | null
           heading?: number | null
           id?: string
+          is_locked?: boolean
           pitch?: number | null
+          spacing?: string | null
           to_photo_id: string
           tour_id: string
           user_id: string
         }
         Update: {
+          constellation_id?: string | null
           created_at?: string
           from_photo_id?: string
           group_name?: string | null
           heading?: number | null
           id?: string
+          is_locked?: boolean
           pitch?: number | null
+          spacing?: string | null
           to_photo_id?: string
+          tour_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      constellations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          tour_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          tour_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
           tour_id?: string
           user_id?: string
         }
@@ -123,6 +156,7 @@ export type Database = {
           file_path: string
           file_url: string
           filename: string | null
+          heading: number | null
           id: string
           island_id: string | null
           latitude: number | null
@@ -137,6 +171,7 @@ export type Database = {
           file_path: string
           file_url: string
           filename?: string | null
+          heading?: number | null
           id?: string
           island_id?: string | null
           latitude?: number | null
@@ -151,6 +186,7 @@ export type Database = {
           file_path?: string
           file_url?: string
           filename?: string | null
+          heading?: number | null
           id?: string
           island_id?: string | null
           latitude?: number | null
