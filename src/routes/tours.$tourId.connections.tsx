@@ -146,7 +146,7 @@ function ConnectionsPage() {
     }
     panoRef.current.innerHTML = "";
     try {
-      const v = window.pannellum.viewer(panoRef.current, {
+      const v: any = window.pannellum.viewer(panoRef.current, {
         type: "equirectangular",
         panorama: active.file_url,
         autoLoad: true,
@@ -155,7 +155,7 @@ function ConnectionsPage() {
         hfov: 110,
       });
       viewerRef.current = v;
-      v.on("animatefinished", () => setCurrentHeading(((v.getYaw() + 360) % 360)));
+      v.on?.("animatefinished", () => setCurrentHeading(((v.getYaw() + 360) % 360)));
       const id = setInterval(() => {
         try { setCurrentHeading(((v.getYaw() + 360) % 360)); } catch {}
       }, 200);
