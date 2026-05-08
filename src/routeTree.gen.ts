@@ -74,14 +74,14 @@ const ToursTourIdIndexRoute = ToursTourIdIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ToursTourIdPublishRoute = ToursTourIdPublishRouteImport.update({
-  id: '/publish',
-  path: '/publish',
-  getParentRoute: () => ToursTourIdRoute,
+  id: '/tours/$tourId/publish',
+  path: '/tours/$tourId/publish',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ToursTourIdLocationRoute = ToursTourIdLocationRouteImport.update({
-  id: '/location',
-  path: '/location',
-  getParentRoute: () => ToursTourIdRoute,
+  id: '/tours/$tourId/location',
+  path: '/tours/$tourId/location',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ToursTourIdConnectionsRoute = ToursTourIdConnectionsRouteImport.update({
   id: '/tours/$tourId/connections',
@@ -194,6 +194,8 @@ export interface RootRouteChildren {
   ToursNewRoute: typeof ToursNewRoute
   ToursIndexRoute: typeof ToursIndexRoute
   ToursTourIdConnectionsRoute: typeof ToursTourIdConnectionsRoute
+  ToursTourIdLocationRoute: typeof ToursTourIdLocationRoute
+  ToursTourIdPublishRoute: typeof ToursTourIdPublishRoute
   ToursTourIdIndexRoute: typeof ToursTourIdIndexRoute
 }
 
@@ -271,17 +273,17 @@ declare module '@tanstack/react-router' {
     }
     '/tours/$tourId/publish': {
       id: '/tours/$tourId/publish'
-      path: '/publish'
+      path: '/tours/$tourId/publish'
       fullPath: '/tours/$tourId/publish'
       preLoaderRoute: typeof ToursTourIdPublishRouteImport
-      parentRoute: typeof ToursTourIdRoute
+      parentRoute: typeof rootRouteImport
     }
     '/tours/$tourId/location': {
       id: '/tours/$tourId/location'
-      path: '/location'
+      path: '/tours/$tourId/location'
       fullPath: '/tours/$tourId/location'
       preLoaderRoute: typeof ToursTourIdLocationRouteImport
-      parentRoute: typeof ToursTourIdRoute
+      parentRoute: typeof rootRouteImport
     }
     '/tours/$tourId/connections': {
       id: '/tours/$tourId/connections'
@@ -304,6 +306,8 @@ const rootRouteChildren: RootRouteChildren = {
   ToursNewRoute: ToursNewRoute,
   ToursIndexRoute: ToursIndexRoute,
   ToursTourIdConnectionsRoute: ToursTourIdConnectionsRoute,
+  ToursTourIdLocationRoute: ToursTourIdLocationRoute,
+  ToursTourIdPublishRoute: ToursTourIdPublishRoute,
   ToursTourIdIndexRoute: ToursTourIdIndexRoute,
 }
 export const routeTree = rootRouteImport
