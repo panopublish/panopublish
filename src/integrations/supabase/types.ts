@@ -47,6 +47,42 @@ export type Database = {
         }
         Relationships: []
       }
+      connections: {
+        Row: {
+          created_at: string
+          from_photo_id: string
+          group_name: string | null
+          heading: number | null
+          id: string
+          pitch: number | null
+          to_photo_id: string
+          tour_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_photo_id: string
+          group_name?: string | null
+          heading?: number | null
+          id?: string
+          pitch?: number | null
+          to_photo_id: string
+          tour_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_photo_id?: string
+          group_name?: string | null
+          heading?: number | null
+          id?: string
+          pitch?: number | null
+          to_photo_id?: string
+          tour_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       islands: {
         Row: {
           created_at: string
@@ -223,6 +259,8 @@ export type Database = {
           google_place_id: string | null
           google_place_url: string | null
           id: string
+          latitude: number | null
+          longitude: number | null
           name: string
           status: string
           type: string
@@ -236,6 +274,8 @@ export type Database = {
           google_place_id?: string | null
           google_place_url?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name: string
           status?: string
           type?: string
@@ -249,6 +289,8 @@ export type Database = {
           google_place_id?: string | null
           google_place_url?: string | null
           id?: string
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           status?: string
           type?: string
