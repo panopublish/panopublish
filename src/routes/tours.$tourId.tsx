@@ -36,7 +36,7 @@ function TourDetail() {
   const [newIslandName, setNewIslandName] = useState("");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
-  const [showPublish, setShowPublish] = useState(false);
+  
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [uploads, setUploads] = useState<{ name: string; pct: number }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
