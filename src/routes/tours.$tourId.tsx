@@ -314,18 +314,6 @@ function TourDetail() {
         </DialogContent>
       </Dialog>
 
-
-      {/* Publish modal */}
-      <Dialog open={showPublish} onOpenChange={setShowPublish}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Publish to Google Street View</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">To publish, you need to connect your Google Account. Click below to authorize.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPublish(false)}>Cancel</Button>
-            <Button onClick={() => { toast.info("Google OAuth will be connected in the next update."); setShowPublish(false); }}>Connect Google Account</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }
