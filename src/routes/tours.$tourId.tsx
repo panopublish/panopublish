@@ -12,7 +12,7 @@ import { SceneViewerModal } from "@/components/SceneViewerModal";
 import { Plus, Folder, Trash2, Pencil, Upload as UploadIcon, MapPin, X, Image as ImageIcon, Download, Droplets, MapPinned, Link2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
-import { formatDateIN } from "@/lib/format";
+
 
 export const Route = createFileRoute("/tours/$tourId")({
   head: () => ({ meta: [{ title: "Tour — TourVista" }] }),
