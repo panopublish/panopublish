@@ -19,6 +19,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToursIndexRouteImport } from './routes/tours.index'
 import { Route as ToursNewRouteImport } from './routes/tours.new'
 import { Route as ToursTourIdRouteImport } from './routes/tours.$tourId'
+import { Route as ToursTourIdPublishRouteImport } from './routes/tours.$tourId.publish'
 import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
 import { Route as ToursTourIdConnectionsRouteImport } from './routes/tours.$tourId.connections'
 
@@ -72,6 +73,11 @@ const ToursTourIdRoute = ToursTourIdRouteImport.update({
   path: '/tours/$tourId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToursTourIdPublishRoute = ToursTourIdPublishRouteImport.update({
+  id: '/publish',
+  path: '/publish',
+  getParentRoute: () => ToursTourIdRoute,
+} as any)
 const ToursTourIdLocationRoute = ToursTourIdLocationRouteImport.update({
   id: '/location',
   path: '/location',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/tours/': typeof ToursIndexRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
+  '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +117,7 @@ export interface FileRoutesByTo {
   '/tours': typeof ToursIndexRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
+  '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/tours/': typeof ToursIndexRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
+  '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +150,7 @@ export interface FileRouteTypes {
     | '/tours/'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
+    | '/tours/$tourId/publish'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/tours'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
+    | '/tours/$tourId/publish'
   id:
     | '__root__'
     | '/'
@@ -169,6 +180,7 @@ export interface FileRouteTypes {
     | '/tours/'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
+    | '/tours/$tourId/publish'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -256,6 +268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursTourIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tours/$tourId/publish': {
+      id: '/tours/$tourId/publish'
+      path: '/publish'
+      fullPath: '/tours/$tourId/publish'
+      preLoaderRoute: typeof ToursTourIdPublishRouteImport
+      parentRoute: typeof ToursTourIdRoute
+    }
     '/tours/$tourId/location': {
       id: '/tours/$tourId/location'
       path: '/location'
@@ -276,11 +295,13 @@ declare module '@tanstack/react-router' {
 interface ToursTourIdRouteChildren {
   ToursTourIdConnectionsRoute: typeof ToursTourIdConnectionsRoute
   ToursTourIdLocationRoute: typeof ToursTourIdLocationRoute
+  ToursTourIdPublishRoute: typeof ToursTourIdPublishRoute
 }
 
 const ToursTourIdRouteChildren: ToursTourIdRouteChildren = {
   ToursTourIdConnectionsRoute: ToursTourIdConnectionsRoute,
   ToursTourIdLocationRoute: ToursTourIdLocationRoute,
+  ToursTourIdPublishRoute: ToursTourIdPublishRoute,
 }
 
 const ToursTourIdRouteWithChildren = ToursTourIdRoute._addFileChildren(
