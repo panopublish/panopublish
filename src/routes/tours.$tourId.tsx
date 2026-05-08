@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusBadge, Status } from "@/components/StatusBadge";
-import { Plus, Folder, Trash2, Pencil, Upload as UploadIcon, MapPin, X, Image as ImageIcon, AlertTriangle, CheckSquare, Square, Move, Eye } from "lucide-react";
+import { SceneViewerModal } from "@/components/SceneViewerModal";
+import { Plus, Folder, Trash2, Pencil, Upload as UploadIcon, MapPin, X, Image as ImageIcon, Download, Droplets, MapPinned, Link2, Send } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
-import { formatDateIN } from "@/lib/format";
+
 
 export const Route = createFileRoute("/tours/$tourId")({
   head: () => ({ meta: [{ title: "Tour — TourVista" }] }),
@@ -35,8 +36,8 @@ function TourDetail() {
   const [newIslandName, setNewIslandName] = useState("");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
-  const [showPublish, setShowPublish] = useState(false);
-  const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
+  
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [uploads, setUploads] = useState<{ name: string; pct: number }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
@@ -143,9 +144,11 @@ function TourDetail() {
               <MapPin className="h-3.5 w-3.5" /> {tour.address ?? "No address"} • {tour.client?.name ?? "No client"}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => fileInput.current?.click()}><UploadIcon className="h-4 w-4 mr-1" /> Upload Photos</Button>
-            <Button onClick={() => setShowPublish(true)} className="bg-success text-success-foreground hover:bg-success/90">Publish to Google Street View</Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button asChild variant="outline" size="sm"><Link to="/tours/$tourId/location" params={{ tourId }}><MapPinned className="h-4 w-4 mr-1" /> Location</Link></Button>
+            <Button asChild variant="outline" size="sm"><Link to="/tours/$tourId/connections" params={{ tourId }}><Link2 className="h-4 w-4 mr-1" /> Connections</Link></Button>
+            <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()}><UploadIcon className="h-4 w-4 mr-1" /> Upload</Button>
+            <Button asChild size="sm" className="bg-success text-success-foreground hover:bg-success/90"><Link to="/tours/$tourId/publish" params={{ tourId }}><Send className="h-4 w-4 mr-1" /> Publish to Google</Link></Button>
             <input ref={fileInput} type="file" hidden multiple accept=".jpg,.jpeg" onChange={(e) => onPickFiles(e.target.files)} />
           </div>
         </div>
@@ -211,50 +214,87 @@ function TourDetail() {
               description="Click Upload Photos above. Accepts .jpg / .jpeg, max 75MB each."
               action={<Button onClick={() => fileInput.current?.click()}><UploadIcon className="h-4 w-4 mr-1" /> Upload Photos</Button>} />
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {visiblePhotos.map((p) => {
-                const hasGps = p.latitude != null && p.longitude != null;
-                const sel = selected.has(p.id);
-                return (
-                  <div key={p.id} className={`group relative rounded-xl border bg-card overflow-hidden ${sel ? "ring-2 ring-primary" : ""}`}>
-                    <button onClick={() => toggleSelect(p.id)} className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur rounded p-1">
-                      {sel ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
-                    </button>
-                    <button onClick={() => setPreviewPhoto(p)} className="block w-full">
-                      <div className="aspect-square bg-muted overflow-hidden">
-                        <img src={p.file_url} loading="lazy" alt={p.filename ?? "Photo"} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {visiblePhotos.map((p, idx) => (
+                  <div key={p.id} className="group">
+                    <div
+                      onClick={() => setViewerIndex(idx)}
+                      className="relative aspect-square rounded-xl border bg-muted overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg"
+                    >
+                      <img
+                        src={p.file_url}
+                        loading="lazy"
+                        alt={p.filename ?? "Photo"}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-background/0 group-hover:bg-background/10 transition-colors pointer-events-none" />
+
+                      {/* Scene number badge */}
+                      <div className="absolute top-2 left-2 rounded bg-foreground text-background px-2 py-0.5 text-[11px] font-semibold">
+                        {idx}
                       </div>
-                    </button>
-                    <div className="p-3 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="text-xs font-medium truncate">{p.filename}</div>
-                        <StatusBadge status={p.status} />
-                      </div>
-                      <div className="text-[11px] text-muted-foreground flex items-center justify-between">
-                        <span>{((p.size_bytes ?? 0) / 1024 / 1024).toFixed(1)} MB</span>
-                        <span>{formatDateIN(p.uploaded_at)}</span>
-                      </div>
-                      {hasGps ? (
-                        <div className="text-[11px] text-success flex items-center gap-1"><MapPin className="h-3 w-3" /> {p.latitude!.toFixed(4)}, {p.longitude!.toFixed(4)}</div>
-                      ) : (
-                        <div className="text-[11px] text-warning-foreground flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Missing GPS data</div>
-                      )}
-                      <div className="flex gap-1 pt-1">
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setPreviewPhoto(p)}><Eye className="h-3 w-3 mr-1" />View</Button>
-                        <select onChange={(e) => movePhoto(p, e.target.value || null)} value={p.island_id ?? ""} className="text-xs border rounded px-1.5 py-1 bg-card" aria-label="Move to island">
-                          <option value="">Unassigned</option>
-                          {islands.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
-                        </select>
-                        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs ml-auto" onClick={() => deletePhoto(p)}><Trash2 className="h-3 w-3 text-destructive" /></Button>
-                      </div>
+
+                      {/* Delete X */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deletePhoto(p); }}
+                        className="absolute top-2 right-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center"
+                        aria-label="Delete photo"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+
+                      {/* Download */}
+                      <a
+                        href={p.file_url}
+                        download={p.filename ?? undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute bottom-2 left-2 h-8 w-8 rounded-full bg-foreground/80 text-background hover:bg-foreground flex items-center justify-center"
+                        aria-label="Download"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </a>
+
+                      {/* Nadir/watermark toggle */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toast.info("Nadir watermark toggle — configurable on Publish step"); }}
+                        className="absolute bottom-2 right-2 h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center"
+                        aria-label="Nadir watermark"
+                      >
+                        <Droplets className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <div className="mt-1.5 px-1 flex items-center justify-between gap-2">
+                      <span className="text-xs text-muted-foreground truncate">{p.filename}</span>
+                      <StatusBadge status={p.status} />
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+
+                {/* Add more card */}
+                <button
+                  onClick={() => fileInput.current?.click()}
+                  className="aspect-square rounded-xl border-2 border-dashed border-success bg-success/10 hover:bg-success/20 flex items-center justify-center transition-colors"
+                  aria-label="Add more photos"
+                >
+                  <Plus className="h-12 w-12 text-success" />
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
+
+      {viewerIndex !== null && (
+        <SceneViewerModal
+          photos={visiblePhotos}
+          startIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
 
       {/* Add Island */}
       <Dialog open={showAddIsland} onOpenChange={setShowAddIsland}>
@@ -274,25 +314,6 @@ function TourDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Photo preview */}
-      <Dialog open={!!previewPhoto} onOpenChange={(o) => !o && setPreviewPhoto(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader><DialogTitle>{previewPhoto?.filename}</DialogTitle></DialogHeader>
-          {previewPhoto && <img src={previewPhoto.file_url} alt="" className="w-full rounded-lg" />}
-        </DialogContent>
-      </Dialog>
-
-      {/* Publish modal */}
-      <Dialog open={showPublish} onOpenChange={setShowPublish}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Publish to Google Street View</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">To publish, you need to connect your Google Account. Click below to authorize.</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPublish(false)}>Cancel</Button>
-            <Button onClick={() => { toast.info("Google OAuth will be connected in the next update."); setShowPublish(false); }}>Connect Google Account</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }

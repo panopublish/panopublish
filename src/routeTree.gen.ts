@@ -19,6 +19,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToursIndexRouteImport } from './routes/tours.index'
 import { Route as ToursNewRouteImport } from './routes/tours.new'
 import { Route as ToursTourIdRouteImport } from './routes/tours.$tourId'
+import { Route as ToursTourIdPublishRouteImport } from './routes/tours.$tourId.publish'
+import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
+import { Route as ToursTourIdConnectionsRouteImport } from './routes/tours.$tourId.connections'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -70,6 +73,21 @@ const ToursTourIdRoute = ToursTourIdRouteImport.update({
   path: '/tours/$tourId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToursTourIdPublishRoute = ToursTourIdPublishRouteImport.update({
+  id: '/publish',
+  path: '/publish',
+  getParentRoute: () => ToursTourIdRoute,
+} as any)
+const ToursTourIdLocationRoute = ToursTourIdLocationRouteImport.update({
+  id: '/location',
+  path: '/location',
+  getParentRoute: () => ToursTourIdRoute,
+} as any)
+const ToursTourIdConnectionsRoute = ToursTourIdConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => ToursTourIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -79,9 +97,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/tours/$tourId': typeof ToursTourIdRoute
+  '/tours/$tourId': typeof ToursTourIdRouteWithChildren
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
+  '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
+  '/tours/$tourId/location': typeof ToursTourIdLocationRoute
+  '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,9 +112,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/tours/$tourId': typeof ToursTourIdRoute
+  '/tours/$tourId': typeof ToursTourIdRouteWithChildren
   '/tours/new': typeof ToursNewRoute
   '/tours': typeof ToursIndexRoute
+  '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
+  '/tours/$tourId/location': typeof ToursTourIdLocationRoute
+  '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,9 +128,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
-  '/tours/$tourId': typeof ToursTourIdRoute
+  '/tours/$tourId': typeof ToursTourIdRouteWithChildren
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
+  '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
+  '/tours/$tourId/location': typeof ToursTourIdLocationRoute
+  '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +148,9 @@ export interface FileRouteTypes {
     | '/tours/$tourId'
     | '/tours/new'
     | '/tours/'
+    | '/tours/$tourId/connections'
+    | '/tours/$tourId/location'
+    | '/tours/$tourId/publish'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +163,9 @@ export interface FileRouteTypes {
     | '/tours/$tourId'
     | '/tours/new'
     | '/tours'
+    | '/tours/$tourId/connections'
+    | '/tours/$tourId/location'
+    | '/tours/$tourId/publish'
   id:
     | '__root__'
     | '/'
@@ -145,6 +178,9 @@ export interface FileRouteTypes {
     | '/tours/$tourId'
     | '/tours/new'
     | '/tours/'
+    | '/tours/$tourId/connections'
+    | '/tours/$tourId/location'
+    | '/tours/$tourId/publish'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -155,7 +191,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
-  ToursTourIdRoute: typeof ToursTourIdRoute
+  ToursTourIdRoute: typeof ToursTourIdRouteWithChildren
   ToursNewRoute: typeof ToursNewRoute
   ToursIndexRoute: typeof ToursIndexRoute
 }
@@ -232,8 +268,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursTourIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tours/$tourId/publish': {
+      id: '/tours/$tourId/publish'
+      path: '/publish'
+      fullPath: '/tours/$tourId/publish'
+      preLoaderRoute: typeof ToursTourIdPublishRouteImport
+      parentRoute: typeof ToursTourIdRoute
+    }
+    '/tours/$tourId/location': {
+      id: '/tours/$tourId/location'
+      path: '/location'
+      fullPath: '/tours/$tourId/location'
+      preLoaderRoute: typeof ToursTourIdLocationRouteImport
+      parentRoute: typeof ToursTourIdRoute
+    }
+    '/tours/$tourId/connections': {
+      id: '/tours/$tourId/connections'
+      path: '/connections'
+      fullPath: '/tours/$tourId/connections'
+      preLoaderRoute: typeof ToursTourIdConnectionsRouteImport
+      parentRoute: typeof ToursTourIdRoute
+    }
   }
 }
+
+interface ToursTourIdRouteChildren {
+  ToursTourIdConnectionsRoute: typeof ToursTourIdConnectionsRoute
+  ToursTourIdLocationRoute: typeof ToursTourIdLocationRoute
+  ToursTourIdPublishRoute: typeof ToursTourIdPublishRoute
+}
+
+const ToursTourIdRouteChildren: ToursTourIdRouteChildren = {
+  ToursTourIdConnectionsRoute: ToursTourIdConnectionsRoute,
+  ToursTourIdLocationRoute: ToursTourIdLocationRoute,
+  ToursTourIdPublishRoute: ToursTourIdPublishRoute,
+}
+
+const ToursTourIdRouteWithChildren = ToursTourIdRoute._addFileChildren(
+  ToursTourIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -243,20 +316,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
-  ToursTourIdRoute: ToursTourIdRoute,
+  ToursTourIdRoute: ToursTourIdRouteWithChildren,
   ToursNewRoute: ToursNewRoute,
   ToursIndexRoute: ToursIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
