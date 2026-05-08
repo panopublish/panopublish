@@ -37,7 +37,7 @@ function TourDetail() {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
   const [showPublish, setShowPublish] = useState(false);
-  const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [uploads, setUploads] = useState<{ name: string; pct: number }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
