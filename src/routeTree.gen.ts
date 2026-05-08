@@ -20,6 +20,7 @@ import { Route as ToursIndexRouteImport } from './routes/tours.index'
 import { Route as ToursNewRouteImport } from './routes/tours.new'
 import { Route as ToursTourIdRouteImport } from './routes/tours.$tourId'
 import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
+import { Route as ToursTourIdConnectionsRouteImport } from './routes/tours.$tourId.connections'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -76,6 +77,11 @@ const ToursTourIdLocationRoute = ToursTourIdLocationRouteImport.update({
   path: '/location',
   getParentRoute: () => ToursTourIdRoute,
 } as any)
+const ToursTourIdConnectionsRoute = ToursTourIdConnectionsRouteImport.update({
+  id: '/connections',
+  path: '/connections',
+  getParentRoute: () => ToursTourIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/tours/$tourId': typeof ToursTourIdRouteWithChildren
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
+  '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
 }
 export interface FileRoutesByTo {
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/tours/$tourId': typeof ToursTourIdRouteWithChildren
   '/tours/new': typeof ToursNewRoute
   '/tours': typeof ToursIndexRoute
+  '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
 }
 export interface FileRoutesById {
@@ -115,6 +123,7 @@ export interface FileRoutesById {
   '/tours/$tourId': typeof ToursTourIdRouteWithChildren
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
+  '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
 }
 export interface FileRouteTypes {
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
     | '/tours/$tourId'
     | '/tours/new'
     | '/tours/'
+    | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/tours/$tourId'
     | '/tours/new'
     | '/tours'
+    | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
   id:
     | '__root__'
@@ -156,6 +167,7 @@ export interface FileRouteTypes {
     | '/tours/$tourId'
     | '/tours/new'
     | '/tours/'
+    | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
   fileRoutesById: FileRoutesById
 }
@@ -251,14 +263,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursTourIdLocationRouteImport
       parentRoute: typeof ToursTourIdRoute
     }
+    '/tours/$tourId/connections': {
+      id: '/tours/$tourId/connections'
+      path: '/connections'
+      fullPath: '/tours/$tourId/connections'
+      preLoaderRoute: typeof ToursTourIdConnectionsRouteImport
+      parentRoute: typeof ToursTourIdRoute
+    }
   }
 }
 
 interface ToursTourIdRouteChildren {
+  ToursTourIdConnectionsRoute: typeof ToursTourIdConnectionsRoute
   ToursTourIdLocationRoute: typeof ToursTourIdLocationRoute
 }
 
 const ToursTourIdRouteChildren: ToursTourIdRouteChildren = {
+  ToursTourIdConnectionsRoute: ToursTourIdConnectionsRoute,
   ToursTourIdLocationRoute: ToursTourIdLocationRoute,
 }
 
