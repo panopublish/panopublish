@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClientsRouteImport } from './routes/clients'
@@ -24,6 +26,11 @@ import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.
 import { Route as ToursTourIdConnectionsRouteImport } from './routes/tours.$tourId.connections'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google.callback'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -32,6 +39,11 @@ const SignupRoute = SignupRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -101,8 +113,10 @@ export interface FileRoutesByFullPath {
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -117,8 +131,10 @@ export interface FileRoutesByTo {
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/tours/new': typeof ToursNewRoute
   '/tours': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -134,8 +150,10 @@ export interface FileRoutesById {
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
@@ -152,8 +170,10 @@ export interface FileRouteTypes {
     | '/clients'
     | '/dashboard'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/signup'
+    | '/terms'
     | '/tours/new'
     | '/tours/'
     | '/auth/google/callback'
@@ -168,8 +188,10 @@ export interface FileRouteTypes {
     | '/clients'
     | '/dashboard'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/signup'
+    | '/terms'
     | '/tours/new'
     | '/tours'
     | '/auth/google/callback'
@@ -184,8 +206,10 @@ export interface FileRouteTypes {
     | '/clients'
     | '/dashboard'
     | '/login'
+    | '/privacy'
     | '/settings'
     | '/signup'
+    | '/terms'
     | '/tours/new'
     | '/tours/'
     | '/auth/google/callback'
@@ -201,8 +225,10 @@ export interface RootRouteChildren {
   ClientsRoute: typeof ClientsRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   ToursNewRoute: typeof ToursNewRoute
   ToursIndexRoute: typeof ToursIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
@@ -214,6 +240,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -226,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -321,8 +361,10 @@ const rootRouteChildren: RootRouteChildren = {
   ClientsRoute: ClientsRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   ToursNewRoute: ToursNewRoute,
   ToursIndexRoute: ToursIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,

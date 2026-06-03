@@ -1,8 +1,9 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Map, Users, Settings, BarChart3, LogOut, Compass } from "lucide-react";
+import { LayoutDashboard, Map, Users, Settings, BarChart3, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Logo } from "./Logo";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -19,13 +20,11 @@ export function AppSidebar() {
 
   return (
     <aside className="hidden md:flex h-screen sticky top-0 w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
-      <div className="flex items-center gap-2 px-5 py-5 border-b">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Compass className="h-5 w-5" />
-        </div>
+      <div className="flex items-center gap-2 px-5 py-4 border-b">
+        <Logo logoClassName="h-9 w-9 text-primary" iconOnly />
         <div>
-          <div className="font-bold tracking-tight">TourVista</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Made in India</div>
+          <div className="font-bold tracking-tight text-foreground leading-none">TourVista</div>
+          <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-1">Made in India</div>
         </div>
       </div>
       <nav className="flex-1 p-3 space-y-1">

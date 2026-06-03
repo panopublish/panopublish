@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Search } from "lucide-react";
+import { Logo } from "./Logo";
 
 type Crumb = { label: string; to?: string };
 
@@ -66,7 +67,9 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
       <main className="flex-1 min-w-0">
         <header className="bg-background border-b">
           <div className="flex items-center gap-3 px-4 md:px-8 py-3">
-            <div className="md:hidden font-bold">TourVista</div>
+            <Link to="/dashboard" className="md:hidden">
+              <Logo logoClassName="h-7 w-7 text-primary" className="text-base font-bold" />
+            </Link>
             <div className="flex-1 max-w-lg relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input

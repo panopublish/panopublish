@@ -18,6 +18,8 @@ serve(async (req) => {
     
     if (!apiKey) throw new Error("GOOGLE_MAPS_API_KEY missing")
 
+    const referer = req.headers.get('referer') || req.headers.get('origin') || 'https://app.vista360digital.com/'
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -31,7 +33,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Length': '0'
+          'Content-Length': '0',
+          'Referer': referer
         }
       })
       const startData = await startRes.json()
@@ -217,7 +220,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Referer': referer
         },
         body: JSON.stringify(body)
       })
@@ -244,7 +248,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Length': '0'
+          'Content-Length': '0',
+          'Referer': referer
         }
       })
       const startData = await startRes.json()
@@ -302,7 +307,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Referer': referer
         },
         body: JSON.stringify(body)
       })
@@ -326,7 +332,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Length': '0'
+          'Content-Length': '0',
+          'Referer': referer
         }
       })
       const data = await res.json()
@@ -363,7 +370,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Referer': referer
         },
         body: JSON.stringify(body)
       })
@@ -423,7 +431,8 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Referer': referer
         },
         body: JSON.stringify({ updatePhotoRequests })
       })
@@ -437,7 +446,8 @@ serve(async (req) => {
       const { streetview_photo_id } = payload
       const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=BASIC`, {
         headers: {
-          'Authorization': `Bearer ${access_token}`
+          'Authorization': `Bearer ${access_token}`,
+          'Referer': referer
         }
       })
       const data = await res.json()
@@ -453,7 +463,8 @@ serve(async (req) => {
     if (action === 'list_photos') {
       const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC`, {
         headers: {
-          'Authorization': `Bearer ${access_token}`
+          'Authorization': `Bearer ${access_token}`,
+          'Referer': referer
         }
       })
       const data = await res.json()
@@ -466,7 +477,8 @@ serve(async (req) => {
       const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${access_token}`
+          'Authorization': `Bearer ${access_token}`,
+          'Referer': referer
         }
       })
       if (!res.ok) {

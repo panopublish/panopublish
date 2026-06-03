@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
+import { getEnv } from "@/lib/env";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -294,7 +295,7 @@ function SettingsPage() {
 
   const connectGoogle = async () => {
     try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = getEnv('VITE_GOOGLE_CLIENT_ID');
       if (!clientId) throw new Error("Missing VITE_GOOGLE_CLIENT_ID in environment variables.");
       const redirectUri = window.location.origin + "/auth/google/callback";
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=https://www.googleapis.com/auth/streetviewpublish&access_type=offline&prompt=consent`;
@@ -336,7 +337,7 @@ function SettingsPage() {
       toast.dismiss(tid);
 
       // 2. Open Razorpay Checkout modal
-      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_SvUlzHxrvbZ3KW';
+      const keyId = getEnv('VITE_RAZORPAY_KEY_ID') || 'rzp_test_SvUlzHxrvbZ3KW';
       
       const options = {
         key: keyId,

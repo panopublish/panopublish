@@ -20,12 +20,14 @@ import { usePanoramaMap } from "@/hooks/usePanoramaMap";
 import { MapToolbar } from "@/components/MapToolbar";
 import { PanoramaNode, Connection, MapMode } from "@/types/panorama";
 
+import { getEnv } from "@/lib/env";
+
 export const Route = createFileRoute("/tours/$tourId/connections")({
   head: () => ({ meta: [{ title: "Build Connections — TourVista" }] }),
   component: ConnectionsPage,
 });
 
-const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+const MAPS_KEY = getEnv('VITE_GOOGLE_MAPS_API_KEY');
 
 type Photo = {
   id: string;

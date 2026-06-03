@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <mask id="logo-mask">
+      <rect x="0" y="0" width="100" height="100" fill="white" />
+      <path d="M 20,10 L 39,10 L 50,70 L 61,10 L 80,10 L 58,86 L 42,86 Z" fill="black" stroke="black" stroke-width="8" stroke-linejoin="miter" stroke-linecap="square" />
+    </mask>
+  </defs>
+  <circle cx="50" cy="50" r="38" stroke="#1E40AF" stroke-width="9" fill="none" mask="url(#logo-mask)" />
+  <path d="M 20,10 L 39,10 L 50,70 L 61,10 L 80,10 L 58,86 L 42,86 Z" fill="#1E40AF" />
+</svg>

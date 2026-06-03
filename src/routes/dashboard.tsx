@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
+import { getEnv } from "@/lib/env";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Map, Users, Camera, CheckCircle2, Plus, ListChecks, X, Compass, ArrowRight, HelpCircle, AlertCircle, Check } from "lucide-react";
@@ -117,7 +118,7 @@ function Dashboard() {
   const connectGoogle = async () => {
     setLoadingOauth(true);
     try {
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = getEnv('VITE_GOOGLE_CLIENT_ID');
       if (!clientId) {
         throw new Error("Missing Google Client ID in environment variables.");
       }

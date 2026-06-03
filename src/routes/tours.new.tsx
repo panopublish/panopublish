@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Search, ChevronRight, UploadCloud, Wand2, Star, UserPlus, MapPin, Rocket } from "lucide-react";
 import { toast } from "sonner";
 
+import { getEnv } from "@/lib/env";
+
 export const Route = createFileRoute("/tours/new")({
   head: () => ({ meta: [{ title: "Create Tour — TourVista" }] }),
   component: CreateTour,
@@ -39,7 +41,7 @@ function CreateTour() {
   useEffect(() => {
     if (step === 3 && !(window as any).google) {
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${getEnv('VITE_GOOGLE_MAPS_API_KEY')}&libraries=places`;
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
