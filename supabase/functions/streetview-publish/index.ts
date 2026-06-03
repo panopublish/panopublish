@@ -402,7 +402,7 @@ serve(async (req) => {
             pitch: c.pose.pitch,
             roll: c.pose.roll
           }
-          updateMask += ",pose.latLngPair,pose.heading,pose.pitch,pose.roll"
+          updateMask += ",pose.lat_lng_pair,pose.heading,pose.pitch,pose.roll"
           
           if (c.pose.level) {
             photo.pose.level = {
