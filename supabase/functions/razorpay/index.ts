@@ -117,6 +117,26 @@ serve(async (req) => {
             
           console.log(`Successfully cancelled subscription ${subscriptionId} for user ${subRow.user_id}`);
         }
+      } else if (event === 'subscription.charged') {
+        const subscriptionEntity = webhookPayload.payload.subscription.entity;
+        const subscriptionId = subscriptionEntity.id;
+
+        // Fetch user from subscriptions log
+        const { data: subRow } = await supabaseClient
+          .from('subscriptions')
+          .select('user_id')
+          .eq('razorpay_subscription_id', subscriptionId)
+          .maybeSingle();
+
+        if (subRow?.user_id) {
+          // Reset the billing cycle tours used count on renewal
+          await supabaseClient
+            .from('profiles')
+            .update({ billing_cycle_tours_used: 0 })
+            .eq('id', subRow.user_id);
+
+          console.log(`Successfully renewed subscription and reset tour count for subscription ${subscriptionId}, user ${subRow.user_id}`);
+        }
       }
 
       return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
@@ -187,7 +207,10 @@ serve(async (req) => {
       // Update public.profiles table
       const { error: profileErr } = await supabaseClient
         .from('profiles')
-        .update({ plan: plan_name.toLowerCase() })
+        .update({ 
+          plan: plan_name.toLowerCase(),
+          billing_cycle_tours_used: 0
+        })
         .eq('id', user_id);
 
       if (profileErr) throw profileErr;

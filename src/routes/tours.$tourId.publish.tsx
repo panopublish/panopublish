@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
 
+const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
+
 /**
  * Loads an image from a URL and returns an HTMLImageElement.
  * Uses crossOrigin = 'anonymous' to avoid tainted canvas security errors.
@@ -355,6 +357,7 @@ function PublishPage() {
     step: 'idle' | 'processing' | 'encoding' | 'uploading' | 'connecting' | 'success' | 'failed';
     message: string;
   } | null>(null);
+  const [profile, setProfile] = useState<{ plan: string; billing_cycle_tours_used: number } | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -410,9 +413,39 @@ function PublishPage() {
     } catch (e) {
       console.error("Not connected to Google:", e);
     }
+
+    // Fetch profiles to check limits
+    try {
+      const { data: p } = await supabase.from("profiles").select("plan, billing_cycle_tours_used").eq("id", user.id).maybeSingle();
+      if (p) {
+        setProfile(p);
+      }
+    } catch (e) {
+      console.error("Failed to load user profile:", e);
+    }
   };
 
   useEffect(() => { load(); }, [user, tourId]);
+
+  const handlePublishClick = () => {
+    if (!accessToken) {
+      toast.error("Please connect your Google Account first.");
+      return;
+    }
+
+    const limit = planLimit[profile?.plan ?? "trial"] ?? 1;
+    const used = profile?.billing_cycle_tours_used ?? 0;
+    const isAlreadyPublished = tour?.has_been_published ?? false;
+
+    if (!isAlreadyPublished && used >= limit) {
+      toast.error(
+        `Publishing limit reached! You have used ${used}/${limit === 9999 ? "∞" : limit} tours on your ${profile?.plan || "trial"} plan. Please upgrade your subscription in Settings to publish more tours.`
+      );
+      return;
+    }
+
+    setConfirm(true);
+  };
 
   useStreetViewStatus(photos as StatusPhoto[], accessToken, load);
 
@@ -940,13 +973,7 @@ function PublishPage() {
               size="lg"
               className="w-full bg-[#0277bd] hover:bg-[#01579b]"
               disabled={publishing || photos.length === 0}
-              onClick={() => {
-                if (!accessToken) {
-                  toast.error("Please connect your Google Account first.");
-                  return;
-                }
-                setConfirm(true);
-              }}
+              onClick={handlePublishClick}
             >
               <Send className="h-5 w-5 mr-2" />
               {publishing ? "Publishing…" : `Publish ${photos.filter(p => !p.streetview_status || p.streetview_status === 'NOT_PUBLISHED').length} scene(s)`}

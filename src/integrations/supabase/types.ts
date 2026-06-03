@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -276,6 +276,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          billing_cycle_tours_used: number
           company_name: string | null
           country_code: string | null
           created_at: string
@@ -299,6 +300,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          billing_cycle_tours_used?: number
           company_name?: string | null
           country_code?: string | null
           created_at?: string
@@ -322,6 +324,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          billing_cycle_tours_used?: number
           company_name?: string | null
           country_code?: string | null
           created_at?: string
@@ -390,6 +393,7 @@ export type Database = {
           created_at: string
           google_place_id: string | null
           google_place_url: string | null
+          has_been_published: boolean
           id: string
           latitude: number | null
           longitude: number | null
@@ -409,6 +413,7 @@ export type Database = {
           created_at?: string
           google_place_id?: string | null
           google_place_url?: string | null
+          has_been_published?: boolean
           id?: string
           latitude?: number | null
           longitude?: number | null
@@ -428,6 +433,7 @@ export type Database = {
           created_at?: string
           google_place_id?: string | null
           google_place_url?: string | null
+          has_been_published?: boolean
           id?: string
           latitude?: number | null
           longitude?: number | null

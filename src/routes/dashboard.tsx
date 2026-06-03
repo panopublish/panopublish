@@ -16,12 +16,12 @@ export const Route = createFileRoute("/dashboard")({
 
 type Stats = { clients: number; tours: number; published: number; processing: number; uploaded: number };
 
-const planLimit: Record<string, number> = { trial: 5, basic: 5, pro: 25, agency: 9999 };
+const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
 
 function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [profile, setProfile] = useState<{ plan: string; onboarding_dismissed: boolean } | null>(null);
+  const [profile, setProfile] = useState<{ plan: string; onboarding_dismissed: boolean; billing_cycle_tours_used: number } | null>(null);
   
   // Onboarding Wizard State
   const [showWizard, setShowWizard] = useState(false);
@@ -32,7 +32,7 @@ function Dashboard() {
     if (!user) return;
     (async () => {
       const [p, c, t, token, photosRes] = await Promise.all([
-        supabase.from("profiles").select("plan,onboarding_dismissed").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("plan,onboarding_dismissed,billing_cycle_tours_used").eq("id", user.id).maybeSingle(),
         supabase.from("clients").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("tours").select("id,status").eq("user_id", user.id),
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
@@ -133,8 +133,8 @@ function Dashboard() {
     }
   };
 
-  const limit = planLimit[profile?.plan ?? "trial"] ?? 5;
-  const tourCount = stats?.tours ?? 0;
+  const limit = planLimit[profile?.plan ?? "trial"] ?? 1;
+  const tourCount = profile?.billing_cycle_tours_used ?? 0;
   const usagePct = Math.min(100, (tourCount / limit) * 100);
 
   const onboarding = [
