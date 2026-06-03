@@ -130,33 +130,19 @@ serve(async (req) => {
       agency: 2999
     };
 
+    const staticPlanIds: Record<string, string> = {
+      basic: 'plan_Sx8pyS9J75kPLf',
+      pro: 'plan_Sx9MoqhOSiSQYh',
+      agency: 'plan_Sx9O12idzkpCLD'
+    };
+
     if (action === 'create_subscription') {
       const { plan_name, email } = payload;
       const planAmount = planPrices[plan_name.toLowerCase()];
       if (!planAmount) throw new Error("Invalid plan selection");
 
-      // 1. Dynamically create plan on Razorpay (Ensures dynamic self-healing test flow)
-      const planRes = await fetch('https://api.razorpay.com/v1/plans', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${btoa(`${keyId}:${keySecret}`)}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          period: 'monthly',
-          interval: 1,
-          item: {
-            name: `TourVista ${plan_name.toUpperCase()} Subscription`,
-            amount: planAmount * 100, // in paisa
-            currency: 'INR',
-            description: `Recurring monthly subscription for TourVista ${plan_name} tier`
-          }
-        })
-      });
-
-      const planData = await planRes.json();
-      if (!planRes.ok) throw new Error(planData.error?.description || 'Failed to create plan on Razorpay');
-      const planId = planData.id;
+      const planId = staticPlanIds[plan_name.toLowerCase()];
+      if (!planId) throw new Error("Plan ID not found for selection");
 
       // 2. Create Razorpay Subscription
       const subRes = await fetch('https://api.razorpay.com/v1/subscriptions', {
