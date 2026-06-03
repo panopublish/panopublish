@@ -141,7 +141,7 @@ function TourDetail() {
 
     const updates = updatedPhotos.map(p => ({ id: p.id, order_index: p.order_index }));
     for (const update of updates) {
-      const { error } = await supabase.from("photos").update({ order_index: update.order_index } as any).eq("id", update.id);
+      const { error } = await supabase.from("photos").update({ order_index: update.order_index }).eq("id", update.id);
       if (error) {
         console.error("Error updating order:", error);
         toast.error("Failed to save sequence: " + error.message);
@@ -314,7 +314,7 @@ function TourDetail() {
       // 3. Save new order_index values sequentially to Supabase
       await Promise.all(
         sorted.map((p, idx) => 
-          supabase.from("photos").update({ order_index: idx } as any).eq("id", p.id)
+          supabase.from("photos").update({ order_index: idx }).eq("id", p.id)
         )
       );
       
