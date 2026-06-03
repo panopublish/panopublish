@@ -69,6 +69,13 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // Expose Cloudflare environment bindings to process.env for SSR compatibility
+      if (env && typeof env === "object") {
+        globalThis.process = globalThis.process || {};
+        globalThis.process.env = globalThis.process.env || {};
+        Object.assign(globalThis.process.env, env);
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
