@@ -453,7 +453,7 @@ function Landing() {
           <div className="flex flex-col items-center md:items-start gap-2">
             <Logo logoClassName="text-primary h-7 w-7" className="text-lg font-bold" />
             <div className="text-xs">Made with ❤️ in India  |  © 2026 TourVista</div>
-            <div className="text-[11px] font-medium text-muted-foreground/80 mt-1">GSTIN: 29ABCDE1234F1Z5  |  Support Email: er.prashantyadav37@gmail.com</div>
+            <div className="text-[11px] font-medium text-muted-foreground/80 mt-1">Support Email: contact@vista360digital.com</div>
           </div>
           
           <div className="flex flex-col items-center md:items-end gap-3">

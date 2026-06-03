@@ -145,7 +145,7 @@ function TermsConditions() {
       {/* Footer */}
       <footer className="border-t py-8 bg-card mt-12">
         <div className="container mx-auto px-4 text-center text-xs text-muted-foreground space-y-2 max-w-6xl">
-          <div>Made with ❤️ in India  |  © 2026 TourVista  |  GST: 29ABCDE1234F1Z5</div>
+          <div>Made with ❤️ in India  |  © 2026 TourVista</div>
           <div className="flex justify-center gap-4">
             <Link to="/privacy" className="hover:text-foreground underline">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-foreground underline">Terms & Conditions</Link>
