@@ -430,7 +430,8 @@ function PublishPage() {
       return;
     }
 
-    const limit = planLimit[profile?.plan ?? "trial"] ?? 1;
+    const isAdmin = user?.email === 'er.prashantyadav37@gmail.com' || user?.email === 'vista360gtp@gmail.com';
+    const limit = isAdmin ? 9999 : (planLimit[profile?.plan ?? "trial"] ?? 1);
     const used = profile?.billing_cycle_tours_used ?? 0;
     const isAlreadyPublished = tour?.has_been_published ?? false;
 
