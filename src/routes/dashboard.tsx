@@ -72,15 +72,12 @@ function Dashboard() {
       for (const tour of tours) {
         const tPhotos = photos.filter((p) => p.tour_id === tour.id);
         if (tPhotos.length > 0) {
-          const allPublished = tPhotos.every(p => p.streetview_status === 'PUBLISHED');
-          const anyProcessing = tPhotos.some(p => p.streetview_status === 'PROCESSING');
+          const allSubmitted = tPhotos.every(p => p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING');
           const anyFailed = tPhotos.some(p => p.streetview_status === 'FAILED');
           
           let newStatus = tour.status;
-          if (allPublished) {
+          if (allSubmitted) {
             newStatus = 'published';
-          } else if (anyProcessing) {
-            newStatus = 'processing';
           } else if (anyFailed) {
             newStatus = 'rejected';
           }

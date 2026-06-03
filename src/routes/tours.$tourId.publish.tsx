@@ -374,15 +374,12 @@ function PublishPage() {
 
     // Self-healing check: Sync tour status based on photos
     if (t && loadedPhotos.length > 0) {
-      const allPublished = loadedPhotos.every((p: any) => p.streetview_status === 'PUBLISHED');
-      const anyProcessing = loadedPhotos.some((p: any) => p.streetview_status === 'PROCESSING');
+      const allSubmitted = loadedPhotos.every((p: any) => p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING');
       const anyFailed = loadedPhotos.some((p: any) => p.streetview_status === 'FAILED');
       
       let newStatus = t.status;
-      if (allPublished) {
+      if (allSubmitted) {
         newStatus = 'published';
-      } else if (anyProcessing) {
-        newStatus = 'processing';
       } else if (anyFailed) {
         newStatus = 'rejected';
       } else {
