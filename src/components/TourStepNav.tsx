@@ -8,7 +8,6 @@ const steps: { key: string; label: string; to: string; icon: LucideIcon }[] = [
   { key: "connections", label: "Build connections", to: "/tours/$tourId/connections", icon: Link2 },
   { key: "publish", label: "Publish to Google", to: "/tours/$tourId/publish", icon: Send },
   { key: "analytics", label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { key: "custom", label: "Custom Tour", to: "/tours/$tourId", icon: Sparkles },
 ];
 
 export function TourStepNav({ tourId, current }: { tourId: string; current: string }) {

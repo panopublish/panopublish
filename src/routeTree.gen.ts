@@ -22,6 +22,7 @@ import { Route as ToursTourIdIndexRouteImport } from './routes/tours.$tourId.ind
 import { Route as ToursTourIdPublishRouteImport } from './routes/tours.$tourId.publish'
 import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
 import { Route as ToursTourIdConnectionsRouteImport } from './routes/tours.$tourId.connections'
+import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google.callback'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -88,6 +89,11 @@ const ToursTourIdConnectionsRoute = ToursTourIdConnectionsRouteImport.update({
   path: '/tours/$tourId/connections',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
+  id: '/auth/google/callback',
+  path: '/auth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
   '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/tours/new': typeof ToursNewRoute
   '/tours': typeof ToursIndexRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
   '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
   '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/tours/new'
     | '/tours/'
+    | '/auth/google/callback'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
     | '/tours/$tourId/publish'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/tours/new'
     | '/tours'
+    | '/auth/google/callback'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
     | '/tours/$tourId/publish'
@@ -177,6 +188,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/tours/new'
     | '/tours/'
+    | '/auth/google/callback'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
     | '/tours/$tourId/publish'
@@ -193,6 +205,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ToursNewRoute: typeof ToursNewRoute
   ToursIndexRoute: typeof ToursIndexRoute
+  AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
   ToursTourIdConnectionsRoute: typeof ToursTourIdConnectionsRoute
   ToursTourIdLocationRoute: typeof ToursTourIdLocationRoute
   ToursTourIdPublishRoute: typeof ToursTourIdPublishRoute
@@ -292,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursTourIdConnectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/google/callback': {
+      id: '/auth/google/callback'
+      path: '/auth/google/callback'
+      fullPath: '/auth/google/callback'
+      preLoaderRoute: typeof AuthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -305,6 +325,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ToursNewRoute: ToursNewRoute,
   ToursIndexRoute: ToursIndexRoute,
+  AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
   ToursTourIdConnectionsRoute: ToursTourIdConnectionsRoute,
   ToursTourIdLocationRoute: ToursTourIdLocationRoute,
   ToursTourIdPublishRoute: ToursTourIdPublishRoute,
@@ -313,3 +334,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

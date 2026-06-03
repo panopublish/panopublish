@@ -28,6 +28,19 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
     if (!loading && !user) navigate({ to: "/login" });
   }, [loading, user, navigate]);
 
+  useEffect(() => {
+    if (!user) return;
+    
+    supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      const isConnected = !!data;
+      if (isConnected) {
+        localStorage.setItem("google_connected", "true");
+      } else {
+        localStorage.removeItem("google_connected");
+      }
+    });
+  }, [user]);
+
   // keyboard: ctrl+n new tour, ctrl+k focus search
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -51,7 +64,7 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
     <div className="min-h-screen flex bg-background">
       <AppSidebar />
       <main className="flex-1 min-w-0">
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b">
+        <header className="bg-background border-b">
           <div className="flex items-center gap-3 px-4 md:px-8 py-3">
             <div className="md:hidden font-bold">TourVista</div>
             <div className="flex-1 max-w-lg relative">
