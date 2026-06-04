@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { TourStepsNav } from "@/components/TourStepsNav";
 import { useEffect, useState } from "react";
@@ -257,7 +257,7 @@ function TourAnalytics() {
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleSyncViews}
-                disabled={syncing || loading || !accessToken}
+                disabled={syncing || loading || !accessToken || publishedPhotos.length === 0}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform active:scale-95 flex items-center gap-2 px-5 py-2.5"
               >
                 <RefreshCw className={`h-4.5 w-4.5 ${syncing ? 'animate-spin' : ''}`} />
@@ -266,7 +266,7 @@ function TourAnalytics() {
 
               <Button
                 onClick={handleDownloadCSV}
-                disabled={loading || photos.length === 0}
+                disabled={loading || publishedPhotos.length === 0}
                 variant="outline"
                 className="border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-sm hover:shadow transition-all duration-300 flex items-center gap-2 px-5 py-2.5 bg-white cursor-pointer"
               >
@@ -281,13 +281,18 @@ function TourAnalytics() {
               <RefreshCw className="h-10 w-10 text-blue-500 animate-spin mb-4" />
               <p className="text-slate-500 font-bold text-sm">Loading analytics statistics...</p>
             </div>
-          ) : photos.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 shadow-sm flex flex-col items-center justify-center min-h-[350px] text-center">
-              <AlertCircle className="h-12 w-12 text-slate-300 mb-3" />
-              <h2 className="text-lg font-bold text-slate-800">No scenes uploaded yet</h2>
-              <p className="text-slate-400 text-sm max-w-sm mt-1 mb-6">
-                You need to upload 360° photos and publish them to Google Maps before analytics views can be tracked.
+          ) : publishedPhotos.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 shadow-sm flex flex-col items-center justify-center min-h-[350px] text-center max-w-2xl mx-auto mt-8">
+              <Globe className="h-12 w-12 text-slate-300 mb-4 animate-pulse" />
+              <h2 className="text-lg font-bold text-slate-800 mb-2">No Published Scenes</h2>
+              <p className="text-slate-500 text-sm max-w-md font-medium leading-relaxed mb-6">
+                You do not have any published scenes for us to display analytics. Please publish some scenes to Google first.
               </p>
+              <Link to="/tours/$tourId/publish" params={{ tourId }}>
+                <Button className="bg-[#0277bd] text-white font-bold rounded-xl px-6 py-2.5 shadow-md hover:shadow-lg transition-all">
+                  Go to Publish Page
+                </Button>
+              </Link>
             </div>
           ) : (
             <div className="space-y-6">
