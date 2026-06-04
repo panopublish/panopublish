@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { getEnv } from "@/lib/env";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Map, Users, Camera, CheckCircle2, Plus, ListChecks, X, Compass, ArrowRight, HelpCircle, AlertCircle, Check } from "lucide-react";
+import { Map, Users, Camera, CheckCircle2, Plus, ListChecks, X, Compass, ArrowRight, HelpCircle, AlertCircle, Check, Shield } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -145,9 +145,18 @@ function Dashboard() {
 
   return (
     <AppShell title={`Welcome${user?.email ? `, ${user.email.split("@")[0]}` : ""}`} breadcrumbs={[{ label: "Dashboard" }]}>
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <Link to="/tours/new"><Button><Plus className="h-4 w-4 mr-1" /> Create Tour</Button></Link>
-        <Link to="/tours"><Button variant="outline"><Map className="h-4 w-4 mr-1" /> My Tours</Button></Link>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <Link to="/tours/new"><Button><Plus className="h-4 w-4 mr-1" /> Create Tour</Button></Link>
+          <Link to="/tours"><Button variant="outline"><Map className="h-4 w-4 mr-1" /> My Tours</Button></Link>
+        </div>
+        {isAdmin && (
+          <Link to="/admin">
+            <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl shadow-md flex items-center gap-2 px-5">
+              <Shield className="h-4 w-4" /> Admin Panel
+            </Button>
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
