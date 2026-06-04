@@ -61,7 +61,7 @@ declare global {
   }
 }
 
-const SPACINGS = ["1m", "2m", "3m", "5m", "10m"];
+const SPACINGS = ["1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m", "10m"];
 
 function calcHeading(from: Photo, to: Photo): number {
   if (from.latitude == null || from.longitude == null || to.latitude == null || to.longitude == null) return 0;
@@ -233,19 +233,39 @@ function ConnectionsPage() {
       return activeIslandId ? pIslandId === activeIslandId : true;
     });
     
+    // Compute the preview coordinates for pendingTo dynamically
+    let previewLat: number | null = null;
+    let previewLng: number | null = null;
+
+    if (active && pendingTo && active.latitude != null && active.longitude != null) {
+      const distanceNum = parseInt(spacing.replace('m', '')) || 3;
+      const baseHeading = ((active.heading || 0) + currentHeading) % 360;
+      const finalHeading = (baseHeading + alignFine[0] - 5 + 360) % 360;
+      const geographicHeading = finalHeading;
+
+      if (window.google?.maps?.geometry?.spherical) {
+        const fromLatLng = new window.google.maps.LatLng(active.latitude, active.longitude);
+        const toLatLng = window.google.maps.geometry.spherical.computeOffset(fromLatLng, distanceNum, geographicHeading);
+        previewLat = toLatLng.lat();
+        previewLng = toLatLng.lng();
+      }
+    }
+    
     return filteredPhotos.map((p) => {
       const originalIndex = photos.findIndex(x => x.id === p.id);
+      const lat = (p.id === pendingTo && previewLat !== null) ? previewLat : (p.latitude ?? tour?.latitude ?? 23.02463);
+      const lng = (p.id === pendingTo && previewLng !== null) ? previewLng : (p.longitude ?? tour?.longitude ?? 72.56436);
       return {
         id: p.id,
-        lat: p.latitude ?? tour?.latitude ?? 23.02463,
-        lng: p.longitude ?? tour?.longitude ?? 72.56436,
+        lat,
+        lng,
         heading: (active && p.id === active.id) ? ((active.heading || 0) + currentHeading) % 360 : (p.heading ?? 0),
         label: showLabels ? String(originalIndex) : "",
         connectionCount: conns.filter(c => c.from_photo_id === p.id || c.to_photo_id === p.id).length,
         status: 'active'
       };
     });
-  }, [photos, tour, conns, showLabels, active, currentHeading, activeIslandId]);
+  }, [photos, tour, conns, showLabels, active, currentHeading, activeIslandId, pendingTo, spacing, alignFine]);
 
   const mapConnections: Connection[] = useMemo(() => {
     return conns
@@ -1311,16 +1331,40 @@ function ConnectionsPage() {
             {pendingTo && (
               <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
                 <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-green-500 shadow-[0_0_8px_#22c55e] z-0 pointer-events-none" />
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-[90%] max-w-lg rounded-lg shadow-2xl pointer-events-auto flex flex-col z-20 border border-white/20">
-                  <div className="flex items-center justify-between px-3 py-2 bg-black/85 backdrop-blur-md border-b border-white/10 rounded-t-lg">
-                    <div className="w-1/3">
-                      <Slider value={opacity} onValueChange={setOpacity} max={100} step={1} className="w-full cursor-pointer" />
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 w-[95%] max-w-xl rounded-lg shadow-2xl pointer-events-auto flex flex-col z-20 border border-[#689f38]/30">
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-[#689f38] rounded-t-lg border-b border-[#558b2f]/30 text-white gap-3">
+                    <div className="w-[28%] flex items-center">
+                      <Slider value={opacity} onValueChange={setOpacity} max={100} step={1} className="w-full cursor-pointer [&_[role=slider]]:bg-white [&_[role=slider]]:border-slate-200" />
                     </div>
-                    <div className="flex items-center">
-                      <button onClick={() => setPendingTo(null)} className="flex items-center gap-1 bg-white hover:bg-gray-100 text-[#e53935] px-3 py-1 text-xs font-bold transition-colors rounded-l border-r">
+                    <div 
+                      className="flex items-center gap-1.5 text-xs font-bold select-none cursor-help text-white/90 hover:text-white transition-colors"
+                      title="Spacing between your constellations as they are added to the map. As a rule of thumb, set this number to the same distance your scenes were captured. TourBuilder defaults to 3 meters as we've noticed the click-to-go navigation works good for most scenes at this distance."
+                    >
+                      <Info className="h-4 w-4 shrink-0" />
+                      <span>spacing</span>
+                      <select
+                        value={spacing}
+                        onChange={(e) => setSpacing(e.target.value)}
+                        className="bg-white text-slate-800 border border-slate-200 rounded px-2 py-0.5 text-xs font-bold outline-none cursor-pointer hover:bg-slate-50 transition-colors"
+                      >
+                        {SPACINGS.map((sp) => (
+                          <option key={sp} value={sp}>
+                            {sp}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center shadow-sm rounded-lg overflow-hidden">
+                      <button 
+                        onClick={() => setPendingTo(null)} 
+                        className="flex items-center gap-1 bg-[#ef5350] hover:bg-[#e53935] text-white px-3 py-1.5 text-xs font-bold transition-colors border-r border-red-600/30 cursor-pointer shadow-inner"
+                      >
                         <X className="h-3 w-3" /> Cancel
                       </button>
-                      <button onClick={() => { const p = photos.find((x) => x.id === pendingTo); if (p) addConnection(p); }} className="flex items-center gap-1 bg-[#ff9800] hover:bg-[#ef6c00] text-white px-3 py-1 text-xs font-bold transition-colors rounded-r shadow-inner">
+                      <button 
+                        onClick={() => { const p = photos.find((x) => x.id === pendingTo); if (p) addConnection(p); }} 
+                        className="flex items-center gap-1 bg-[#ff9800] hover:bg-[#ef6c00] text-white px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer shadow-inner"
+                      >
                         <Plus className="h-3 w-3" /> Add
                       </button>
                     </div>
