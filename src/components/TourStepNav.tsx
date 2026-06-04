@@ -7,7 +7,7 @@ const steps: { key: string; label: string; to: string; icon: LucideIcon }[] = [
   { key: "upload", label: "Upload photos", to: "/tours/$tourId", icon: Upload },
   { key: "connections", label: "Build connections", to: "/tours/$tourId/connections", icon: Link2 },
   { key: "publish", label: "Publish to Google", to: "/tours/$tourId/publish", icon: Send },
-  { key: "analytics", label: "Analytics", to: "/analytics", icon: BarChart3 },
+  { key: "analytics", label: "Analytics", to: "/tours/$tourId/analytics", icon: BarChart3 },
 ];
 
 export function TourStepNav({ tourId, current }: { tourId: string; current: string }) {

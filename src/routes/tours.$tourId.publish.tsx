@@ -1029,13 +1029,25 @@ function PublishPage() {
         {photos.length > 0 && (
           <div className="mt-8 space-y-1.5 max-h-64 overflow-y-auto">
             {photos.map((p, i) => (
-              <div key={p.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background">
+              <div key={p.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium">
                 <span className="text-muted-foreground w-8">{i}</span>
                 <span className="flex-1 truncate">{p.filename}</span>
-                {p.streetview_status === 'PUBLISHED' ? (
-                  <span className="text-green-600 font-semibold text-xs flex items-center gap-1"><CheckCheck className="h-4 w-4" /> PUBLISHED</span>
-                ) : p.streetview_status === 'PROCESSING' ? (
-                  <span className="text-yellow-600 font-semibold text-xs flex items-center gap-1"><Clock className="h-4 w-4" /> PROCESSING</span>
+                {(p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING') ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
+                      <CheckCheck className="h-4 w-4 text-green-600" /> PUBLISHED
+                    </span>
+                    {p.streetview_share_link && (
+                      <a 
+                        href={p.streetview_share_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors"
+                      >
+                        View on Maps
+                      </a>
+                    )}
+                  </div>
                 ) : p.streetview_status === 'FAILED' ? (
                   <span className="text-red-600 font-semibold text-xs flex items-center gap-1"><XIcon className="h-4 w-4" /> FAILED</span>
                 ) : (

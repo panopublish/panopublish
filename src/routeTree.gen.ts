@@ -16,7 +16,6 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToursIndexRouteImport } from './routes/tours.index'
 import { Route as ToursNewRouteImport } from './routes/tours.new'
@@ -24,6 +23,7 @@ import { Route as ToursTourIdIndexRouteImport } from './routes/tours.$tourId.ind
 import { Route as ToursTourIdPublishRouteImport } from './routes/tours.$tourId.publish'
 import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
 import { Route as ToursTourIdConnectionsRouteImport } from './routes/tours.$tourId.connections'
+import { Route as ToursTourIdAnalyticsRouteImport } from './routes/tours.$tourId.analytics'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth.google.callback'
 
 const TermsRoute = TermsRouteImport.update({
@@ -61,11 +61,6 @@ const ClientsRoute = ClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -101,6 +96,11 @@ const ToursTourIdConnectionsRoute = ToursTourIdConnectionsRouteImport.update({
   path: '/tours/$tourId/connections',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToursTourIdAnalyticsRoute = ToursTourIdAnalyticsRouteImport.update({
+  id: '/tours/$tourId/analytics',
+  path: '/tours/$tourId/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google/callback',
   path: '/auth/google/callback',
@@ -109,7 +109,6 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -120,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
   '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
@@ -127,7 +127,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -138,6 +137,7 @@ export interface FileRoutesByTo {
   '/tours/new': typeof ToursNewRoute
   '/tours': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
   '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
@@ -146,7 +146,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
@@ -157,6 +156,7 @@ export interface FileRoutesById {
   '/tours/new': typeof ToursNewRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
+  '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
   '/tours/$tourId/connections': typeof ToursTourIdConnectionsRoute
   '/tours/$tourId/location': typeof ToursTourIdLocationRoute
   '/tours/$tourId/publish': typeof ToursTourIdPublishRoute
@@ -166,7 +166,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/analytics'
     | '/clients'
     | '/dashboard'
     | '/login'
@@ -177,6 +176,7 @@ export interface FileRouteTypes {
     | '/tours/new'
     | '/tours/'
     | '/auth/google/callback'
+    | '/tours/$tourId/analytics'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
     | '/tours/$tourId/publish'
@@ -184,7 +184,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/analytics'
     | '/clients'
     | '/dashboard'
     | '/login'
@@ -195,6 +194,7 @@ export interface FileRouteTypes {
     | '/tours/new'
     | '/tours'
     | '/auth/google/callback'
+    | '/tours/$tourId/analytics'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
     | '/tours/$tourId/publish'
@@ -202,7 +202,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/analytics'
     | '/clients'
     | '/dashboard'
     | '/login'
@@ -213,6 +212,7 @@ export interface FileRouteTypes {
     | '/tours/new'
     | '/tours/'
     | '/auth/google/callback'
+    | '/tours/$tourId/analytics'
     | '/tours/$tourId/connections'
     | '/tours/$tourId/location'
     | '/tours/$tourId/publish'
@@ -221,7 +221,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnalyticsRoute: typeof AnalyticsRoute
   ClientsRoute: typeof ClientsRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
@@ -232,6 +231,7 @@ export interface RootRouteChildren {
   ToursNewRoute: typeof ToursNewRoute
   ToursIndexRoute: typeof ToursIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
+  ToursTourIdAnalyticsRoute: typeof ToursTourIdAnalyticsRoute
   ToursTourIdConnectionsRoute: typeof ToursTourIdConnectionsRoute
   ToursTourIdLocationRoute: typeof ToursTourIdLocationRoute
   ToursTourIdPublishRoute: typeof ToursTourIdPublishRoute
@@ -289,13 +289,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analytics': {
-      id: '/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -345,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursTourIdConnectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tours/$tourId/analytics': {
+      id: '/tours/$tourId/analytics'
+      path: '/tours/$tourId/analytics'
+      fullPath: '/tours/$tourId/analytics'
+      preLoaderRoute: typeof ToursTourIdAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/google/callback': {
       id: '/auth/google/callback'
       path: '/auth/google/callback'
@@ -357,7 +357,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnalyticsRoute: AnalyticsRoute,
   ClientsRoute: ClientsRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
@@ -368,6 +367,7 @@ const rootRouteChildren: RootRouteChildren = {
   ToursNewRoute: ToursNewRoute,
   ToursIndexRoute: ToursIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
+  ToursTourIdAnalyticsRoute: ToursTourIdAnalyticsRoute,
   ToursTourIdConnectionsRoute: ToursTourIdConnectionsRoute,
   ToursTourIdLocationRoute: ToursTourIdLocationRoute,
   ToursTourIdPublishRoute: ToursTourIdPublishRoute,

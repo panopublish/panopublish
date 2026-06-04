@@ -444,7 +444,7 @@ serve(async (req) => {
 
     if (action === 'get_photo_status') {
       const { streetview_photo_id } = payload
-      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=BASIC`, {
+      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=INCLUDE_SHARE_LINK`, {
         headers: {
           'Authorization': `Bearer ${access_token}`,
           'Referer': referer
@@ -457,7 +457,20 @@ serve(async (req) => {
       if (data.mapsPublishStatus === 'PUBLISHED') status = 'PUBLISHED'
       else if (data.mapsPublishStatus === 'REJECTED_UNKNOWN' || data.mapsPublishStatus === 'REJECTED') status = 'FAILED'
 
-      return new Response(JSON.stringify({ status, shareLink: data.shareLink, data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      const viewCount = data.viewCount ? parseInt(data.viewCount, 10) : 0
+
+      // Update in database directly
+      const { error: dbErr } = await supabaseClient.from('photos').update({
+        streetview_status: status,
+        streetview_share_link: data.shareLink,
+        view_count: viewCount
+      }).eq('streetview_photo_id', streetview_photo_id)
+
+      if (dbErr) {
+        console.error("Error updating database in get_photo_status:", dbErr)
+      }
+
+      return new Response(JSON.stringify({ status, shareLink: data.shareLink, viewCount, data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'list_photos') {

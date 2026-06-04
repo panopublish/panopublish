@@ -9,7 +9,6 @@ const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tours", label: "Tours", icon: Map },
   { to: "/clients", label: "Clients", icon: Users },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
