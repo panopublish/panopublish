@@ -58,22 +58,7 @@ export function useStreetViewStatus(photos: Photo[], accessToken: string | null,
             if (errStr.toLowerCase().includes("image not found") || errStr.toUpperCase().includes("NOT_FOUND")) {
               const firstSeen = firstSeenProcessingRef.current[photo.streetview_photo_id || ""] || Date.now();
               const elapsedSeconds = (Date.now() - firstSeen) / 1000;
-              
-              // Only mark as FAILED if 2 minutes (120 seconds) have elapsed
-              if (elapsedSeconds > 120) {
-                const { error: updateError } = await supabase.from('photos').update({
-                  streetview_status: 'FAILED',
-                  streetview_photo_id: null,
-                  streetview_share_link: null
-                }).eq('id', photo.id);
-                
-                if (!updateError) {
-                  anyUpdated = true;
-                  toast.error(`Scene ${photo.filename || ""} failed to process on Google: ${data.error}`);
-                }
-              } else {
-                console.log(`Ignoring 'Image not found' error for ${photo.filename || ""} due to replication cooldown (${elapsedSeconds.toFixed(0)}s / 120s elapsed)`);
-              }
+              console.log(`Ignoring 'Image not found' error for ${photo.filename || ""} (elapsed: ${elapsedSeconds.toFixed(0)}s). It is still replicating on Google...`);
             }
           } else if (data?.status && data.status !== 'PROCESSING') {
             const { error: updateError } = await supabase.from('photos').update({
