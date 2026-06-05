@@ -42,9 +42,9 @@ type Photo = {
 type Island = {
   id: string;
   name: string;
-  is_level?: boolean;
-  level_number?: number;
-  level_name?: string;
+  is_level?: boolean | null;
+  level_number?: number | null;
+  level_name?: string | null;
 };
 
 type Connection = {

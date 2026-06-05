@@ -306,9 +306,10 @@ function SettingsPage() {
   };
 
   const revokeGoogleAccess = async () => {
+    if (!user) return;
     if (!window.confirm("Are you sure you want to revoke Google Street View access? You will not be able to publish new scenes until you reconnect.")) return;
     try {
-      const { error } = await supabase.from("google_tokens").delete().eq("user_id", user?.id);
+      const { error } = await supabase.from("google_tokens").delete().eq("user_id", user.id);
       if (error) throw error;
       setIsGoogleConnected(false);
       toast.success("Google connection access revoked successfully.");

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Hand, Droplets, Eraser, Save, AlertTriangle, Loader2 } from "lucide-react";
+import { X, Hand, Droplets, Eraser, Save, AlertTriangle, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 type Photo = {
@@ -106,6 +106,8 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
   }
 }
 
+
+
 declare global {
   interface Window {
     pannellum?: { viewer: (el: string | HTMLElement, cfg: unknown) => { destroy: () => void; }; };
@@ -126,6 +128,7 @@ export function BlurEditorModal({
   const [saving, setSaving] = useState(false);
   const [brushSize, setBrushSize] = useState(25); // Screen pixels radius
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+  const [blurStrength, setBlurStrength] = useState(15); // Default to 15px
   
   // Heading and Pitch readout states
   const [heading, setHeading] = useState(0);
@@ -141,6 +144,26 @@ export function BlurEditorModal({
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const blurredImageRef = useRef<HTMLCanvasElement | null>(null);
+
+  const applyBlurStrength = (strength: number) => {
+    const img = originalImageRef.current;
+    const blurredCanvas = blurredImageRef.current;
+    if (!img || !blurredCanvas) return;
+    const blurredCtx = blurredCanvas.getContext("2d");
+    if (blurredCtx) {
+      blurredCtx.clearRect(0, 0, blurredCanvas.width, blurredCanvas.height);
+      blurredCtx.filter = `blur(${strength}px)`;
+      blurredCtx.drawImage(img, 0, 0);
+      blurredCtx.filter = "none";
+    }
+  };
+
+  const handleBlurStrengthChange = (strength: number) => {
+    setBlurStrength(strength);
+    applyBlurStrength(strength);
+    rebuildDisplayCanvas();
+    reloadPannellumTexture();
+  };
 
   // Drawing state
   const isDrawingRef = useRef(false);
@@ -175,8 +198,8 @@ export function BlurEditorModal({
       blurredCanvas.height = img.height;
       const blurredCtx = blurredCanvas.getContext("2d");
       if (blurredCtx) {
-        // Modern canvas blur filter (light blur for professional styling)
-        blurredCtx.filter = "blur(5px)";
+        // Modern canvas blur filter (initial default 15px)
+        blurredCtx.filter = "blur(15px)";
         blurredCtx.drawImage(img, 0, 0);
       }
       blurredImageRef.current = blurredCanvas;
@@ -371,12 +394,15 @@ export function BlurEditorModal({
     isDrawingRef.current = false;
     lastScreenPosRef.current = null;
 
-    // Bake the stroke coordinates to the 2D equirectangular mask canvas
-    bakeStrokeToEquirectangular();
-
-    // Rebuild texture and reload Pannellum
-    rebuildDisplayCanvas();
-    reloadPannellumTexture();
+    if (mode === "blur" || mode === "erase") {
+      const maskCanvas = maskCanvasRef.current;
+      if (maskCanvas) {
+        // Bake the stroke coordinates to the 2D equirectangular mask canvas
+        bakeStrokeToCanvas(maskCanvas, mode);
+        rebuildDisplayCanvas();
+        reloadPannellumTexture();
+      }
+    }
 
     // Clear overlay canvas
     clearScreenOverlay();
@@ -388,7 +414,11 @@ export function BlurEditorModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.strokeStyle = mode === "blur" ? "rgba(2, 119, 189, 0.4)" : "rgba(255, 255, 255, 0.8)";
+    if (mode === "blur") {
+      ctx.strokeStyle = "rgba(2, 119, 189, 0.4)";
+    } else {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // Erase
+    }
     ctx.lineWidth = brushSize * 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -407,17 +437,16 @@ export function BlurEditorModal({
     }
   };
 
-  // Convert all gathered stroke coordinates to equirectangular pixel drawings
-  const bakeStrokeToEquirectangular = () => {
-    const maskCanvas = maskCanvasRef.current;
+  // Convert all gathered stroke coordinates to equirectangular pixel drawings on a target canvas
+  const bakeStrokeToCanvas = (targetCanvas: HTMLCanvasElement, strokeMode: "blur" | "erase") => {
     const points = strokePointsRef.current;
-    if (!maskCanvas || points.length === 0 || !viewerRef.current) return;
+    if (points.length === 0 || !viewerRef.current) return;
 
-    const ctx = maskCanvas.getContext("2d");
+    const ctx = targetCanvas.getContext("2d");
     if (!ctx) return;
 
-    const W = maskCanvas.width;
-    const H = maskCanvas.height;
+    const W = targetCanvas.width;
+    const H = targetCanvas.height;
 
     // Scale brush size relative to image size vs container width
     const containerWidth = viewerRef.current.getContainer().clientWidth || 1000;
@@ -430,7 +459,7 @@ export function BlurEditorModal({
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
-    if (mode === "erase") {
+    if (strokeMode === "erase") {
       ctx.globalCompositeOperation = "destination-out";
       ctx.strokeStyle = "rgba(0,0,0,1)";
     } else {
@@ -652,7 +681,7 @@ export function BlurEditorModal({
           {mode !== "pan" && !loading && (
             <div className="absolute top-4 left-4 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border border-white/10 z-20 flex items-center gap-2 select-none pointer-events-none uppercase tracking-wide">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
-              Draw on panorama to apply {mode === "blur" ? "blur" : "erase"}. Release mouse to bake texture.
+              {`Draw on panorama to apply ${mode === "blur" ? "blur" : "erase"}. Release mouse to bake texture.`}
             </div>
           )}
         </div>
@@ -673,6 +702,24 @@ export function BlurEditorModal({
               </span>
             </div>
           </div>
+
+          {/* Blur Strength controller */}
+          {mode === "blur" && (
+            <div className="flex items-center gap-2.5 font-bold mr-4">
+              <span>Blur Strength:</span>
+              <input
+                type="range"
+                min="5"
+                max="50"
+                value={blurStrength}
+                onChange={(e) => handleBlurStrengthChange(parseInt(e.target.value))}
+                className="w-24 accent-white cursor-pointer h-1 bg-white/20 rounded-lg appearance-none outline-none focus:ring-0"
+              />
+              <span className="font-mono bg-[#002f56]/30 px-1.5 py-0.5 rounded border border-white/5 w-10 text-center block">
+                {blurStrength}px
+              </span>
+            </div>
+          )}
 
           {/* Brush size controller */}
           {mode !== "pan" && (
