@@ -392,7 +392,7 @@ serve(async (req) => {
 
     if (action === 'update_connections') {
       const { connections } = payload
-      const updatePhotoRequests = connections.map((c: any) => {
+      const allRequests = connections.map((c: any) => {
         const photo: any = {
           photoId: { id: c.streetview_photo_id },
           connections: (c.connected_ids || []).map((id: string) => ({ target: { id } }))
@@ -410,7 +410,7 @@ serve(async (req) => {
             pitch: c.pose.pitch,
             roll: c.pose.roll
           }
-          updateMask += ",pose.lat_lng_pair,pose.heading,pose.pitch,pose.roll"
+          updateMask += ",pose.latLngPair,pose.heading,pose.pitch,pose.roll"
           
           if (c.pose.level) {
             photo.pose.level = {
@@ -427,24 +427,33 @@ serve(async (req) => {
         }
       })
 
-      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photos:batchUpdate?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-          'Content-Type': 'application/json',
-          'Referer': referer
-        },
-        body: JSON.stringify({ updatePhotoRequests })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to update connections')
+      const chunkSize = 20
+      const results: any[] = []
+      
+      for (let i = 0; i < allRequests.length; i += chunkSize) {
+        const chunk = allRequests.slice(i, i + chunkSize)
+        const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photos:batchUpdate?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+            'Content-Type': 'application/json',
+            'Referer': referer
+          },
+          body: JSON.stringify({ updatePhotoRequests: chunk })
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error?.message || `Failed to update connections for batch ${Math.floor(i / chunkSize) + 1}`)
+        if (data.results) {
+          results.push(...data.results)
+        }
+      }
 
-      return new Response(JSON.stringify(data), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'get_photo_status') {
       const { streetview_photo_id } = payload
-      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=INCLUDE_SHARE_LINK`, {
+      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=BASIC`, {
         headers: {
           'Authorization': `Bearer ${access_token}`,
           'Referer': referer

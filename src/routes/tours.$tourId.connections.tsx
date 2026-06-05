@@ -211,6 +211,14 @@ function ConnectionsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const markConnectionsUnsynced = useCallback(async () => {
+    try {
+      await supabase.from("tours").update({ streetview_connections_synced: false } as any).eq("id", tourId);
+    } catch (e) {
+      console.error("Failed to mark connections unsynced:", e);
+    }
+  }, [tourId]);
+
   // Synchronize expanded island and map focus when active photo changes
   useEffect(() => {
     if (active) {
@@ -333,9 +341,10 @@ function ConnectionsPage() {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
       await supabase.from("photos").update({ latitude: lat, longitude: lng }).eq("id", id);
+      await markConnectionsUnsynced();
       toast.success("Position saved", { duration: 1500 });
     }, 500);
-  }, []);
+  }, [tourId, markConnectionsUnsynced]);
 
   const handleNodeRotate = useCallback((heading: number) => {
     if (!active) return;
@@ -344,9 +353,10 @@ function ConnectionsPage() {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
       await supabase.from("photos").update({ heading }).eq("id", active.id);
+      await markConnectionsUnsynced();
       toast.success("Heading saved", { duration: 1500 });
     }, 500);
-  }, [active]);
+  }, [active, markConnectionsUnsynced]);
 
   const handleNodeSelect = useCallback((id: string) => {
     if (mapMode === 'connect' && active) {
@@ -670,6 +680,7 @@ function ConnectionsPage() {
   const removeAllConnections = async (photoId: string) => {
     if (!confirm("Remove this scene from all connections?")) return;
     await supabase.from("connections").delete().or(`from_photo_id.eq.${photoId},to_photo_id.eq.${photoId}`);
+    await markConnectionsUnsynced();
     toast.success("Scene disconnected");
     load();
   };
@@ -756,6 +767,7 @@ function ConnectionsPage() {
     
     if (error) return toast.error("Failed to save connections: " + error.message);
     
+    await markConnectionsUnsynced();
     toast.success("Scene connected and aligned successfully!");
     setPendingTo(null);
     load();
@@ -816,9 +828,10 @@ function ConnectionsPage() {
       return;
     }
 
+    await markConnectionsUnsynced();
     toast.success("Quick connection created successfully!");
     load();
-  }, [user, photos, conns, tourId, activeConstName, spacing, ensureConstellation, load]);
+  }, [user, photos, conns, tourId, activeConstName, spacing, ensureConstellation, load, markConnectionsUnsynced]);
 
   const onDeleteConnection = useCallback(async () => {
     if (!selectedConnection) return;
@@ -843,10 +856,11 @@ function ConnectionsPage() {
       return;
     }
 
+    await markConnectionsUnsynced();
     toast.success("Connection deleted successfully", { id: tid });
     setSelectedConnection(null);
     load();
-  }, [selectedConnection, photos, load]);
+  }, [selectedConnection, photos, load, markConnectionsUnsynced]);
 
   const onConnectionSelect = useCallback((fromId: string | null, toId: string | null) => {
     if (fromId === null || toId === null) {
@@ -959,6 +973,7 @@ function ConnectionsPage() {
     const last = [...conns].sort((a, b) => (a.id < b.id ? 1 : -1))[0];
     if (!last) return;
     await supabase.from("connections").delete().eq("id", last.id);
+    await markConnectionsUnsynced();
     toast.success("Undone");
     load();
   };
@@ -977,8 +992,12 @@ function ConnectionsPage() {
     setPhotos(prev => prev.map(p => p.id === active.id ? { ...p, heading: newHeading } : p));
     
     const { error } = await supabase.from("photos").update({ heading: newHeading }).eq("id", active.id);
-    if (error) toast.error("Failed to save North direction");
-    else toast.success(`North set`);
+    if (error) {
+      toast.error("Failed to save North direction");
+    } else {
+      await markConnectionsUnsynced();
+      toast.success(`North set`);
+    }
   };
 
   const fullscreenPano = () => {

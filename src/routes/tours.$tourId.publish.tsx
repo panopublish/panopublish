@@ -311,6 +311,7 @@ type Photo = {
   capture_time?: string;
   streetview_status?: string;
   streetview_photo_id?: string;
+  streetview_share_link?: string | null;
   island_id?: string | null;
 };
 
@@ -455,12 +456,19 @@ function PublishPage() {
       setPrevWasProcessing(true);
     }
     
-    if (allPublished && prevWasProcessing && accessToken) {
+    const needsSync = tour && !tour.streetview_connections_synced;
+    const shouldSync = allPublished && needsSync && accessToken && !publishing;
+    
+    if (shouldSync) {
+      setPrevWasProcessing(false);
+      toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
+      syncConnectionsOnly();
+    } else if (allPublished && prevWasProcessing && accessToken && !publishing) {
       setPrevWasProcessing(false);
       toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
       syncConnectionsOnly();
     }
-  }, [photos, accessToken, prevWasProcessing]);
+  }, [photos, tour?.streetview_connections_synced, accessToken, publishing, prevWasProcessing]);
 
   const connectGoogle = async () => {
     try {
@@ -678,7 +686,7 @@ function PublishPage() {
 
               return {
                 streetview_photo_id: p.streetview_photo_id,
-                connected_ids: Array.from(new Set(svConnections[p.streetview_photo_id] || [])),
+                connected_ids: Array.from(new Set((p.streetview_photo_id && svConnections[p.streetview_photo_id]) || [])),
                 pose: {
                   latitude: p.latitude || tour.latitude,
                   longitude: p.longitude || tour.longitude,
@@ -700,6 +708,9 @@ function PublishPage() {
             });
             if (connError) throw new Error(await getFunctionErrorMessage(connError));
             if (connData?.error || connData?.success === false) throw new Error(connData.error || "Failed to update connections");
+            
+            // Mark connections as synced
+            await supabase.from("tours").update({ streetview_connections_synced: true } as any).eq("id", tourId);
           }
         }
       }
@@ -781,7 +792,7 @@ function PublishPage() {
 
           return {
             streetview_photo_id: p.streetview_photo_id,
-            connected_ids: Array.from(new Set(svConnections[p.streetview_photo_id] || [])),
+            connected_ids: Array.from(new Set((p.streetview_photo_id && svConnections[p.streetview_photo_id]) || [])),
             pose: {
               latitude: p.latitude || tour?.latitude,
               longitude: p.longitude || tour?.longitude,
@@ -810,6 +821,10 @@ function PublishPage() {
         });
         if (connError) throw new Error(await getFunctionErrorMessage(connError));
         if (connData?.error || connData?.success === false) throw new Error(connData.error || "Failed to update connections");
+        
+        // Mark connections as synced
+        await supabase.from("tours").update({ streetview_connections_synced: true } as any).eq("id", tourId);
+        
         toast.success("Connections and alignments updated successfully on Google Maps!");
       } else {
         toast.info("No published scenes with connections to update.");
