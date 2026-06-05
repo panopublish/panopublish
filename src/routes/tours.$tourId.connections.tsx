@@ -63,10 +63,11 @@ declare global {
 
 const SPACINGS = ["1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m", "10m"];
 
-function calcHeading(from: Photo, to: Photo): number {
-  if (!from.latitude || !from.longitude || !to.latitude || !to.longitude) return 0;
+function calcHeading(from: Photo, to: Photo): number | null {
+  if (!from.latitude || !from.longitude || !to.latitude || !to.longitude) return null;
   const dLon = to.longitude - from.longitude;
   const dLat = to.latitude - from.latitude;
+  if (dLon === 0 && dLat === 0) return null;
   let h = Math.atan2(dLon, dLat) * (180 / Math.PI);
   if (h < 0) h += 360;
   return h;
@@ -174,7 +175,16 @@ function ConnectionsPage() {
     ]);
     setTour(t as any);
     
-    const sortedPhotos = (ps as any[] ?? []).sort((a, b) => {
+    const tourLat = t?.latitude || 23.02463;
+    const tourLng = t?.longitude || 72.56436;
+
+    const mappedPhotos = (ps as any[] ?? []).map(p => ({
+      ...p,
+      latitude: (p.latitude && p.latitude !== 0) ? p.latitude : tourLat,
+      longitude: (p.longitude && p.longitude !== 0) ? p.longitude : tourLng,
+    }));
+    
+    const sortedPhotos = mappedPhotos.sort((a, b) => {
       if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
       return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
     });
@@ -397,7 +407,10 @@ function ConnectionsPage() {
             const targetPhoto = photosRef.current.find(x => x.id === c.to_photo_id);
             let dynamicHeading = c.heading;
             if (p && targetPhoto) {
-              dynamicHeading = calcHeading(p, targetPhoto);
+              const calcH = calcHeading(p, targetPhoto);
+              if (calcH !== null) {
+                dynamicHeading = calcH;
+              }
             }
             return {
               description: targetPhoto?.filename || 'Scene',
@@ -516,7 +529,10 @@ function ConnectionsPage() {
           const targetPhoto = photosRef.current.find(x => x.id === c.to_photo_id);
           let dynamicHeading = c.heading;
           if (p && targetPhoto) {
-            dynamicHeading = calcHeading(p, targetPhoto);
+            const calcH = calcHeading(p, targetPhoto);
+            if (calcH !== null) {
+              dynamicHeading = calcH;
+            }
           }
           return {
             description: targetPhoto?.filename || 'Scene',
@@ -541,7 +557,10 @@ function ConnectionsPage() {
         const targetPhoto = photos.find(x => x.id === c.to_photo_id);
         let dynamicHeading = c.heading;
         if (targetPhoto) {
-          dynamicHeading = calcHeading(p, targetPhoto);
+          const calcH = calcHeading(p, targetPhoto);
+          if (calcH !== null) {
+            dynamicHeading = calcH;
+          }
         }
         return {
           description: targetPhoto?.filename || 'Scene',
@@ -613,7 +632,8 @@ function ConnectionsPage() {
     // Set initial POV for overlay to point back along connection
     try {
       if (active) {
-        const geoHeading = autoAlign ? calcHeading(active, pendingPhoto) : ((active.heading || 0) + currentHeading);
+        const calcH = autoAlign ? calcHeading(active, pendingPhoto) : null;
+        const geoHeading = calcH !== null ? calcH : (((active.heading || 0) + currentHeading) % 360);
         const initialPixelHeading = geoHeading - (pendingPhoto.heading || 0);
         overlayViewerRef.current.setPov({ heading: initialPixelHeading, pitch: 0 });
       }
@@ -793,7 +813,7 @@ function ConnectionsPage() {
     const cid = await ensureConstellation();
     if (!cid) return;
 
-    const geographicHeading = calcHeading(fromPhoto, toPhoto);
+    const geographicHeading = calcHeading(fromPhoto, toPhoto) ?? 0;
 
     // Save connection lines (both ways) to connections table in Supabase
     const { error } = await supabase.from("connections").insert([
