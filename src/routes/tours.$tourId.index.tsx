@@ -24,7 +24,7 @@ export const Route = createFileRoute("/tours/$tourId/")({
 const MAX_BYTES = 75 * 1024 * 1024;
 
 type Tour = { id: string; name: string; status: Status; type: string; address: string | null; google_place_url: string | null; client?: { name: string } | null; latitude: number | null; longitude: number | null; };
-type Island = { id: string; name: string; order_index: number; photo_count?: number; is_level?: boolean; level_number?: number; level_name?: string; show_scene_names?: boolean; };
+type Island = { id: string; name: string; order_index: number; photo_count?: number; is_level?: boolean | null; level_number?: number | null; level_name?: string | null; show_scene_names?: boolean | null; };
 type Photo = { id: string; file_url: string; file_path: string; filename: string | null; size_bytes: number | null; status: Status; latitude: number | null; longitude: number | null; uploaded_at: string; island_id: string | null; order_index?: number };
 
 async function extractPhotoMetadata(file: File) {
@@ -206,8 +206,8 @@ function TourDetail() {
     const { error } = await supabase.from("photos").insert({
       user_id: user.id, tour_id: tourId, island_id: islandId,
       file_path: path, file_url: pub.publicUrl, filename: file.name, size_bytes: file.size, status: "uploaded",
-      latitude: meta.latitude ?? tour?.latitude ?? null,
-      longitude: meta.longitude ?? tour?.longitude ?? null,
+      latitude: (meta.latitude && meta.latitude !== 0) ? meta.latitude : (tour?.latitude || null),
+      longitude: (meta.longitude && meta.longitude !== 0) ? meta.longitude : (tour?.longitude || null),
       heading: meta.heading,
       pitch: meta.pitch,
       roll: meta.roll

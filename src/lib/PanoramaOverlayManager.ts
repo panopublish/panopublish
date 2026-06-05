@@ -201,6 +201,10 @@ export function createPanoramaOverlayManager(options: {
       this.nodeElements.clear();
     }
 
+    setMap(map: any): void {
+      super.setMap(map);
+    }
+
     draw(): void {
       const projection = this.getProjection();
       if (!projection) return;

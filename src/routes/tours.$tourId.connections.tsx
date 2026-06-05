@@ -64,7 +64,7 @@ declare global {
 const SPACINGS = ["1m", "2m", "3m", "4m", "5m", "6m", "7m", "8m", "9m", "10m"];
 
 function calcHeading(from: Photo, to: Photo): number {
-  if (from.latitude == null || from.longitude == null || to.latitude == null || to.longitude == null) return 0;
+  if (!from.latitude || !from.longitude || !to.latitude || !to.longitude) return 0;
   const dLon = to.longitude - from.longitude;
   const dLat = to.latitude - from.latitude;
   let h = Math.atan2(dLon, dLat) * (180 / Math.PI);
@@ -158,8 +158,8 @@ function ConnectionsPage() {
   const lastHeadingRef = useRef(0);
   const prevActiveIdRef = useRef<string | null>(null);
   const photoCenter = useMemo(() => {
-    if (active?.latitude != null && active?.longitude != null) return { lat: active.latitude, lng: active.longitude };
-    if (tour?.latitude != null && tour?.longitude != null) return { lat: tour.latitude, lng: tour.longitude };
+    if (active?.latitude && active?.longitude) return { lat: active.latitude, lng: active.longitude };
+    if (tour?.latitude && tour?.longitude) return { lat: tour.latitude, lng: tour.longitude };
     return { lat: 23.02463, lng: 72.56436 };
   }, [active, tour]);
 
@@ -245,7 +245,7 @@ function ConnectionsPage() {
     let previewLat: number | null = null;
     let previewLng: number | null = null;
 
-    if (active && pendingTo && active.latitude != null && active.longitude != null) {
+    if (active && pendingTo && active.latitude && active.longitude) {
       const distanceNum = parseInt(spacing.replace('m', '')) || 3;
       const baseHeading = ((active.heading || 0) + currentHeading) % 360;
       const finalHeading = (baseHeading + alignFine[0] - 5 + 360) % 360;
@@ -261,8 +261,8 @@ function ConnectionsPage() {
     
     return filteredPhotos.map((p) => {
       const originalIndex = photos.findIndex(x => x.id === p.id);
-      const lat = (p.id === pendingTo && previewLat !== null) ? previewLat : (p.latitude ?? tour?.latitude ?? 23.02463);
-      const lng = (p.id === pendingTo && previewLng !== null) ? previewLng : (p.longitude ?? tour?.longitude ?? 72.56436);
+      const lat = (p.id === pendingTo && previewLat !== null) ? previewLat : (p.latitude || tour?.latitude || 23.02463);
+      const lng = (p.id === pendingTo && previewLng !== null) ? previewLng : (p.longitude || tour?.longitude || 72.56436);
       return {
         id: p.id,
         lat,
@@ -410,7 +410,7 @@ function ConnectionsPage() {
             location: {
               pano: p.id,
               description: p.filename || 'Scene',
-              latLng: new window.google.maps.LatLng(p.latitude || 0, p.longitude || 0),
+              latLng: new window.google.maps.LatLng(p.latitude || tour?.latitude || 0, p.longitude || tour?.longitude || 0),
             },
             links: links,
             copyright: 'TourVista',
@@ -701,7 +701,7 @@ function ConnectionsPage() {
     const distanceNum = parseInt(spacing.replace('m', '')) || 3;
 
     // Always recalculate coordinates based on active photo's position, green line direction, and spacing
-    if (active.latitude != null && active.longitude != null) {
+    if (active.latitude && active.longitude) {
       if (window.google?.maps?.geometry?.spherical) {
         const fromLatLng = new window.google.maps.LatLng(active.latitude, active.longitude);
         const toLatLng = window.google.maps.geometry.spherical.computeOffset(fromLatLng, distanceNum, geographicHeading);
@@ -1225,7 +1225,7 @@ function ConnectionsPage() {
                           if (targetMap && connectedIslandPhotos.length > 0) {
                             const bounds = new window.google.maps.LatLngBounds();
                             connectedIslandPhotos.forEach(p => {
-                              if (p.latitude != null && p.longitude != null) {
+                              if (p.latitude && p.longitude) {
                                 bounds.extend({ lat: p.latitude, lng: p.longitude });
                               }
                             });
@@ -1278,7 +1278,7 @@ function ConnectionsPage() {
                               </button>
 
                               {/* GPS warning */}
-                              {p.latitude == null && (
+                              {(p.latitude == null || p.latitude === 0) && (
                                 <div className="absolute bottom-2 left-2 rounded bg-amber-500 text-white font-bold px-2 py-0.5 text-[9px] flex items-center gap-1.5 shadow border border-amber-400">
                                   <AlertTriangle className="h-3 w-3 animate-bounce" /> NO GPS
                                 </div>
