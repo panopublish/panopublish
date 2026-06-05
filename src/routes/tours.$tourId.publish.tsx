@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Send, CheckCheck, Check, Clock, X as XIcon, Cloud, Upload as UploadIcon, Trash2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
@@ -1076,10 +1076,12 @@ function PublishPage() {
 
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Confirm publish</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            You are about to publish to Google Street View under <strong>{user?.email}</strong>. Continue?
-          </p>
+          <DialogHeader>
+            <DialogTitle>Confirm publish</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-2">
+              You are about to publish to Google Street View under <strong>{user?.email}</strong>. Continue?
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirm(false)}>Cancel</Button>
             <Button onClick={publishAll} className="bg-[#0277bd] text-white">Publish</Button>
@@ -1094,9 +1096,9 @@ function PublishPage() {
             <DialogTitle className="text-lg font-bold text-center text-gray-800">
               Upload your Nadir by dragging and dropping it below.
             </DialogTitle>
-            <p className="text-xs text-center text-gray-400 mt-1">
+            <DialogDescription className="text-xs text-center text-gray-400 mt-1">
               2000px x 2000px PNG recommended
-            </p>
+            </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col items-center justify-center my-6">
