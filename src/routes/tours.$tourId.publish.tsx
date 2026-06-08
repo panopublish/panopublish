@@ -342,7 +342,13 @@ function PublishPage() {
   const { user } = useAuth();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [tour, setTour] = useState<any>(null);
-  const [nadirType, setNadirType] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem(`tour-nadir-type-${tourId}`) : null) || "Stretch Blur");
+  const [nadirType, setNadirType] = useState(() => {
+    let initialType = (typeof window !== 'undefined' ? localStorage.getItem(`tour-nadir-type-${tourId}`) : null) || "Stretch Blur";
+    if (initialType.toLowerCase().trim() === 'none') return 'None';
+    if (initialType.toLowerCase().trim() === 'stretch blur') return 'Stretch Blur';
+    if (initialType.toLowerCase().trim() === 'tour level') return 'Tour level';
+    return initialType;
+  });
   const [size, setSize] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem(`tour-size-${tourId}`) : null) || "13%");
   const [pos, setPos] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem(`tour-pos-${tourId}`) : null) || "btm");
   const [confirm, setConfirm] = useState(false);
@@ -360,17 +366,46 @@ function PublishPage() {
   } | null>(null);
   const [profile, setProfile] = useState<{ plan: string; billing_cycle_tours_used: number } | null>(null);
 
+  const saveNadirSettings = async (newType: string, newSize: string, newPos: string) => {
+    localStorage.setItem(`tour-nadir-type-${tourId}`, newType);
+    localStorage.setItem(`tour-size-${tourId}`, newSize);
+    localStorage.setItem(`tour-pos-${tourId}`, newPos);
+
+    try {
+      const { error } = await supabase.from("tours").update({
+        nadir_type: newType,
+        nadir_size: newSize,
+        nadir_pos: newPos
+      } as any).eq("id", tourId);
+      if (error) throw error;
+      setTour((prev: any) => prev ? { ...prev, nadir_type: newType, nadir_size: newSize, nadir_pos: newPos } : null);
+    } catch (e: any) {
+      console.error("Failed to auto-save nadir settings:", e);
+    }
+  };
+
   const load = async () => {
     if (!user) return;
     const { data: t } = await supabase.from("tours").select("*").eq("id", tourId).maybeSingle();
     setTour(t);
     if (t) {
-      setNadirType(t.nadir_type || localStorage.getItem(`tour-nadir-type-${tourId}`) || "None");
+      let fetchedNadirType = t.nadir_type || localStorage.getItem(`tour-nadir-type-${tourId}`) || "None";
+      if (fetchedNadirType.toLowerCase().trim() === 'none') {
+        fetchedNadirType = 'None';
+      } else if (fetchedNadirType.toLowerCase().trim() === 'stretch blur') {
+        fetchedNadirType = 'Stretch Blur';
+      } else if (fetchedNadirType.toLowerCase().trim() === 'tour level') {
+        fetchedNadirType = 'Tour level';
+      }
+      setNadirType(fetchedNadirType);
       setSize(t.nadir_size || localStorage.getItem(`tour-size-${tourId}`) || "13%");
       setPos(t.nadir_pos || localStorage.getItem(`tour-pos-${tourId}`) || "btm");
     }
-    const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId).order("uploaded_at");
-    const loadedPhotos = (ps as any) ?? [];
+    const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
+    const loadedPhotos = (ps as any[] ?? []).sort((a, b) => {
+      if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
+      return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
+    });
     setPhotos(loadedPhotos);
 
     // Self-healing check: Sync tour status based on photos
@@ -884,22 +919,8 @@ function PublishPage() {
         tourId={tourId} 
         activeTab="publish" 
         onSave={async () => {
-          try {
-            localStorage.setItem(`tour-nadir-type-${tourId}`, nadirType);
-            localStorage.setItem(`tour-size-${tourId}`, size);
-            localStorage.setItem(`tour-pos-${tourId}`, pos);
-
-            const { error } = await supabase.from("tours").update({
-              nadir_type: nadirType,
-              nadir_size: size,
-              nadir_pos: pos
-            } as any).eq("id", tourId);
-            if (error) throw error;
-
-            toast.success("Publish and Nadir settings saved!");
-          } catch (e) {
-            toast.success("Settings saved locally!");
-          }
+          await saveNadirSettings(nadirType, size, pos);
+          toast.success("Publish and Nadir settings saved!");
         }}
         onNadir={() => {
           setShowNadirModal(true);
@@ -927,7 +948,15 @@ function PublishPage() {
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <label className="flex items-center gap-1">
             <span className="text-muted-foreground">Nadir Type:</span>
-            <select value={nadirType} onChange={(e) => setNadirType(e.target.value)} className="border rounded px-2 py-1 bg-background font-medium">
+            <select 
+              value={nadirType} 
+              onChange={async (e) => {
+                const val = e.target.value;
+                setNadirType(val);
+                await saveNadirSettings(val, size, pos);
+              }} 
+              className="border rounded px-2 py-1 bg-background font-medium"
+            >
               <option value="None">None</option>
               <option value="Stretch Blur">Stretch Blur</option>
               <option value="Tour level">Tour level</option>
@@ -935,7 +964,15 @@ function PublishPage() {
           </label>
           <label className="flex items-center gap-1">
             <span className="text-muted-foreground">Size:</span>
-            <select value={size} onChange={(e) => setSize(e.target.value)} className="border rounded px-2 py-1 bg-background font-medium">
+            <select 
+              value={size} 
+              onChange={async (e) => {
+                const val = e.target.value;
+                setSize(val);
+                await saveNadirSettings(nadirType, val, pos);
+              }} 
+              className="border rounded px-2 py-1 bg-background font-medium"
+            >
               <option value="5%">5%</option>
               <option value="10%">10%</option>
               <option value="13%">13%</option>
@@ -945,7 +982,15 @@ function PublishPage() {
           </label>
           <label className="flex items-center gap-1">
             <span className="text-muted-foreground">Pos:</span>
-            <select value={pos} onChange={(e) => setPos(e.target.value)} className="border rounded px-2 py-1 bg-background font-medium">
+            <select 
+              value={pos} 
+              onChange={async (e) => {
+                const val = e.target.value;
+                setPos(val);
+                await saveNadirSettings(nadirType, size, val);
+              }} 
+              className="border rounded px-2 py-1 bg-background font-medium"
+            >
               <option value="btm">btm</option>
               <option value="top">top</option>
             </select>

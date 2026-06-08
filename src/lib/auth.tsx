@@ -16,14 +16,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const code = params?.get("code");
+    const isGoogleCallback = typeof window !== "undefined" && window.location.pathname.includes("/auth/google/callback");
+    const shouldExchange = code && !isGoogleCallback;
+
+    const initializeAuth = async () => {
+      if (shouldExchange && code) {
+        try {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            console.error("Error exchanging code for session:", error);
+            const { toast } = await import("sonner");
+            toast.error("Email verification failed: " + error.message);
+          } else {
+            const { toast } = await import("sonner");
+            toast.success("Email confirmed successfully! Welcome.");
+          }
+        } catch (err) {
+          console.error("Unexpected error exchanging code:", err);
+        } finally {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("code");
+          window.history.replaceState({}, document.title, url.pathname + url.search);
+        }
+      }
+      const { data } = await supabase.auth.getSession();
+      setSession(data.session);
+      setLoading(false);
+    };
+
+    initializeAuth();
+
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setLoading(false);
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 

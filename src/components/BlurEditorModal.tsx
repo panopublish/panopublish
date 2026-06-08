@@ -126,9 +126,9 @@ export function BlurEditorModal({
   const [mode, setMode] = useState<EditMode>("pan");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [brushSize, setBrushSize] = useState(25); // Screen pixels radius
+  const [brushSize, setBrushSize] = useState(15); // Screen pixels radius
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
-  const [blurStrength, setBlurStrength] = useState(15); // Default to 15px
+  const [blurStrength, setBlurStrength] = useState(10); // Default to 10px
   
   // Heading and Pitch readout states
   const [heading, setHeading] = useState(0);
@@ -198,8 +198,8 @@ export function BlurEditorModal({
       blurredCanvas.height = img.height;
       const blurredCtx = blurredCanvas.getContext("2d");
       if (blurredCtx) {
-        // Modern canvas blur filter (initial default 15px)
-        blurredCtx.filter = "blur(15px)";
+        // Modern canvas blur filter (initial default 10px)
+        blurredCtx.filter = "blur(10px)";
         blurredCtx.drawImage(img, 0, 0);
       }
       blurredImageRef.current = blurredCanvas;

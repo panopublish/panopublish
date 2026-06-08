@@ -140,21 +140,23 @@ function ConnectionsPage() {
   const viewerRef = useRef<any>(null);
   const overlayPanoRef = useRef<HTMLDivElement>(null);
   const overlayViewerRef = useRef<any>(null);
+  const overlayPanoContainerRef = useRef<HTMLDivElement | null>(null);
   const rightPanoRef = useRef<HTMLDivElement>(null);
   const rightViewerRef = useRef<any>(null);
+  const rightPanoContainerRef = useRef<HTMLDivElement | null>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const modalMapDivRef = useRef<HTMLDivElement>(null);
 
   const photosRef = useRef(photos);
-  useEffect(() => { photosRef.current = photos; }, [photos]);
+  photosRef.current = photos;
 
   const active = photos[activeIdx];
 
   const activeRef = useRef(active);
-  useEffect(() => { activeRef.current = active; }, [active]);
+  activeRef.current = active;
 
   const connsRef = useRef(conns);
-  useEffect(() => { connsRef.current = conns; }, [conns]);
+  connsRef.current = conns;
 
   const lastHeadingRef = useRef(0);
   const prevActiveIdRef = useRef<string | null>(null);
@@ -399,7 +401,7 @@ function ConnectionsPage() {
         enableCloseButton: false,
         showRoadLabels: false,
         panoProvider: (panoId: string) => {
-          const p = photosRef.current.find(x => x.id === panoId);
+          const p = (active && panoId === active.id) ? active : photosRef.current.find(x => x.id === panoId);
           if (!p) return null;
           
           const activeConns = connsRef.current.filter(c => c.from_photo_id === panoId);
@@ -595,10 +597,14 @@ function ConnectionsPage() {
     const pendingPhoto = photos.find(p => p.id === pendingTo);
     if (!pendingPhoto || !overlayPanoRef.current || !mapsReady || !window.google?.maps) {
       overlayViewerRef.current = null;
+      overlayPanoContainerRef.current = null;
       return; 
     }
     
-    if (!overlayViewerRef.current) {
+    const containerChanged = overlayPanoContainerRef.current !== overlayPanoRef.current;
+    overlayPanoContainerRef.current = overlayPanoRef.current;
+
+    if (!overlayViewerRef.current || containerChanged) {
       overlayViewerRef.current = new window.google.maps.StreetViewPanorama(overlayPanoRef.current, {
         visible: true,
         pano: pendingPhoto.id,
@@ -611,7 +617,7 @@ function ConnectionsPage() {
         clickToGo: false,
         disableDefaultUI: false,
         panoProvider: (panoId: string) => {
-          const p = photosRef.current.find(x => x.id === panoId);
+          const p = panoId === pendingPhoto.id ? pendingPhoto : photosRef.current.find(x => x.id === panoId);
           if (!p) return null;
           return {
             location: { pano: p.id },
@@ -646,10 +652,14 @@ function ConnectionsPage() {
     const previewPhoto = photos.find(p => p.id === rightPendingTo) || active;
     if (!previewPhoto || !rightPanoRef.current || !mapsReady || !window.google?.maps) {
       rightViewerRef.current = null;
+      rightPanoContainerRef.current = null;
       return;
     }
 
-    if (!rightViewerRef.current) {
+    const containerChanged = rightPanoContainerRef.current !== rightPanoRef.current;
+    rightPanoContainerRef.current = rightPanoRef.current;
+
+    if (!rightViewerRef.current || containerChanged) {
       rightViewerRef.current = new window.google.maps.StreetViewPanorama(rightPanoRef.current, {
         visible: true,
         pano: previewPhoto.id,
@@ -662,7 +672,7 @@ function ConnectionsPage() {
         clickToGo: false,
         disableDefaultUI: true,
         panoProvider: (panoId: string) => {
-          const p = photosRef.current.find(x => x.id === panoId);
+          const p = panoId === previewPhoto.id ? previewPhoto : photosRef.current.find(x => x.id === panoId);
           if (!p) return null;
           return {
             location: { pano: p.id },
