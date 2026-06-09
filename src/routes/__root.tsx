@@ -96,8 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "TourVista — Google Street View Publishing for Indian Businesses" },
       { name: "twitter:description", content: "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!" },
       { name: "twitter:image", content: "https://app.vista360digital.com/og-image.png" },
-      // TODO: Go to search.google.com/search-console -> Add Property -> URL prefix: https://app.vista360digital.com -> HTML tag verification -> copy the content value here
-      { name: "google-site-verification", content: "YOUR_VERIFICATION_CODE_HERE" },
+      { name: "google-site-verification", content: "google8601514a32a20709" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
