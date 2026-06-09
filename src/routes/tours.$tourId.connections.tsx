@@ -22,8 +22,15 @@ import { PanoramaNode, Connection, MapMode } from "@/types/panorama";
 
 import { getEnv } from "@/lib/env";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/$tourId/connections")({
-  head: () => ({ meta: [{ title: "Build Connections — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Build Connections — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: ConnectionsPage,
 });
 
@@ -1175,6 +1182,11 @@ function ConnectionsPage() {
 
   return (
     <AppShell title="Build Connections" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: tour?.name ?? "Tour" }, { label: "Build Connections" }]}>
+      <SEO
+        title="Build Connections"
+        description="Connect virtual tour panoramas and build Street View walkthrough paths."
+        noIndex={true}
+      />
       <TourStepsNav 
         tourId={tourId} 
         activeTab="connections" 

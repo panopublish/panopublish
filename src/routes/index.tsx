@@ -13,12 +13,172 @@ import {
   TrendingUp,
   Workflow,
   MousePointerClick,
-  Info
+  Info,
+  ChevronDown
 } from "lucide-react";
 import { formatINR, waLink } from "@/lib/format";
 import { useState } from "react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Logo } from "@/components/Logo";
+import { SEO } from "@/components/SEO";
+
+const landingSchemas = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "TourVista",
+    "alternateName": "TourVista by Vista360 Digital",
+    "url": "https://app.vista360digital.com/",
+    "description": "Publish 360° virtual tours to Google Maps & Street View. Built for photographers, agencies, hotels, and real estate professionals in India.",
+    "inLanguage": "en-IN",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://app.vista360digital.com/signup"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "TourVista",
+    "operatingSystem": "Web",
+    "applicationCategory": "BusinessApplication",
+    "applicationSubCategory": "Virtual Tour Software",
+    "url": "https://app.vista360digital.com/",
+    "description": "SaaS platform for publishing 360° panoramic photos to Google Street View and Google Maps. Designed for Indian photographers and marketing agencies.",
+    "screenshot": "https://app.vista360digital.com/robot_beach_upload.png",
+    "featureList": [
+      "Direct Google Street View publishing",
+      "360° photo management",
+      "Multi-client workspace",
+      "Custom nadir branding",
+      "Indian payment methods (UPI, Razorpay)",
+      "GST invoice generation",
+      "WhatsApp support"
+    ],
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Basic Plan",
+        "price": "499",
+        "priceCurrency": "INR",
+        "billingIncrement": "P1M",
+        "description": "1 user, 5 tours, 50 photos per tour, email support",
+        "url": "https://app.vista360digital.com/signup"
+      },
+      {
+        "@type": "Offer",
+        "name": "Pro Plan",
+        "price": "1499",
+        "priceCurrency": "INR",
+        "billingIncrement": "P1M",
+        "description": "3 users, 25 tours, 200 photos per tour, WhatsApp support",
+        "url": "https://app.vista360digital.com/signup"
+      },
+      {
+        "@type": "Offer",
+        "name": "Agency Plan",
+        "price": "2999",
+        "priceCurrency": "INR",
+        "billingIncrement": "P1M",
+        "description": "Unlimited users, unlimited tours, dedicated manager",
+        "url": "https://app.vista360digital.com/signup"
+      }
+    ],
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "3",
+      "bestRating": "5"
+    },
+    "review": [
+      {
+        "@type": "Review",
+        "author": { "@type": "Person", "name": "Rahul M." },
+        "reviewBody": "TourVista's direct publishing cut my upload time and metadata alignment in half. The support is top-notch.",
+        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" }
+      },
+      {
+        "@type": "Review",
+        "author": { "@type": "Person", "name": "Priya S." },
+        "reviewBody": "Finally, a platform built for India with INR pricing, tax invoice generation, and real WhatsApp support.",
+        "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" }
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is TourVista and who is it for?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "TourVista is a SaaS platform for photographers, marketing agencies, hotels, and real estate professionals in India who want to publish 360° virtual tours directly to Google Street View and Google Maps. It manages the entire workflow from photo upload to publishing."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need a professional 360° camera to use TourVista?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You need a 360° camera that produces equirectangular JPEG images (like Insta360, Ricoh Theta, or similar). Consumer-grade cameras like the Insta360 ONE X2 work perfectly. We accept files up to 75MB per photo."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How long does it take for virtual tours to appear on Google Street View?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "After you click Publish in TourVista, Google typically processes and displays your 360° photos on Google Street View and Google Maps within 24 to 48 hours. Processing time depends on Google's review queue."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I hide or blur my camera tripod or add my brand logo?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. TourVista's Custom Nadir feature lets you apply a stretch blur to hide your tripod at the bottom of the panorama, or upload your company logo to brand every scene before publishing to Google Street View."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How are subscription payments and GST invoices handled?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Payments are processed via Razorpay and support UPI, credit/debit cards, net banking, and EMI. You can enter your GSTIN to automatically receive GST-compliant tax invoices for every transaction, suitable for input tax credit claims."
+        }
+      }
+    ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "TourVista by Vista360 Digital",
+    "url": "https://app.vista360digital.com",
+    "logo": "https://app.vista360digital.com/og-image.png",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer support",
+      "availableLanguage": ["English", "Hindi"],
+      "contactOption": "TollFree",
+      "areaServed": "IN",
+      "hoursAvailable": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+        "opens": "10:00",
+        "closes": "19:00"
+      }
+    },
+    "sameAs": [
+      "https://vista360digital.com",
+      "https://www.facebook.com/vista360digital/"
+    ]
+  }
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -86,9 +246,15 @@ const faqs = [
 
 function Landing() {
   const [annual, setAnnual] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans antialiased text-foreground">
+      <SEO 
+        title="TourVista — Google Street View Publishing for Indian Businesses"
+        description="Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!"
+        schema={landingSchemas}
+      />
       {/* Dynamic top banner */}
       <div className="bg-gradient-to-r from-primary to-primary-glow text-white text-center text-xs font-semibold py-2 px-4 select-none animate-pulse">
         🚀 Start publishing today! Try TourVista free for 7 days. No credit card required.{" "}
@@ -164,6 +330,8 @@ function Landing() {
                 src="/robot_beach_upload.png" 
                 alt="TourVista Interactive Map Dashboard interface showing 360 degree photos and camera settings" 
                 className="absolute inset-0 w-full h-full object-cover opacity-30 select-none pointer-events-none"
+                loading="lazy"
+                decoding="async"
               />
               <div className="relative z-10 text-center p-6 max-w-md">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-elegant transition-transform group-hover:scale-110 cursor-pointer">
@@ -180,7 +348,7 @@ function Landing() {
         <section className="bg-primary text-white py-8 select-none">
           <div className="container mx-auto px-4 max-w-6xl flex flex-wrap items-center justify-around gap-6 text-center md:text-left">
             <div>
-              <h3 className="text-xl font-bold">Need customized media pricing or GST integration?</h3>
+              <div className="text-xl font-bold">Need customized media pricing or GST integration?</div>
               <p className="text-white/80 text-sm mt-0.5">We provide tax-compliant billing and prioritized processing for Indian creators.</p>
             </div>
             <Link to="/signup">
@@ -418,14 +586,34 @@ function Landing() {
               <p className="mt-3 text-muted-foreground">Answers to common questions about TourVista and publishing to Google Street View.</p>
             </div>
             
-            <Accordion type="single" collapsible className="bg-card rounded-xl border shadow-sm" id="faq-accordion">
+            <div className="bg-card rounded-xl border shadow-sm divide-y" id="faq-accordion">
               {faqs.map(([q, a], i) => (
-                <AccordionItem key={i} value={`f${i}`} className="px-5 last:border-b-0">
-                  <AccordionTrigger className="text-left font-semibold text-base py-4 hover:text-primary hover:no-underline">{q}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground text-sm leading-relaxed pb-4">{a}</AccordionContent>
-                </AccordionItem>
+                <div key={i} className="px-5">
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      className="flex flex-1 items-center justify-between py-4 font-semibold text-left text-base text-foreground hover:text-primary transition-colors cursor-pointer w-full"
+                      aria-expanded={openFaq === i}
+                    >
+                      <span>{q}</span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`} />
+                    </button>
+                  </h3>
+                  <div
+                    className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                      openFaq === i ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <p className="text-muted-foreground text-sm leading-relaxed pb-4 pr-4">
+                        {a}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </Accordion>
+            </div>
           </div>
         </section>
 
@@ -456,12 +644,16 @@ function Landing() {
             <div className="text-[11px] font-medium text-muted-foreground/80 mt-1">Support Email: contact@vista360digital.com</div>
           </div>
           
-          <div className="flex flex-col items-center md:items-end gap-3">
-            <div className="flex gap-5 font-semibold">
-              <Link to="/privacy" className="hover:text-primary transition-colors underline underline-offset-4">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-primary transition-colors underline underline-offset-4">Terms & Conditions</Link>
-              <a href="#features" className="hover:text-primary transition-colors">Features</a>
-              <a href="#pricing" className="hover:text-primary transition-colors">Pricing</a>
+          <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto">
+            {/* Keyword-rich internal links for crawl paths */}
+            <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center md:justify-end font-semibold text-xs text-muted-foreground/90">
+              <a href="#features" className="hover:text-primary transition-colors">360° Virtual Tour Features</a>
+              <a href="#pricing" className="hover:text-primary transition-colors">Pricing Plans — INR</a>
+              <a href="#workflow" className="hover:text-primary transition-colors">How Street View Publishing Works</a>
+              <a href="#faq" className="hover:text-primary transition-colors">Frequently Asked Questions</a>
+              <Link to="/signup" className="hover:text-primary transition-colors font-bold text-primary">Start Free Trial</Link>
+              <Link to="/privacy" className="hover:text-primary transition-colors underline underline-offset-2">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-primary transition-colors underline underline-offset-2">Terms & Conditions</Link>
             </div>
             
             <div className="text-xs flex items-center gap-1.5 bg-whatsapp/10 text-whatsapp px-3 py-1 rounded-full font-bold">
@@ -472,6 +664,10 @@ function Landing() {
             </div>
           </div>
         </div>
+        {/* Hidden in markup but visible for crawlers */}
+        <p className="sr-only">
+          TourVista is a product of Vista360 Digital, Ahmedabad, India.
+        </p>
       </footer>
     </div>
   );

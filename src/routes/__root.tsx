@@ -7,6 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { HelmetProvider } from "react-helmet-async";
 
 import appCss from "../styles.css?url";
 
@@ -75,16 +76,40 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "TourVista — Google Street View Tours for Indian Businesses" },
       { name: "description", content: "Publish your business on Google Maps in minutes. Manage 360° Street View tours for clients across India." },
       { name: "author", content: "TourVista" },
+      { name: "application-name", content: "TourVista" },
+      { name: "theme-color", content: "#1E3A5F" },
+      { name: "apple-mobile-web-app-title", content: "TourVista" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "robots", content: "index, follow" },
       { property: "og:title", content: "TourVista — Google Street View Tours for Indian Businesses" },
       { property: "og:description", content: "Publish your business on Google Maps in minutes. Manage 360° Street View tours for clients across India." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:site_name", content: "TourVista" },
+      { property: "og:url", content: "https://app.vista360digital.com" },
+      { property: "og:image", content: "https://app.vista360digital.com/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "TourVista — Google Street View Publishing for Indian Businesses" },
+      { name: "twitter:description", content: "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!" },
+      { name: "twitter:image", content: "https://app.vista360digital.com/og-image.png" },
+      // TODO: Go to search.google.com/search-console -> Add Property -> URL prefix: https://app.vista360digital.com -> HTML tag verification -> copy the content value here
+      { name: "google-site-verification", content: "YOUR_VERIFICATION_CODE_HERE" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       { rel: "stylesheet", href: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" },
+      // Performance hints
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://cdn.jsdelivr.net" },
+      { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
+      { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
+      { rel: "dns-prefetch", href: "https://cdn.jsdelivr.net" },
     ],
     scripts: [
       { src: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js", defer: true },
@@ -133,10 +158,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Outlet />
-        <Toaster richColors position="top-right" />
-      </AuthProvider>
+      <HelmetProvider>
+        <AuthProvider>
+          <Outlet />
+          <Toaster richColors position="top-right" />
+        </AuthProvider>
+      </HelmetProvider>
     </QueryClientProvider>
   );
 }

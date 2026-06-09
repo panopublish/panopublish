@@ -32,8 +32,15 @@ import {
 } from "lucide-react";
 import { waLink, formatDateIN } from "@/lib/format";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Settings — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: SettingsPage,
 });
 
@@ -424,6 +431,11 @@ function SettingsPage() {
 
   return (
     <AppShell title="Settings" breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Settings" }]}>
+      <SEO
+        title="Settings"
+        description="Configure your profile, company branding, and subscription details."
+        noIndex={true}
+      />
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6 min-h-[600px] pb-12">
         
         {/* Left Navigation Sidebar */}

@@ -9,8 +9,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/")({
-  head: () => ({ meta: [{ title: "Tours — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Tours — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: ToursPage,
 });
 
@@ -174,6 +181,11 @@ function ToursPage() {
 
   return (
     <AppShell title="Tours" breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Tours" }]}>
+      <SEO
+        title="Tours"
+        description="View and manage your virtual tours."
+        noIndex={true}
+      />
       <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-12">
         
         {/* Header Block */}

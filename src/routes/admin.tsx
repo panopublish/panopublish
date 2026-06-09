@@ -31,9 +31,15 @@ import {
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin Panel — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Admin Panel — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: AdminDashboard,
 });
 
@@ -278,6 +284,11 @@ function AdminDashboard() {
         { label: "Admin" }
       ]}
     >
+      <SEO
+        title="Admin Console"
+        description="Administrative console for TourVista."
+        noIndex={true}
+      />
       <div className="bg-[#f8fafc] min-h-[calc(100vh-64px)] pb-12">
         <div className="max-w-6xl mx-auto px-4 pt-6 space-y-8">
           

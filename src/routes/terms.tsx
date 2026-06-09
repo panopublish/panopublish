@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { FileText, Award, AlertCircle, HelpCircle, ArrowLeft } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
       { title: "Terms & Conditions — TourVista" },
-      { name: "description", content: "Read TourVista's terms of service and usage conditions for our 360° virtual tour publishing platform." },
+      { name: "description", content: "Review the terms of service and usage conditions for the TourVista virtual tour publishing SaaS platform in India." },
     ],
   }),
   component: TermsConditions,
@@ -16,6 +17,14 @@ export const Route = createFileRoute("/terms")({
 function TermsConditions() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO
+        title="Terms & Conditions"
+        description="Review the terms of service and usage conditions for the TourVista virtual tour publishing SaaS platform in India."
+        breadcrumbs={[
+          { name: "Home", url: "https://app.vista360digital.com/" },
+          { name: "Terms of Service", url: "https://app.vista360digital.com/terms" }
+        ]}
+      />
       {/* Navigation */}
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4 max-w-6xl">

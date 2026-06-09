@@ -9,8 +9,15 @@ import { toast } from "sonner";
 
 import { getEnv } from "@/lib/env";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/new")({
-  head: () => ({ meta: [{ title: "Create Tour — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Create Tour — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: CreateTour,
 });
 
@@ -155,6 +162,11 @@ function CreateTour() {
 
   return (
     <AppShell title="Create Tour" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Create" }]}>
+      <SEO
+        title="Create Tour"
+        description="Create a new virtual tour."
+        noIndex={true}
+      />
       <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] p-8">
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border p-12">
           {renderStepNav()}

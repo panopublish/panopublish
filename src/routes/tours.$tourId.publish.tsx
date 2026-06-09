@@ -293,8 +293,15 @@ async function processNadirClientSide(
   return new Blob([metadataPreservedBytes.buffer as any], { type: "image/jpeg" });
 }
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/$tourId/publish")({
-  head: () => ({ meta: [{ title: "Publish to Google — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Publish to Google — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: PublishPage,
 });
 
@@ -573,7 +580,20 @@ function PublishPage() {
     setConfirm(false);
     setPublishing(true);
     
-    if (!accessToken) {
+    let freshToken = accessToken;
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth", {
+        body: { action: "get_valid_token", user_id: user.id }
+      });
+      if (!error && data?.access_token) {
+        freshToken = data.access_token;
+        setAccessToken(data.access_token);
+      }
+    } catch (e) {
+      console.error("Failed to refresh token before publish:", e);
+    }
+
+    if (!freshToken) {
       toast.error("Not connected to Google");
       setPublishing(false);
       return;
@@ -647,7 +667,7 @@ function PublishPage() {
         const { data: createData, error: createError } = await supabase.functions.invoke("streetview-publish", {
           body: {
             action: "publish_photo_bytes",
-            access_token: accessToken,
+            access_token: freshToken,
             photo_base64: base64data,
             latitude: photo.latitude || tour.latitude,
             longitude: photo.longitude || tour.longitude,
@@ -687,7 +707,7 @@ function PublishPage() {
         // Re-fetch photos to get newly assigned streetview_photo_id and poses
         const { data: latestPhotos } = await supabase
           .from("photos")
-          .select("id, streetview_photo_id, latitude, longitude, heading, pitch, roll, island_id")
+          .select("id, streetview_photo_id, streetview_status, latitude, longitude, heading, pitch, roll, island_id")
           .eq("tour_id", tourId);
         
         if (latestPhotos) {
@@ -737,15 +757,16 @@ function PublishPage() {
             const { data: connData, error: connError } = await supabase.functions.invoke("streetview-publish", {
               body: { 
                 action: "update_connections", 
-                access_token: accessToken,
+                access_token: freshToken,
                 connections: formattedConnections
               }
             });
             if (connError) throw new Error(await getFunctionErrorMessage(connError));
             if (connData?.error || connData?.success === false) throw new Error(connData.error || "Failed to update connections");
             
-            // Mark connections as synced
-            await supabase.from("tours").update({ streetview_connections_synced: true } as any).eq("id", tourId);
+            // Mark connections as synced only if all photos are already published
+            const allPublishedNow = latestPhotos ? latestPhotos.every(p => p.streetview_status === 'PUBLISHED') : false;
+            await supabase.from("tours").update({ streetview_connections_synced: allPublishedNow } as any).eq("id", tourId);
           }
         }
       }
@@ -763,7 +784,21 @@ function PublishPage() {
 
   const syncConnectionsOnly = async () => {
     setPublishing(true);
-    if (!accessToken) {
+    
+    let freshToken = accessToken;
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth", {
+        body: { action: "get_valid_token", user_id: user.id }
+      });
+      if (!error && data?.access_token) {
+        freshToken = data.access_token;
+        setAccessToken(data.access_token);
+      }
+    } catch (e) {
+      console.error("Failed to refresh token before sync:", e);
+    }
+
+    if (!freshToken) {
       toast.error("Not connected to Google");
       setPublishing(false);
       return;
@@ -850,7 +885,7 @@ function PublishPage() {
         const { data: connData, error: connError } = await supabase.functions.invoke("streetview-publish", {
           body: { 
             action: "update_connections", 
-            access_token: accessToken,
+            access_token: freshToken,
             connections: formattedConnections
           }
         });
@@ -878,14 +913,33 @@ function PublishPage() {
     
     setPublishing(true);
     try {
+      let freshToken = accessToken;
+      try {
+        const { data, error } = await supabase.functions.invoke("google-oauth", {
+          body: { action: "get_valid_token", user_id: user.id }
+        });
+        if (!error && data?.access_token) {
+          freshToken = data.access_token;
+          setAccessToken(data.access_token);
+        }
+      } catch (e) {
+        console.error("Failed to refresh token before reset:", e);
+      }
+
+      if (!freshToken) {
+        toast.error("Not connected to Google");
+        setPublishing(false);
+        return;
+      }
+
       // 1. Delete from Google Maps
       for (const photo of photos) {
-        if (photo.streetview_photo_id && accessToken) {
+        if (photo.streetview_photo_id && freshToken) {
           try {
             await supabase.functions.invoke("streetview-publish", {
               body: {
                 action: "delete_photo",
-                access_token: accessToken,
+                access_token: freshToken,
                 streetview_photo_id: photo.streetview_photo_id
               }
             });
@@ -915,6 +969,11 @@ function PublishPage() {
 
   return (
     <AppShell title="Publish to Google" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: tour?.name || "Tour" }, { label: "Publish" }]}>
+      <SEO
+        title="Publish to Google"
+        description="Configure nadir settings and publish your virtual tour to Google Street View and Google Maps."
+        noIndex={true}
+      />
       <TourStepsNav 
         tourId={tourId} 
         activeTab="publish" 

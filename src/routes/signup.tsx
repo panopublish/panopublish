@@ -7,9 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Compass, Eye, EyeOff, User, Building2, Mail, Lock, Check, AlertCircle } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/signup")({
-  head: () => ({ meta: [{ title: "Start free trial — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Start Free 7-Day Trial — TourVista" },
+      { name: "description", content: "Create your TourVista account today. Publish 360° virtual tours to Google Maps, generate tax invoices, and get WhatsApp support in India." },
+    ],
+  }),
   component: Signup,
 });
 
@@ -131,6 +137,14 @@ function Signup() {
 
   return (
     <div className="min-h-screen bg-[#f2f4f8] flex items-center justify-center p-6 bg-gradient-to-br from-[#0277bd]/5 to-[#8bc34a]/5">
+      <SEO
+        title="Start Free 7-Day Trial"
+        description="Create your TourVista account today. Publish 360° virtual tours to Google Maps, generate tax invoices, and get WhatsApp support in India."
+        breadcrumbs={[
+          { name: "Home", url: "https://app.vista360digital.com/" },
+          { name: "Signup", url: "https://app.vista360digital.com/signup" }
+        ]}
+      />
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col p-8 md:p-10">
         
         {/* Logo and Header */}

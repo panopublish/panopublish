@@ -2,12 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { Shield, Lock, Eye, FileText, ArrowLeft } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
       { title: "Privacy Policy — TourVista" },
-      { name: "description", content: "Learn how TourVista collects, uses, and secures your information. Read our Privacy Policy regarding your Google Street View data." },
+      { name: "description", content: "Read TourVista's privacy policy. Learn how we handle your personal data, Google Account connections, and panorama uploads securely." },
     ],
   }),
   component: PrivacyPolicy,
@@ -16,6 +17,14 @@ export const Route = createFileRoute("/privacy")({
 function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <SEO
+        title="Privacy Policy"
+        description="Read TourVista's privacy policy. Learn how we handle your personal data, Google Account connections, and panorama uploads securely."
+        breadcrumbs={[
+          { name: "Home", url: "https://app.vista360digital.com/" },
+          { name: "Privacy Policy", url: "https://app.vista360digital.com/privacy" }
+        ]}
+      />
       {/* Navigation */}
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4 max-w-6xl">

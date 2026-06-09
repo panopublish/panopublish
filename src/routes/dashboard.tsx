@@ -8,9 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Map, Users, Camera, CheckCircle2, Plus, ListChecks, X, Compass, ArrowRight, HelpCircle, AlertCircle, Check, Shield } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Dashboard — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: Dashboard,
 });
 
@@ -145,6 +151,11 @@ function Dashboard() {
 
   return (
     <AppShell title={`Welcome${user?.email ? `, ${user.email.split("@")[0]}` : ""}`} breadcrumbs={[{ label: "Dashboard" }]}>
+      <SEO
+        title="Dashboard"
+        description="Manage your 360° virtual tours and publishing workflow."
+        noIndex={true}
+      />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
           <Link to="/tours/new"><Button><Plus className="h-4 w-4 mr-1" /> Create Tour</Button></Link>

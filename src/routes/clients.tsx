@@ -14,8 +14,15 @@ import { formatDateIN } from "@/lib/format";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/clients")({
-  head: () => ({ meta: [{ title: "Clients — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Clients — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: ClientsPage,
 });
 
@@ -67,6 +74,11 @@ function ClientsPage() {
 
   return (
     <AppShell title="Clients" breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Clients" }]}>
+      <SEO
+        title="Clients"
+        description="Manage your virtual tour clients."
+        noIndex={true}
+      />
       <div className="flex justify-end mb-4">
         <Button onClick={openNew}><Plus className="h-4 w-4 mr-1" /> Add Client</Button>
       </div>

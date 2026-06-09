@@ -1,9 +1,28 @@
 User-agent: *
 Allow: /
-Disallow: /dashboard
-Disallow: /tours
-Disallow: /clients
-Disallow: /settings
-Disallow: /analytics
+Allow: /pricing
+Allow: /features
+Allow: /signup
+Allow: /login
 
-Sitemap: /sitemap.xml
+# Block authenticated/private pages
+Disallow: /dashboard
+Disallow: /tours/
+Disallow: /clients/
+Disallow: /settings
+Disallow: /billing
+Disallow: /auth/
+
+# Block API and utility routes
+Disallow: /api/
+Disallow: /*.json$
+
+# Crawl delay for bots
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://app.vista360digital.com/sitemap.xml
+
+# Allow Google image bot for OG images
+User-agent: Googlebot-Image
+Allow: /

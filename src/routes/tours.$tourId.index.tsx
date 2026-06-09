@@ -16,8 +16,15 @@ import { EmptyState } from "@/components/EmptyState";
 import { TourStepsNav } from "@/components/TourStepsNav";
 import { BlurEditorModal } from "@/components/BlurEditorModal";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/$tourId/")({
-  head: () => ({ meta: [{ title: "Upload Photos — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Upload Photos — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: TourDetail,
 });
 
@@ -328,6 +335,11 @@ function TourDetail() {
 
   return (
     <AppShell title={tour?.name ?? "Tour"} breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: tour?.name ?? "Loading…" }]}>
+      <SEO
+        title="Upload Photos"
+        description="Upload your 360 photos for your virtual tour."
+        noIndex={true}
+      />
       <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] pb-12">
         <TourStepsNav tourId={tourId} activeTab="upload" />
 

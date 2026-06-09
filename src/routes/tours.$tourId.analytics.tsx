@@ -22,8 +22,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/$tourId/analytics")({
-  head: () => ({ meta: [{ title: "Tour Analytics — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Tour Analytics — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: TourAnalytics,
 });
 
@@ -243,6 +250,11 @@ function TourAnalytics() {
         { label: "Analytics" }
       ]}
     >
+      <SEO
+        title="Tour Analytics"
+        description="View performance metrics, view counts, and connections count for your Google Street View tours."
+        noIndex={true}
+      />
       <div className="bg-[#f8fafc] min-h-[calc(100vh-64px)] pb-12">
         <TourStepsNav tourId={tourId} activeTab="analytics" />
 

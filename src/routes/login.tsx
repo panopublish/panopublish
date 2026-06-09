@@ -7,9 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Compass } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign in — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign In — TourVista" },
+      { name: "description", content: "Sign in to your TourVista dashboard to manage your virtual tours, map connections, custom nadir settings, and client profiles." },
+    ],
+  }),
   component: Login,
 });
 
@@ -38,6 +44,14 @@ function Login() {
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
+      <SEO
+        title="Sign In"
+        description="Sign in to your TourVista dashboard to manage your virtual tours, map connections, custom nadir settings, and client profiles."
+        breadcrumbs={[
+          { name: "Home", url: "https://app.vista360digital.com/" },
+          { name: "Login", url: "https://app.vista360digital.com/login" }
+        ]}
+      />
       <div className="hidden md:flex gradient-hero text-primary-foreground p-10 flex-col justify-between">
         <Link to="/" className="flex items-center gap-2 font-bold text-lg">
           <Compass className="h-6 w-6" /> TourVista

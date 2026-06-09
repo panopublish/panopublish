@@ -12,8 +12,15 @@ import { toast } from "sonner";
 
 import { getEnv } from "@/lib/env";
 
+import { SEO } from "@/components/SEO";
+
 export const Route = createFileRoute("/tours/$tourId/location")({
-  head: () => ({ meta: [{ title: "Choose Location — TourVista" }] }),
+  head: () => ({
+    meta: [
+      { title: "Choose Location — TourVista" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
   component: LocationPage,
 });
 
@@ -129,6 +136,11 @@ function LocationPage() {
 
   return (
     <AppShell title="Choose Location" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: title || "Tour" }, { label: "Choose Location" }]}>
+      <SEO
+        title="Choose Location"
+        description="Confirm coordinates and select the business location for Google Maps."
+        noIndex={true}
+      />
       <TourStepNav tourId={tourId} current="location" />
 
       {!MAPS_KEY && (
