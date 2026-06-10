@@ -962,18 +962,6 @@ function PublishPage() {
               <Send className="h-5 w-5 mr-2" />
               {publishing ? "Publishing…" : `Publish ${photos.filter(p => !p.streetview_status || p.streetview_status === 'NOT_PUBLISHED').length} scene(s)`}
             </Button>
-            {photos.some(p => p.streetview_status === 'PUBLISHED') && (
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full border-blue-200 hover:bg-blue-50/80 text-blue-600 hover:text-blue-700 mt-2 flex items-center justify-center bg-blue-50/40 cursor-pointer font-semibold shadow-sm transition-all duration-300 hover:scale-[1.01] hover:shadow"
-                disabled={publishing}
-                onClick={syncConnectionsOnly}
-              >
-                <Share2 className="h-5 w-5 mr-2 text-blue-600 animate-pulse" />
-                Update Connections & Poses
-              </Button>
-            )}
             {photos.some(p => p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING') && (
               <Button
                 variant="outline"
