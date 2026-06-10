@@ -453,25 +453,59 @@ serve(async (req) => {
 
     if (action === 'get_photo_status') {
       const { streetview_photo_id } = payload
-      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=BASIC`, {
-        headers: {
-          'Authorization': `Bearer ${access_token}`,
-          'Referer': referer
-        }
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error?.message || 'Failed to get photo status')
-
+      
       let status = 'PROCESSING'
-      if (data.mapsPublishStatus === 'PUBLISHED') status = 'PUBLISHED'
-      else if (data.mapsPublishStatus === 'REJECTED_UNKNOWN' || data.mapsPublishStatus === 'REJECTED') status = 'FAILED'
+      let shareLink = undefined
+      let viewCount = 0
+      let rawData = null
 
-      const viewCount = data.viewCount ? parseInt(data.viewCount, 10) : 0
+      try {
+        // 1. Try to fetch from the list endpoint first to get mapsPublishStatus
+        const listRes = await fetch(`https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC&pageSize=100`, {
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+            'Referer': referer
+          }
+        })
+        if (listRes.ok) {
+          const listData = await listRes.json()
+          const googlePhotos = listData.photos || []
+          const found = googlePhotos.find((gp: any) => gp.photoId?.id === streetview_photo_id)
+          if (found) {
+            if (found.mapsPublishStatus === 'PUBLISHED') status = 'PUBLISHED'
+            else if (found.mapsPublishStatus === 'REJECTED_UNKNOWN' || found.mapsPublishStatus === 'REJECTED') status = 'FAILED'
+            shareLink = found.shareLink
+            viewCount = found.viewCount ? parseInt(found.viewCount, 10) : 0
+            rawData = found
+          }
+        }
+      } catch (listErr) {
+        console.error("Failed to fetch status from list, falling back to singular get:", listErr)
+      }
+
+      // 2. If not found in the list (e.g. older photo beyond first 100), fall back to singular get endpoint
+      if (!rawData) {
+        const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}&view=BASIC`, {
+          headers: {
+            'Authorization': `Bearer ${access_token}`,
+            'Referer': referer
+          }
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error?.message || 'Failed to get photo status')
+
+        if (data.mapsPublishStatus === 'PUBLISHED') status = 'PUBLISHED'
+        else if (data.mapsPublishStatus === 'REJECTED_UNKNOWN' || data.mapsPublishStatus === 'REJECTED') status = 'FAILED'
+        
+        shareLink = data.shareLink
+        viewCount = data.viewCount ? parseInt(data.viewCount, 10) : 0
+        rawData = data
+      }
 
       // Update in database directly
       const { error: dbErr } = await supabaseClient.from('photos').update({
         streetview_status: status,
-        streetview_share_link: data.shareLink,
+        streetview_share_link: shareLink,
         view_count: viewCount
       }).eq('streetview_photo_id', streetview_photo_id)
 
@@ -479,7 +513,7 @@ serve(async (req) => {
         console.error("Error updating database in get_photo_status:", dbErr)
       }
 
-      return new Response(JSON.stringify({ status, shareLink: data.shareLink, viewCount, data }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ status, shareLink, viewCount, data: rawData }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
     if (action === 'list_photos') {
