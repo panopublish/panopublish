@@ -120,7 +120,7 @@ function ConnectionsPage() {
   const [constellations, setConstellations] = useState<Constellation[]>([]);
   const [activeConstName, setActiveConstName] = useState("");
   const [tour, setTour] = useState<{ name: string; latitude: number | null; longitude: number | null } | null>(null);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [autoAlign, setAutoAlign] = useState(true);
   const [alignFine, setAlignFine] = useState([5]);
   const [spacing, setSpacing] = useState("3m");
@@ -157,7 +157,7 @@ function ConnectionsPage() {
   const photosRef = useRef(photos);
   photosRef.current = photos;
 
-  const active = photos[activeIdx];
+  const active = activeIdx !== null ? photos[activeIdx] : null;
 
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -199,7 +199,39 @@ function ConnectionsPage() {
     });
     setPhotos(sortedPhotos);
     
-    setConns((cs as any) ?? []);
+    const fetchedConns = (cs as any) ?? [];
+    setConns(fetchedConns);
+    
+    // Sync activeIdx when connections are added/removed
+    setActiveIdx((prevIdx) => {
+      const connectedPhotoIds = new Set(fetchedConns.flatMap((c: any) => [c.from_photo_id, c.to_photo_id]));
+
+      if (fetchedConns.length === 0) {
+        return null;
+      }
+
+      if (prevIdx === null) {
+        return 0;
+      }
+
+      const currentActivePhoto = sortedPhotos[prevIdx];
+      if (!currentActivePhoto) {
+        return 0;
+      }
+
+      // If the currently active photo is no longer connected (e.g. its connections were deleted)
+      if (!connectedPhotoIds.has(currentActivePhoto.id)) {
+        // Automatically select the first connected photo as the new active scene
+        const firstConnectedIdx = sortedPhotos.findIndex(p => connectedPhotoIds.has(p.id));
+        if (firstConnectedIdx !== -1) {
+          return firstConnectedIdx;
+        }
+        return 0;
+      }
+
+      return prevIdx;
+    });
+
     setConstellations((cons as any) ?? []);
     setIslands((is as any) ?? []);
     
@@ -1238,7 +1270,7 @@ function ConnectionsPage() {
             {/* Connected scenes grouped by island */}
             {[...islands, { id: 'unassigned', name: 'Unassigned', order_index: 999 }].map((island) => {
               const islandPhotos = photos.filter(p => island.id === 'unassigned' ? !p.island_id : p.island_id === island.id);
-              const connectedIslandPhotos = islandPhotos.filter(p => connectedIds.has(p.id));
+              const connectedIslandPhotos = islandPhotos.filter(p => connectedIds.has(p.id) || (active && p.id === active.id));
               if (connectedIslandPhotos.length === 0) return null;
               
               const isOpen = islandOpen[island.id];
@@ -1384,9 +1416,15 @@ function ConnectionsPage() {
 
           <div className="relative flex-1 bg-black">
             <div ref={panoRef} className="absolute inset-0" />
-            <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-green-500 shadow-[0_0_8px_#22c55e] z-10 pointer-events-none" />
+            {active && (
+              <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-green-500 shadow-[0_0_8px_#22c55e] z-10 pointer-events-none" />
+            )}
             {!active && (
-              <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm">Select a scene to preview</div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 text-sm z-20 bg-slate-950 gap-2.5 p-4 text-center select-none">
+                <MousePointer2 className="h-8 w-8 text-white/40 animate-bounce" />
+                <div className="font-bold text-white text-base">No active scene selected</div>
+                <p className="text-xs text-white/50 max-w-[280px]">Select a scene from the right-side list and click <b>"Set Active"</b> to start building walkthrough connections.</p>
+              </div>
             )}
             
             {pendingTo && (
@@ -1488,25 +1526,39 @@ function ConnectionsPage() {
                 <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-10">
                   {rightPendingTo 
                     ? photos.findIndex(p => p.id === rightPendingTo) 
-                    : `${photos.findIndex(p => p.id === active.id)} (ACTIVE)`
+                    : `${active ? photos.findIndex(p => p.id === active.id) : ""} (ACTIVE)`
                   }
                 </div>
-                {/* Floating "Align & Connect" button overlay on top-right viewer to trigger middle overlay */}
-                {rightPendingTo && (
-                  <div className="absolute bottom-2 right-2 z-10">
+                {/* Floating controls on top-right viewer */}
+                <div className="absolute bottom-2 right-2 z-10 flex gap-2">
+                  {rightPendingTo && (
+                    <button
+                      onClick={() => {
+                        const idx = photos.findIndex(p => p.id === rightPendingTo);
+                        if (idx !== -1) {
+                          setActiveIdx(idx);
+                          setRightPendingTo(null);
+                        }
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-lg hover:scale-103 active:scale-97 transition-all uppercase cursor-pointer"
+                    >
+                      <Check className="h-3 w-3" /> Set Active
+                    </button>
+                  )}
+                  {rightPendingTo && active && (
                     <button
                       onClick={() => setPendingTo(rightPendingTo)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-lg hover:scale-103 active:scale-97 transition-all uppercase cursor-pointer"
                     >
                       <Plus className="h-3 w-3" /> Align & Connect
                     </button>
-                  </div>
-                )}
-                {!rightPendingTo && (
-                  <div className="absolute bottom-2 right-2 z-10 bg-orange-600 text-white font-black text-[10px] px-2.5 py-1.5 rounded-lg shadow-lg border border-orange-500 uppercase tracking-wider select-none">
-                    Active Scene
-                  </div>
-                )}
+                  )}
+                  {!rightPendingTo && active && (
+                    <div className="bg-orange-600 text-white font-black text-[10px] px-2.5 py-1.5 rounded-lg shadow-lg border border-orange-500 uppercase tracking-wider select-none">
+                      Active Scene
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-white/50 text-sm gap-2">
@@ -1582,7 +1634,16 @@ function ConnectionsPage() {
                                   : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
                               }`}
                             >
-                              <div className="aspect-[4/3] relative cursor-pointer overflow-hidden" onClick={() => setRightPendingTo(p.id)}>
+                              <div 
+                                className="aspect-[4/3] relative cursor-pointer overflow-hidden" 
+                                onClick={() => {
+                                  if (!active) {
+                                    setActiveIdx(idx);
+                                  } else {
+                                    setRightPendingTo(p.id);
+                                  }
+                                }}
+                              >
                                 <img 
                                   src={p.file_url} 
                                   alt="" 
@@ -1593,13 +1654,23 @@ function ConnectionsPage() {
                                   {idx}
                                 </div>
                                 
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setRightPendingTo(p.id); setPendingTo(p.id); }}
-                                  className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 bg-emerald-500 hover:bg-emerald-600 shadow-md z-20"
-                                  title="Align & Connect"
-                                >
-                                  <Plus className="h-4.5 w-4.5" />
-                                </button>
+                                {active ? (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setRightPendingTo(p.id); setPendingTo(p.id); }}
+                                    className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 bg-emerald-500 hover:bg-emerald-600 shadow-md z-20"
+                                    title="Align & Connect"
+                                  >
+                                    <Plus className="h-4.5 w-4.5" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setActiveIdx(idx); }}
+                                    className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 bg-blue-500 hover:bg-blue-600 shadow-md z-20"
+                                    title="Set as Start Scene"
+                                  >
+                                    <Check className="h-4.5 w-4.5" />
+                                  </button>
+                                )}
                                 
                                 {isPending && (
                                   <div className="absolute inset-0 bg-emerald-500/5 flex items-center justify-center pointer-events-none z-10">

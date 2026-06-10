@@ -28,11 +28,19 @@ export const Route = createFileRoute("/tours/$tourId/")({
   component: TourDetail,
 });
 
-const MAX_BYTES = 75 * 1024 * 1024;
+const MAX_BYTES = 50 * 1024 * 1024;
 
 type Tour = { id: string; name: string; status: Status; type: string; address: string | null; google_place_url: string | null; client?: { name: string } | null; latitude: number | null; longitude: number | null; };
 type Island = { id: string; name: string; order_index: number; photo_count?: number; is_level?: boolean | null; level_number?: number | null; level_name?: string | null; show_scene_names?: boolean | null; };
 type Photo = { id: string; file_url: string; file_path: string; filename: string | null; size_bytes: number | null; status: Status; latitude: number | null; longitude: number | null; uploaded_at: string; island_id: string | null; order_index?: number };
+
+type UploadItem = {
+  id: string;
+  name: string;
+  pct: number;
+  status: 'queued' | 'uploading' | 'saving' | 'completed' | 'failed';
+  error?: string;
+};
 
 async function extractPhotoMetadata(file: File) {
   try {
@@ -71,10 +79,11 @@ function TourDetail() {
   const [newIslandName, setNewIslandName] = useState("");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
-  const [uploads, setUploads] = useState<{ name: string; pct: number }[]>([]);
+  const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
   
@@ -85,32 +94,39 @@ function TourDetail() {
 
   const load = async () => {
     if (!user) return;
-    const { data: t } = await supabase.from("tours").select("id,name,status,type,address,google_place_url,client:clients(name),latitude,longitude").eq("id", tourId).maybeSingle();
-    setTour(t as any);
-    const { data: is } = await supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index");
-    const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
-    const counts = new Map<string, number>();
-    (ps ?? []).forEach((p) => { if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1); });
-    
-    const fetchedIslands = (is ?? []).map((i) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
-    setIslands(fetchedIslands);
+    setIsLoading(true);
+    try {
+      const { data: t } = await supabase.from("tours").select("id,name,status,type,address,google_place_url,client:clients(name),latitude,longitude").eq("id", tourId).maybeSingle();
+      setTour(t as any);
+      const { data: is } = await supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index");
+      const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
+      const counts = new Map<string, number>();
+      (ps ?? []).forEach((p) => { if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1); });
+      
+      const fetchedIslands = (is ?? []).map((i) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
+      setIslands(fetchedIslands);
 
-    if (fetchedIslands.length > 0) {
-      setActiveIsland(prev => {
-        if (prev && fetchedIslands.some(i => i.id === prev)) return prev;
-        return fetchedIslands[0].id;
+      if (fetchedIslands.length > 0) {
+        setActiveIsland(prev => {
+          if (prev && fetchedIslands.some(i => i.id === prev)) return prev;
+          return fetchedIslands[0].id;
+        });
+      } else {
+        setActiveIsland(null);
+        setShowAddIsland(true);
+      }
+      
+      // Sort locally by order_index (if exists) or uploaded_at
+      const sortedPhotos = (ps as any[] ?? []).sort((a, b) => {
+        if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
+        return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
       });
-    } else {
-      setActiveIsland(null);
-      setShowAddIsland(true);
+      setPhotos(sortedPhotos);
+    } catch (err) {
+      console.error("Error loading tour details:", err);
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Sort locally by order_index (if exists) or uploaded_at
-    const sortedPhotos = (ps as any[] ?? []).sort((a, b) => {
-      if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
-      return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
-    });
-    setPhotos(sortedPhotos);
   };
 
   useEffect(() => { load(); }, [user, tourId]);
@@ -187,30 +203,89 @@ function TourDetail() {
     toast.success("Island deleted"); if (activeIsland === id) setActiveIsland(null); load();
   };
 
-  const onPickFiles = (files: FileList | null, islandId?: string) => {
+  const onPickFiles = async (files: FileList | null, islandId?: string) => {
     if (!files) return;
     const targetIsland = islandId || activeIsland;
     if (!targetIsland) return toast.error("Please select or create an island first!");
     
-    Array.from(files).forEach((f) => {
-      if (f.size > MAX_BYTES) return toast.error(`${f.name} is too large`);
-      uploadPhoto(f, targetIsland);
-    });
+    const fileList = Array.from(files);
+    
+    // Add all files to uploads state queue first
+    const newUploads = fileList.map((f) => ({
+      id: `${f.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: f.name,
+      pct: 0,
+      status: 'queued' as const,
+    }));
+    
+    setUploads((prev) => [...prev, ...newUploads]);
+
+    // Process files sequentially
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const uploadItem = newUploads[i];
+      
+      try {
+        if (file.size > MAX_BYTES) {
+          throw new Error(`File is too large (max 50MB)`);
+        }
+        
+        await uploadPhoto(file, targetIsland, uploadItem.id);
+      } catch (err: any) {
+        console.error("Upload failed for file:", file.name, err);
+        setUploads((prev) =>
+          prev.map((item) =>
+            item.id === uploadItem.id
+              ? { ...item, status: 'failed', error: err.message || "Upload failed" }
+              : item
+          )
+        );
+        // Automatically remove failed item from progress list after 5 seconds
+        setTimeout(() => {
+          setUploads((prev) => prev.filter((item) => item.id !== uploadItem.id));
+        }, 5000);
+      }
+    }
   };
 
-  const uploadPhoto = async (file: File, islandId: string) => {
+  const uploadPhoto = async (file: File, islandId: string, uploadId: string) => {
     if (!user) return;
 
-    setUploads((u) => [...u, { name: file.name, pct: 5 }]);
+    setUploads((prev) =>
+      prev.map((item) =>
+        item.id === uploadId ? { ...item, status: 'uploading', pct: 0 } : item
+      )
+    );
+
     const path = `${user.id}/${tourId}/${islandId}/${Date.now()}-${file.name}`;
-    const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, { contentType: file.type || "image/jpeg" });
-    setUploads((u) => u.map((x) => x.name === file.name ? { ...x, pct: 75 } : x));
-    if (upErr) { toast.error(upErr.message); setUploads((u) => u.filter((x) => x.name !== file.name)); return; }
+    
+    const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, {
+      contentType: file.type || "image/jpeg",
+      onUploadProgress: (progress) => {
+        const pct = Math.round((progress.loaded / progress.total) * 100);
+        // Map 0-100% of upload to 0-90% of overall progress
+        const mappedPct = Math.round(pct * 0.9);
+        setUploads((prev) =>
+          prev.map((item) =>
+            item.id === uploadId ? { ...item, pct: mappedPct } : item
+          )
+        );
+      }
+    });
+
+    if (upErr) throw upErr;
+
+    // Database update phase
+    setUploads((prev) =>
+      prev.map((item) =>
+        item.id === uploadId ? { ...item, status: 'saving', pct: 95 } : item
+      )
+    );
 
     const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(path);
     const meta = await extractPhotoMetadata(file);
 
-    const { error } = await supabase.from("photos").insert({
+    const { error: dbErr } = await supabase.from("photos").insert({
       user_id: user.id, tour_id: tourId, island_id: islandId,
       file_path: path, file_url: pub.publicUrl, filename: file.name, size_bytes: file.size, status: "uploaded",
       latitude: (meta.latitude && meta.latitude !== 0) ? meta.latitude : (tour?.latitude || null),
@@ -219,9 +294,13 @@ function TourDetail() {
       pitch: meta.pitch,
       roll: meta.roll
     });
-    setUploads((u) => u.filter((x) => x.name !== file.name));
-    if (error) return toast.error(error.message);
-    toast.success(`${file.name} uploaded`); load();
+
+    if (dbErr) throw dbErr;
+
+    // Success! Remove from uploads list
+    setUploads((prev) => prev.filter((item) => item.id !== uploadId));
+    toast.success(`${file.name} uploaded`);
+    load();
   };
 
   const deletePhoto = async (p: Photo) => {
@@ -474,11 +553,26 @@ function TourDetail() {
 
                 {/* Uploads Process */}
                 {uploads.length > 0 && (
-                  <div className="p-4 bg-blue-50 border-b border-blue-100">
+                  <div className="p-4 bg-blue-50 border-b border-blue-100 space-y-2">
                     {uploads.map((u) => (
-                      <div key={u.name} className="text-xs mb-2 last:mb-0">
-                        <div className="flex justify-between mb-1"><span className="truncate text-blue-900 font-medium">{u.name}</span><span className="text-blue-700">{u.pct}%</span></div>
-                        <div className="h-1.5 rounded bg-blue-200 overflow-hidden"><div className="h-full bg-[#0277bd]" style={{ width: `${u.pct}%` }} /></div>
+                      <div key={u.id} className="text-xs text-left">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="truncate text-blue-900 font-medium max-w-[70%]">{u.name}</span>
+                          <span className="text-blue-700 font-bold">
+                            {u.status === 'queued' && 'Queued'}
+                            {u.status === 'uploading' && `Uploading (${u.pct}%)`}
+                            {u.status === 'saving' && 'Saving...'}
+                            {u.status === 'failed' && 'Failed'}
+                          </span>
+                        </div>
+                        {u.status !== 'failed' && (
+                          <div className="h-1.5 rounded bg-blue-200 overflow-hidden">
+                            <div className="h-full bg-[#0277bd] transition-all duration-300" style={{ width: `${u.pct}%` }} />
+                          </div>
+                        )}
+                        {u.status === 'failed' && (
+                          <p className="text-[10px] text-red-500 font-semibold truncate mt-0.5">{u.error}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -583,7 +677,7 @@ function TourDetail() {
         />
       )}
 
-      <Dialog open={showAddIsland || islands.length === 0} onOpenChange={(open) => { if (islands.length === 0) return; setShowAddIsland(open); }}>
+      <Dialog open={!isLoading && (showAddIsland || islands.length === 0)} onOpenChange={(open) => { if (islands.length === 0) return; setShowAddIsland(open); }}>
         <DialogContent onPointerDownOutside={(e) => { if (islands.length === 0) e.preventDefault(); }} onEscapeKeyDown={(e) => { if (islands.length === 0) e.preventDefault(); }}>
           <DialogHeader><DialogTitle>Add island</DialogTitle></DialogHeader>
           <div>

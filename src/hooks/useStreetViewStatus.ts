@@ -1,9 +1,11 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { syncStreetViewConnections } from "@/lib/streetview";
 
 export interface Photo {
   id: string;
+  tour_id?: string;
   streetview_status?: string;
   streetview_photo_id?: string;
   [key: string]: any;
@@ -32,6 +34,7 @@ export function useStreetViewStatus(photos: Photo[], accessToken: string | null,
 
     const checkStatuses = async () => {
       let anyUpdated = false;
+      const toursToSync = new Set<string>();
 
       for (const photo of processingPhotos) {
         if (isCancelled) break;
@@ -68,10 +71,32 @@ export function useStreetViewStatus(photos: Photo[], accessToken: string | null,
             
             if (!updateError) {
               anyUpdated = true;
+              if (photo.tour_id) {
+                toursToSync.add(photo.tour_id);
+              }
             }
           }
         } catch (err) {
           console.error("Error polling photo status for", photo.id, err);
+        }
+      }
+
+      // Automatically sync connections for any tours that just finished processing all photos
+      for (const tourId of toursToSync) {
+        try {
+          const { data: remainingProcessing, error: countErr } = await supabase
+            .from('photos')
+            .select('id')
+            .eq('tour_id', tourId)
+            .eq('streetview_status', 'PROCESSING')
+            .limit(1);
+
+          if (!countErr && (!remainingProcessing || remainingProcessing.length === 0)) {
+            console.log(`All photos for tour ${tourId} are published! Running final connection sync...`);
+            await syncStreetViewConnections(supabase, tourId, accessToken);
+          }
+        } catch (syncErr) {
+          console.error(`Failed to auto-sync connections for tour ${tourId}:`, syncErr);
         }
       }
 

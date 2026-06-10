@@ -63,7 +63,7 @@ function ToursPage() {
         const ids = tList.map((t) => t.id);
 
         const [photoRes, connRes] = await Promise.all([
-          supabase.from("photos").select("id,tour_id,file_url,streetview_status").in("tour_id", ids),
+          supabase.from("photos").select("id,tour_id,file_url,streetview_status,streetview_photo_id").in("tour_id", ids),
           supabase.from("connections").select("id,tour_id").in("tour_id", ids)
         ]);
 

@@ -10,6 +10,7 @@ import { Send, CheckCheck, Check, Clock, X as XIcon, Cloud, Upload as UploadIcon
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
+import { syncStreetViewConnections } from "@/lib/streetview";
 
 const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
 
@@ -694,82 +695,20 @@ function PublishPage() {
       }
 
       // Step 5: Update connections and poses on Google Maps
-      const { data: connections } = await supabase.from('connections').select('*').eq('tour_id', tourId);
+      setPublishProgress({
+        current: totalPhotos,
+        total: totalPhotos,
+        step: 'connecting',
+        message: "Updating connections and alignments on Google Maps..."
+      });
+      toast.info("Updating connections and poses on Google Maps...");
+      await syncStreetViewConnections(supabase, tourId, freshToken);
       
-      if (connections && connections.length > 0) {
-        setPublishProgress({
-          current: totalPhotos,
-          total: totalPhotos,
-          step: 'connecting',
-          message: "Updating connections and alignments on Google Maps..."
-        });
-        toast.info("Updating connections and poses on Google Maps...");
-        // Re-fetch photos to get newly assigned streetview_photo_id and poses
-        const { data: latestPhotos } = await supabase
-          .from("photos")
-          .select("id, streetview_photo_id, streetview_status, latitude, longitude, heading, pitch, roll, island_id")
-          .eq("tour_id", tourId);
-        
-        if (latestPhotos) {
-          const svConnections: any = {};
-          
-          connections.forEach(conn => {
-            const fromP = latestPhotos.find(p => p.id === conn.from_photo_id);
-            const toP = latestPhotos.find(p => p.id === conn.to_photo_id);
-            if (fromP?.streetview_photo_id && toP?.streetview_photo_id) {
-              if (!svConnections[fromP.streetview_photo_id]) svConnections[fromP.streetview_photo_id] = [];
-              if (!svConnections[toP.streetview_photo_id]) svConnections[toP.streetview_photo_id] = [];
-              
-              svConnections[fromP.streetview_photo_id].push(toP.streetview_photo_id);
-              svConnections[toP.streetview_photo_id].push(fromP.streetview_photo_id); // bidirectional
-            }
-          });
-
-          const formattedConnections = latestPhotos
-            .filter(p => p.streetview_photo_id)
-            .map(p => {
-              let level = undefined;
-              if (p.island_id) {
-                const island = islands.find(i => i.id === p.island_id);
-                if (island?.is_level && island.level_name) {
-                  level = {
-                    number: island.level_number ?? 0,
-                    name: island.level_name.toString().toUpperCase().slice(0, 3)
-                  };
-                }
-              }
-
-              return {
-                streetview_photo_id: p.streetview_photo_id,
-                connected_ids: Array.from(new Set((p.streetview_photo_id && svConnections[p.streetview_photo_id]) || [])),
-                pose: {
-                  latitude: p.latitude || tour.latitude,
-                  longitude: p.longitude || tour.longitude,
-                  heading: p.heading || 0,
-                  pitch: p.pitch || 0,
-                  roll: p.roll || 0,
-                  level
-                }
-              };
-            });
-
-          if (formattedConnections.length > 0) {
-            const { data: connData, error: connError } = await supabase.functions.invoke("streetview-publish", {
-              body: { 
-                action: "update_connections", 
-                access_token: freshToken,
-                connections: formattedConnections
-              }
-            });
-            if (connError) throw new Error(await getFunctionErrorMessage(connError));
-            if (connData?.error || connData?.success === false) throw new Error(connData.error || "Failed to update connections");
-            
-            // Mark connections as synced only if all photos are already published
-            const allPublishedNow = latestPhotos ? latestPhotos.every(p => p.streetview_status === 'PUBLISHED') : false;
-            await supabase.from("tours").update({ streetview_connections_synced: allPublishedNow } as any).eq("id", tourId);
-          }
-        }
-      }
+      // Since photos are still processing, explicitly set synced to false.
+      // The background status hook will auto-trigger a final sync once processing completes.
+      const { data: latestPhotos } = await supabase.from("photos").select("streetview_status").eq("tour_id", tourId);
+      const allPublishedNow = latestPhotos ? latestPhotos.every(p => p.streetview_status === 'PUBLISHED') : false;
+      await supabase.from("tours").update({ streetview_connections_synced: allPublishedNow } as any).eq("id", tourId);
 
       toast.success("Photos published and connections updated! They will process shortly.");
       load();
@@ -812,93 +751,11 @@ function PublishPage() {
         message: "Fetching connections and photo alignments..."
       });
 
-      const { data: connections } = await supabase.from('connections').select('*').eq('tour_id', tourId);
-      
-      if (!connections || connections.length === 0) {
-        toast.info("No connections found for this tour.");
-        setPublishing(false);
-        return;
-      }
-
       toast.info("Updating connections and poses on Google Maps...");
       
-      // Re-fetch photos to get newly assigned streetview_photo_id and poses
-      const { data: latestPhotos } = await supabase
-        .from("photos")
-        .select("id, streetview_photo_id, latitude, longitude, heading, pitch, roll, island_id")
-        .eq("tour_id", tourId);
+      await syncStreetViewConnections(supabase, tourId, freshToken);
       
-      if (!latestPhotos) {
-        throw new Error("Failed to fetch photos for this tour");
-      }
-
-      const svConnections: any = {};
-      
-      connections.forEach(conn => {
-        const fromP = latestPhotos.find(p => p.id === conn.from_photo_id);
-        const toP = latestPhotos.find(p => p.id === conn.to_photo_id);
-        if (fromP?.streetview_photo_id && toP?.streetview_photo_id) {
-          if (!svConnections[fromP.streetview_photo_id]) svConnections[fromP.streetview_photo_id] = [];
-          if (!svConnections[toP.streetview_photo_id]) svConnections[toP.streetview_photo_id] = [];
-          
-          svConnections[fromP.streetview_photo_id].push(toP.streetview_photo_id);
-          svConnections[toP.streetview_photo_id].push(fromP.streetview_photo_id); // bidirectional
-        }
-      });
-
-      const formattedConnections = latestPhotos
-        .filter(p => p.streetview_photo_id)
-        .map(p => {
-          let level = undefined;
-          if (p.island_id) {
-            const island = islands.find(i => i.id === p.island_id);
-            if (island?.is_level && island.level_name) {
-              level = {
-                number: island.level_number ?? 0,
-                name: island.level_name.toString().toUpperCase().slice(0, 3)
-              };
-            }
-          }
-
-          return {
-            streetview_photo_id: p.streetview_photo_id,
-            connected_ids: Array.from(new Set((p.streetview_photo_id && svConnections[p.streetview_photo_id]) || [])),
-            pose: {
-              latitude: p.latitude || tour?.latitude,
-              longitude: p.longitude || tour?.longitude,
-              heading: p.heading || 0,
-              pitch: p.pitch || 0,
-              roll: p.roll || 0,
-              level
-            }
-          };
-        });
-
-      if (formattedConnections.length > 0) {
-        setPublishProgress({
-          current: 50,
-          total: 100,
-          step: 'connecting',
-          message: "Syncing connections and alignments to Google Maps..."
-        });
-
-        const { data: connData, error: connError } = await supabase.functions.invoke("streetview-publish", {
-          body: { 
-            action: "update_connections", 
-            access_token: freshToken,
-            connections: formattedConnections
-          }
-        });
-        if (connError) throw new Error(await getFunctionErrorMessage(connError));
-        if (connData?.error || connData?.success === false) throw new Error(connData.error || "Failed to update connections");
-        
-        // Mark connections as synced
-        await supabase.from("tours").update({ streetview_connections_synced: true } as any).eq("id", tourId);
-        
-        toast.success("Connections and alignments updated successfully on Google Maps!");
-      } else {
-        toast.info("No published scenes with connections to update.");
-      }
+      toast.success("Connections and alignments updated successfully on Google Maps!");
     } catch (e: any) {
       console.error(e);
       toast.error("Failed to sync connections: " + e.message);
@@ -1151,7 +1008,7 @@ function PublishPage() {
               <div key={p.id} className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium">
                 <span className="text-muted-foreground w-8">{i}</span>
                 <span className="flex-1 truncate">{p.filename}</span>
-                {(p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING') ? (
+                {p.streetview_status === 'PUBLISHED' ? (
                   <div className="flex items-center gap-3">
                     <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
                       <CheckCheck className="h-4 w-4 text-green-600" /> PUBLISHED
@@ -1162,6 +1019,22 @@ function PublishPage() {
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors"
+                      >
+                        View on Maps
+                      </a>
+                    )}
+                  </div>
+                ) : p.streetview_status === 'PROCESSING' ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-amber-600 font-semibold text-xs flex items-center gap-1 animate-pulse">
+                      <Clock className="h-4 w-4 text-amber-500 animate-spin" /> PROCESSING
+                    </span>
+                    {p.streetview_share_link && (
+                      <a 
+                        href={p.streetview_share_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors opacity-70"
                       >
                         View on Maps
                       </a>
