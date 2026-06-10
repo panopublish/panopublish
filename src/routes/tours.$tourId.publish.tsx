@@ -755,6 +755,16 @@ function PublishPage() {
       
       await syncStreetViewConnections(supabase, tourId, freshToken);
       
+      // Update database and local state to prevent loop
+      const { error: dbErr } = await supabase
+        .from("tours")
+        .update({ streetview_connections_synced: true } as any)
+        .eq("id", tourId);
+
+      if (!dbErr) {
+        setTour((prev: any) => prev ? { ...prev, streetview_connections_synced: true } : null);
+      }
+      
       toast.success("Connections and alignments updated successfully on Google Maps!");
     } catch (e: any) {
       console.error(e);

@@ -94,6 +94,11 @@ export function useStreetViewStatus(photos: Photo[], accessToken: string | null,
           if (!countErr && (!remainingProcessing || remainingProcessing.length === 0)) {
             console.log(`All photos for tour ${tourId} are published! Running final connection sync...`);
             await syncStreetViewConnections(supabase, tourId, accessToken);
+            // Mark as synced in DB to prevent loops
+            await supabase
+              .from('tours')
+              .update({ streetview_connections_synced: true } as any)
+              .eq('id', tourId);
           }
         } catch (syncErr) {
           console.error(`Failed to auto-sync connections for tour ${tourId}:`, syncErr);
