@@ -72,9 +72,25 @@ function Dashboard() {
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("photos").select("tour_id,streetview_status").eq("user_id", user.id),
       ]);
+      if (p.error) {
+        console.error("Dashboard profile error:", p.error);
+        toast.error("Profile error: " + p.error.message);
+      }
+      if (c.error) {
+        console.error("Dashboard clients error:", c.error);
+        toast.error("Clients error: " + c.error.message);
+      }
       if (t.error) {
         console.error("Dashboard tours error:", t.error);
-        toast.error("Dashboard error: " + t.error.message);
+        toast.error("Tours error: " + t.error.message);
+      }
+      if (token.error) {
+        console.error("Dashboard google_tokens error:", token.error);
+        toast.error("Google Tokens error: " + token.error.message);
+      }
+      if (photosRes.error) {
+        console.error("Dashboard photos error:", photosRes.error);
+        toast.error("Photos error: " + photosRes.error.message);
       }
 
       const userProfile = p.data ?? null;

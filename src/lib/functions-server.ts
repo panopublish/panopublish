@@ -20,9 +20,11 @@ async function getUserIdFromToken(token: string) {
 }
 
 // 1. Google OAuth Server Function Handler
-export const handleGoogleOauthServerFn = createServerFn("POST", async (arg: any) => {
-  try {
-    const payload = arg?.data || arg;
+export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
+  .handler(async (ctx: any) => {
+    try {
+      const input = ctx.data;
+      const payload = input?.data || input;
     const userId = await getUserIdFromToken(payload.token);
     const db = getBinding("DB");
     if (!db) throw new Error("Cloudflare D1 Database binding 'DB' is missing");
@@ -151,9 +153,11 @@ export const handleGoogleOauthServerFn = createServerFn("POST", async (arg: any)
   }
 });
 
-export const handleStreetViewPublishServerFn = createServerFn("POST", async (arg: any) => {
-  try {
-    const payload = arg?.data || arg;
+export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" })
+  .handler(async (ctx: any) => {
+    try {
+      const input = ctx.data;
+      const payload = input?.data || input;
     const userId = await getUserIdFromToken(payload.token);
     const db = getBinding("DB");
     const bucket = getBinding("BUCKET");

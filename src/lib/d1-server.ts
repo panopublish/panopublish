@@ -19,10 +19,12 @@ async function getUserFromToken(token: string) {
   return user;
 }
 
-export const runD1Query = createServerFn("POST", async (arg: any) => {
-  try {
-    const payload = arg?.data || arg;
-    const user = await getUserFromToken(payload.token);
+export const runD1Query = createServerFn({ method: "POST" })
+  .handler(async (ctx: any) => {
+    try {
+      const input = ctx.data;
+      const payload = input?.data || input;
+      const user = await getUserFromToken(payload.token);
     const userId = user.id;
     const db = getBinding("DB");
     if (!db) {
@@ -174,7 +176,7 @@ export const runD1Query = createServerFn("POST", async (arg: any) => {
         await db.prepare(insertSql).bind(...values).run();
 
         // Query again to get the inserted profile in correct select field format
-        const queryAgain = await stmt.bind(...params).all();
+        const queryAgain = await db.prepare(sql).bind(...params).all();
         results = queryAgain.results;
       }
 
