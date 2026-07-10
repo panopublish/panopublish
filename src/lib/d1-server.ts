@@ -43,27 +43,28 @@ export const runD1Query = createServerFn({ method: "POST" })
 
       // Ensure user can only access their own data (Row-Level Security)
       if (table === "profiles") {
-        clauses.push("id = ?");
+        clauses.push(`${table}.id = ?`);
         params.push(userId);
       } else if (table === "coupons") {
         // coupons is public read
       } else {
-        clauses.push("user_id = ?");
+        clauses.push(`${table}.user_id = ?`);
         params.push(userId);
       }
 
       if (payload.filters && payload.filters.length > 0) {
         for (const f of payload.filters) {
+          const colName = f.column.includes(".") ? f.column : `${table}.${f.column}`;
           if (f.type === "eq") {
-            clauses.push(`${f.column} = ?`);
+            clauses.push(`${colName} = ?`);
             params.push(f.value);
           } else if (f.type === "neq") {
-            clauses.push(`${f.column} != ?`);
+            clauses.push(`${colName} != ?`);
             params.push(f.value);
           } else if (f.type === "in") {
             if (Array.isArray(f.value) && f.value.length > 0) {
               const placeholders = f.value.map(() => "?").join(", ");
-              clauses.push(`${f.column} IN (${placeholders})`);
+              clauses.push(`${colName} IN (${placeholders})`);
               params.push(...f.value);
             } else {
               clauses.push("0 = 1"); // force empty results for empty IN list
@@ -74,7 +75,8 @@ export const runD1Query = createServerFn({ method: "POST" })
             for (const part of parts) {
               const match = part.match(/^([^.]+)\.eq\.(.+)$/);
               if (match) {
-                subClauses.push(`${match[1]} = ?`);
+                const subCol = match[1].includes(".") ? match[1] : `${table}.${match[1]}`;
+                subClauses.push(`${subCol} = ?`);
                 params.push(match[2]);
               }
             }
@@ -118,18 +120,28 @@ export const runD1Query = createServerFn({ method: "POST" })
         joinClause = " LEFT JOIN clients ON tours.client_id = clients.id";
       }
 
-      // clean up other nested fields
+      // clean up other nested fields and qualify main table fields
       selectFields = selectFields
         .split(",")
         .map((f) => f.trim())
         .filter((f) => !f.includes(":"))
+        .map((f) => {
+          if (f.includes(".") || f.toLowerCase().includes(" as ")) {
+            return f;
+          }
+          if (f === "*") return f;
+          return `${table}.${f}`;
+        })
         .join(", ");
       if (!selectFields) selectFields = "*";
 
       sql = `SELECT ${selectFields} FROM ${table}${joinClause}${whereSql}`;
 
       if (payload.orderCol) {
-        sql += ` ORDER BY ${payload.orderCol} ${payload.orderAsc ? "ASC" : "DESC"}`;
+        const orderColQualified = payload.orderCol.includes(".")
+          ? payload.orderCol
+          : `${table}.${payload.orderCol}`;
+        sql += ` ORDER BY ${orderColQualified} ${payload.orderAsc ? "ASC" : "DESC"}`;
       }
 
       if (payload.limitCount) {
