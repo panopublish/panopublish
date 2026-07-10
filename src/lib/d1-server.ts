@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { getEnv, getBinding } from "./env";
 
-async function getUserIdFromToken(token: string) {
+async function getUserFromToken(token: string) {
   const supabaseUrl = getEnv("VITE_SUPABASE_URL") || getEnv("SUPABASE_URL");
   const supabaseKey = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("SUPABASE_PUBLISHABLE_KEY");
   if (!supabaseUrl || !supabaseKey) {
@@ -16,13 +16,14 @@ async function getUserIdFromToken(token: string) {
   if (error || !user) {
     throw new Error("Invalid session token: " + (error?.message || "User not found"));
   }
-  return user.id;
+  return user;
 }
 
 export const runD1Query = createServerFn("POST", async (arg: any) => {
   try {
     const payload = arg?.data || arg;
-    const userId = await getUserIdFromToken(payload.token);
+    const user = await getUserFromToken(payload.token);
+    const userId = user.id;
     const db = getBinding("DB");
     if (!db) {
       return { data: null, error: { message: "Cloudflare D1 Database binding 'DB' is missing" } };
@@ -137,7 +138,45 @@ export const runD1Query = createServerFn("POST", async (arg: any) => {
 
       console.log(`D1 SELECT SQL: ${sql} with params:`, params);
       const stmt = db.prepare(sql);
-      const { results } = await stmt.bind(...params).all();
+      let { results } = await stmt.bind(...params).all();
+
+      if (table === "profiles" && results.length === 0) {
+        // Self-heal: Create profile in D1 if missing
+        const metadata = user.user_metadata || {};
+        const baseUsername = (metadata.username || user.email?.split("@")[0] || "user")
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+        const finalUsername = `${baseUsername}_${user.id.slice(0, 4)}`;
+
+        const defaultProfile = {
+          id: user.id,
+          email: user.email || "",
+          name: metadata.name || user.email?.split("@")[0] || "User",
+          username: finalUsername,
+          company_name: metadata.company_name || "",
+          first_name: metadata.first_name || "",
+          last_name: metadata.last_name || "",
+          plan: "trial",
+          credits: 0,
+          onboarding_dismissed: 0,
+          dark_mode: 0,
+          phone: metadata.phone || "",
+          billing_cycle_tours_used: 0,
+          created_at: new Date().toISOString(),
+        };
+
+        const keys = Object.keys(defaultProfile);
+        const values = Object.values(defaultProfile);
+        const placeholders = keys.map(() => "?").join(", ");
+        const insertSql = `INSERT INTO profiles (${keys.join(", ")}) VALUES (${placeholders})`;
+
+        console.log(`D1 profiles Self-Heal SQL: ${insertSql} with params:`, values);
+        await db.prepare(insertSql).bind(...values).run();
+
+        // Query again to get the inserted profile in correct select field format
+        const queryAgain = await stmt.bind(...params).all();
+        results = queryAgain.results;
+      }
 
       const processedResults = results.map((row: any) => {
         if ("client_name" in row) {
@@ -176,8 +215,16 @@ export const runD1Query = createServerFn("POST", async (arg: any) => {
           row.user_id = userId;
         }
 
-        const keys = Object.keys(row);
-        const values = Object.values(row);
+        // Clean up undefined properties to avoid D1 binding errors
+        const cleanedRow: any = {};
+        for (const [k, v] of Object.entries(row)) {
+          if (v !== undefined) {
+            cleanedRow[k] = v;
+          }
+        }
+
+        const keys = Object.keys(cleanedRow);
+        const values = Object.values(cleanedRow);
         const placeholders = keys.map(() => "?").join(", ");
 
         sql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`;
@@ -187,7 +234,7 @@ export const runD1Query = createServerFn("POST", async (arg: any) => {
           .prepare(sql)
           .bind(...values)
           .run();
-        insertedRows.push(row);
+        insertedRows.push(cleanedRow);
       }
 
       const returnData = Array.isArray(data) ? insertedRows : insertedRows[0];
@@ -199,8 +246,16 @@ export const runD1Query = createServerFn("POST", async (arg: any) => {
       delete data.id;
       delete data.user_id;
 
-      const keys = Object.keys(data);
-      const values = Object.values(data);
+      // Clean up undefined properties to avoid D1 binding errors
+      const cleanedData: any = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (v !== undefined) {
+          cleanedData[k] = v;
+        }
+      }
+
+      const keys = Object.keys(cleanedData);
+      const values = Object.values(cleanedData);
       const setClause = keys.map((k) => `${k} = ?`).join(", ");
 
       sql = `UPDATE ${table} SET ${setClause}`;
@@ -213,7 +268,7 @@ export const runD1Query = createServerFn("POST", async (arg: any) => {
         .bind(...params)
         .run();
 
-      return { data, error: null };
+      return { data: cleanedData, error: null };
     }
 
     if (action === "delete") {

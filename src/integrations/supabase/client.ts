@@ -156,6 +156,7 @@ class D1QueryBuilder {
 
     // Wrap argument inside { data: ... } for TanStack Start's client RPC routing
     const res = await runD1Query({ data: payload });
+    console.log("runD1Query response on client:", res);
     return res;
   }
 }
