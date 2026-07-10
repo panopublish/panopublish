@@ -21,7 +21,7 @@ function GoogleAuthCallback() {
 
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
-      
+
       if (!code) {
         setError("No authorization code found in URL.");
         return;
@@ -30,7 +30,7 @@ function GoogleAuthCallback() {
       try {
         const redirectUri = window.location.origin + "/auth/google/callback";
         const { data, error: fnError } = await supabase.functions.invoke("google-oauth", {
-          body: { action: "exchange_code", code, user_id: user.id, redirect_uri: redirectUri }
+          body: { action: "exchange_code", code, user_id: user.id, redirect_uri: redirectUri },
         });
 
         if (fnError || data?.error) {
@@ -65,7 +65,7 @@ function GoogleAuthCallback() {
           </div>
         )}
         {error && (
-          <button 
+          <button
             onClick={() => navigate({ to: "/tours" })}
             className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
           >

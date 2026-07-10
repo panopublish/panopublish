@@ -4,7 +4,16 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronRight, UploadCloud, Wand2, Star, UserPlus, MapPin, Rocket } from "lucide-react";
+import {
+  Search,
+  ChevronRight,
+  UploadCloud,
+  Wand2,
+  Star,
+  UserPlus,
+  MapPin,
+  Rocket,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { getEnv } from "@/lib/env";
@@ -14,7 +23,7 @@ import { SEO } from "@/components/SEO";
 export const Route = createFileRoute("/tours/new")({
   head: () => ({
     meta: [
-      { title: "Create Tour — TourVista" },
+      { title: "Create Tour — PanoPublish" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -24,31 +33,78 @@ export const Route = createFileRoute("/tours/new")({
 function CreateTour() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   // Step can be 1, 1.1, 2, 3
   const [step, setStep] = useState<number>(1);
   const [type, setType] = useState<"gmaps" | "custom" | null>(null);
   const [method, setMethod] = useState<"new" | "import" | null>(null);
-  
+
   const [clients, setClients] = useState<{ id: string; name: string; city: string | null }[]>([]);
   const [clientId, setClientId] = useState<string | "new" | "">("");
   const [search, setSearch] = useState("");
   const [newClientName, setNewClientName] = useState("");
-  
+
   const [tourInput, setTourInput] = useState("");
-  const [placeDetails, setPlaceDetails] = useState<{ address?: string; url?: string; place_id?: string; name?: string; lat?: number; lng?: number }>({});
+  const [placeDetails, setPlaceDetails] = useState<{
+    address?: string;
+    url?: string;
+    place_id?: string;
+    name?: string;
+    lat?: number;
+    lng?: number;
+  }>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
 
+  // Subscription plan check states
+  const [profile, setProfile] = useState<any>(null);
+  const [tourCount, setTourCount] = useState<number | null>(null);
+  const [checkingLimits, setCheckingLimits] = useState(true);
+
   useEffect(() => {
     if (!user) return;
-    supabase.from("clients").select("id,name,city").eq("user_id", user.id).order("name").then(({ data }) => setClients(data ?? []));
+    supabase
+      .from("clients")
+      .select("id,name,city")
+      .eq("user_id", user.id)
+      .order("name")
+      .then(({ data }) => setClients(data ?? []));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    async function checkLimits() {
+      try {
+        const { data: prof, error: profErr } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .single();
+
+        if (profErr) throw profErr;
+
+        const { count, error: countErr } = await supabase
+          .from("tours")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        if (countErr) throw countErr;
+
+        setProfile(prof);
+        setTourCount(count ?? 0);
+      } catch (err) {
+        console.error("Error checking limits:", err);
+      } finally {
+        setCheckingLimits(false);
+      }
+    }
+    checkLimits();
   }, [user]);
 
   useEffect(() => {
     if (step === 3 && !(window as any).google) {
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${getEnv('VITE_GOOGLE_MAPS_API_KEY')}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${getEnv("VITE_GOOGLE_MAPS_API_KEY")}&libraries=places`;
       script.async = true;
       script.defer = true;
       document.head.appendChild(script);
@@ -60,7 +116,9 @@ function CreateTour() {
 
   const initAutocomplete = () => {
     if (!inputRef.current || !(window as any).google) return;
-    const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, { types: ["establishment", "geocode"] });
+    const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, {
+      types: ["establishment", "geocode"],
+    });
     autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace();
       if (!place.place_id) return;
@@ -71,7 +129,7 @@ function CreateTour() {
         place_id: place.place_id,
         name: place.name,
         lat: place.geometry?.location?.lat(),
-        lng: place.geometry?.location?.lng()
+        lng: place.geometry?.location?.lng(),
       });
     });
   };
@@ -102,22 +160,35 @@ function CreateTour() {
     if (!user) return;
     setSaving(true);
     let finalClientId: string | null = null;
-    
+
     if (clientId === "new") {
-      if (!newClientName.trim()) { toast.error("New client name is required"); setSaving(false); return; }
-      const { data, error } = await supabase.from("clients").insert({ user_id: user.id, name: newClientName, business_type: "Other", city: "" }).select("id").single();
-      if (error) { setSaving(false); return toast.error(error.message); }
+      if (!newClientName.trim()) {
+        toast.error("New client name is required");
+        setSaving(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("clients")
+        .insert({ user_id: user.id, name: newClientName, business_type: "Other", city: "" })
+        .select("id")
+        .single();
+      if (error) {
+        setSaving(false);
+        return toast.error(error.message);
+      }
       finalClientId = data.id;
     } else if (clientId) {
       finalClientId = clientId;
     } else {
       toast.error("Please select or create a client");
-      setSaving(false); return;
+      setSaving(false);
+      return;
     }
 
     if (!tourInput.trim()) {
       toast.error("Please enter a business name or CID");
-      setSaving(false); return;
+      setSaving(false);
+      return;
     }
 
     // Determine if it's a CID or business name based on some simple regex
@@ -128,12 +199,24 @@ function CreateTour() {
       name = "Tour " + cid;
     }
 
-    const { data, error } = await supabase.from("tours").insert({
-      user_id: user.id, client_id: finalClientId, name, type: type || "gmaps", status: "draft", cid,
-      address: placeDetails.address, google_place_url: placeDetails.url,
-      google_place_id: placeDetails.place_id, latitude: placeDetails.lat, longitude: placeDetails.lng
-    }).select("id").single();
-    
+    const { data, error } = await supabase
+      .from("tours")
+      .insert({
+        user_id: user.id,
+        client_id: finalClientId,
+        name,
+        type: type || "gmaps",
+        status: "draft",
+        cid,
+        address: placeDetails.address,
+        google_place_url: placeDetails.url,
+        google_place_id: placeDetails.place_id,
+        latitude: placeDetails.lat,
+        longitude: placeDetails.lng,
+      })
+      .select("id")
+      .single();
+
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Tour created!");
@@ -144,44 +227,132 @@ function CreateTour() {
     const mainStep = Math.floor(step);
     return (
       <div className="flex items-center justify-center gap-4 mb-12">
-        <div className={`flex items-center gap-2 ${mainStep === 1 ? 'text-[#0277bd]' : 'text-muted-foreground'}`}>
-          <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-white ${mainStep === 1 ? 'bg-[#0277bd]' : 'bg-muted-foreground/50'}`}>1</div>
+        <div
+          className={`flex items-center gap-2 ${mainStep === 1 ? "text-[#0277bd]" : "text-muted-foreground"}`}
+        >
+          <div
+            className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-white ${mainStep === 1 ? "bg-[#0277bd]" : "bg-muted-foreground/50"}`}
+          >
+            1
+          </div>
           <span className="text-sm font-medium">Choose what you want to do</span>
         </div>
-        <div className={`flex items-center gap-2 ${mainStep === 2 ? 'text-[#0277bd]' : 'text-muted-foreground'}`}>
-          <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-white ${mainStep === 2 ? 'bg-[#0277bd]' : 'bg-muted-foreground/50'}`}>2</div>
+        <div
+          className={`flex items-center gap-2 ${mainStep === 2 ? "text-[#0277bd]" : "text-muted-foreground"}`}
+        >
+          <div
+            className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-white ${mainStep === 2 ? "bg-[#0277bd]" : "bg-muted-foreground/50"}`}
+          >
+            2
+          </div>
           <span className="text-sm font-medium">Select your client</span>
         </div>
-        <div className={`flex items-center gap-2 ${mainStep === 3 ? 'text-[#0277bd]' : 'text-muted-foreground'}`}>
-          <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-white ${mainStep === 3 ? 'bg-[#0277bd]' : 'bg-muted-foreground/50'}`}>3</div>
+        <div
+          className={`flex items-center gap-2 ${mainStep === 3 ? "text-[#0277bd]" : "text-muted-foreground"}`}
+        >
+          <div
+            className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-white ${mainStep === 3 ? "bg-[#0277bd]" : "bg-muted-foreground/50"}`}
+          >
+            3
+          </div>
           <span className="text-sm font-medium">Get ready for take off</span>
         </div>
       </div>
     );
   };
 
-  return (
-    <AppShell title="Create Tour" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Create" }]}>
-      <SEO
+  const isTrialLimitReached = profile?.plan === "trial" && (tourCount ?? 0) >= 1;
+  const isBasicLimitReached = profile?.plan === "basic" && (tourCount ?? 0) >= 5;
+  const isProLimitReached = profile?.plan === "pro" && (tourCount ?? 0) >= 25;
+
+  const isLimitReached = isTrialLimitReached || isBasicLimitReached || isProLimitReached;
+
+  if (checkingLimits) {
+    return (
+      <AppShell
         title="Create Tour"
-        description="Create a new virtual tour."
-        noIndex={true}
-      />
+        breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Create" }]}
+      >
+        <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-t-transparent border-[#0277bd] rounded-full animate-spin" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (isLimitReached) {
+    const limit = profile?.plan === "trial" ? 1 : profile?.plan === "basic" ? 5 : 25;
+    return (
+      <AppShell
+        title="Create Tour"
+        breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Create" }]}
+      >
+        <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] p-8 flex items-center justify-center animate-in fade-in duration-200">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg border p-8 text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
+            <div className="mx-auto w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
+              <Rocket className="h-8 w-8 animate-bounce" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold text-slate-800">Limit Reached</h2>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                You have reached your limit of{" "}
+                <strong className="text-slate-800 font-extrabold">
+                  {limit} tour{limit > 1 ? "s" : ""}
+                </strong>{" "}
+                on the{" "}
+                <span className="capitalize font-bold text-slate-700">
+                  {profile?.plan ?? "trial"}
+                </span>{" "}
+                plan.
+              </p>
+              <p className="text-xs text-slate-400">
+                Upgrade your subscription to create and publish more high-quality 360-degree tours.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <Link
+                to="/settings"
+                search={{ tab: "billing" } as any}
+                className="w-full bg-[#0277bd] hover:bg-[#0266a1] text-white py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-sm uppercase tracking-wider block"
+              >
+                Upgrade Subscription
+              </Link>
+              <Link
+                to="/tours"
+                className="w-full bg-slate-50 hover:bg-slate-100 border text-slate-600 py-3 rounded-xl font-bold transition-all text-sm block"
+              >
+                Go back to Tours
+              </Link>
+            </div>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell
+      title="Create Tour"
+      breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Create" }]}
+    >
+      <SEO title="Create Tour" description="Create a new virtual tour." noIndex={true} />
       <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] p-8">
         <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-sm border p-12">
           {renderStepNav()}
 
           {step === 1 && (
             <div className="max-w-2xl mx-auto text-center animate-in fade-in zoom-in-95 duration-200">
-              <h1 className="text-3xl font-medium text-[#0277bd] mb-8">What would you like to do?</h1>
+              <h1 className="text-3xl font-medium text-[#0277bd] mb-8">
+                What would you like to do?
+              </h1>
               <div className="space-y-4">
-                <button 
+                <button
                   onClick={() => handleActionSelected("gmaps")}
                   className="w-full flex items-center gap-4 bg-[#8bc34a] hover:bg-[#7cb342] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium"
                 >
                   <MapPin className="h-6 w-6" /> Publish a tour to Google Maps
                 </button>
-                <button 
+                <button
                   onClick={() => handleActionSelected("custom")}
                   className="w-full flex items-center gap-4 bg-[#0277bd] hover:bg-[#0266a1] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium"
                 >
@@ -193,15 +364,17 @@ function CreateTour() {
 
           {step === 1.1 && (
             <div className="max-w-2xl mx-auto text-center animate-in fade-in zoom-in-95 duration-200">
-              <h1 className="text-3xl font-medium text-[#0277bd] mb-8">Cool, how should we create your Google tour?</h1>
+              <h1 className="text-3xl font-medium text-[#0277bd] mb-8">
+                Cool, how should we create your Google tour?
+              </h1>
               <div className="space-y-4">
-                <button 
+                <button
                   onClick={() => handleMethodSelected("new")}
                   className="w-full flex items-center gap-4 bg-[#8bc34a] hover:bg-[#7cb342] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium"
                 >
                   <Wand2 className="h-6 w-6" /> Create a new tour
                 </button>
-                <button 
+                <button
                   onClick={() => handleMethodSelected("import")}
                   className="w-full flex items-center gap-4 bg-[#0277bd] hover:bg-[#0266a1] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium"
                 >
@@ -214,7 +387,9 @@ function CreateTour() {
           {step === 2 && (
             <div className="max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-200">
               <div className="text-sm text-gray-600 mb-8 font-medium">
-                <span className="font-bold">Why do I need to do this?</span> TourBuilder organizes your tours by client name. This helps you organize your Google Street View tours, custom tours, and users in one neatly tucked away place.
+                <span className="font-bold">Why do I need to do this?</span> TourBuilder organizes
+                your tours by client name. This helps you organize your Google Street View tours,
+                custom tours, and users in one neatly tucked away place.
               </div>
 
               <div className="grid md:grid-cols-[1fr_auto_1fr] gap-8 items-start mb-12">
@@ -225,26 +400,34 @@ function CreateTour() {
                   </h3>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input 
-                      className="pl-10 h-12 text-lg focus-visible:ring-[#0277bd]" 
-                      placeholder="Search..." 
-                      value={search} 
-                      onChange={(e) => { setSearch(e.target.value); setClientId(""); }} 
+                    <Input
+                      className="pl-10 h-12 text-lg focus-visible:ring-[#0277bd]"
+                      placeholder="Search..."
+                      value={search}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setClientId("");
+                      }}
                     />
                   </div>
                   {search && (
                     <div className="mt-2 max-h-48 overflow-auto border rounded-md shadow-sm bg-white z-10 absolute w-full max-w-[calc(50%-2rem)]">
-                      {filtered.length === 0 ? <div className="p-3 text-gray-500">No matches</div> :
+                      {filtered.length === 0 ? (
+                        <div className="p-3 text-gray-500">No matches</div>
+                      ) : (
                         filtered.map((c) => (
-                          <div 
-                            key={c.id} 
-                            onClick={() => { setClientId(c.id); setSearch(c.name); }} 
-                            className={`p-3 cursor-pointer hover:bg-gray-50 ${clientId === c.id ? 'bg-[#e1f5fe] text-[#0277bd] font-medium' : ''}`}
+                          <div
+                            key={c.id}
+                            onClick={() => {
+                              setClientId(c.id);
+                              setSearch(c.name);
+                            }}
+                            className={`p-3 cursor-pointer hover:bg-gray-50 ${clientId === c.id ? "bg-[#e1f5fe] text-[#0277bd] font-medium" : ""}`}
                           >
                             {c.name}
                           </div>
                         ))
-                      }
+                      )}
                     </div>
                   )}
                 </div>
@@ -257,11 +440,15 @@ function CreateTour() {
                   <h3 className="text-xl font-medium text-[#0277bd] mb-4 flex items-center gap-2">
                     <PlusIcon className="h-5 w-5" /> Create new client
                   </h3>
-                  <Input 
-                    className="h-12 text-lg focus-visible:ring-[#0277bd]" 
-                    placeholder="Enter a new client name" 
-                    value={newClientName} 
-                    onChange={(e) => { setNewClientName(e.target.value); setClientId("new"); setSearch(""); }} 
+                  <Input
+                    className="h-12 text-lg focus-visible:ring-[#0277bd]"
+                    placeholder="Enter a new client name"
+                    value={newClientName}
+                    onChange={(e) => {
+                      setNewClientName(e.target.value);
+                      setClientId("new");
+                      setSearch("");
+                    }}
                   />
                   {clientId === "new" && (
                     <div className="mt-2 text-sm text-[#8bc34a] font-medium flex items-center gap-1">
@@ -271,34 +458,39 @@ function CreateTour() {
                 </div>
               </div>
 
-              <button 
+              <button
                 disabled={!clientId}
                 onClick={() => setStep(3)}
-                className={`w-full flex items-center justify-between px-6 py-4 rounded-full text-lg font-medium transition-colors ${clientId ? 'bg-[#a5b2bc] hover:bg-[#8d9ba6] text-white' : 'bg-gray-300 text-gray-100 cursor-not-allowed'}`}
-                style={clientId ? { backgroundColor: '#a1acb4' } : {}}
+                className={`w-full flex items-center justify-between px-6 py-4 rounded-full text-lg font-medium transition-colors ${clientId ? "bg-[#a5b2bc] hover:bg-[#8d9ba6] text-white" : "bg-gray-300 text-gray-100 cursor-not-allowed"}`}
+                style={clientId ? { backgroundColor: "#a1acb4" } : {}}
               >
-                <div className="flex items-center gap-2"><ChevronRight className="h-5 w-5" /> Next</div>
+                <div className="flex items-center gap-2">
+                  <ChevronRight className="h-5 w-5" /> Next
+                </div>
               </button>
             </div>
           )}
 
           {step === 3 && (
             <div className="max-w-3xl mx-auto text-center animate-in fade-in zoom-in-95 duration-200">
-              <p className="text-gray-600 mb-8 font-medium">To get started, find your place page by cid, business name, address or Google place page url.</p>
-              
+              <p className="text-gray-600 mb-8 font-medium">
+                To get started, find your place page by cid, business name, address or Google place
+                page url.
+              </p>
+
               <div className="flex border rounded border-gray-300 overflow-hidden mb-12 bg-white">
                 <div className="px-4 py-3 bg-gray-50 border-r text-gray-500 flex items-center">
                   <Search className="h-5 w-5" />
                 </div>
-                <Input 
+                <Input
                   ref={inputRef}
-                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 w-[60%]" 
-                  placeholder="Business Name, Address, or Google Place URL" 
-                  value={tourInput} 
+                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 w-[60%]"
+                  placeholder="Business Name, Address, or Google Place URL"
+                  value={tourInput}
                   onChange={(e) => {
                     setTourInput(e.target.value);
                     if (e.target.value === "") setPlaceDetails({});
-                  }} 
+                  }}
                 />
                 <div className="px-4 py-3 bg-gray-50 border-x font-bold text-gray-400 flex items-center shrink-0">
                   OR
@@ -306,11 +498,11 @@ function CreateTour() {
                 <div className="px-4 py-3 bg-gray-50 border-r text-gray-500 flex items-center text-sm shrink-0">
                   cid
                 </div>
-                <Input 
-                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 flex-1" 
-                  placeholder="CID# (most precise)" 
-                  value={/^[0-9]+$/.test(tourInput) ? tourInput : ""} 
-                  onChange={(e) => setTourInput(e.target.value)} 
+                <Input
+                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 flex-1"
+                  placeholder="CID# (most precise)"
+                  value={/^[0-9]+$/.test(tourInput) ? tourInput : ""}
+                  onChange={(e) => setTourInput(e.target.value)}
                 />
               </div>
 
@@ -325,7 +517,7 @@ function CreateTour() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={submit}
                 disabled={saving || !tourInput}
                 className="w-full flex items-center justify-center px-6 py-4 rounded-full text-lg font-medium transition-colors bg-gray-400 hover:bg-gray-500 text-white"
@@ -334,7 +526,6 @@ function CreateTour() {
               </button>
             </div>
           )}
-
         </div>
       </div>
     </AppShell>
@@ -343,7 +534,18 @@ function CreateTour() {
 
 function PlusIcon(props: any) {
   return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M5 12h14" />
       <path d="M12 5v14" />
     </svg>
@@ -352,7 +554,18 @@ function PlusIcon(props: any) {
 
 function CheckIcon(props: any) {
   return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );

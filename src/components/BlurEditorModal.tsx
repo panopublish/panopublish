@@ -21,7 +21,7 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
     const originalBytes = new Uint8Array(originalBuffer);
 
     // 2. Parse original JPEG APP segments
-    if (originalBytes[0] !== 0xFF || originalBytes[1] !== 0xD8) {
+    if (originalBytes[0] !== 0xff || originalBytes[1] !== 0xd8) {
       console.warn("Original image is not a valid JPEG. Skipping metadata injection.");
       return newBlob;
     }
@@ -29,16 +29,16 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
     const appSegments: Uint8Array[] = [];
     let pos = 2;
     while (pos < originalBytes.length) {
-      if (originalBytes[pos] === 0xFF) {
+      if (originalBytes[pos] === 0xff) {
         const marker = originalBytes[pos + 1];
-        
+
         // APP segments are 0xFFE0 to 0xFFEF
-        if (marker >= 0xE0 && marker <= 0xEF) {
+        if (marker >= 0xe0 && marker <= 0xef) {
           const length = (originalBytes[pos + 2] << 8) + originalBytes[pos + 3];
           const segment = originalBytes.slice(pos, pos + 2 + length);
           appSegments.push(segment);
           pos += 2 + length;
-        } else if (marker === 0xD9 || marker === 0xDA) {
+        } else if (marker === 0xd9 || marker === 0xda) {
           // End of headers
           break;
         } else {
@@ -55,7 +55,7 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
     const newBuffer = await newBlob.arrayBuffer();
     const newBytes = new Uint8Array(newBuffer);
 
-    if (newBytes[0] !== 0xFF || newBytes[1] !== 0xD8) {
+    if (newBytes[0] !== 0xff || newBytes[1] !== 0xd8) {
       console.warn("New canvas image is not a valid JPEG. Skipping metadata injection.");
       return newBlob;
     }
@@ -64,9 +64,9 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
     let newPos = 2;
     let imageStartPos = 2;
     while (newPos < newBytes.length) {
-      if (newBytes[newPos] === 0xFF) {
+      if (newBytes[newPos] === 0xff) {
         const marker = newBytes[newPos + 1];
-        if (marker >= 0xE0 && marker <= 0xEF) {
+        if (marker >= 0xe0 && marker <= 0xef) {
           const length = (newBytes[newPos + 2] << 8) + newBytes[newPos + 3];
           newPos += 2 + length;
         } else {
@@ -85,8 +85,8 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
     const finalBytes = new Uint8Array(finalSize);
 
     // Write SOI
-    finalBytes[0] = 0xFF;
-    finalBytes[1] = 0xD8;
+    finalBytes[0] = 0xff;
+    finalBytes[1] = 0xd8;
 
     // Write original APP segments
     let writePos = 2;
@@ -106,11 +106,9 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
   }
 }
 
-
-
 declare global {
   interface Window {
-    pannellum?: { viewer: (el: string | HTMLElement, cfg: unknown) => { destroy: () => void; }; };
+    pannellum?: { viewer: (el: string | HTMLElement, cfg: unknown) => { destroy: () => void } };
   }
 }
 
@@ -129,7 +127,7 @@ export function BlurEditorModal({
   const [brushSize, setBrushSize] = useState(15); // Screen pixels radius
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [blurStrength, setBlurStrength] = useState(10); // Default to 10px
-  
+
   // Heading and Pitch readout states
   const [heading, setHeading] = useState(0);
   const [pitch, setPitch] = useState(0);
@@ -255,7 +253,7 @@ export function BlurEditorModal({
 
       viewerRef.current.on("animatefinished", updateDirectionReadouts);
       viewerRef.current.on("zoomchange", updateDirectionReadouts);
-      
+
       // Update reading parameters continuously
       const t = setInterval(() => {
         if (viewerRef.current) {
@@ -284,7 +282,8 @@ export function BlurEditorModal({
 
   // Re-load config in Pannellum with updated canvas data URL while keeping viewport
   const reloadPannellumTexture = () => {
-    if (!viewerRef.current || !displayCanvasRef.current || !panoRef.current || !window.pannellum) return;
+    if (!viewerRef.current || !displayCanvasRef.current || !panoRef.current || !window.pannellum)
+      return;
     try {
       const dataUrl = displayCanvasRef.current.toDataURL("image/jpeg", 0.9);
       const yaw = viewerRef.current.getYaw();
@@ -345,11 +344,11 @@ export function BlurEditorModal({
 
     isDrawingRef.current = true;
     strokePointsRef.current = [];
-    
+
     const rect = overlayCanvasRef.current.getBoundingClientRect();
     const localX = e.clientX - rect.left;
     const localY = e.clientY - rect.top;
-    
+
     lastScreenPosRef.current = { x: localX, y: localY };
     setMousePos({ x: localX, y: localY });
 
@@ -451,7 +450,7 @@ export function BlurEditorModal({
     // Scale brush size relative to image size vs container width
     const containerWidth = viewerRef.current.getContainer().clientWidth || 1000;
     const hfov = viewerRef.current.getHfov() || 100;
-    
+
     // Physical mapping of brush size
     const equirectangularBrushSize = (brushSize / containerWidth) * (hfov / 360) * W;
 
@@ -474,7 +473,7 @@ export function BlurEditorModal({
 
     for (let i = 1; i < points.length; i++) {
       const px = mapSphereToEquirectangular(points[i].pitch, points[i].yaw, W, H);
-      
+
       // Handle equirectangular seams wrapping horizontally
       const prevPx = mapSphereToEquirectangular(points[i - 1].pitch, points[i - 1].yaw, W, H);
       if (Math.abs(px.x - prevPx.x) > W * 0.8) {
@@ -506,7 +505,7 @@ export function BlurEditorModal({
   // Adjust canvas size to match overlay DOM exactly during resize
   useEffect(() => {
     if (loading) return;
-    
+
     const resize = () => {
       const canvas = overlayCanvasRef.current;
       const pano = panoRef.current;
@@ -528,21 +527,25 @@ export function BlurEditorModal({
     if (!displayCanvas) return;
 
     setSaving(true);
-    displayCanvas.toBlob(async (blob) => {
-      if (blob) {
-        try {
-          // Inject original EXIF/XMP metadata headers so Google Street View publishing does not fail
-          const metadataPreservedBlob = await copyJpegMetadata(photo.file_url, blob);
-          await onSave(metadataPreservedBlob);
-        } catch (err: any) {
-          toast.error("Error saving image: " + err.message);
+    displayCanvas.toBlob(
+      async (blob) => {
+        if (blob) {
+          try {
+            // Inject original EXIF/XMP metadata headers so Google Street View publishing does not fail
+            const metadataPreservedBlob = await copyJpegMetadata(photo.file_url, blob);
+            await onSave(metadataPreservedBlob);
+          } catch (err: any) {
+            toast.error("Error saving image: " + err.message);
+            setSaving(false);
+          }
+        } else {
+          toast.error("Failed to generate image file.");
           setSaving(false);
         }
-      } else {
-        toast.error("Failed to generate image file.");
-        setSaving(false);
-      }
-    }, "image/jpeg", 0.95);
+      },
+      "image/jpeg",
+      0.95,
+    );
   };
 
   return (
@@ -554,7 +557,11 @@ export function BlurEditorModal({
             {/* Miniature preview placeholder with pulse bar */}
             <div className="relative w-24 h-12 bg-slate-100 rounded-lg overflow-hidden border flex items-center justify-center mb-6">
               {photo.file_url ? (
-                <img src={photo.file_url} alt="" className="w-full h-full object-cover opacity-60" />
+                <img
+                  src={photo.file_url}
+                  alt=""
+                  className="w-full h-full object-cover opacity-60"
+                />
               ) : (
                 <div className="w-full h-full bg-slate-200" />
               )}
@@ -572,13 +579,13 @@ export function BlurEditorModal({
 
             {/* Generated illustration embedded static */}
             <div className="w-full max-w-[280px] aspect-[4/3] rounded-2xl overflow-hidden relative flex items-center justify-center bg-slate-50 border border-slate-100 shadow-inner">
-              <img 
-                src="/robot_beach_upload.png" 
-                alt="Robot Relaxing on Beach illustration" 
+              <img
+                src="/robot_beach_upload.png"
+                alt="Robot Relaxing on Beach illustration"
                 className="w-full h-full object-contain"
               />
             </div>
-            
+
             <div className="flex items-center gap-2 text-slate-400 mt-6 font-bold text-xs">
               <Loader2 className="h-4 w-4 animate-spin text-emerald-500" /> PROCESSING IMAGE...
             </div>
@@ -594,7 +601,9 @@ export function BlurEditorModal({
             <button
               onClick={() => setMode("pan")}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                mode === "pan" ? "bg-white text-[#01579b] shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
+                mode === "pan"
+                  ? "bg-white text-[#01579b] shadow"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Hand className="h-4 w-4" /> Pan
@@ -602,7 +611,9 @@ export function BlurEditorModal({
             <button
               onClick={() => setMode("blur")}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                mode === "blur" ? "bg-white text-[#01579b] shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
+                mode === "blur"
+                  ? "bg-white text-[#01579b] shadow"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Droplets className="h-4 w-4" /> Blur
@@ -610,7 +621,9 @@ export function BlurEditorModal({
             <button
               onClick={() => setMode("erase")}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                mode === "erase" ? "bg-white text-[#01579b] shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
+                mode === "erase"
+                  ? "bg-white text-[#01579b] shadow"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Eraser className="h-4 w-4" /> Erase
@@ -637,7 +650,7 @@ export function BlurEditorModal({
         {/* 360 VIEWER VIEWPORT */}
         <div className="flex-1 min-h-0 relative bg-slate-950 flex items-center justify-center overflow-hidden">
           <div ref={panoRef} className="absolute inset-0 w-full h-full" />
-          
+
           {/* Transparent Canvas overlays for real-time brush rendering */}
           {mode !== "pan" && (
             <canvas

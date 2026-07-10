@@ -1,21 +1,23 @@
-import { PanoramaNode, Connection, MapMode } from '../types/panorama';
+import { PanoramaNode, Connection, MapMode } from "../types/panorama";
 
 function isSameConnection(
-  c1: { fromId: string, toId: string } | null, 
-  c2: { fromId: string, toId: string } | null
+  c1: { fromId: string; toId: string } | null,
+  c2: { fromId: string; toId: string } | null,
 ): boolean {
   if (!c1 || !c2) return false;
-  return (c1.fromId === c2.fromId && c1.toId === c2.toId) || 
-         (c1.fromId === c2.toId && c1.toId === c2.fromId);
+  return (
+    (c1.fromId === c2.fromId && c1.toId === c2.toId) ||
+    (c1.fromId === c2.toId && c1.toId === c2.fromId)
+  );
 }
 
 export interface IPanoramaOverlayManager {
   setMode(mode: MapMode): void;
   updateNodes(
-    nodes: PanoramaNode[], 
-    connections: Connection[], 
+    nodes: PanoramaNode[],
+    connections: Connection[],
     activeNodeId: string | null,
-    selectedConnection?: { fromId: string, toId: string } | null
+    selectedConnection?: { fromId: string; toId: string } | null,
   ): void;
   draw(): void;
   setMap(map: any): void;
@@ -25,25 +27,24 @@ export function createPanoramaOverlayManager(options: {
   nodes: PanoramaNode[];
   connections: Connection[];
   activeNodeId: string | null;
-  selectedConnection?: { fromId: string, toId: string } | null;
+  selectedConnection?: { fromId: string; toId: string } | null;
   onNodeClick: (nodeId: string) => void;
   onNodeDrag: (nodeId: string, lat: number, lng: number) => void;
   onRotateActiveNode?: (newHeading: number) => void;
   onQuickConnect?: (fromId: string, toId: string) => void;
   onConnectionSelect?: (fromId: string | null, toId: string | null) => void;
 }): IPanoramaOverlayManager {
-
   class PanoramaOverlayManager extends window.google.maps.OverlayView {
     private container: HTMLDivElement;
     private svg: SVGSVGElement;
     private nodesContainer: HTMLDivElement;
-    
+
     private nodes: PanoramaNode[] = [];
     private connections: Connection[] = [];
     private activeNodeId: string | null = null;
-    private selectedConnection: { fromId: string, toId: string } | null = null;
-    private mode: MapMode = 'select';
-    
+    private selectedConnection: { fromId: string; toId: string } | null = null;
+    private mode: MapMode = "select";
+
     private onNodeClick: (nodeId: string) => void;
     private onNodeDrag: (nodeId: string, lat: number, lng: number) => void;
     private onRotateActiveNode?: (newHeading: number) => void;
@@ -52,12 +53,12 @@ export function createPanoramaOverlayManager(options: {
 
     // Keyboard & Mouse Tracking State for Quick Connect
     private ctrlPressed = false;
-    private currentMousePos: { x: number, y: number } | null = null;
+    private currentMousePos: { x: number; y: number } | null = null;
     private hoveredNodeId: string | null = null;
-    
+
     // Caching node DOM elements to avoid full recreations on scroll/pan
     private nodeElements = new Map<string, HTMLDivElement>();
-    
+
     // Drag & Rotate State
     private isDragging = false;
     private isRotating = false;
@@ -65,14 +66,14 @@ export function createPanoramaOverlayManager(options: {
     private wasDragging = false;
     private dragStartX = 0;
     private dragStartY = 0;
- 
+
     // Window listeners for smooth global tracking during drag
     private boundGlobalMouseMove: (e: MouseEvent) => void;
     private boundGlobalMouseUp: (e: MouseEvent) => void;
     private boundKeyDown: (e: KeyboardEvent) => void;
     private boundKeyUp: (e: KeyboardEvent) => void;
     private boundWindowBlur: () => void;
- 
+
     constructor() {
       super();
       this.nodes = options.nodes;
@@ -86,67 +87,67 @@ export function createPanoramaOverlayManager(options: {
       this.onConnectionSelect = options.onConnectionSelect;
 
       // 1. Create main container spanning overlay pane
-      this.container = document.createElement('div');
-      this.container.style.position = 'absolute';
-      this.container.style.top = '0';
-      this.container.style.left = '0';
-      this.container.style.width = '100%';
-      this.container.style.height = '100%';
-      this.container.style.pointerEvents = 'none'; // Map clicks pass through empty space
+      this.container = document.createElement("div");
+      this.container.style.position = "absolute";
+      this.container.style.top = "0";
+      this.container.style.left = "0";
+      this.container.style.width = "100%";
+      this.container.style.height = "100%";
+      this.container.style.pointerEvents = "none"; // Map clicks pass through empty space
 
       // 2. Create SVG layer for lines and indicators
-      this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      this.svg.style.position = 'absolute';
-      this.svg.style.top = '0';
-      this.svg.style.left = '0';
-      this.svg.style.width = '100%';
-      this.svg.style.height = '100%';
-      this.svg.style.pointerEvents = 'none';
+      this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      this.svg.style.position = "absolute";
+      this.svg.style.top = "0";
+      this.svg.style.left = "0";
+      this.svg.style.width = "100%";
+      this.svg.style.height = "100%";
+      this.svg.style.pointerEvents = "none";
       this.container.appendChild(this.svg);
 
       // Define arrowhead markers in SVG defs
-      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+
       // Standard Red Arrow
-      const arrowMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-      arrowMarker.setAttribute('id', 'arrow');
-      arrowMarker.setAttribute('viewBox', '0 0 10 10');
-      arrowMarker.setAttribute('refX', '8');
-      arrowMarker.setAttribute('refY', '5');
-      arrowMarker.setAttribute('markerWidth', '6');
-      arrowMarker.setAttribute('markerHeight', '6');
-      arrowMarker.setAttribute('orient', 'auto-start-reverse');
-      const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      arrowPath.setAttribute('d', 'M 0 1.5 L 9 5 L 0 8.5 z');
-      arrowPath.setAttribute('fill', '#ef4444');
+      const arrowMarker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+      arrowMarker.setAttribute("id", "arrow");
+      arrowMarker.setAttribute("viewBox", "0 0 10 10");
+      arrowMarker.setAttribute("refX", "8");
+      arrowMarker.setAttribute("refY", "5");
+      arrowMarker.setAttribute("markerWidth", "6");
+      arrowMarker.setAttribute("markerHeight", "6");
+      arrowMarker.setAttribute("orient", "auto-start-reverse");
+      const arrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      arrowPath.setAttribute("d", "M 0 1.5 L 9 5 L 0 8.5 z");
+      arrowPath.setAttribute("fill", "#ef4444");
       arrowMarker.appendChild(arrowPath);
       defs.appendChild(arrowMarker);
 
       // Locked Red Arrow
-      const lockedArrowMarker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-      lockedArrowMarker.setAttribute('id', 'arrow-locked');
-      lockedArrowMarker.setAttribute('viewBox', '0 0 10 10');
-      lockedArrowMarker.setAttribute('refX', '8');
-      lockedArrowMarker.setAttribute('refY', '5');
-      lockedArrowMarker.setAttribute('markerWidth', '6');
-      lockedArrowMarker.setAttribute('markerHeight', '6');
-      lockedArrowMarker.setAttribute('orient', 'auto-start-reverse');
-      const lockedArrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      lockedArrowPath.setAttribute('d', 'M 0 1.5 L 9 5 L 0 8.5 z');
-      lockedArrowPath.setAttribute('fill', '#7f1d1d');
+      const lockedArrowMarker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+      lockedArrowMarker.setAttribute("id", "arrow-locked");
+      lockedArrowMarker.setAttribute("viewBox", "0 0 10 10");
+      lockedArrowMarker.setAttribute("refX", "8");
+      lockedArrowMarker.setAttribute("refY", "5");
+      lockedArrowMarker.setAttribute("markerWidth", "6");
+      lockedArrowMarker.setAttribute("markerHeight", "6");
+      lockedArrowMarker.setAttribute("orient", "auto-start-reverse");
+      const lockedArrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      lockedArrowPath.setAttribute("d", "M 0 1.5 L 9 5 L 0 8.5 z");
+      lockedArrowPath.setAttribute("fill", "#7f1d1d");
       lockedArrowMarker.appendChild(lockedArrowPath);
       defs.appendChild(lockedArrowMarker);
 
       this.svg.appendChild(defs);
 
       // 3. Create sub-container for absolutely positioned HTML nodes
-      this.nodesContainer = document.createElement('div');
-      this.nodesContainer.style.position = 'absolute';
-      this.nodesContainer.style.top = '0';
-      this.nodesContainer.style.left = '0';
-      this.nodesContainer.style.width = '100%';
-      this.nodesContainer.style.height = '100%';
-      this.nodesContainer.style.pointerEvents = 'none';
+      this.nodesContainer = document.createElement("div");
+      this.nodesContainer.style.position = "absolute";
+      this.nodesContainer.style.top = "0";
+      this.nodesContainer.style.left = "0";
+      this.nodesContainer.style.width = "100%";
+      this.nodesContainer.style.height = "100%";
+      this.nodesContainer.style.pointerEvents = "none";
       this.container.appendChild(this.nodesContainer);
 
       this.boundGlobalMouseMove = this.handleGlobalMouseMove.bind(this);
@@ -156,10 +157,10 @@ export function createPanoramaOverlayManager(options: {
       this.boundWindowBlur = this.handleWindowBlur.bind(this);
 
       // Handle clicks on SVG to cancel quick connect
-      this.svg.addEventListener('click', (e) => {
+      this.svg.addEventListener("click", (e) => {
         if (this.ctrlPressed) {
           this.ctrlPressed = false;
-          this.svg.style.pointerEvents = 'none';
+          this.svg.style.pointerEvents = "none";
           this.currentMousePos = null;
           this.hoveredNodeId = null;
           this.updateCursor();
@@ -178,11 +179,11 @@ export function createPanoramaOverlayManager(options: {
       const panes = this.getPanes();
       if (panes) {
         panes.overlayMouseTarget.appendChild(this.container);
-        window.addEventListener('mousemove', this.boundGlobalMouseMove);
-        window.addEventListener('mouseup', this.boundGlobalMouseUp);
-        window.addEventListener('keydown', this.boundKeyDown);
-        window.addEventListener('keyup', this.boundKeyUp);
-        window.addEventListener('blur', this.boundWindowBlur);
+        window.addEventListener("mousemove", this.boundGlobalMouseMove);
+        window.addEventListener("mouseup", this.boundGlobalMouseUp);
+        window.addEventListener("keydown", this.boundKeyDown);
+        window.addEventListener("keyup", this.boundKeyUp);
+        window.addEventListener("blur", this.boundWindowBlur);
       }
     }
 
@@ -190,14 +191,14 @@ export function createPanoramaOverlayManager(options: {
       if (this.container.parentNode) {
         this.container.parentNode.removeChild(this.container);
       }
-      window.removeEventListener('mousemove', this.boundGlobalMouseMove);
-      window.removeEventListener('mouseup', this.boundGlobalMouseUp);
-      window.removeEventListener('keydown', this.boundKeyDown);
-      window.removeEventListener('keyup', this.boundKeyUp);
-      window.removeEventListener('blur', this.boundWindowBlur);
-      
+      window.removeEventListener("mousemove", this.boundGlobalMouseMove);
+      window.removeEventListener("mouseup", this.boundGlobalMouseUp);
+      window.removeEventListener("keydown", this.boundKeyDown);
+      window.removeEventListener("keyup", this.boundKeyUp);
+      window.removeEventListener("blur", this.boundWindowBlur);
+
       // Clean up cached nodes
-      this.nodeElements.forEach(el => el.remove());
+      this.nodeElements.forEach((el) => el.remove());
       this.nodeElements.clear();
     }
 
@@ -213,10 +214,10 @@ export function createPanoramaOverlayManager(options: {
       if (!map) return;
 
       // Keep the main container positioned at 0, 0 of the pane
-      this.container.style.left = '0px';
-      this.container.style.top = '0px';
-      this.container.style.width = '100%';
-      this.container.style.height = '100%';
+      this.container.style.left = "0px";
+      this.container.style.top = "0px";
+      this.container.style.width = "100%";
+      this.container.style.height = "100%";
 
       // Calculate bounding box of all nodes in div pixel coordinates for optimal SVG sizing
       let minX = Infinity;
@@ -224,7 +225,7 @@ export function createPanoramaOverlayManager(options: {
       let maxX = -Infinity;
       let maxY = -Infinity;
 
-      const nodePositions = new Map<string, { x: number, y: number }>();
+      const nodePositions = new Map<string, { x: number; y: number }>();
 
       for (const node of this.nodes) {
         const p = this.latLngToDivPixel(node.lat, node.lng);
@@ -239,7 +240,10 @@ export function createPanoramaOverlayManager(options: {
 
       const PADDING = 500; // Generous padding to prevent heading indicators from clipping
       if (minX === Infinity) {
-        minX = 0; minY = 0; maxX = 100; maxY = 100;
+        minX = 0;
+        minY = 0;
+        maxX = 100;
+        maxY = 100;
       } else {
         minX -= PADDING;
         minY -= PADDING;
@@ -251,14 +255,16 @@ export function createPanoramaOverlayManager(options: {
       const svgHeight = maxY - minY;
 
       // Position SVG overlay container exactly over the nodes bounding area
-      this.svg.style.left = minX + 'px';
-      this.svg.style.top = minY + 'px';
-      this.svg.style.width = svgWidth + 'px';
-      this.svg.style.height = svgHeight + 'px';
+      this.svg.style.left = minX + "px";
+      this.svg.style.top = minY + "px";
+      this.svg.style.width = svgWidth + "px";
+      this.svg.style.height = svgHeight + "px";
 
       // Clear SVG layers (lines, groups, and heading dots)
-      const elementsToClear = this.svg.querySelectorAll('circle, line, g.connection-group, path:not([fill])');
-      elementsToClear.forEach(c => c.remove());
+      const elementsToClear = this.svg.querySelectorAll(
+        "circle, line, g.connection-group, path:not([fill])",
+      );
+      elementsToClear.forEach((c) => c.remove());
 
       // 1. Draw SVG Connection Lines
       for (const conn of this.connections) {
@@ -269,14 +275,14 @@ export function createPanoramaOverlayManager(options: {
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        
+
         if (dist > 2) {
           const ux = dx / dist;
           const uy = dy / dist;
-          
+
           const isFromActive = conn.fromId === this.activeNodeId;
           const fromOffset = isFromActive ? 10 : 7;
-          
+
           const isToActive = conn.toId === this.activeNodeId;
           const toOffset = isToActive ? 10 : 7;
 
@@ -306,48 +312,51 @@ export function createPanoramaOverlayManager(options: {
           const isSelected = isSameConnection(this.selectedConnection, conn);
 
           // Group both visible line and wider hit-line
-          const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          group.setAttribute('class', 'connection-group');
-          group.style.cursor = 'pointer';
+          const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          group.setAttribute("class", "connection-group");
+          group.style.cursor = "pointer";
 
-          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          line.setAttribute('x1', svgStartX.toString());
-          line.setAttribute('y1', svgStartY.toString());
-          line.setAttribute('x2', svgEndX.toString());
-          line.setAttribute('y2', svgEndY.toString());
-          line.setAttribute('stroke', isSelected ? '#000000' : (conn.isLocked ? '#ef4444' : '#3b82f6'));
-          line.setAttribute('stroke-width', isSelected ? '7' : '4');
-          line.setAttribute('class', 'connection-line transition-all duration-200');
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", svgStartX.toString());
+          line.setAttribute("y1", svgStartY.toString());
+          line.setAttribute("x2", svgEndX.toString());
+          line.setAttribute("y2", svgEndY.toString());
+          line.setAttribute(
+            "stroke",
+            isSelected ? "#000000" : conn.isLocked ? "#ef4444" : "#3b82f6",
+          );
+          line.setAttribute("stroke-width", isSelected ? "7" : "4");
+          line.setAttribute("class", "connection-line transition-all duration-200");
           group.appendChild(line);
 
           // Generous hit area for easy mouse click / hover interaction
-          const hitLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          hitLine.setAttribute('x1', svgStartX.toString());
-          hitLine.setAttribute('y1', svgStartY.toString());
-          hitLine.setAttribute('x2', svgEndX.toString());
-          hitLine.setAttribute('y2', svgEndY.toString());
-          hitLine.setAttribute('stroke', 'transparent');
-          hitLine.setAttribute('stroke-width', '16');
-          hitLine.setAttribute('class', 'connection-hit-line');
-          hitLine.style.pointerEvents = 'auto';
+          const hitLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          hitLine.setAttribute("x1", svgStartX.toString());
+          hitLine.setAttribute("y1", svgStartY.toString());
+          hitLine.setAttribute("x2", svgEndX.toString());
+          hitLine.setAttribute("y2", svgEndY.toString());
+          hitLine.setAttribute("stroke", "transparent");
+          hitLine.setAttribute("stroke-width", "16");
+          hitLine.setAttribute("class", "connection-hit-line");
+          hitLine.style.pointerEvents = "auto";
           group.appendChild(hitLine);
 
           // Add interactive hover states
-          group.addEventListener('mouseenter', () => {
+          group.addEventListener("mouseenter", () => {
             if (!isSelected) {
-              line.setAttribute('stroke', '#475569'); // turn dark slate on hover
-              line.setAttribute('stroke-width', '6');  // thicken to guide action
+              line.setAttribute("stroke", "#475569"); // turn dark slate on hover
+              line.setAttribute("stroke-width", "6"); // thicken to guide action
             }
           });
-          group.addEventListener('mouseleave', () => {
+          group.addEventListener("mouseleave", () => {
             if (!isSelected) {
-              line.setAttribute('stroke', conn.isLocked ? '#ef4444' : '#3b82f6');
-              line.setAttribute('stroke-width', '4');
+              line.setAttribute("stroke", conn.isLocked ? "#ef4444" : "#3b82f6");
+              line.setAttribute("stroke-width", "4");
             }
           });
 
           // Handle click to select
-          group.addEventListener('click', (e) => {
+          group.addEventListener("click", (e) => {
             e.stopPropagation();
             if (this.onConnectionSelect) {
               this.onConnectionSelect(conn.fromId, conn.toId);
@@ -361,43 +370,45 @@ export function createPanoramaOverlayManager(options: {
       // Draw Quick Connect Line
       if (this.ctrlPressed && this.activeNodeId) {
         const p1 = nodePositions.get(this.activeNodeId);
-        const p2 = this.hoveredNodeId ? nodePositions.get(this.hoveredNodeId) : this.currentMousePos;
+        const p2 = this.hoveredNodeId
+          ? nodePositions.get(this.hoveredNodeId)
+          : this.currentMousePos;
         if (p1 && p2) {
           const startX = p1.x - minX;
           const startY = p1.y - minY;
           const endX = p2.x - minX;
           const endY = p2.y - minY;
 
-          const quickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          quickLine.setAttribute('x1', startX.toString());
-          quickLine.setAttribute('y1', startY.toString());
-          quickLine.setAttribute('x2', endX.toString());
-          quickLine.setAttribute('y2', endY.toString());
-          quickLine.setAttribute('stroke-dasharray', '5,5');
+          const quickLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          quickLine.setAttribute("x1", startX.toString());
+          quickLine.setAttribute("y1", startY.toString());
+          quickLine.setAttribute("x2", endX.toString());
+          quickLine.setAttribute("y2", endY.toString());
+          quickLine.setAttribute("stroke-dasharray", "5,5");
 
           if (this.hoveredNodeId) {
-            quickLine.setAttribute('stroke', '#10b981');
-            quickLine.setAttribute('stroke-width', '8');
-            quickLine.setAttribute('class', 'animate-pulse');
-            quickLine.style.pointerEvents = 'auto';
-            quickLine.style.cursor = 'pointer';
+            quickLine.setAttribute("stroke", "#10b981");
+            quickLine.setAttribute("stroke-width", "8");
+            quickLine.setAttribute("class", "animate-pulse");
+            quickLine.style.pointerEvents = "auto";
+            quickLine.style.cursor = "pointer";
 
-            quickLine.addEventListener('click', (e) => {
+            quickLine.addEventListener("click", (e) => {
               e.stopPropagation();
               if (this.activeNodeId && this.hoveredNodeId && this.onQuickConnect) {
                 this.onQuickConnect(this.activeNodeId, this.hoveredNodeId);
                 this.hoveredNodeId = null;
                 this.currentMousePos = null;
                 this.ctrlPressed = false;
-                this.svg.style.pointerEvents = 'none';
+                this.svg.style.pointerEvents = "none";
                 this.updateCursor();
                 requestAnimationFrame(() => this.draw());
               }
             });
           } else {
-            quickLine.setAttribute('stroke', '#f59e0b');
-            quickLine.setAttribute('stroke-width', '4');
-            quickLine.style.pointerEvents = 'none';
+            quickLine.setAttribute("stroke", "#f59e0b");
+            quickLine.setAttribute("stroke-width", "4");
+            quickLine.style.pointerEvents = "none";
           }
 
           this.svg.appendChild(quickLine);
@@ -416,15 +427,15 @@ export function createPanoramaOverlayManager(options: {
 
         let el = this.nodeElements.get(node.id);
         if (!el) {
-          el = document.createElement('div');
-          el.style.position = 'absolute';
-          el.style.pointerEvents = 'auto';
-          el.className = 'absolute select-none transition-transform duration-200 hover:scale-105';
+          el = document.createElement("div");
+          el.style.position = "absolute";
+          el.style.pointerEvents = "auto";
+          el.className = "absolute select-none transition-transform duration-200 hover:scale-105";
           this.nodesContainer.appendChild(el);
           this.nodeElements.set(node.id, el);
 
-          el.addEventListener('mousedown', (e) => this.handleNodeMouseDown(e, node.id));
-          el.addEventListener('click', (e) => {
+          el.addEventListener("mousedown", (e) => this.handleNodeMouseDown(e, node.id));
+          el.addEventListener("click", (e) => {
             e.stopPropagation();
             if (!this.wasDragging) {
               this.onNodeClick(node.id);
@@ -435,13 +446,13 @@ export function createPanoramaOverlayManager(options: {
         // Position node exactly in div pixel coordinates
         el.style.left = `${p.x}px`;
         el.style.top = `${p.y}px`;
-        el.style.zIndex = isActive ? '50' : '10';
+        el.style.zIndex = isActive ? "50" : "10";
 
         el.innerHTML = this.renderNodeHTML(node, isActive);
 
         // 3. Draw Active Node Heading Ray in SVG
         if (isActive) {
-          const headingRad = (node.heading - 90) * Math.PI / 180;
+          const headingRad = ((node.heading - 90) * Math.PI) / 180;
           const DOT_COUNT = 5;
           const DOT_SPACING = 15;
 
@@ -456,12 +467,12 @@ export function createPanoramaOverlayManager(options: {
             const svgDotX = dotX - minX;
             const svgDotY = dotY - minY;
 
-            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-            dot.setAttribute('cx', svgDotX.toString());
-            dot.setAttribute('cy', svgDotY.toString());
-            dot.setAttribute('r', radius.toString());
-            dot.setAttribute('fill', `rgba(239, 68, 68, ${alpha})`);
-            dot.setAttribute('class', 'shadow-sm animate-pulse');
+            const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            dot.setAttribute("cx", svgDotX.toString());
+            dot.setAttribute("cy", svgDotY.toString());
+            dot.setAttribute("r", radius.toString());
+            dot.setAttribute("fill", `rgba(239, 68, 68, ${alpha})`);
+            dot.setAttribute("class", "shadow-sm animate-pulse");
             this.svg.appendChild(dot);
           }
         }
@@ -477,10 +488,10 @@ export function createPanoramaOverlayManager(options: {
     }
 
     updateNodes(
-      nodes: PanoramaNode[], 
-      connections: Connection[], 
+      nodes: PanoramaNode[],
+      connections: Connection[],
       activeNodeId: string | null,
-      selectedConnection?: { fromId: string, toId: string } | null
+      selectedConnection?: { fromId: string; toId: string } | null,
     ): void {
       this.nodes = nodes;
       this.connections = connections;
@@ -489,14 +500,14 @@ export function createPanoramaOverlayManager(options: {
       requestAnimationFrame(() => this.draw());
     }
 
-    private latLngToDivPixel(lat: number, lng: number): { x: number, y: number } | null {
+    private latLngToDivPixel(lat: number, lng: number): { x: number; y: number } | null {
       const projection = this.getProjection();
       if (!projection) return null;
-      
+
       const latLng = new window.google.maps.LatLng(lat, lng);
       const point = projection.fromLatLngToDivPixel(latLng);
       if (!point) return null;
-      
+
       return { x: point.x, y: point.y };
     }
 
@@ -514,7 +525,7 @@ export function createPanoramaOverlayManager(options: {
             </div>
           </div>
         `;
-        
+
         // Rotating compass dashed outer line
         html += `
           <div class="absolute border border-dashed border-red-500/50 rounded-full flex items-center justify-center pointer-events-none animate-spin-slow" style="width: 40px; height: 40px; left: 0px; top: 0px; transform: translate(-50%, -50%);"></div>
@@ -556,7 +567,7 @@ export function createPanoramaOverlayManager(options: {
       }
 
       // 4. Rotate handle in 'rotate' mode
-      if (isActive && this.mode === 'rotate') {
+      if (isActive && this.mode === "rotate") {
         html += `
           <div class="absolute rounded-full bg-slate-800 border border-white text-white flex items-center justify-center cursor-grab hover:bg-slate-700 shadow-lg pointer-events-auto rotate-handle transition-transform hover:scale-110 active:cursor-grabbing z-30" style="width: 20px; height: 20px; left: -28px; top: -10px; transform: translateY(-50%);" title="Drag to Rotate Direction">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 fill-current" viewBox="0 0 24 24">
@@ -580,15 +591,15 @@ export function createPanoramaOverlayManager(options: {
     }
 
     private handleNodeMouseDown(e: MouseEvent, nodeId: string): void {
-      const isRotateHandle = (e.target as HTMLElement).closest('.rotate-handle');
-      
+      const isRotateHandle = (e.target as HTMLElement).closest(".rotate-handle");
+
       // Stop mapping drag events
       e.stopPropagation();
 
       this.dragStartX = e.clientX;
       this.dragStartY = e.clientY;
 
-      const isLocked = this.connections.some(c => c.isLocked);
+      const isLocked = this.connections.some((c) => c.isLocked);
       if (isLocked) {
         // If locked, we don't start dragging or rotating, but clicking will still select the node
         if (!isRotateHandle) {
@@ -604,8 +615,8 @@ export function createPanoramaOverlayManager(options: {
         this.isRotating = true;
         this.activeDragNodeId = nodeId;
         this.wasDragging = false;
-        
-        const node = this.nodes.find(n => n.id === nodeId);
+
+        const node = this.nodes.find((n) => n.id === nodeId);
         if (node) {
           this.isRotating = true;
         }
@@ -614,7 +625,7 @@ export function createPanoramaOverlayManager(options: {
       }
 
       // If we are in 'select' or 'rotate' mode, start node drag repositioning
-      if (this.mode === 'select' || this.mode === 'rotate') {
+      if (this.mode === "select" || this.mode === "rotate") {
         this.isDragging = true;
         this.activeDragNodeId = nodeId;
         this.wasDragging = false;
@@ -665,7 +676,7 @@ export function createPanoramaOverlayManager(options: {
       if (!map) return;
 
       // Find node
-      const node = this.nodes.find(n => n.id === this.activeDragNodeId);
+      const node = this.nodes.find((n) => n.id === this.activeDragNodeId);
       if (!node) return;
 
       // Extract raw mouse relative to our overlay container (which is 0, 0 of the pane, meaning div pixel coords!)
@@ -680,7 +691,7 @@ export function createPanoramaOverlayManager(options: {
         if (latLng) {
           node.lat = latLng.lat();
           node.lng = latLng.lng();
-          
+
           // Instantly redraw lines/dots reactively
           requestAnimationFrame(() => this.draw());
         }
@@ -691,9 +702,9 @@ export function createPanoramaOverlayManager(options: {
         if (nodeDiv) {
           const nodeX = parseFloat(nodeDiv.style.left);
           const nodeY = parseFloat(nodeDiv.style.top);
-          
+
           const angleRad = Math.atan2(localY - nodeY, localX - nodeX);
-          let heading = (angleRad * 180 / Math.PI) + 90; // Align forward indicator
+          let heading = (angleRad * 180) / Math.PI + 90; // Align forward indicator
           if (heading < 0) heading += 360;
           heading = heading % 360;
 
@@ -701,7 +712,7 @@ export function createPanoramaOverlayManager(options: {
           if (this.onRotateActiveNode) {
             this.onRotateActiveNode(heading);
           }
-          
+
           // Instant heading vector redraw
           requestAnimationFrame(() => this.draw());
         }
@@ -711,8 +722,8 @@ export function createPanoramaOverlayManager(options: {
     private handleGlobalMouseUp(e: MouseEvent): void {
       if (!this.activeDragNodeId) return;
 
-      const node = this.nodes.find(n => n.id === this.activeDragNodeId);
-      
+      const node = this.nodes.find((n) => n.id === this.activeDragNodeId);
+
       if (this.wasDragging && node) {
         if (this.isDragging) {
           // Reposition finished, save to Supabase
@@ -730,18 +741,18 @@ export function createPanoramaOverlayManager(options: {
     }
 
     private handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Control' && !this.ctrlPressed) {
+      if (e.key === "Control" && !this.ctrlPressed) {
         this.ctrlPressed = true;
-        this.svg.style.pointerEvents = 'auto';
+        this.svg.style.pointerEvents = "auto";
         this.updateCursor();
         requestAnimationFrame(() => this.draw());
       }
     }
 
     private handleKeyUp(e: KeyboardEvent): void {
-      if (e.key === 'Control') {
+      if (e.key === "Control") {
         this.ctrlPressed = false;
-        this.svg.style.pointerEvents = 'none';
+        this.svg.style.pointerEvents = "none";
         this.currentMousePos = null;
         this.hoveredNodeId = null;
         this.updateCursor();
@@ -752,7 +763,7 @@ export function createPanoramaOverlayManager(options: {
     private handleWindowBlur(): void {
       if (this.ctrlPressed) {
         this.ctrlPressed = false;
-        this.svg.style.pointerEvents = 'none';
+        this.svg.style.pointerEvents = "none";
         this.currentMousePos = null;
         this.hoveredNodeId = null;
         this.updateCursor();
@@ -762,15 +773,15 @@ export function createPanoramaOverlayManager(options: {
 
     private updateCursor(): void {
       if (this.ctrlPressed) {
-        const cursorStyle = this.hoveredNodeId ? 'pointer' : 'crosshair';
+        const cursorStyle = this.hoveredNodeId ? "pointer" : "crosshair";
         this.nodesContainer.style.cursor = cursorStyle;
         this.svg.style.cursor = cursorStyle;
-      } else if (this.mode === 'connect') {
-        this.nodesContainer.style.cursor = 'crosshair';
-        this.svg.style.cursor = 'crosshair';
+      } else if (this.mode === "connect") {
+        this.nodesContainer.style.cursor = "crosshair";
+        this.svg.style.cursor = "crosshair";
       } else {
-        this.nodesContainer.style.cursor = 'default';
-        this.svg.style.cursor = 'default';
+        this.nodesContainer.style.cursor = "default";
+        this.svg.style.cursor = "default";
       }
     }
   }

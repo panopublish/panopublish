@@ -5,20 +5,20 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { 
-  BarChart3, 
-  Layers, 
-  Globe, 
-  Eye, 
-  Layers2, 
-  Compass, 
-  Download, 
-  RefreshCw, 
-  ExternalLink, 
-  CheckCircle2, 
+import {
+  BarChart3,
+  Layers,
+  Globe,
+  Eye,
+  Layers2,
+  Compass,
+  Download,
+  RefreshCw,
+  ExternalLink,
+  CheckCircle2,
   DownloadCloud,
   FileSpreadsheet,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,7 +27,7 @@ import { SEO } from "@/components/SEO";
 export const Route = createFileRoute("/tours/$tourId/analytics")({
   head: () => ({
     meta: [
-      { title: "Tour Analytics — TourVista" },
+      { title: "Tour Analytics — PanoPublish" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -99,7 +99,7 @@ function TourAnalytics() {
 
       // 5. Fetch Google Token
       const { data: tokenData } = await supabase.functions.invoke("google-oauth", {
-        body: { action: "get_valid_token", user_id: user.id }
+        body: { action: "get_valid_token", user_id: user.id },
       });
       if (tokenData?.access_token) {
         setAccessToken(tokenData.access_token);
@@ -123,7 +123,11 @@ function TourAnalytics() {
       return;
     }
 
-    const svPhotos = photos.filter(p => p.streetview_photo_id && (p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING'));
+    const svPhotos = photos.filter(
+      (p) =>
+        p.streetview_photo_id &&
+        (p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING"),
+    );
     if (svPhotos.length === 0) {
       toast.info("No published scenes found to sync views for.");
       return;
@@ -137,14 +141,14 @@ function TourAnalytics() {
       let current = 0;
       for (const p of svPhotos) {
         if (!p.streetview_photo_id) continue;
-        
+
         try {
           const { data, error } = await supabase.functions.invoke("streetview-publish", {
-            body: { 
-              action: "get_photo_status", 
+            body: {
+              action: "get_photo_status",
               access_token: accessToken,
-              streetview_photo_id: p.streetview_photo_id
-            }
+              streetview_photo_id: p.streetview_photo_id,
+            },
           });
 
           if (error) {
@@ -155,10 +159,12 @@ function TourAnalytics() {
         } catch (e) {
           console.error(`Sync fetch error for ${p.filename}:`, e);
         }
-        
+
         current++;
         setSyncProgress({ current, total: svPhotos.length });
-        toast.loading(`Syncing ${current} of ${svPhotos.length} scenes with Google Maps...`, { id: tid });
+        toast.loading(`Syncing ${current} of ${svPhotos.length} scenes with Google Maps...`, {
+          id: tid,
+        });
       }
 
       toast.success("Analytics synced successfully with Google Maps!", { id: tid });
@@ -173,31 +179,47 @@ function TourAnalytics() {
   // Download Analytics as CSV
   const handleDownloadCSV = () => {
     try {
-      const headers = ["Index", "Filename", "Island", "Level", "Connections", "Status", "Street View ID", "Share Link", "Views/Impressions"];
+      const headers = [
+        "Index",
+        "Filename",
+        "Island",
+        "Level",
+        "Connections",
+        "Status",
+        "Street View ID",
+        "Share Link",
+        "Views/Impressions",
+      ];
       const rows = sortedPhotos.map((p, idx) => {
-        const island = islands.find(i => i.id === p.island_id);
+        const island = islands.find((i) => i.id === p.island_id);
         const connCount = connectionCounts.get(p.id) ?? 0;
-        const levelText = island?.is_level ? `${island.level_number} (${island.level_name || 'L0'})` : '—';
+        const levelText = island?.is_level
+          ? `${island.level_number} (${island.level_name || "L0"})`
+          : "—";
         return [
           idx,
           p.filename || `scene_${idx}`,
-          island?.name || '—',
+          island?.name || "—",
           levelText,
           connCount,
-          p.streetview_status || 'NOT_PUBLISHED',
-          p.streetview_photo_id || '—',
-          p.streetview_share_link || '—',
-          p.view_count
+          p.streetview_status || "NOT_PUBLISHED",
+          p.streetview_photo_id || "—",
+          p.streetview_share_link || "—",
+          p.view_count,
         ];
       });
 
-      const csvContent = "data:text/csv;charset=utf-8," 
-        + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
-      
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        [
+          headers.join(","),
+          ...rows.map((e) => e.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",")),
+        ].join("\n");
+
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `analytics_${tour?.name || 'tour'}_${Date.now()}.csv`);
+      link.setAttribute("download", `analytics_${tour?.name || "tour"}_${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -220,34 +242,45 @@ function TourAnalytics() {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
-      toast.success(`Scene ${p.filename || 'panorama'} downloaded!`);
+      toast.success(`Scene ${p.filename || "panorama"} downloaded!`);
     } catch (err: any) {
       toast.error("Failed to download image: " + err.message);
     }
   };
 
   // Calculations
-  const publishedPhotos = photos.filter(p => p.streetview_photo_id && (p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING'));
+  const publishedPhotos = photos.filter(
+    (p) =>
+      p.streetview_photo_id &&
+      (p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING"),
+  );
   const totalViews = publishedPhotos.reduce((sum, p) => sum + (p.view_count || 0), 0);
-  const levelsCount = islands.filter(i => i.is_level).length;
+  const levelsCount = islands.filter((i) => i.is_level).length;
 
   const connectionCounts = new Map<string, number>();
-  connections.forEach(c => {
+  connections.forEach((c) => {
     connectionCounts.set(c.from_photo_id, (connectionCounts.get(c.from_photo_id) ?? 0) + 1);
     connectionCounts.set(c.to_photo_id, (connectionCounts.get(c.to_photo_id) ?? 0) + 1);
   });
 
   // Sort photos by view count descending
   const sortedPhotos = [...photos].sort((a, b) => (b.view_count || 0) - (a.view_count || 0));
-  const topThree = sortedPhotos.slice(0, 3).filter(p => p.view_count > 0 || (p.streetview_photo_id && (p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING')));
+  const topThree = sortedPhotos
+    .slice(0, 3)
+    .filter(
+      (p) =>
+        p.view_count > 0 ||
+        (p.streetview_photo_id &&
+          (p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING")),
+    );
 
   return (
-    <AppShell 
-      title="Tour Analytics" 
+    <AppShell
+      title="Tour Analytics"
       breadcrumbs={[
-        { label: "Tours", to: "/tours" }, 
-        { label: tour?.name || "Tour" }, 
-        { label: "Analytics" }
+        { label: "Tours", to: "/tours" },
+        { label: tour?.name || "Tour" },
+        { label: "Analytics" },
       ]}
     >
       <SEO
@@ -262,18 +295,24 @@ function TourAnalytics() {
           {/* Header Action Bar */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black text-slate-800 tracking-tight">{tour?.name || "Tour Dashboard"}</h1>
-              <p className="text-sm text-slate-500 font-medium">{tour?.address || "No address assigned"}</p>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+                {tour?.name || "Tour Dashboard"}
+              </h1>
+              <p className="text-sm text-slate-500 font-medium">
+                {tour?.address || "No address assigned"}
+              </p>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <Button
                 onClick={handleSyncViews}
                 disabled={syncing || loading || !accessToken || publishedPhotos.length === 0}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform active:scale-95 flex items-center gap-2 px-5 py-2.5"
               >
-                <RefreshCw className={`h-4.5 w-4.5 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? `Syncing (${syncProgress.current}/${syncProgress.total})` : "Sync Google Views"}
+                <RefreshCw className={`h-4.5 w-4.5 ${syncing ? "animate-spin" : ""}`} />
+                {syncing
+                  ? `Syncing (${syncProgress.current}/${syncProgress.total})`
+                  : "Sync Google Views"}
               </Button>
 
               <Button
@@ -298,7 +337,8 @@ function TourAnalytics() {
               <Globe className="h-12 w-12 text-slate-300 mb-4 animate-pulse" />
               <h2 className="text-lg font-bold text-slate-800 mb-2">No Published Scenes</h2>
               <p className="text-slate-500 text-sm max-w-md font-medium leading-relaxed mb-6">
-                You do not have any published scenes for us to display analytics. Please publish some scenes to Google first.
+                You do not have any published scenes for us to display analytics. Please publish
+                some scenes to Google first.
               </p>
               <Link to="/tours/$tourId/publish" params={{ tourId }}>
                 <Button className="bg-[#0277bd] text-white font-bold rounded-xl px-6 py-2.5 shadow-md hover:shadow-lg transition-all">
@@ -316,7 +356,9 @@ function TourAnalytics() {
                     <Eye className="h-16 w-16" />
                   </div>
                   <div>
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Total Impressions</span>
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                      Total Impressions
+                    </span>
                     <span className="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
                       {totalViews.toLocaleString("en-US")}
                     </span>
@@ -332,8 +374,12 @@ function TourAnalytics() {
                     <Globe className="h-16 w-16" />
                   </div>
                   <div>
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Scenes Uploaded</span>
-                    <span className="text-3xl font-black text-slate-800 tracking-tight">{photos.length}</span>
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                      Scenes Uploaded
+                    </span>
+                    <span className="text-3xl font-black text-slate-800 tracking-tight">
+                      {photos.length}
+                    </span>
                   </div>
                   <div className="text-xs text-slate-400 font-semibold mt-4">
                     {publishedPhotos.length} published on Google Maps
@@ -346,8 +392,12 @@ function TourAnalytics() {
                     <Layers className="h-16 w-16" />
                   </div>
                   <div>
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Islands Created</span>
-                    <span className="text-3xl font-black text-slate-800 tracking-tight">{islands.length}</span>
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                      Islands Created
+                    </span>
+                    <span className="text-3xl font-black text-slate-800 tracking-tight">
+                      {islands.length}
+                    </span>
                   </div>
                   <div className="text-xs text-slate-400 font-semibold mt-4">
                     Logical grouping folders
@@ -360,8 +410,12 @@ function TourAnalytics() {
                     <Layers2 className="h-16 w-16" />
                   </div>
                   <div>
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Levels Active</span>
-                    <span className="text-3xl font-black text-slate-800 tracking-tight">{levelsCount}</span>
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
+                      Levels Active
+                    </span>
+                    <span className="text-3xl font-black text-slate-800 tracking-tight">
+                      {levelsCount}
+                    </span>
                   </div>
                   <div className="text-xs text-slate-400 font-semibold mt-4">
                     Floor layout mapping segments
@@ -401,32 +455,50 @@ function TourAnalytics() {
                   <div className="p-8">
                     <div className="mb-6">
                       <h2 className="text-lg font-black text-slate-800">Top Performing Scenes</h2>
-                      <p className="text-xs text-slate-400 font-medium">Ranked by overall impression share split</p>
+                      <p className="text-xs text-slate-400 font-medium">
+                        Ranked by overall impression share split
+                      </p>
                     </div>
 
                     {topThree.length === 0 ? (
                       <div className="border border-dashed border-slate-200 rounded-xl p-12 text-center text-slate-400 flex flex-col items-center">
                         <Globe className="h-10 w-10 text-slate-300 mb-2" />
                         <span className="text-sm font-semibold">No view analytics tracked yet</span>
-                        <span className="text-xs mt-0.5">Publish your tour on Google Maps and click "Sync Google Views" to load metrics.</span>
+                        <span className="text-xs mt-0.5">
+                          Publish your tour on Google Maps and click "Sync Google Views" to load
+                          metrics.
+                        </span>
                       </div>
                     ) : (
                       <div className="grid md:grid-cols-3 gap-8">
                         {topThree.map((p, idx) => {
-                          const pctShare = totalViews > 0 ? Math.round((p.view_count / totalViews) * 100) : 0;
-                          
+                          const pctShare =
+                            totalViews > 0 ? Math.round((p.view_count / totalViews) * 100) : 0;
+
                           // Circular indicator stroke properties
                           const radius = 42;
                           const circumference = 2 * Math.PI * radius;
                           const strokeDashoffset = circumference - (pctShare / 100) * circumference;
 
                           // Colors for circular progress
-                          const ringColor = idx === 0 ? "stroke-blue-500" : idx === 1 ? "stroke-indigo-500" : "stroke-amber-500";
-                          const glowColor = idx === 0 ? "text-blue-500/10" : idx === 1 ? "text-indigo-500/10" : "text-amber-500/10";
+                          const ringColor =
+                            idx === 0
+                              ? "stroke-blue-500"
+                              : idx === 1
+                                ? "stroke-indigo-500"
+                                : "stroke-amber-500";
+                          const glowColor =
+                            idx === 0
+                              ? "text-blue-500/10"
+                              : idx === 1
+                                ? "text-indigo-500/10"
+                                : "text-amber-500/10";
 
                           return (
-                            <div key={p.id} className="group flex flex-col items-center p-6 border rounded-2xl hover:border-slate-200 hover:shadow-md transition-all duration-300 relative bg-white overflow-hidden">
-                              
+                            <div
+                              key={p.id}
+                              className="group flex flex-col items-center p-6 border rounded-2xl hover:border-slate-200 hover:shadow-md transition-all duration-300 relative bg-white overflow-hidden"
+                            >
                               {/* Position Badge */}
                               <div className="absolute top-4 left-4 h-7 w-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-sm">
                                 {idx + 1}
@@ -454,8 +526,12 @@ function TourAnalytics() {
                                   />
                                 </svg>
                                 <div className="absolute flex flex-col items-center">
-                                  <span className="text-xl font-black text-slate-800 leading-none">{pctShare}%</span>
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">share</span>
+                                  <span className="text-xl font-black text-slate-800 leading-none">
+                                    {pctShare}%
+                                  </span>
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                    share
+                                  </span>
                                 </div>
                               </div>
 
@@ -464,7 +540,9 @@ function TourAnalytics() {
                                 <span className="text-2xl font-black text-slate-800 tracking-tight">
                                   {p.view_count.toLocaleString("en-US")}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mt-0.5">Impressions</span>
+                                <span className="text-[10px] font-bold text-slate-400 block uppercase tracking-wider mt-0.5">
+                                  Impressions
+                                </span>
                               </div>
 
                               {/* Thumbnail preview */}
@@ -475,7 +553,9 @@ function TourAnalytics() {
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                 />
                                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/70 to-transparent p-2 pt-6">
-                                  <span className="text-[10px] font-bold text-white truncate block">{p.filename}</span>
+                                  <span className="text-[10px] font-bold text-white truncate block">
+                                    {p.filename}
+                                  </span>
                                 </div>
                               </div>
 
@@ -515,12 +595,18 @@ function TourAnalytics() {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                           {sortedPhotos.map((p, idx) => {
-                            const island = islands.find(i => i.id === p.island_id);
+                            const island = islands.find((i) => i.id === p.island_id);
                             const connCount = connectionCounts.get(p.id) ?? 0;
-                            const isPublished = p.streetview_photo_id && (p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING');
+                            const isPublished =
+                              p.streetview_photo_id &&
+                              (p.streetview_status === "PUBLISHED" ||
+                                p.streetview_status === "PROCESSING");
 
                             return (
-                              <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <tr
+                                key={p.id}
+                                className="hover:bg-slate-50/50 transition-colors group"
+                              >
                                 {/* Thumbnail */}
                                 <td className="p-4 pl-6">
                                   <div className="relative aspect-square w-16 rounded-xl border bg-slate-50 overflow-hidden shadow-sm">
@@ -537,7 +623,10 @@ function TourAnalytics() {
 
                                 {/* Details / Metadata */}
                                 <td className="p-4">
-                                  <div className="font-bold text-slate-800 truncate max-w-[200px] mb-1" title={p.filename || ""}>
+                                  <div
+                                    className="font-bold text-slate-800 truncate max-w-[200px] mb-1"
+                                    title={p.filename || ""}
+                                  >
                                     {p.filename || `scene_${idx}`}
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2">
@@ -556,7 +645,7 @@ function TourAnalytics() {
                                       </span>
                                     )}
                                   </div>
-                                  
+
                                   {/* Quick Actions */}
                                   <div className="flex items-center gap-3 mt-2 text-xs font-bold text-[#0277bd]">
                                     {p.streetview_share_link && (
@@ -591,9 +680,11 @@ function TourAnalytics() {
                                 <td className="p-4 text-center">
                                   {island?.is_level ? (
                                     <div className="flex flex-col items-center">
-                                      <span className="text-xs font-bold text-slate-800">{island.level_number}</span>
+                                      <span className="text-xs font-bold text-slate-800">
+                                        {island.level_number}
+                                      </span>
                                       <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mt-0.5">
-                                        {island.level_name || 'L0'}
+                                        {island.level_name || "L0"}
                                       </span>
                                     </div>
                                   ) : (

@@ -1,21 +1,27 @@
-import { useEffect, useRef, useCallback, useState, RefObject } from 'react';
-import { PanoramaNode, Connection, MapMode } from '../types/panorama';
-import { IPanoramaOverlayManager, createPanoramaOverlayManager } from '../lib/PanoramaOverlayManager';
+import { useEffect, useRef, useCallback, useState, RefObject } from "react";
+import { PanoramaNode, Connection, MapMode } from "../types/panorama";
+import {
+  IPanoramaOverlayManager,
+  createPanoramaOverlayManager,
+} from "../lib/PanoramaOverlayManager";
 
-export function usePanoramaMap(mapRef: RefObject<HTMLDivElement | null>, options: {
-  nodes: PanoramaNode[];
-  connections: Connection[];
-  activeNodeId: string | null;
-  selectedConnection?: { fromId: string, toId: string } | null;
-  onNodeSelect: (id: string) => void;
-  onNodeMove: (id: string, lat: number, lng: number) => void;
-  onNodeRotate?: (heading: number) => void;
-  onQuickConnect?: (fromId: string, toId: string) => void;
-  onConnectionSelect?: (fromId: string | null, toId: string | null) => void;
-  centerLat?: number;
-  centerLng?: number;
-  mapsReady?: boolean;
-}) {
+export function usePanoramaMap(
+  mapRef: RefObject<HTMLDivElement | null>,
+  options: {
+    nodes: PanoramaNode[];
+    connections: Connection[];
+    activeNodeId: string | null;
+    selectedConnection?: { fromId: string; toId: string } | null;
+    onNodeSelect: (id: string) => void;
+    onNodeMove: (id: string, lat: number, lng: number) => void;
+    onNodeRotate?: (heading: number) => void;
+    onQuickConnect?: (fromId: string, toId: string) => void;
+    onConnectionSelect?: (fromId: string | null, toId: string | null) => void;
+    centerLat?: number;
+    centerLng?: number;
+    mapsReady?: boolean;
+  },
+) {
   const mapInstanceRef = useRef<any>(null);
   const overlayRef = useRef<IPanoramaOverlayManager | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -34,25 +40,31 @@ export function usePanoramaMap(mapRef: RefObject<HTMLDivElement | null>, options
     onNodeRotateRef.current = options.onNodeRotate;
     onQuickConnectRef.current = options.onQuickConnect;
     onConnectionSelectRef.current = options.onConnectionSelect;
-  }, [options.onNodeSelect, options.onNodeMove, options.onNodeRotate, options.onQuickConnect, options.onConnectionSelect]);
+  }, [
+    options.onNodeSelect,
+    options.onNodeMove,
+    options.onNodeRotate,
+    options.onQuickConnect,
+    options.onConnectionSelect,
+  ]);
 
   // Initialize Google Map
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current || !window.google?.maps) return;
-    
+
     const lat = options.centerLat ?? 20.5937;
     const lng = options.centerLng ?? 78.9629;
-    
+
     mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
       center: { lat, lng },
       zoom: 19,
-      mapTypeId: 'roadmap',
+      mapTypeId: "roadmap",
       disableDefaultUI: true,
-      gestureHandling: 'greedy',
+      gestureHandling: "greedy",
     });
-    
+
     // Clear connection selection when clicking on empty map area
-    window.google.maps.event.addListener(mapInstanceRef.current, 'click', () => {
+    window.google.maps.event.addListener(mapInstanceRef.current, "click", () => {
       onConnectionSelectRef.current?.(null, null);
     });
 
@@ -80,11 +92,11 @@ export function usePanoramaMap(mapRef: RefObject<HTMLDivElement | null>, options
         onConnectionSelectRef.current?.(fromId, toId);
       },
     });
-    
+
     overlayRef.current.setMap(mapInstanceRef.current);
-    
+
     // Trigger redraws on bounds change
-    window.google.maps.event.addListener(mapInstanceRef.current, 'bounds_changed', () => {
+    window.google.maps.event.addListener(mapInstanceRef.current, "bounds_changed", () => {
       overlayRef.current?.draw();
     });
 
@@ -93,7 +105,7 @@ export function usePanoramaMap(mapRef: RefObject<HTMLDivElement | null>, options
       overlayRef.current?.draw();
     });
     resizeObserver.observe(mapRef.current);
-    
+
     setMapReady(true);
 
     return () => {
@@ -112,7 +124,7 @@ export function usePanoramaMap(mapRef: RefObject<HTMLDivElement | null>, options
         options.nodes,
         options.connections,
         options.activeNodeId,
-        options.selectedConnection
+        options.selectedConnection,
       );
     }
   }, [options.nodes, options.connections, options.activeNodeId, options.selectedConnection]);
@@ -121,17 +133,20 @@ export function usePanoramaMap(mapRef: RefObject<HTMLDivElement | null>, options
   const fitBounds = useCallback(() => {
     if (!mapInstanceRef.current || options.nodes.length === 0) return;
     const bounds = new window.google.maps.LatLngBounds();
-    options.nodes.forEach(n => bounds.extend({ lat: n.lat, lng: n.lng }));
-    mapInstanceRef.current.fitBounds(bounds, 60);  // 60px padding
+    options.nodes.forEach((n) => bounds.extend({ lat: n.lat, lng: n.lng }));
+    mapInstanceRef.current.fitBounds(bounds, 60); // 60px padding
   }, [options.nodes]);
 
   // Expose centerOnNode
-  const centerOnNode = useCallback((nodeId: string) => {
-    const node = options.nodes.find(n => n.id === nodeId);
-    if (node && mapInstanceRef.current) {
-      mapInstanceRef.current.panTo({ lat: node.lat, lng: node.lng });
-    }
-  }, [options.nodes]);
+  const centerOnNode = useCallback(
+    (nodeId: string) => {
+      const node = options.nodes.find((n) => n.id === nodeId);
+      if (node && mapInstanceRef.current) {
+        mapInstanceRef.current.panTo({ lat: node.lat, lng: node.lng });
+      }
+    },
+    [options.nodes],
+  );
 
   const setMode = useCallback((mode: MapMode) => {
     if (overlayRef.current) {

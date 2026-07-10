@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 
 export function WhatsAppButton() {
   const { user } = useAuth();
-  const msg = `Hi, I need help with TourVista — my account email is ${user?.email ?? "(not signed in)"}`;
+  const msg = `Hi, I need help with PanoPublish — my account email is ${user?.email ?? "(not signed in)"}`;
   return (
     <a
       href={waLink(msg)}

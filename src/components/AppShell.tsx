@@ -10,19 +10,32 @@ import { Logo } from "./Logo";
 
 type Crumb = { label: string; to?: string };
 
-export function AppShell({ children, title, breadcrumbs }: { children: ReactNode; title?: string; breadcrumbs?: Crumb[] }) {
+export function AppShell({
+  children,
+  title,
+  breadcrumbs,
+}: {
+  children: ReactNode;
+  title?: string;
+  breadcrumbs?: Crumb[];
+}) {
   const { loading, user } = useAuth();
   const navigate = useNavigate();
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("plan,trial_ends_at").eq("id", user.id).maybeSingle().then(({ data }) => {
-      if (data?.plan === "trial" && data.trial_ends_at) {
-        const ms = new Date(data.trial_ends_at).getTime() - Date.now();
-        setTrialDaysLeft(Math.max(0, Math.ceil(ms / 86400000)));
-      } else setTrialDaysLeft(null);
-    });
+    supabase
+      .from("profiles")
+      .select("plan,trial_ends_at")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.plan === "trial" && data.trial_ends_at) {
+          const ms = new Date(data.trial_ends_at).getTime() - Date.now();
+          setTrialDaysLeft(Math.max(0, Math.ceil(ms / 86400000)));
+        } else setTrialDaysLeft(null);
+      });
   }, [user]);
 
   useEffect(() => {
@@ -31,22 +44,28 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
 
   useEffect(() => {
     if (!user) return;
-    
-    supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle().then(({ data }) => {
-      const isConnected = !!data;
-      if (isConnected) {
-        localStorage.setItem("google_connected", "true");
-      } else {
-        localStorage.removeItem("google_connected");
-      }
-    });
+
+    supabase
+      .from("google_tokens")
+      .select("id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        const isConnected = !!data;
+        if (isConnected) {
+          localStorage.setItem("google_connected", "true");
+        } else {
+          localStorage.removeItem("google_connected");
+        }
+      });
   }, [user]);
 
   // keyboard: ctrl+n new tour, ctrl+k focus search
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") {
-        e.preventDefault(); navigate({ to: "/tours/new" });
+        e.preventDefault();
+        navigate({ to: "/tours/new" });
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -58,7 +77,11 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
   }, [navigate]);
 
   if (loading || !user) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading…
+      </div>
+    );
   }
 
   return (
@@ -79,7 +102,10 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
               />
             </div>
             {trialDaysLeft !== null && (
-              <Link to="/settings" className="hidden sm:inline-flex items-center rounded-full bg-warning/20 text-warning-foreground px-3 py-1 text-xs font-medium">
+              <Link
+                to="/settings"
+                className="hidden sm:inline-flex items-center rounded-full bg-warning/20 text-warning-foreground px-3 py-1 text-xs font-medium"
+              >
                 Trial: {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left
               </Link>
             )}
@@ -90,7 +116,13 @@ export function AppShell({ children, title, breadcrumbs }: { children: ReactNode
                 <nav className="text-xs text-muted-foreground mb-1">
                   {breadcrumbs.map((c, i) => (
                     <span key={i}>
-                      {c.to ? <Link to={c.to} className="hover:text-foreground">{c.label}</Link> : c.label}
+                      {c.to ? (
+                        <Link to={c.to} className="hover:text-foreground">
+                          {c.label}
+                        </Link>
+                      ) : (
+                        c.label
+                      )}
                       {i < breadcrumbs.length - 1 && <span className="mx-1.5">/</span>}
                     </span>
                   ))}

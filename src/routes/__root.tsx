@@ -73,35 +73,56 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TourVista — Google Street View Tours for Indian Businesses" },
-      { name: "description", content: "Publish your business on Google Maps in minutes. Manage 360° Street View tours for clients across India." },
-      { name: "author", content: "TourVista" },
-      { name: "application-name", content: "TourVista" },
-      { name: "theme-color", content: "#1E3A5F" },
-      { name: "apple-mobile-web-app-title", content: "TourVista" },
+      { title: "PanoPublish — Google Street View Publishing for Indian Businesses" },
+      {
+        name: "description",
+        content:
+          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
+      },
+      { name: "author", content: "PanoPublish" },
+      { name: "application-name", content: "PanoPublish" },
+      { name: "theme-color", content: "#0F172A" },
+      { name: "apple-mobile-web-app-title", content: "PanoPublish" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "robots", content: "index, follow" },
-      { property: "og:title", content: "TourVista — Google Street View Tours for Indian Businesses" },
-      { property: "og:description", content: "Publish your business on Google Maps in minutes. Manage 360° Street View tours for clients across India." },
+      {
+        property: "og:title",
+        content: "PanoPublish — Google Street View Publishing for Indian Businesses",
+      },
+      {
+        property: "og:description",
+        content:
+          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
+      },
       { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "TourVista" },
-      { property: "og:url", content: "https://app.vista360digital.com" },
-      { property: "og:image", content: "https://app.vista360digital.com/og-image.png" },
+      { property: "og:site_name", content: "PanoPublish" },
+      { property: "og:url", content: "https://app.panopublish.com" },
+      { property: "og:image", content: "https://app.panopublish.com/og-image.png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
-      { name: "twitter:title", content: "TourVista — Google Street View Publishing for Indian Businesses" },
-      { name: "twitter:description", content: "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!" },
-      { name: "twitter:image", content: "https://app.vista360digital.com/og-image.png" },
+      { name: "twitter:site", content: "@PanoPublish" },
+      {
+        name: "twitter:title",
+        content: "PanoPublish — Google Street View Publishing for Indian Businesses",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
+      },
+      { name: "twitter:image", content: "https://app.panopublish.com/og-image.png" },
       { name: "google-site-verification", content: "google8601514a32a20709" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
-      { rel: "stylesheet", href: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" },
+      {
+        rel: "stylesheet",
+        href: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css",
+      },
       // Performance hints
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -122,7 +143,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   const isServer = import.meta.env.SSR;
-  const envScript = isServer ? `
+  const envScript = isServer
+    ? `
     window.ENV = {
       VITE_SUPABASE_URL: ${JSON.stringify(globalThis.process?.env?.VITE_SUPABASE_URL || globalThis.process?.env?.SUPABASE_URL)},
       VITE_SUPABASE_PUBLISHABLE_KEY: ${JSON.stringify(globalThis.process?.env?.VITE_SUPABASE_PUBLISHABLE_KEY || globalThis.process?.env?.SUPABASE_PUBLISHABLE_KEY)},
@@ -130,16 +152,14 @@ function RootShell({ children }: { children: React.ReactNode }) {
       VITE_GOOGLE_CLIENT_ID: ${JSON.stringify(globalThis.process?.env?.VITE_GOOGLE_CLIENT_ID)},
       VITE_RAZORPAY_KEY_ID: ${JSON.stringify(globalThis.process?.env?.VITE_RAZORPAY_KEY_ID)}
     };
-  ` : '';
+  `
+    : "";
 
   return (
     <html lang="en">
       <head>
         <HeadContent />
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{ __html: envScript }}
-        />
+        <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: envScript }} />
       </head>
       <body>
         {children}

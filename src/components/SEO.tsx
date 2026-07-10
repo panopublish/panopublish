@@ -15,24 +15,28 @@ export function SEO({
   title,
   description,
   canonical,
-  ogImage = "https://app.vista360digital.com/og-image.png",
+  ogImage = "https://app.panopublish.com/og-image.png",
   ogType = "website",
   noIndex = false,
   schema,
   breadcrumbs,
 }: SEOProps) {
-  const fullTitle = title.includes("TourVista") ? title : `${title} | TourVista`;
-  const canonicalUrl = canonical || (typeof window !== "undefined" ? window.location.origin + window.location.pathname : "https://app.vista360digital.com");
+  const fullTitle = title.includes("PanoPublish") ? title : `${title} | PanoPublish`;
+  const canonicalUrl =
+    canonical ||
+    (typeof window !== "undefined"
+      ? window.location.origin + window.location.pathname
+      : "https://app.panopublish.com");
 
   const breadcrumbSchema = breadcrumbs
     ? {
         "@context": "https://schema.org",
         "@type": "BreadcrumbList",
-        "itemListElement": breadcrumbs.map((b, i) => ({
+        itemListElement: breadcrumbs.map((b, i) => ({
           "@type": "ListItem",
-          "position": i + 1,
-          "name": b.name,
-          "item": b.url,
+          position: i + 1,
+          name: b.name,
+          item: b.url,
         })),
       }
     : null;
@@ -66,7 +70,7 @@ export function SEO({
       <meta property="og:image:type" content="image/png" />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
-      <meta property="og:site_name" content="TourVista" />
+      <meta property="og:site_name" content="PanoPublish" />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />

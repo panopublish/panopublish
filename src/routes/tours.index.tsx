@@ -13,24 +13,21 @@ import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/tours/")({
   head: () => ({
-    meta: [
-      { title: "Tours — TourVista" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "Tours — PanoPublish" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: ToursPage,
 });
 
-type Tour = { 
-  id: string; 
-  name: string; 
-  status: any; 
-  type: string; 
-  created_at: string; 
+type Tour = {
+  id: string;
+  name: string;
+  status: any;
+  type: string;
+  created_at: string;
   updated_at?: string;
   cid?: string | null;
   google_place_id?: string | null;
-  client?: { name: string } | null 
+  client?: { name: string } | null;
 };
 
 function ToursPage() {
@@ -63,8 +60,11 @@ function ToursPage() {
         const ids = tList.map((t) => t.id);
 
         const [photoRes, connRes] = await Promise.all([
-          supabase.from("photos").select("id,tour_id,file_url,streetview_status,streetview_photo_id").in("tour_id", ids),
-          supabase.from("connections").select("id,tour_id").in("tour_id", ids)
+          supabase
+            .from("photos")
+            .select("id,tour_id,file_url,streetview_status,streetview_photo_id")
+            .in("tour_id", ids),
+          supabase.from("connections").select("id,tour_id").in("tour_id", ids),
         ]);
 
         const loadedPhotos = photoRes.data ?? [];
@@ -76,14 +76,16 @@ function ToursPage() {
         for (const t of tList) {
           const tPhotos = loadedPhotos.filter((p) => p.tour_id === t.id);
           if (tPhotos.length > 0) {
-            const allSubmitted = tPhotos.every(p => p.streetview_status === 'PUBLISHED' || p.streetview_status === 'PROCESSING');
-            const anyFailed = tPhotos.some(p => p.streetview_status === 'FAILED');
-            
+            const allSubmitted = tPhotos.every(
+              (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
+            );
+            const anyFailed = tPhotos.some((p) => p.streetview_status === "FAILED");
+
             let newStatus = t.status;
             if (allSubmitted) {
-              newStatus = 'published';
+              newStatus = "published";
             } else if (anyFailed) {
-              newStatus = 'rejected';
+              newStatus = "rejected";
             }
 
             if (newStatus !== t.status) {
@@ -101,7 +103,7 @@ function ToursPage() {
       // Load Google access token to check status
       try {
         const { data, error } = await supabase.functions.invoke("google-oauth", {
-          body: { action: "get_valid_token", user_id: user.id }
+          body: { action: "get_valid_token", user_id: user.id },
         });
         if (!error && data?.access_token) {
           setAccessToken(data.access_token);
@@ -125,7 +127,7 @@ function ToursPage() {
 
   const handleDelete = async (id: string, name: string) => {
     const confirmed = window.confirm(
-      `Are you absolutely sure you want to permanently delete the virtual tour "${name}"? This action cannot be undone and will delete all associated photos and connections.`
+      `Are you absolutely sure you want to permanently delete the virtual tour "${name}"? This action cannot be undone and will delete all associated photos and connections.`,
     );
     if (!confirmed) return;
 
@@ -180,14 +182,12 @@ function ToursPage() {
   });
 
   return (
-    <AppShell title="Tours" breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Tours" }]}>
-      <SEO
-        title="Tours"
-        description="View and manage your virtual tours."
-        noIndex={true}
-      />
+    <AppShell
+      title="Tours"
+      breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Tours" }]}
+    >
+      <SEO title="Tours" description="View and manage your virtual tours." noIndex={true} />
       <div className="flex flex-col gap-6 max-w-6xl mx-auto pb-12">
-        
         {/* Header Block */}
         <div className="flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-2">
@@ -208,8 +208,8 @@ function ToursPage() {
             <span className="text-xs font-black text-gray-400 flex items-center gap-1 uppercase tracking-wider">
               <ListFilter className="h-3.5 w-3.5" /> Sort
             </span>
-            <select 
-              value={sortBy} 
+            <select
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="text-xs bg-transparent font-extrabold text-gray-700 outline-none cursor-pointer border-0 p-0 pr-6 focus:ring-0"
             >
@@ -243,7 +243,9 @@ function ToursPage() {
           <div className="bg-white border rounded-2xl p-12 text-center flex flex-col items-center justify-center shadow-xs">
             <Map className="h-12 w-12 text-gray-300 mb-3" />
             <h3 className="text-base font-bold text-gray-600">No tours match your criteria</h3>
-            <p className="text-xs text-gray-400 max-w-sm mt-1">Try refining your search terms or create a new tour to get started.</p>
+            <p className="text-xs text-gray-400 max-w-sm mt-1">
+              Try refining your search terms or create a new tour to get started.
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-xl border shadow-sm divide-y divide-gray-100">
@@ -252,19 +254,23 @@ function ToursPage() {
               const thumbUrl = firstPhoto?.file_url;
               const hasConnections = connections.some((c) => c.tour_id === t.id);
               const tourPhotos = photos.filter((p) => p.tour_id === t.id);
-              const isPublished = t.status === "published" || 
-                (tourPhotos.length > 0 && tourPhotos.every((p) => p.streetview_status === 'PUBLISHED'));
+              const isPublished =
+                t.status === "published" ||
+                (tourPhotos.length > 0 &&
+                  tourPhotos.every((p) => p.streetview_status === "PUBLISHED"));
 
               return (
-                <div key={t.id} className="p-4 flex flex-col sm:flex-row gap-4 items-center justify-between hover:bg-slate-50/50 transition-colors">
-                  
+                <div
+                  key={t.id}
+                  className="p-4 flex flex-col sm:flex-row gap-4 items-center justify-between hover:bg-slate-50/50 transition-colors"
+                >
                   {/* Thumbnail */}
                   <div className="w-36 h-20 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0 relative group shadow-sm">
                     {thumbUrl ? (
-                      <img 
-                        src={thumbUrl} 
-                        alt="" 
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                      <img
+                        src={thumbUrl}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-[#0277bd]/10 to-[#8bc34a]/10 flex items-center justify-center">
@@ -281,9 +287,12 @@ function ToursPage() {
                       </Link>
                     </h3>
                     <p className="text-[11px] text-gray-500 mt-1 flex items-center justify-center sm:justify-start gap-1 font-medium">
-                      CID: <code className="bg-gray-100 border border-gray-200 px-1 py-0.2 rounded text-[10px] text-gray-700 font-mono">{t.cid || "—"}</code>
+                      CID:{" "}
+                      <code className="bg-gray-100 border border-gray-200 px-1 py-0.2 rounded text-[10px] text-gray-700 font-mono">
+                        {t.cid || "—"}
+                      </code>
                     </p>
-                    
+
                     {/* Buttons Row */}
                     <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-3">
                       <Link to="/tours/$tourId" params={{ tourId: t.id }}>
@@ -291,11 +300,11 @@ function ToursPage() {
                           <Pencil className="h-3.5 w-3.5" /> Edit
                         </Button>
                       </Link>
-                      
+
                       {hasConnections ? (
-                        <a 
-                          href={`/tours/${t.id}/connections?preview=true`} 
-                          target="_blank" 
+                        <a
+                          href={`/tours/${t.id}/connections?preview=true`}
+                          target="_blank"
                           rel="noreferrer"
                         >
                           <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
@@ -303,8 +312,8 @@ function ToursPage() {
                           </Button>
                         </a>
                       ) : (
-                        <Button 
-                          disabled 
+                        <Button
+                          disabled
                           className="bg-gray-200 text-gray-400 border border-gray-300/40 font-bold h-8 px-4 text-xs rounded cursor-not-allowed gap-1 shadow-none"
                           title="Add connections in the map editor first to enable preview"
                         >
@@ -322,24 +331,26 @@ function ToursPage() {
                     </div>
                     <div className="flex justify-between gap-2">
                       <span>Updated:</span>
-                      <span className="font-bold text-gray-700">{formatDate(t.updated_at || t.created_at)}</span>
+                      <span className="font-bold text-gray-700">
+                        {formatDate(t.updated_at || t.created_at)}
+                      </span>
                     </div>
                   </div>
 
                   {/* Status Indicator & Deletion */}
                   <div className="flex items-center gap-6">
-                    <div 
+                    <div
                       className={`h-4.5 w-4.5 rounded-full shadow border-2 border-white ${
-                        isPublished 
-                          ? "bg-[#8bc34a] shadow-[0_0_8px_#8bc34a]" 
+                        isPublished
+                          ? "bg-[#8bc34a] shadow-[0_0_8px_#8bc34a]"
                           : "bg-[#f44336] shadow-[0_0_8px_#f44336]"
                       }`}
                       title={isPublished ? "Published on Google Maps" : "Unpublished / Draft"}
                     />
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDelete(t.id, t.name)}
                       className="text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors h-9 w-9"
                       title="Delete Tour Permanently"
@@ -347,13 +358,11 @@ function ToursPage() {
                       <Trash2 className="h-5 w-5" />
                     </Button>
                   </div>
-
                 </div>
               );
             })}
           </div>
         )}
-
       </div>
     </AppShell>
   );

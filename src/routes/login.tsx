@@ -6,14 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Compass } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign In — TourVista" },
-      { name: "description", content: "Sign in to your TourVista dashboard to manage your virtual tours, map connections, custom nadir settings, and client profiles." },
+      { title: "Sign In — PanoPublish" },
+      {
+        name: "description",
+        content:
+          "Sign in to your PanoPublish dashboard to manage your virtual tours, map connections, custom nadir settings, and client profiles.",
+      },
     ],
   }),
   component: Login,
@@ -29,7 +33,9 @@ function Login() {
   const [step, setStep] = useState<"login" | "forgot">("login");
   const [sendingReset, setSendingReset] = useState(false);
 
-  useEffect(() => { if (user) navigate({ to: "/dashboard" }); }, [user, navigate]);
+  useEffect(() => {
+    if (user) navigate({ to: "/dashboard" });
+  }, [user, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +43,8 @@ function Login() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      if (error.message.toLowerCase().includes("rate")) toast.error("Too many attempts, please wait 5 minutes.");
+      if (error.message.toLowerCase().includes("rate"))
+        toast.error("Too many attempts, please wait 5 minutes.");
       else toast.error(error.message);
       return;
     }
@@ -64,19 +71,21 @@ function Login() {
     <div className="min-h-screen grid md:grid-cols-2">
       <SEO
         title={step === "login" ? "Sign In" : "Reset Password"}
-        description="Sign in to your TourVista dashboard to manage your virtual tours, map connections, custom nadir settings, and client profiles."
+        description="Sign in to your PanoPublish dashboard to manage your virtual tours, map connections, custom nadir settings, and client profiles."
         breadcrumbs={[
-          { name: "Home", url: "https://app.vista360digital.com/" },
-          { name: "Login", url: "https://app.vista360digital.com/login" }
+          { name: "Home", url: "https://app.panopublish.com/" },
+          { name: "Login", url: "https://app.panopublish.com/login" },
         ]}
       />
       <div className="hidden md:flex gradient-hero text-primary-foreground p-10 flex-col justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-          <Compass className="h-6 w-6" /> TourVista
+        <Link to="/" className="flex items-center gap-2">
+          <Logo logoClassName="h-8 w-8" />
         </Link>
         <div>
-          <h2 className="text-3xl font-bold">Welcome back.</h2>
-          <p className="mt-2 opacity-90">Manage your 360° Google Street View tours from one dashboard.</p>
+          <h2 className="text-3xl font-bold font-serif">Welcome back.</h2>
+          <p className="mt-2 opacity-90">
+            Manage your 360° Google Street View tours from one dashboard.
+          </p>
         </div>
         <div className="text-xs opacity-75">Made with ❤️ in India</div>
       </div>
@@ -84,18 +93,23 @@ function Login() {
         {step === "login" ? (
           <form onSubmit={submit} className="w-full max-w-sm space-y-4">
             <div>
-              <h1 className="text-2xl font-semibold">Sign in to TourVista</h1>
-              <p className="text-sm text-muted-foreground mt-1">New to TourVista? <Link to="/signup" className="text-primary font-medium hover:underline">Create an account</Link></p>
+              <h1 className="text-2xl font-semibold">Sign in to PanoPublish</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                New to PanoPublish?{" "}
+                <Link to="/signup" className="text-primary font-medium hover:underline">
+                  Create an account
+                </Link>
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                required 
-                className="h-11 bg-gray-50/50 rounded-xl focus-visible:ring-[#0277bd]"
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+              <Input
+                id="email"
+                type="email"
+                required
+                className="h-11 bg-gray-50/50 rounded-xl focus-visible:ring-primary"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -109,18 +123,18 @@ function Login() {
                   Forgot password?
                 </button>
               </div>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
-                className="h-11 bg-gray-50/50 rounded-xl focus-visible:ring-[#0277bd]"
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+              <Input
+                id="password"
+                type="password"
+                required
+                className="h-11 bg-gray-50/50 rounded-xl focus-visible:ring-primary"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full h-11 bg-[#0277bd] hover:bg-[#0266a1] text-white rounded-xl font-bold transition-all shadow-md mt-2 cursor-pointer" 
+            <Button
+              type="submit"
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold transition-all shadow-md mt-2 cursor-pointer"
               disabled={loading}
             >
               {loading ? "Signing in…" : "Sign in"}
@@ -136,18 +150,18 @@ function Login() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="reset-email">Email Address</Label>
-              <Input 
-                id="reset-email" 
-                type="email" 
-                required 
-                className="h-11 bg-gray-50/50 rounded-xl focus-visible:ring-[#0277bd]"
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+              <Input
+                id="reset-email"
+                type="email"
+                required
+                className="h-11 bg-gray-50/50 rounded-xl focus-visible:ring-primary"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full h-11 bg-[#0277bd] hover:bg-[#0266a1] text-white rounded-xl font-bold transition-all shadow-md mt-2 cursor-pointer" 
+            <Button
+              type="submit"
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold transition-all shadow-md mt-2 cursor-pointer"
               disabled={sendingReset}
             >
               {sendingReset ? "Sending link…" : "Send Reset Link"}

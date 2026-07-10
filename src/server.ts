@@ -12,7 +12,7 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => ((m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry)),
+      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
     );
   }
   return serverEntryPromise;
@@ -74,6 +74,60 @@ export default {
         globalThis.process = globalThis.process || {};
         globalThis.process.env = globalThis.process.env || {};
         Object.assign(globalThis.process.env, env);
+        (globalThis as any).cloudflareEnv = env;
+      }
+
+      const url = new URL(request.url);
+
+      // Intercept file downloads from R2
+      if (url.pathname.startsWith("/api/files/")) {
+        const bucket = (env as any).BUCKET;
+        if (!bucket) {
+          return new Response("Cloudflare R2 Bucket binding 'BUCKET' is missing", { status: 500 });
+        }
+        const filePath = decodeURIComponent(url.pathname.substring("/api/files/".length));
+        const object = await bucket.get(filePath);
+        if (!object) {
+          return new Response("File not found", { status: 404 });
+        }
+        const headers = new Headers();
+        object.writeHttpMetadata(headers);
+        headers.set("etag", object.httpEtag);
+        headers.set("cache-control", "public, max-age=3600");
+        return new Response(object.body, { headers });
+      }
+
+      // Intercept file uploads to R2
+      if (url.pathname === "/api/upload" && request.method === "POST") {
+        const bucket = (env as any).BUCKET;
+        if (!bucket) {
+          return new Response("Cloudflare R2 Bucket binding 'BUCKET' is missing", { status: 500 });
+        }
+        const filePath = url.searchParams.get("path");
+        if (!filePath) {
+          return new Response("Missing path search parameter", { status: 400 });
+        }
+        // Save the raw request body directly to R2
+        await bucket.put(filePath, request.body);
+        return new Response(JSON.stringify({ success: true, path: filePath }), {
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      // Intercept file removal from R2
+      if (url.pathname === "/api/remove" && request.method === "POST") {
+        const bucket = (env as any).BUCKET;
+        if (!bucket) {
+          return new Response("Cloudflare R2 Bucket binding 'BUCKET' is missing", { status: 500 });
+        }
+        const { paths } = (await request.json()) as { paths: string[] };
+        if (!paths || !Array.isArray(paths)) {
+          return new Response("Invalid paths body parameters", { status: 400 });
+        }
+        await Promise.all(paths.map((p) => bucket.delete(p)));
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { "content-type": "application/json" },
+        });
       }
 
       const handler = await getServerEntry();

@@ -1,4 +1,3 @@
-
 # TourVista — Multi-Feature Build Plan
 
 This is a large request. I'll group it into 6 work units and ship in order. A few decisions need your confirmation before I start.
@@ -22,11 +21,13 @@ This is a large request. I'll group it into 6 work units and ship in order. A fe
 ## Work units (in build order)
 
 ### 1. Razorpay secrets (5 min)
+
 - Add `RAZORPAY_KEY_ID` + `RAZORPAY_KEY_SECRET` via secrets tool.
 - Update billing UI placeholder to read `RAZORPAY_KEY_ID` (publishable) from a server function.
 - No Razorpay checkout flow yet — that's a separate task.
 
 ### 2. 360° Photo Grid + Scene Viewer Modal (Flat tab only)
+
 - Refactor `src/routes/tours.$tourId.tsx` photo grid:
   - 4-col desktop / 2-col mobile, square cards.
   - Scene-number badge (top-left), red X delete (top-right), filename below, download (bottom-left), droplet/nadir toggle (bottom-right).
@@ -36,6 +37,7 @@ This is a large request. I'll group it into 6 work units and ship in order. A fe
 - Flat tab: plain `<img>`. 360°/RAW/Google: stub content (will fill in next steps).
 
 ### 3. Pannellum 360° Viewer
+
 - Add Pannellum CSS+JS via `__root.tsx` `head()`.
 - 360° tab mounts a `<div ref>`, calls `window.pannellum.viewer(...)` with the equirectangular config, shows loading spinner, destroys on tab change / scene change / modal close.
 - RAW tab: filename, size, GPS, upload date overlay.
@@ -43,6 +45,7 @@ This is a large request. I'll group it into 6 work units and ship in order. A fe
 - Tab selection persists across prev/next.
 
 ### 4. Choose Location page
+
 - New route `src/routes/tours.$tourId.location.tsx` (or step inside existing wizard — I'll add a new dedicated route and link from the wizard).
 - Title input, search bar with Google Places Autocomplete, OR + CID input.
 - Result line with Place ID, CID, "verify on Google Maps" link.
@@ -52,12 +55,14 @@ This is a large request. I'll group it into 6 work units and ship in order. A fe
 - Graceful fallback when `VITE_GOOGLE_MAPS_API_KEY` is missing (shows setup instructions).
 
 ### 5. Build Connections page
+
 - New route `src/routes/tours.$tourId.connections.tsx`.
 - Migration: create `connections` table (`id`, `user_id`, `tour_id`, `from_photo_id`, `to_photo_id`, `heading`, `pitch`, `created_at`) + RLS.
 - Split layout: left 35% map + name input, right 65% scene list with "+", auto-align checkbox + slider, large preview of selected scene, bottom status legend.
 - Top toolbar: 5-step progress nav + Save/Undo/Share/Forward icons.
 
 ### 6. Publish to Google page
+
 - New route `src/routes/tours.$tourId.publish.tsx`.
 - Top bar: owner email + Nadir Type / Size / Pos dropdowns.
 - White card: heading, banner strip, big Publish button, simple CSS conveyor animation on right.
@@ -68,6 +73,7 @@ This is a large request. I'll group it into 6 work units and ship in order. A fe
 ---
 
 ## Technical notes
+
 - All new routes wrapped in `AppShell` with breadcrumbs.
 - Design tokens only (no raw `bg-black`, etc.) — I'll add `--scene-badge`, `--scene-delete` tokens if needed.
 - Two migrations total (tours columns + connections table).
@@ -76,6 +82,7 @@ This is a large request. I'll group it into 6 work units and ship in order. A fe
 ---
 
 **Please confirm:**
+
 1. Mock the Publish-to-Google flow for now? (Y/N)
 2. Do you have a Google Maps API key ready, or should I ship with the placeholder/setup instructions? (Have key / Placeholder)
 3. Approve plan and proceed?

@@ -1,11 +1,11 @@
 export interface PanoramaNode {
-  id: string;                // Supabase photo id
+  id: string; // Supabase photo id
   lat: number;
   lng: number;
-  heading: number;           // compass direction 0-360
-  label: string;             // scene number: "0", "1", "2"
-  connectionCount: number;   // how many connections this node has
-  status: 'active' | 'inactive' | 'processing' | 'published' | 'failed';
+  heading: number; // compass direction 0-360
+  label: string; // scene number: "0", "1", "2"
+  connectionCount: number; // how many connections this node has
+  status: "active" | "inactive" | "processing" | "published" | "failed";
   streetview_photo_id?: string;
 }
 
@@ -17,4 +17,4 @@ export interface Connection {
   isLocked: boolean;
 }
 
-export type MapMode = 'select' | 'connect' | 'rotate' | 'lock';
+export type MapMode = "select" | "connect" | "rotate" | "lock";

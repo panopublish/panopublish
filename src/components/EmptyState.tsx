@@ -2,7 +2,11 @@ import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function EmptyState({
-  icon: Icon, title, description, action, className,
+  icon: Icon,
+  title,
+  description,
+  action,
+  className,
 }: {
   icon?: React.ElementType;
   title: string;
@@ -11,7 +15,12 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center text-center py-16 px-6 rounded-lg border border-dashed bg-card", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center text-center py-16 px-6 rounded-lg border border-dashed bg-card",
+        className,
+      )}
+    >
       {Icon && (
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Icon className="h-6 w-6" />

@@ -6,27 +6,39 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Users, 
-  CreditCard, 
-  Map, 
-  Image, 
-  Tag, 
-  Plus, 
-  ShieldCheck, 
-  Calendar, 
-  Pencil, 
-  Trash2, 
-  Sparkles, 
-  TrendingUp, 
-  Search, 
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Users,
+  CreditCard,
+  Map,
+  Image,
+  Tag,
+  Plus,
+  ShieldCheck,
+  Calendar,
+  Pencil,
+  Trash2,
+  Sparkles,
+  TrendingUp,
+  Search,
   Filter,
   CheckCircle,
   Clock,
   RefreshCw,
-  Ticket
+  Ticket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
@@ -36,7 +48,7 @@ import { SEO } from "@/components/SEO";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin Panel — TourVista" },
+      { title: "Admin Panel — PanoPublish" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -83,7 +95,7 @@ type Coupon = {
 function AdminDashboard() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  
+
   // Data State
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -120,7 +132,7 @@ function AdminDashboard() {
     if (!authLoading) {
       if (!user) {
         navigate({ to: "/login" });
-      } else if (user.email !== "er.prashantyadav37@gmail.com" && user.email !== "vista360gtp@gmail.com") {
+      } else if (user.email !== "panopublish@gmail.com" && user.email !== "vista360gtp@gmail.com") {
         toast.error("Access denied. Admin access only.");
         navigate({ to: "/dashboard" });
       }
@@ -154,7 +166,10 @@ function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (user && (user.email === "er.prashantyadav37@gmail.com" || user.email === "vista360gtp@gmail.com")) {
+    if (
+      user &&
+      (user.email === "panopublish@gmail.com" || user.email === "vista360gtp@gmail.com")
+    ) {
       loadData();
     }
   }, [user]);
@@ -174,7 +189,7 @@ function AdminDashboard() {
     if (!couponForm.code.trim()) return toast.error("Coupon code is required");
     if (!couponForm.email.trim()) return toast.error("Target email is required");
 
-    const expiresAt = couponForm.expiresInDays 
+    const expiresAt = couponForm.expiresInDays
       ? new Date(Date.now() + couponForm.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
       : null;
 
@@ -261,45 +276,45 @@ function AdminDashboard() {
 
   // Calculations
   const totalViews = photos.reduce((sum, p) => sum + (p.view_count || 0), 0);
-  const activeSubs = profiles.filter(p => p.plan !== "trial").length;
+  const activeSubs = profiles.filter((p) => p.plan !== "trial").length;
 
   // Filtered Users List
   const filteredProfiles = profiles.filter((p) => {
-    const matchesSearch = 
+    const matchesSearch =
       (p.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesPlan = planFilter === "all" || p.plan === planFilter;
-    
+
     return matchesSearch && matchesPlan;
   });
 
   return (
-    <AppShell 
-      title="Admin Dashboard" 
-      breadcrumbs={[
-        { label: "Dashboard", to: "/dashboard" }, 
-        { label: "Admin" }
-      ]}
+    <AppShell
+      title="Admin Dashboard"
+      breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Admin" }]}
     >
       <SEO
         title="Admin Console"
-        description="Administrative console for TourVista."
+        description="Administrative console for PanoPublish."
         noIndex={true}
       />
       <div className="bg-[#f8fafc] min-h-[calc(100vh-64px)] pb-12">
         <div className="max-w-6xl mx-auto px-4 pt-6 space-y-8">
-          
           {/* Header section */}
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-6 w-6 text-[#0277bd]" />
-                <span className="text-sm font-bold uppercase tracking-wider text-slate-400">Internal Use Only</span>
+                <span className="text-sm font-bold uppercase tracking-wider text-slate-400">
+                  Internal Use Only
+                </span>
               </div>
-              <h1 className="text-3xl font-black text-slate-800 tracking-tight mt-1">Company Console</h1>
+              <h1 className="text-3xl font-black text-slate-800 tracking-tight mt-1">
+                Company Console
+              </h1>
             </div>
             <Button
               onClick={loadData}
@@ -307,26 +322,56 @@ function AdminDashboard() {
               variant="outline"
               className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-sm flex items-center gap-2 cursor-pointer transition-all"
             >
-              <RefreshCw className={`h-4.5 w-4.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4.5 w-4.5 ${loading ? "animate-spin" : ""}`} />
               Refresh Data
             </Button>
           </div>
 
           {/* Premium Dashboard Metrics Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-            <StatCard icon={Users} label="Total Users" value={loading ? undefined : profiles.length} subtext="Registered accounts" />
-            <StatCard icon={CreditCard} label="Active Subscriptions" value={loading ? undefined : activeSubs} subtext="Paid plans active" accent="success" />
-            <StatCard icon={Map} label="Total Tours" value={loading ? undefined : tours.length} subtext="Street View Tours" />
-            <StatCard icon={Image} label="Photos Uploaded" value={loading ? undefined : photos.length} subtext="Panorama images" />
-            <StatCard icon={TrendingUp} label="Total View Count" value={loading ? undefined : totalViews.toLocaleString("en-US")} subtext="Maps Impressions" accent="warning" />
-            <StatCard icon={Ticket} label="Offers/Coupons" value={loading ? undefined : coupons.length} subtext="Discount codes" />
+            <StatCard
+              icon={Users}
+              label="Total Users"
+              value={loading ? undefined : profiles.length}
+              subtext="Registered accounts"
+            />
+            <StatCard
+              icon={CreditCard}
+              label="Active Subscriptions"
+              value={loading ? undefined : activeSubs}
+              subtext="Paid plans active"
+              accent="success"
+            />
+            <StatCard
+              icon={Map}
+              label="Total Tours"
+              value={loading ? undefined : tours.length}
+              subtext="Street View Tours"
+            />
+            <StatCard
+              icon={Image}
+              label="Photos Uploaded"
+              value={loading ? undefined : photos.length}
+              subtext="Panorama images"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Total View Count"
+              value={loading ? undefined : totalViews.toLocaleString("en-US")}
+              subtext="Maps Impressions"
+              accent="warning"
+            />
+            <StatCard
+              icon={Ticket}
+              label="Offers/Coupons"
+              value={loading ? undefined : coupons.length}
+              subtext="Discount codes"
+            />
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8 items-start">
-            
             {/* Left 2 Columns: Users, Subscriptions, Coupons Tables */}
             <div className="lg:col-span-2 space-y-6">
-              
               {/* Tab Navigation */}
               <div className="border bg-white rounded-2xl p-1.5 flex gap-2 shadow-sm">
                 <button
@@ -364,7 +409,6 @@ function AdminDashboard() {
               {/* Tab Content: Active Users */}
               {activeTab === "users" && (
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  
                   {/* Search and Filters */}
                   <div className="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
                     <div className="relative flex-1 max-w-sm">
@@ -376,7 +420,7 @@ function AdminDashboard() {
                         className="pl-9 bg-white border-slate-200 focus:ring-[#0277bd] rounded-xl text-sm"
                       />
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Filter className="h-4 w-4 text-slate-400" />
                       <Select value={planFilter} onValueChange={setPlanFilter}>
@@ -401,9 +445,7 @@ function AdminDashboard() {
                       ))}
                     </div>
                   ) : filteredProfiles.length === 0 ? (
-                    <div className="p-12 text-center text-slate-400">
-                      No matching users found.
-                    </div>
+                    <div className="p-12 text-center text-slate-400">No matching users found.</div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-sm border-collapse">
@@ -420,20 +462,25 @@ function AdminDashboard() {
                           {filteredProfiles.map((p) => {
                             const userToursCount = tours.filter((t) => t.user_id === p.id).length;
                             const isTrial = p.plan === "trial";
-                            const planLabelClass = 
-                              p.plan === "agency" 
-                                ? "bg-purple-50 text-purple-700 border-purple-100" 
-                                : p.plan === "pro" 
-                                ? "bg-blue-50 text-blue-700 border-blue-100" 
-                                : p.plan === "basic" 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                : "bg-slate-100 text-slate-600 border-slate-200";
+                            const planLabelClass =
+                              p.plan === "agency"
+                                ? "bg-purple-50 text-purple-700 border-purple-100"
+                                : p.plan === "pro"
+                                  ? "bg-blue-50 text-blue-700 border-blue-100"
+                                  : p.plan === "basic"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                    : "bg-slate-100 text-slate-600 border-slate-200";
 
                             return (
                               <tr key={p.id} className="hover:bg-slate-50/40 transition-colors">
                                 <td className="p-4 pl-6">
-                                  <div className="font-bold text-slate-800">{p.name || "Unnamed User"}</div>
-                                  <div className="text-xs text-slate-400 truncate max-w-[200px]" title={p.email || ""}>
+                                  <div className="font-bold text-slate-800">
+                                    {p.name || "Unnamed User"}
+                                  </div>
+                                  <div
+                                    className="text-xs text-slate-400 truncate max-w-[200px]"
+                                    title={p.email || ""}
+                                  >
                                     {p.email}
                                   </div>
                                   {p.company_name && (
@@ -442,34 +489,37 @@ function AdminDashboard() {
                                     </div>
                                   )}
                                 </td>
-                                
+
                                 <td className="p-4">
-                                  <span className={`px-2 py-0.5 rounded-full text-xs font-black border uppercase ${planLabelClass}`}>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-xs font-black border uppercase ${planLabelClass}`}
+                                  >
                                     {p.plan}
                                   </span>
                                   <div className="text-[10px] text-slate-400 mt-1.5 font-semibold">
                                     Credits: {p.credits}
                                   </div>
                                 </td>
-                                
+
                                 <td className="p-4">
                                   <div className="font-bold text-slate-700">
-                                    {p.billing_cycle_tours_used} tour{p.billing_cycle_tours_used === 1 ? "" : "s"}
+                                    {p.billing_cycle_tours_used} tour
+                                    {p.billing_cycle_tours_used === 1 ? "" : "s"}
                                   </div>
                                   <div className="text-[10px] text-slate-400 mt-0.5 font-semibold">
                                     Total in DB: {userToursCount}
                                   </div>
                                 </td>
-                                
+
                                 <td className="p-4 text-xs text-slate-400">
                                   {formatDateIN(p.created_at)}
                                 </td>
-                                
+
                                 <td className="p-4 pr-6 text-right">
-                                  <Button 
+                                  <Button
                                     onClick={() => handleOpenEditProfile(p)}
-                                    variant="ghost" 
-                                    size="icon" 
+                                    variant="ghost"
+                                    size="icon"
                                     className="hover:bg-slate-100 text-slate-600 hover:text-slate-800"
                                     title="Edit User Limits & Plan"
                                   >
@@ -515,22 +565,25 @@ function AdminDashboard() {
                           {subscriptions.map((sub) => {
                             const subscriberProfile = profiles.find((p) => p.id === sub.user_id);
                             const isActive = sub.status === "active";
-                            
+
                             return (
                               <tr key={sub.id} className="hover:bg-slate-50/40 transition-colors">
                                 <td className="p-4 pl-6">
                                   <div className="font-bold text-slate-800">
                                     {subscriberProfile?.name || "Unknown"}
                                   </div>
-                                  <div className="text-xs text-slate-400 truncate max-w-[200px]" title={subscriberProfile?.email || ""}>
+                                  <div
+                                    className="text-xs text-slate-400 truncate max-w-[200px]"
+                                    title={subscriberProfile?.email || ""}
+                                  >
                                     {subscriberProfile?.email || "No email"}
                                   </div>
                                 </td>
-                                
+
                                 <td className="p-4 font-mono text-xs text-slate-500">
                                   {sub.razorpay_subscription_id || "—"}
                                 </td>
-                                
+
                                 <td className="p-4">
                                   <span className="font-bold text-slate-800 uppercase text-xs">
                                     {sub.plan}
@@ -541,18 +594,24 @@ function AdminDashboard() {
                                     </div>
                                   )}
                                 </td>
-                                
+
                                 <td className="p-4">
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
-                                    isActive
-                                      ? "bg-green-50 text-green-700 border-green-100"
-                                      : "bg-red-50 text-red-700 border-red-100"
-                                  }`}>
-                                    {isActive ? <CheckCircle className="h-2.5 w-2.5" /> : <Clock className="h-2.5 w-2.5" />}
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
+                                      isActive
+                                        ? "bg-green-50 text-green-700 border-green-100"
+                                        : "bg-red-50 text-red-700 border-red-100"
+                                    }`}
+                                  >
+                                    {isActive ? (
+                                      <CheckCircle className="h-2.5 w-2.5" />
+                                    ) : (
+                                      <Clock className="h-2.5 w-2.5" />
+                                    )}
                                     {sub.status}
                                   </span>
                                 </td>
-                                
+
                                 <td className="p-4 pr-6 text-xs text-slate-400">
                                   <div>Start: {formatDateIN(sub.start_date)}</div>
                                   {sub.end_date && <div>End: {formatDateIN(sub.end_date)}</div>}
@@ -578,7 +637,8 @@ function AdminDashboard() {
                     </div>
                   ) : coupons.length === 0 ? (
                     <div className="p-12 text-center text-slate-400 font-semibold">
-                      No discount coupons created yet. Use the panel on the right to create your first coupon!
+                      No discount coupons created yet. Use the panel on the right to create your
+                      first coupon!
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -595,8 +655,10 @@ function AdminDashboard() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
                           {coupons.map((c) => {
-                            const isExpired = c.expires_at ? new Date(c.expires_at).getTime() < Date.now() : false;
-                            
+                            const isExpired = c.expires_at
+                              ? new Date(c.expires_at).getTime() < Date.now()
+                              : false;
+
                             return (
                               <tr key={c.id} className="hover:bg-slate-50/40 transition-colors">
                                 <td className="p-4 pl-6">
@@ -604,11 +666,14 @@ function AdminDashboard() {
                                     {c.code}
                                   </div>
                                 </td>
-                                
-                                <td className="p-4 text-xs font-semibold text-slate-600 truncate max-w-[150px]" title={c.email}>
+
+                                <td
+                                  className="p-4 text-xs font-semibold text-slate-600 truncate max-w-[150px]"
+                                  title={c.email}
+                                >
                                   {c.email}
                                 </td>
-                                
+
                                 <td className="p-4">
                                   <span className="font-black text-emerald-600 text-sm">
                                     {c.discount_percent}% OFF
@@ -619,7 +684,7 @@ function AdminDashboard() {
                                     </div>
                                   )}
                                 </td>
-                                
+
                                 <td className="p-4">
                                   {c.is_used ? (
                                     <span className="bg-green-50 text-green-700 border border-green-100 text-[10px] font-black uppercase rounded-full px-2 py-0.5">
@@ -635,16 +700,16 @@ function AdminDashboard() {
                                     </span>
                                   )}
                                 </td>
-                                
+
                                 <td className="p-4 text-xs text-slate-400">
                                   {c.expires_at ? formatDateIN(c.expires_at) : "Never expires"}
                                 </td>
-                                
+
                                 <td className="p-4 pr-6 text-right">
-                                  <Button 
+                                  <Button
                                     onClick={() => handleDeleteCoupon(c.id, c.code)}
-                                    variant="ghost" 
-                                    size="icon" 
+                                    variant="ghost"
+                                    size="icon"
                                     className="hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer rounded-xl"
                                     title="Revoke / Delete Coupon"
                                   >
@@ -660,19 +725,19 @@ function AdminDashboard() {
                   )}
                 </div>
               )}
-
             </div>
 
             {/* Right 1 Column: Create Coupon Form Panel */}
             <div className="space-y-6">
-              
               {/* Form Container */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
                   <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
                   <div>
                     <h2 className="text-base font-black text-slate-800">Generate Offer Code</h2>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Targeted Discount System</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      Targeted Discount System
+                    </p>
                   </div>
                 </div>
 
@@ -684,7 +749,9 @@ function AdminDashboard() {
                       <Input
                         placeholder="e.g. WELCOME50"
                         value={couponForm.code}
-                        onChange={(e) => setCouponForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                        onChange={(e) =>
+                          setCouponForm((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))
+                        }
                         className="font-mono bg-slate-50 border-slate-200 rounded-xl"
                       />
                       <Button
@@ -703,7 +770,9 @@ function AdminDashboard() {
                       placeholder="e.g. user@gmail.com"
                       value={couponForm.email}
                       type="email"
-                      onChange={(e) => setCouponForm((prev) => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setCouponForm((prev) => ({ ...prev, email: e.target.value }))
+                      }
                       className="bg-slate-50 border-slate-200 rounded-xl"
                     />
                   </div>
@@ -712,9 +781,11 @@ function AdminDashboard() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-500">Discount (%)</Label>
-                      <Select 
-                        value={String(couponForm.discountPercent)} 
-                        onValueChange={(val) => setCouponForm((prev) => ({ ...prev, discountPercent: Number(val) }))}
+                      <Select
+                        value={String(couponForm.discountPercent)}
+                        onValueChange={(val) =>
+                          setCouponForm((prev) => ({ ...prev, discountPercent: Number(val) }))
+                        }
                       >
                         <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
                           <SelectValue placeholder="Discount" />
@@ -731,8 +802,8 @@ function AdminDashboard() {
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-bold text-slate-500">Valid For Plan</Label>
-                      <Select 
-                        value={couponForm.plan} 
+                      <Select
+                        value={couponForm.plan}
                         onValueChange={(val) => setCouponForm((prev) => ({ ...prev, plan: val }))}
                       >
                         <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
@@ -751,9 +822,11 @@ function AdminDashboard() {
                   {/* Expiration length */}
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-500">Expires In</Label>
-                    <Select 
-                      value={String(couponForm.expiresInDays)} 
-                      onValueChange={(val) => setCouponForm((prev) => ({ ...prev, expiresInDays: Number(val) }))}
+                    <Select
+                      value={String(couponForm.expiresInDays)}
+                      onValueChange={(val) =>
+                        setCouponForm((prev) => ({ ...prev, expiresInDays: Number(val) }))
+                      }
                     >
                       <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
                         <SelectValue placeholder="Expiry length" />
@@ -784,22 +857,23 @@ function AdminDashboard() {
                   Admin Powers
                 </div>
                 <p className="text-xs leading-relaxed text-slate-400">
-                  This console allows editing billing limits directly from the DB. You can update user plans, increment credits, or configure user limits.
+                  This console allows editing billing limits directly from the DB. You can update
+                  user plans, increment credits, or configure user limits.
                 </p>
                 <div className="text-[10px] text-slate-500 font-bold bg-slate-900 rounded p-2.5 font-mono">
-                  Admins: er.prashantyadav37@gmail.com, vista360gtp@gmail.com
+                  Admins: panopublish@gmail.com, vista360gtp@gmail.com
                 </div>
               </div>
-
             </div>
-
           </div>
-
         </div>
       </div>
 
       {/* Edit Profile Dialog */}
-      <Dialog open={editingProfile !== null} onOpenChange={(open) => !open && setEditingProfile(null)}>
+      <Dialog
+        open={editingProfile !== null}
+        onOpenChange={(open) => !open && setEditingProfile(null)}
+      >
         {editingProfile && (
           <DialogContent className="rounded-2xl max-w-md">
             <DialogHeader>
@@ -807,11 +881,13 @@ function AdminDashboard() {
                 Modify Subscription Limits
               </DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-3">
               <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
                 <div className="text-xs font-bold text-slate-400 uppercase">Target Account</div>
-                <div className="text-sm font-bold text-slate-800 mt-0.5">{editingProfile.name || "Unnamed"}</div>
+                <div className="text-sm font-bold text-slate-800 mt-0.5">
+                  {editingProfile.name || "Unnamed"}
+                </div>
                 <div className="text-xs font-mono text-slate-500">{editingProfile.email}</div>
               </div>
 
@@ -840,7 +916,9 @@ function AdminDashboard() {
                 <Input
                   type="number"
                   value={profileForm.credits}
-                  onChange={(e) => setProfileForm((prev) => ({ ...prev, credits: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setProfileForm((prev) => ({ ...prev, credits: Number(e.target.value) }))
+                  }
                   className="rounded-xl border-slate-200"
                 />
               </div>
@@ -851,21 +929,26 @@ function AdminDashboard() {
                 <Input
                   type="number"
                   value={profileForm.billing_cycle_tours_used}
-                  onChange={(e) => setProfileForm((prev) => ({ ...prev, billing_cycle_tours_used: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setProfileForm((prev) => ({
+                      ...prev,
+                      billing_cycle_tours_used: Number(e.target.value),
+                    }))
+                  }
                   className="rounded-xl border-slate-200"
                 />
               </div>
             </div>
 
             <DialogFooter className="gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setEditingProfile(null)}
                 className="rounded-xl border-slate-200"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSaveProfile}
                 className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl px-5"
               >
@@ -880,30 +963,32 @@ function AdminDashboard() {
 }
 
 // Stats Card helper component
-function StatCard({ 
-  icon: Icon, 
-  label, 
-  value, 
+function StatCard({
+  icon: Icon,
+  label,
+  value,
   subtext,
-  accent 
-}: { 
-  icon: React.ElementType; 
-  label: string; 
-  value?: string | number; 
+  accent,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value?: string | number;
   subtext: string;
-  accent?: "success" | "warning" 
+  accent?: "success" | "warning";
 }) {
-  const accentCls = 
-    accent === "success" 
-      ? "bg-green-50 text-green-600" 
-      : accent === "warning" 
-      ? "bg-amber-50 text-amber-600" 
-      : "bg-blue-50 text-[#0277bd]";
+  const accentCls =
+    accent === "success"
+      ? "bg-green-50 text-green-600"
+      : accent === "warning"
+        ? "bg-amber-50 text-amber-600"
+        : "bg-blue-50 text-[#0277bd]";
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group">
       <div>
-        <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${accentCls}`}>
+        <div
+          className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105 ${accentCls}`}
+        >
           <Icon className="h-5 w-5" />
         </div>
         <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">
@@ -912,14 +997,10 @@ function StatCard({
         {value === undefined ? (
           <Skeleton className="h-8 w-16 mt-1 rounded-lg" />
         ) : (
-          <div className="text-2xl font-black text-slate-800 tracking-tight">
-            {value}
-          </div>
+          <div className="text-2xl font-black text-slate-800 tracking-tight">{value}</div>
         )}
       </div>
-      <div className="text-[10px] text-slate-400 font-semibold mt-3">
-        {subtext}
-      </div>
+      <div className="text-[10px] text-slate-400 font-semibold mt-3">{subtext}</div>
     </div>
   );
 }

@@ -1,5 +1,9 @@
 export const formatINR = (n: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 export const formatDateIN = (d: string | Date) => {
   const date = typeof d === "string" ? new Date(d) : d;
@@ -10,4 +14,5 @@ export const formatDateIN = (d: string | Date) => {
 };
 
 export const SUPPORT_PHONE = "+916394611967"; // replace with real number
-export const waLink = (msg: string) => `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(msg)}`;
+export const waLink = (msg: string) =>
+  `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(msg)}`;

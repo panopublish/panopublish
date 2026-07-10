@@ -1,15 +1,36 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tourvista",
+  "name": "panopublish",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "vars": {
-    "VITE_SUPABASE_URL": "https://qxyfqyaenevpnmdtkoil.supabase.co",
-    "VITE_SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4eWZxeWFlbmV2cG5tZHRrb2lsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NDkyMjYsImV4cCI6MjA5NjAyNTIyNn0.huw6PBtM38W9czO5akVZ5jTocmRJRergo8Au4t8D5PU",
-    "SUPABASE_URL": "https://qxyfqyaenevpnmdtkoil.supabase.co",
-    "SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF4eWZxeWFlbmV2cG5tZHRrb2lsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NDkyMjYsImV4cCI6MjA5NjAyNTIyNn0.huw6PBtM38W9czO5akVZ5jTocmRJRergo8Au4t8D5PU",
-    "VITE_SUPABASE_PROJECT_ID": "qxyfqyaenevpnmdtkoil",
-    "VITE_RAZORPAY_KEY_ID": "rzp_live_Sx8fkRW40qOc8U"
-  }
+    "VITE_SUPABASE_URL": "https://rhpyhlrwwzmagohmbitk.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_VWJt5AbN92-EHHyczJF8Fg_DMOR5Py9",
+    "SUPABASE_URL": "https://rhpyhlrwwzmagohmbitk.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_VWJt5AbN92-EHHyczJF8Fg_DMOR5Py9",
+    "VITE_SUPABASE_PROJECT_ID": "rhpyhlrwwzmagohmbitk",
+    "VITE_RAZORPAY_KEY_ID": "",
+    "VITE_GOOGLE_MAPS_API_KEY": "AIzaSyB_oZLa7HmgpsFtXKu4va8GY7_R1ympdDE",
+    "VITE_GOOGLE_CLIENT_ID": "823257480066-j32lqpguvvp6ghg4bvgvm8t1i038ovgr.apps.googleusercontent.com",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "panopublish-db",
+      "database_id": "c968c26b-c9c1-4fb7-96c3-b88afd31406c",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "panopublish-photos",
+    },
+  ],
+  "routes": [
+    {
+      "pattern": "panopublish.com",
+      "custom_domain": true,
+    },
+  ],
 }

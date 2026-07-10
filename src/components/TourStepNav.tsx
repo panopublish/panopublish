@@ -23,10 +23,14 @@ export function TourStepNav({ tourId, current }: { tourId: string; current: stri
               to={s.to}
               params={{ tourId }}
               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors whitespace-nowrap ${
-                active ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:bg-muted"
+                active
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "text-muted-foreground hover:bg-muted"
               }`}
             >
-              <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] ${active ? "bg-primary-foreground text-primary" : "bg-muted text-muted-foreground"}`}>
+              <span
+                className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] ${active ? "bg-primary-foreground text-primary" : "bg-muted text-muted-foreground"}`}
+              >
                 {i + 1}
               </span>
               <Icon className="h-4 w-4" />

@@ -12,8 +12,8 @@ import { SEO } from "@/components/SEO";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Reset Password — TourVista" },
-      { name: "description", content: "Reset your TourVista account password securely." },
+      { title: "Reset Password — PanoPublish" },
+      { name: "description", content: "Reset your PanoPublish account password securely." },
     ],
   }),
   component: ResetPassword,
@@ -46,7 +46,7 @@ function ResetPassword() {
     setResetting(true);
     try {
       const { error } = await supabase.auth.updateUser({
-        password: password.trim()
+        password: password.trim(),
       });
 
       if (error) {
@@ -82,9 +82,12 @@ function ResetPassword() {
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 text-red-500 mb-4">
             <Lock className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">Invalid or Expired Link</h1>
+          <h1 className="text-2xl font-bold text-gray-800 tracking-tight">
+            Invalid or Expired Link
+          </h1>
           <p className="text-sm text-gray-500 mt-2 font-medium">
-            This password reset link is invalid, expired, or has already been used. Please request a new password reset link from the login page.
+            This password reset link is invalid, expired, or has already been used. Please request a
+            new password reset link from the login page.
           </p>
           <div className="mt-6">
             <Link
@@ -103,19 +106,21 @@ function ResetPassword() {
     <div className="min-h-screen grid md:grid-cols-2">
       <SEO
         title="Reset Password"
-        description="Reset your TourVista account password securely."
+        description="Reset your PanoPublish account password securely."
         breadcrumbs={[
-          { name: "Home", url: "https://app.vista360digital.com/" },
-          { name: "Reset Password", url: "https://app.vista360digital.com/reset-password" }
+          { name: "Home", url: "https://app.panopublish.com/" },
+          { name: "Reset Password", url: "https://app.panopublish.com/reset-password" },
         ]}
       />
       <div className="hidden md:flex gradient-hero text-primary-foreground p-10 flex-col justify-between">
         <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-          <Compass className="h-6 w-6" /> TourVista
+          <Compass className="h-6 w-6" /> PanoPublish
         </Link>
         <div>
           <h2 className="text-3xl font-bold">Secure your account.</h2>
-          <p className="mt-2 opacity-90">Please enter a new password to recover access to your dashboard.</p>
+          <p className="mt-2 opacity-90">
+            Please enter a new password to recover access to your dashboard.
+          </p>
         </div>
         <div className="text-xs opacity-75">Made with ❤️ in India</div>
       </div>
@@ -186,7 +191,9 @@ function ResetPassword() {
                 <div className="h-4 w-4 border-2 border-t-transparent border-white rounded-full animate-spin" />
                 Updating Password…
               </>
-            ) : "Save Password"}
+            ) : (
+              "Save Password"
+            )}
           </Button>
 
           <div className="text-center pt-2">

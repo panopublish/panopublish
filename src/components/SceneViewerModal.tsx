@@ -86,19 +86,30 @@ export function SceneViewerModal({
     return () => {
       cancelled = true;
       if (viewerRef.current) {
-        try { viewerRef.current.destroy(); } catch { /* noop */ }
+        try {
+          viewerRef.current.destroy();
+        } catch {
+          /* noop */
+        }
         viewerRef.current = null;
       }
     };
   }, [tab, photo?.id, photo?.file_url]);
 
   // destroy on unmount
-  useEffect(() => () => {
-    if (viewerRef.current) {
-      try { viewerRef.current.destroy(); } catch { /* noop */ }
-      viewerRef.current = null;
-    }
-  }, []);
+  useEffect(
+    () => () => {
+      if (viewerRef.current) {
+        try {
+          viewerRef.current.destroy();
+        } catch {
+          /* noop */
+        }
+        viewerRef.current = null;
+      }
+    },
+    [],
+  );
 
   if (!photo) return null;
 
@@ -115,7 +126,9 @@ export function SceneViewerModal({
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -125,7 +138,9 @@ export function SceneViewerModal({
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                tab === t.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               {t.label}
@@ -166,7 +181,11 @@ export function SceneViewerModal({
 
         {/* Tab content */}
         {tab === "flat" && (
-          <img src={photo.file_url} alt={photo.filename ?? ""} className="max-h-full max-w-full object-contain" />
+          <img
+            src={photo.file_url}
+            alt={photo.filename ?? ""}
+            className="max-h-full max-w-full object-contain"
+          />
         )}
 
         {tab === "360" && (
@@ -184,8 +203,13 @@ export function SceneViewerModal({
           <div className="relative max-h-full max-w-full">
             <img src={photo.file_url} alt="" className="max-h-[80vh] max-w-full object-contain" />
             <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-foreground/80 text-background p-3 text-xs space-y-1">
-              <div><span className="opacity-70">Filename:</span> {photo.filename ?? "—"}</div>
-              <div><span className="opacity-70">Size:</span> {((photo.size_bytes ?? 0) / 1024 / 1024).toFixed(2)} MB</div>
+              <div>
+                <span className="opacity-70">Filename:</span> {photo.filename ?? "—"}
+              </div>
+              <div>
+                <span className="opacity-70">Size:</span>{" "}
+                {((photo.size_bytes ?? 0) / 1024 / 1024).toFixed(2)} MB
+              </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
                 <span className="opacity-70">GPS:</span>
@@ -193,16 +217,23 @@ export function SceneViewerModal({
                   ? `${photo.latitude.toFixed(5)}, ${photo.longitude.toFixed(5)}`
                   : "Not available"}
               </div>
-              <div><span className="opacity-70">Uploaded:</span> {formatDateIN(photo.uploaded_at)}</div>
+              <div>
+                <span className="opacity-70">Uploaded:</span> {formatDateIN(photo.uploaded_at)}
+              </div>
             </div>
           </div>
         )}
 
         {tab === "google" && (
           <div className="text-center max-w-md p-6">
-            <img src={photo.file_url} alt="" className="max-h-[50vh] mx-auto rounded-lg mb-4 opacity-80" />
+            <img
+              src={photo.file_url}
+              alt=""
+              className="max-h-[50vh] mx-auto rounded-lg mb-4 opacity-80"
+            />
             <p className="text-sm text-muted-foreground">
-              This scene will appear on Google Street View after publishing. Click <strong>Publish to Google</strong> to make it live.
+              This scene will appear on Google Street View after publishing. Click{" "}
+              <strong>Publish to Google</strong> to make it live.
             </p>
           </div>
         )}
