@@ -140,12 +140,23 @@ class D1QueryBuilder {
   }
 
   async execute() {
-    let session = (await rawSupabase.auth.getSession()).data.session;
+    let sessionRes = await rawSupabase.auth.getSession();
+    let session = sessionRes.data.session;
+    console.log("[Supabase Proxy] Client-side getSession() result:", session);
+    
     if (!session) {
-      const { data } = await rawSupabase.auth.refreshSession();
-      session = data.session;
+      console.log("[Supabase Proxy] Session is null, attempting refreshSession...");
+      try {
+        const refreshRes = await rawSupabase.auth.refreshSession();
+        console.log("[Supabase Proxy] refreshSession() result:", refreshRes);
+        session = refreshRes.data.session;
+      } catch (refreshErr) {
+        console.error("[Supabase Proxy] refreshSession() threw error:", refreshErr);
+      }
     }
+    
     const token = session?.access_token || "";
+    console.log("[Supabase Proxy] Client-side final session token:", token ? `${token.substring(0, 10)}...` : "EMPTY");
     const payload = {
       token,
       action: this.action,
