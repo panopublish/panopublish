@@ -136,7 +136,11 @@ class D1QueryBuilder {
   }
 
   async execute() {
-    const session = (await rawSupabase.auth.getSession()).data.session;
+    let session = (await rawSupabase.auth.getSession()).data.session;
+    if (!session) {
+      const { data } = await rawSupabase.auth.refreshSession();
+      session = data.session;
+    }
     const token = session?.access_token || "";
     const payload = {
       token,
@@ -212,7 +216,11 @@ const customStorage = {
 const customFunctions = {
   async invoke(functionName: string, options?: { body: any }) {
     try {
-      const session = (await rawSupabase.auth.getSession()).data.session;
+      let session = (await rawSupabase.auth.getSession()).data.session;
+      if (!session) {
+        const { data } = await rawSupabase.auth.refreshSession();
+        session = data.session;
+      }
       const token = session?.access_token || "";
       const body = { ...options?.body, token };
 
