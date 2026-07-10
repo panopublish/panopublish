@@ -32,9 +32,13 @@ function createSupabaseClient() {
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 export const rawSupabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
-  get(_, prop, receiver) {
+  get(_, prop) {
     if (!_supabase) _supabase = createSupabaseClient();
-    return Reflect.get(_supabase, prop, receiver);
+    const value = (_supabase as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(_supabase);
+    }
+    return value;
   },
 });
 
@@ -254,6 +258,10 @@ export const supabase = new Proxy({} as any, {
     }
     // Fallback to actual Supabase client for auth, etc.
     if (!_supabase) _supabase = createSupabaseClient();
-    return Reflect.get(_supabase, prop, receiver);
+    const value = (_supabase as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(_supabase);
+    }
+    return value;
   },
 });
