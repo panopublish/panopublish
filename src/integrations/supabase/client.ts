@@ -42,6 +42,36 @@ export const rawSupabase = new Proxy({} as ReturnType<typeof createSupabaseClien
   },
 });
 
+let activeRefreshPromise: Promise<any> | null = null;
+
+async function getOrRefreshSession() {
+  const sessionRes = await rawSupabase.auth.getSession();
+  let session = sessionRes.data.session;
+  
+  if (session) {
+    return session;
+  }
+  
+  if (activeRefreshPromise) {
+    console.log("[Supabase Proxy] Waiting for active session refresh...");
+    const refreshRes = await activeRefreshPromise;
+    return refreshRes?.data?.session || null;
+  }
+  
+  console.log("[Supabase Proxy] Session is null, starting refreshSession...");
+  activeRefreshPromise = rawSupabase.auth.refreshSession();
+  try {
+    const refreshRes = await activeRefreshPromise;
+    session = refreshRes?.data?.session || null;
+    return session;
+  } catch (err) {
+    console.error("[Supabase Proxy] refreshSession threw error:", err);
+    return null;
+  } finally {
+    activeRefreshPromise = null;
+  }
+}
+
 // Interceptor for supabase.from() database operations redirected to D1 SQLite database
 class D1QueryBuilder {
   private table: string;
@@ -140,20 +170,8 @@ class D1QueryBuilder {
   }
 
   async execute() {
-    let sessionRes = await rawSupabase.auth.getSession();
-    let session = sessionRes.data.session;
-    console.log("[Supabase Proxy] Client-side getSession() result:", session);
-    
-    if (!session) {
-      console.log("[Supabase Proxy] Session is null, attempting refreshSession...");
-      try {
-        const refreshRes = await rawSupabase.auth.refreshSession();
-        console.log("[Supabase Proxy] refreshSession() result:", refreshRes);
-        session = refreshRes.data.session;
-      } catch (refreshErr) {
-        console.error("[Supabase Proxy] refreshSession() threw error:", refreshErr);
-      }
-    }
+    const session = await getOrRefreshSession();
+    console.log("[Supabase Proxy] Client-side final session:", session);
     
     const token = session?.access_token || "";
     console.log("[Supabase Proxy] Client-side final session token:", token ? `${token.substring(0, 10)}...` : "EMPTY");
@@ -176,6 +194,24 @@ class D1QueryBuilder {
     // Wrap argument inside { data: ... } for TanStack Start's client RPC routing
     const res = await runD1Query({ data: payload });
     console.log("runD1Query response on client:", res);
+
+    // Auto-logout if session token is invalid/revoked/deleted on server
+    if (res?.error && (
+      res.error.message.includes("Invalid session token") ||
+      res.error.message.includes("User from sub claim") ||
+      res.error.message.includes("user_not_found")
+    )) {
+      console.warn("[Supabase Proxy] Session invalid on server, clearing session and logging out...");
+      if (typeof window !== "undefined") {
+        for (const key of Object.keys(localStorage)) {
+          if (key.startsWith("sb-") || key.includes("supabase")) {
+            localStorage.removeItem(key);
+          }
+        }
+        window.location.href = "/login";
+      }
+    }
+
     return res;
   }
 }
@@ -231,11 +267,7 @@ const customStorage = {
 const customFunctions = {
   async invoke(functionName: string, options?: { body: any }) {
     try {
-      let session = (await rawSupabase.auth.getSession()).data.session;
-      if (!session) {
-        const { data } = await rawSupabase.auth.refreshSession();
-        session = data.session;
-      }
+      const session = await getOrRefreshSession();
       const token = session?.access_token || "";
       const body = { ...options?.body, token };
 

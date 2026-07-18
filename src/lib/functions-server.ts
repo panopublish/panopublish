@@ -2,20 +2,50 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { getEnv, getBinding } from "./env";
 
+function decodeJWT(token: string) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonStr = atob(base64);
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    return null;
+  }
+}
+
 async function getUserIdFromToken(token: string) {
   const supabaseUrl = getEnv("VITE_SUPABASE_URL") || getEnv("SUPABASE_URL");
   const supabaseKey = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("SUPABASE_PUBLISHABLE_KEY");
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Supabase URL or Key not set on server");
   }
-  const client = createClient(supabaseUrl, supabaseKey);
-  const {
-    data: { user },
-    error,
-  } = await client.auth.getUser(token);
-  if (error || !user) {
-    throw new Error("Invalid session token: " + (error?.message || "User not found"));
+  
+  const claims = decodeJWT(token);
+  console.log("[FUNCTIONS SERVER] Decoded JWT Claims:", claims);
+  console.log("[FUNCTIONS SERVER] Current Supabase URL:", supabaseUrl);
+
+  const url = `${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`;
+  console.log("[FUNCTIONS SERVER] Direct fetch request to URL:", url);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      "apikey": supabaseKey,
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  console.log("[FUNCTIONS SERVER] Direct fetch status:", res.status);
+  const text = await res.text();
+  console.log("[FUNCTIONS SERVER] Direct fetch response:", text);
+
+  if (!res.ok) {
+    throw new Error("Invalid session token: " + (text || res.statusText));
   }
+
+  const user = JSON.parse(text);
   return user.id;
 }
 
