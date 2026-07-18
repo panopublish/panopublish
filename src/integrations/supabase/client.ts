@@ -175,6 +175,38 @@ class D1QueryBuilder {
     
     const token = session?.access_token || "";
     console.log("[Supabase Proxy] Client-side final session token:", token ? `${token.substring(0, 10)}...` : "EMPTY");
+
+    // If auth is required but token is empty, auto-logout
+    if (!token) {
+      // Determine if this query is a public query (replicate same check as server)
+      const isUsernameCheck = 
+        this.table === "profiles" && 
+        this.action === "select" && 
+        this.filters?.length === 1 && 
+        this.filters[0].column === "username" && 
+        this.filters[0].type === "eq" &&
+        (this.selects === "id" || this.selects === "username" || this.selects === "id,username");
+
+      const isPublicCouponCheck =
+        this.table === "coupons" &&
+        this.action === "select";
+
+      const isPublicQuery = isUsernameCheck || isPublicCouponCheck;
+
+      if (!isPublicQuery) {
+        console.warn("[Supabase Proxy] Authentication required but no session token found. Redirecting to login...");
+        if (typeof window !== "undefined") {
+          for (const key of Object.keys(localStorage)) {
+            if (key.startsWith("sb-") || key.includes("supabase")) {
+              localStorage.removeItem(key);
+            }
+          }
+          window.location.href = "/login";
+        }
+        return { data: null, error: { message: "Authentication required" } };
+      }
+    }
+
     const payload = {
       token,
       action: this.action,
@@ -199,7 +231,8 @@ class D1QueryBuilder {
     if (res?.error && (
       res.error.message.includes("Invalid session token") ||
       res.error.message.includes("User from sub claim") ||
-      res.error.message.includes("user_not_found")
+      res.error.message.includes("user_not_found") ||
+      res.error.message.includes("No session token provided")
     )) {
       console.warn("[Supabase Proxy] Session invalid on server, clearing session and logging out...");
       if (typeof window !== "undefined") {
