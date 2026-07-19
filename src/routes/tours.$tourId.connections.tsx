@@ -925,29 +925,23 @@ function ConnectionsPage() {
       ),
     );
 
-    // Save connection lines (both ways) to connections table in Supabase
+    // Save connection lines (both ways) to connections table
     const { error } = await supabase.from("connections").insert([
       {
-        user_id: user.id,
         tour_id: tourId,
-        constellation_id: cid,
         from_photo_id: active.id,
         to_photo_id: toPhoto.id,
-        group_name: activeConstName.trim(),
+        constellation_name: activeConstName.trim(),
         heading: geographicHeading,
-        pitch: 0,
         spacing,
         is_locked: false,
       },
       {
-        user_id: user.id,
         tour_id: tourId,
-        constellation_id: cid,
         from_photo_id: toPhoto.id,
         to_photo_id: active.id,
-        group_name: activeConstName.trim(),
+        constellation_name: activeConstName.trim(),
         heading: (geographicHeading + 180) % 360,
-        pitch: 0,
         spacing,
         is_locked: false,
       },
@@ -985,29 +979,23 @@ function ConnectionsPage() {
 
       const geographicHeading = calcHeading(fromPhoto, toPhoto) ?? 0;
 
-      // Save connection lines (both ways) to connections table in Supabase
+      // Save connection lines (both ways) to connections table
       const { error } = await supabase.from("connections").insert([
         {
-          user_id: user.id,
           tour_id: tourId,
-          constellation_id: cid,
           from_photo_id: fromPhoto.id,
           to_photo_id: toPhoto.id,
-          group_name: activeConstName.trim(),
+          constellation_name: activeConstName.trim(),
           heading: geographicHeading,
-          pitch: 0,
           spacing,
           is_locked: false,
         },
         {
-          user_id: user.id,
           tour_id: tourId,
-          constellation_id: cid,
           from_photo_id: toPhoto.id,
           to_photo_id: fromPhoto.id,
-          group_name: activeConstName.trim(),
+          constellation_name: activeConstName.trim(),
           heading: (geographicHeading + 180) % 360,
-          pitch: 0,
           spacing,
           is_locked: false,
         },

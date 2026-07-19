@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { customUpdatePassword } from "@/lib/auth-server";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/reset-password")({
 });
 
 function ResetPassword() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [password, setPassword] = useState("");
@@ -43,14 +43,26 @@ function ResetPassword() {
       return;
     }
 
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const tokenFromUrl = params?.get("token") || "";
+    const activeToken = session?.access_token || tokenFromUrl;
+
+    if (!activeToken) {
+      toast.error("No password reset token or active session found. Please request a new password reset link.");
+      return;
+    }
+
     setResetting(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password.trim(),
+      const res = await customUpdatePassword({
+        data: {
+          token: activeToken,
+          password: password.trim()
+        }
       });
 
-      if (error) {
-        toast.error(error.message || "Failed to update password. Please try again.");
+      if (res?.error) {
+        toast.error(res.error.message || "Failed to update password. Please try again.");
         return;
       }
 

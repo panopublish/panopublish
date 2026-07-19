@@ -71,10 +71,10 @@ function ClientsPage() {
       .order("created_at", { ascending: false });
     const { data: tours } = await supabase.from("tours").select("client_id").eq("user_id", user.id);
     const counts = new Map<string, number>();
-    (tours ?? []).forEach((t) => {
+    (tours ?? []).forEach((t: any) => {
       if (t.client_id) counts.set(t.client_id, (counts.get(t.client_id) ?? 0) + 1);
     });
-    setClients((cs ?? []).map((c) => ({ ...c, tour_count: counts.get(c.id) ?? 0 })));
+    setClients((cs ?? []).map((c: any) => ({ ...c, tour_count: counts.get(c.id) ?? 0 })));
   };
 
   useEffect(() => {

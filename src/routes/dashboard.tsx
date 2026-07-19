@@ -120,12 +120,12 @@ function Dashboard() {
 
       // Self-healing check: Sync tour status based on photos
       for (const tour of tours) {
-        const tPhotos = photos.filter((p) => p.tour_id === tour.id);
+        const tPhotos = photos.filter((p: any) => p.tour_id === tour.id);
         if (tPhotos.length > 0) {
           const allSubmitted = tPhotos.every(
-            (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
+            (p: any) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
           );
-          const anyFailed = tPhotos.some((p) => p.streetview_status === "FAILED");
+          const anyFailed = tPhotos.some((p: any) => p.streetview_status === "FAILED");
 
           let newStatus = tour.status;
           if (allSubmitted) {
@@ -144,8 +144,8 @@ function Dashboard() {
       setStats({
         clients: c.count ?? 0,
         tours: tours.length,
-        published: tours.filter((x) => x.status === "published").length,
-        processing: tours.filter((x) => x.status === "processing").length,
+        published: tours.filter((x: any) => x.status === "published").length,
+        processing: tours.filter((x: any) => x.status === "processing").length,
         uploaded: 0,
       });
     })();

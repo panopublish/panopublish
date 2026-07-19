@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { customSignIn, customResetPasswordRequest } from "@/lib/auth-server";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,14 +24,13 @@ export const Route = createFileRoute("/login")({
 });
 
 function Login() {
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user, setSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const [step, setStep] = useState<"login" | "forgot">("login");
   const [sendingReset, setSendingReset] = useState(false);
+  const [step, setStep] = useState<"login" | "forgot">("login");
 
   useEffect(() => {
     if (user) navigate({ to: "/dashboard" });
@@ -40,30 +39,35 @@ function Login() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const res = await customSignIn({ data: { email, password } });
     setLoading(false);
-    if (error) {
-      if (error.message.toLowerCase().includes("rate"))
-        toast.error("Too many attempts, please wait 5 minutes.");
-      else toast.error(error.message);
+    
+    if (res?.error) {
+      toast.error(res.error.message);
       return;
     }
-    toast.success("Welcome back!");
-    navigate({ to: "/dashboard" });
+
+    if (res?.data?.session) {
+      setSession(res.data.session);
+      toast.success("Welcome back!");
+      navigate({ to: "/dashboard" });
+    } else {
+      toast.error("Signin failed");
+    }
   };
 
   const submitReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setSendingReset(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin + "/reset-password",
-    });
+    const res = await customResetPasswordRequest({ data: { email: email.trim() } });
     setSendingReset(false);
-    if (error) {
-      toast.error(error.message);
+    
+    if (res?.error) {
+      toast.error(res.error.message);
       return;
     }
-    toast.success("A password reset link has been sent to your email!");
+    
+    toast.success("A password reset token has been printed to the server logs! (Custom Auth reset is active)");
     setStep("login");
   };
 

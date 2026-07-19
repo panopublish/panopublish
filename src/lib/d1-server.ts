@@ -1,13 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
-import { createClient } from "@supabase/supabase-js";
 import { getEnv, getBinding } from "./env";
+import { verifyJWT } from "./auth-server";
 
 function decodeJWT(token: string) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    if (pad === 2) base64 += '==';
+    else if (pad === 3) base64 += '=';
     const jsonStr = atob(base64);
     return JSON.parse(jsonStr);
   } catch (err) {
@@ -41,36 +43,17 @@ async function getUserFromToken(token: string) {
     return cached.user;
   }
 
-  const supabaseUrl = getEnv("VITE_SUPABASE_URL") || getEnv("SUPABASE_URL");
-  const supabaseKey = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("SUPABASE_PUBLISHABLE_KEY");
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase URL or Key not set on server");
-  }
+  const jwtSecret = getEnv("JWT_SECRET") || "secret";
+  const claims = await verifyJWT(token, jwtSecret);
   
-  const claims = decodeJWT(token);
-  console.log("[D1 SERVER] Decoded JWT Claims:", claims);
-  console.log("[D1 SERVER] Current Supabase URL:", supabaseUrl);
-
-  const url = `${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`;
-  console.log("[D1 SERVER] Direct fetch request to URL:", url);
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${token}`,
-    },
-  });
-
-  console.log("[D1 SERVER] Direct fetch status:", res.status);
-  const text = await res.text();
-  console.log("[D1 SERVER] Direct fetch response:", text);
-
-  if (!res.ok) {
-    throw new Error("Invalid session token: " + (text || res.statusText));
+  if (!claims || !claims.sub) {
+    throw new Error("Invalid session token: JWT verification failed");
   }
 
-  const user = JSON.parse(text);
+  const user = {
+    id: claims.sub,
+    email: claims.email,
+  };
   
   // Cache the user
   tokenCache.set(token, {
@@ -91,10 +74,10 @@ async function getUserFromToken(token: string) {
 }
 
 export const runD1Query = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
   .handler(async (ctx: any) => {
     try {
-      const input = ctx.data;
-      const payload = input?.data || input;
+      const payload = ctx.data;
       console.log("[D1 SERVER] received token in payload:", payload?.token ? `${payload.token.substring(0, 15)}...` : "UNDEFINED/EMPTY");
       
       // Determine if auth is strictly required
@@ -115,9 +98,12 @@ export const runD1Query = createServerFn({ method: "POST" })
       let user: any = null;
       let userId: string | null = null;
 
-      if (!isPublicQuery || (payload.token && payload.token !== "EMPTY")) {
+      if (!isPublicQuery) {
         user = await getUserFromToken(payload.token);
         userId = user.id;
+      } else if (payload.token) {
+        // Optional auth for public queries
+        try { user = await getUserFromToken(payload.token); userId = user.id; } catch {}
       }
     const db = getBinding("DB");
     if (!db) {
@@ -150,6 +136,9 @@ export const runD1Query = createServerFn({ method: "POST" })
           }
         } else if (table === "coupons") {
           // coupons is public read
+        } else if (table === "connections" || table === "users") {
+          // connections are scoped via tour_id (no user_id column)
+          // users table is for auth only, no user_id column
         } else {
           if (userId) {
             clauses.push(`${table}.user_id = ?`);
@@ -216,7 +205,7 @@ export const runD1Query = createServerFn({ method: "POST" })
         return { data: null, count, error: null };
       }
 
-      const selects = payload.selects || "*";
+      const selects = (payload.selects || "*") as string;
       let selectFields = selects;
       let joinClause = "";
 
@@ -340,7 +329,9 @@ export const runD1Query = createServerFn({ method: "POST" })
         if (!rowCopy.id) {
           rowCopy.id = crypto.randomUUID();
         }
-        if (table !== "profiles" && table !== "coupons") {
+        // Only inject user_id for tables that have that column
+        const tablesWithUserId = ["clients", "tours", "islands", "photos", "subscriptions", "google_tokens", "constellations"];
+        if (tablesWithUserId.includes(table)) {
           rowCopy.user_id = userId;
         }
 

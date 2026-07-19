@@ -30,7 +30,7 @@ export function AppShell({
       .select("plan,trial_ends_at")
       .eq("id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data?.plan === "trial" && data.trial_ends_at) {
           const ms = new Date(data.trial_ends_at).getTime() - Date.now();
           setTrialDaysLeft(Math.max(0, Math.ceil(ms / 86400000)));
@@ -50,7 +50,7 @@ export function AppShell({
       .select("id")
       .eq("user_id", user.id)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         const isConnected = !!data;
         if (isConnected) {
           localStorage.setItem("google_connected", "true");

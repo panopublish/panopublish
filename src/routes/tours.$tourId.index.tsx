@@ -158,16 +158,16 @@ function TourDetail() {
         .order("order_index");
       const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
       const counts = new Map<string, number>();
-      (ps ?? []).forEach((p) => {
+      (ps ?? []).forEach((p: any) => {
         if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1);
       });
 
-      const fetchedIslands = (is ?? []).map((i) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
+      const fetchedIslands = (is ?? []).map((i: any) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
       setIslands(fetchedIslands);
 
       if (fetchedIslands.length > 0) {
         setActiveIsland((prev) => {
-          if (prev && fetchedIslands.some((i) => i.id === prev)) return prev;
+          if (prev && fetchedIslands.some((i: any) => i.id === prev)) return prev;
           return fetchedIslands[0].id;
         });
       } else {
@@ -338,7 +338,7 @@ function TourDetail() {
 
     const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, {
       contentType: file.type || "image/jpeg",
-      onUploadProgress: (progress) => {
+      onUploadProgress: (progress: any) => {
         const pct = Math.round((progress.loaded / progress.total) * 100);
         // Map 0-100% of upload to 0-90% of overall progress
         const mappedPct = Math.round(pct * 0.9);

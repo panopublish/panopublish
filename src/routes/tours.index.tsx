@@ -74,12 +74,12 @@ function ToursPage() {
         // Self-healing check: Sync tour status based on photos
         let hasChanges = false;
         for (const t of tList) {
-          const tPhotos = loadedPhotos.filter((p) => p.tour_id === t.id);
+          const tPhotos = loadedPhotos.filter((p: any) => p.tour_id === t.id);
           if (tPhotos.length > 0) {
             const allSubmitted = tPhotos.every(
-              (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
+              (p: any) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
             );
-            const anyFailed = tPhotos.some((p) => p.streetview_status === "FAILED");
+            const anyFailed = tPhotos.some((p: any) => p.streetview_status === "FAILED");
 
             let newStatus = t.status;
             if (allSubmitted) {

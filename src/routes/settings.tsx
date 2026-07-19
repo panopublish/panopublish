@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
+import { customUpdatePassword } from "@/lib/auth-server";
 import { useEffect, useState } from "react";
 import { getEnv } from "@/lib/env";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +45,7 @@ export const Route = createFileRoute("/settings")({
 type TabId = "basic" | "branding" | "billing" | "access" | "support";
 
 function SettingsPage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("basic");
 
   // Profile State
@@ -189,8 +190,16 @@ function SettingsPage() {
 
     setUpdatingPassword(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      if (!session?.access_token) {
+        throw new Error("No active session token found");
+      }
+      const res = await customUpdatePassword({
+        data: {
+          token: session.access_token,
+          password
+        }
+      });
+      if (res?.error) throw new Error(res.error.message);
       toast.success("Password changed successfully!");
       setPassword("");
       setConfirmPassword("");

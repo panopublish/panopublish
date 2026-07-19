@@ -6,8 +6,10 @@ function decodeJWT(token: string) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    const payload = parts[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    if (pad === 2) base64 += '==';
+    else if (pad === 3) base64 += '=';
     const jsonStr = atob(base64);
     return JSON.parse(jsonStr);
   } catch (err) {
@@ -15,53 +17,36 @@ function decodeJWT(token: string) {
   }
 }
 
+import { verifyJWT } from "./auth-server";
+
 async function getUserIdFromToken(token: string) {
-  const supabaseUrl = getEnv("VITE_SUPABASE_URL") || getEnv("SUPABASE_URL");
-  const supabaseKey = getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("SUPABASE_PUBLISHABLE_KEY");
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase URL or Key not set on server");
+  if (!token) {
+    throw new Error("No session token provided");
   }
+
+  const jwtSecret = getEnv("JWT_SECRET") || "secret";
+  const claims = await verifyJWT(token, jwtSecret);
   
-  const claims = decodeJWT(token);
-  console.log("[FUNCTIONS SERVER] Decoded JWT Claims:", claims);
-  console.log("[FUNCTIONS SERVER] Current Supabase URL:", supabaseUrl);
-
-  const url = `${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`;
-  console.log("[FUNCTIONS SERVER] Direct fetch request to URL:", url);
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      "apikey": supabaseKey,
-      "Authorization": `Bearer ${token}`,
-    },
-  });
-
-  console.log("[FUNCTIONS SERVER] Direct fetch status:", res.status);
-  const text = await res.text();
-  console.log("[FUNCTIONS SERVER] Direct fetch response:", text);
-
-  if (!res.ok) {
-    throw new Error("Invalid session token: " + (text || res.statusText));
+  if (!claims || !claims.sub) {
+    throw new Error("Invalid session token: JWT verification failed");
   }
 
-  const user = JSON.parse(text);
-  return user.id;
+  return claims.sub;
 }
 
 // 1. Google OAuth Server Function Handler
 export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
   .handler(async (ctx: any) => {
     try {
-      const input = ctx.data;
-      const payload = input?.data || input;
+      const payload = ctx.data;
     const userId = await getUserIdFromToken(payload.token);
     const db = getBinding("DB");
     if (!db) throw new Error("Cloudflare D1 Database binding 'DB' is missing");
 
     const clientId = getEnv("VITE_GOOGLE_CLIENT_ID");
     const clientSecret = getEnv("GOOGLE_CLIENT_SECRET") || "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";
-    const redirectUri = payload.redirect_uri || `${getEnv("VITE_SUPABASE_URL")}/auth/v1/callback`;
+    const redirectUri = payload.redirect_uri || `${getEnv("VITE_APP_URL") || "https://panopublish.com"}/auth/google/callback`;
 
     if (payload.action === "get_auth_url") {
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=https://www.googleapis.com/auth/streetviewpublish&access_type=offline&prompt=consent`;
@@ -184,10 +169,10 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
 });
 
 export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
   .handler(async (ctx: any) => {
     try {
-      const input = ctx.data;
-      const payload = input?.data || input;
+      const payload = ctx.data;
     const userId = await getUserIdFromToken(payload.token);
     const db = getBinding("DB");
     const bucket = getBinding("BUCKET");

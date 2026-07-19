@@ -162,3 +162,12 @@ CREATE TABLE IF NOT EXISTS coupons (
   used_at TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Native Users (Cloudflare-only Auth)
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);

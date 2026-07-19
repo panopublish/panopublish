@@ -1,12 +1,22 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+
+type CustomUser = {
+  id: string;
+  email: string;
+};
+
+type CustomSession = {
+  access_token: string;
+  expires_at: number;
+  user: CustomUser;
+};
 
 type AuthCtx = {
-  session: Session | null;
-  user: User | null;
+  session: CustomSession | null;
+  user: CustomUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  setSession: (s: CustomSession | null) => void;
 };
 
 const Ctx = createContext<AuthCtx>({
@@ -14,53 +24,72 @@ const Ctx = createContext<AuthCtx>({
   user: null,
   loading: true,
   signOut: async () => {},
+  setSession: () => {},
 });
 
+function decodeJWT(token: string) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    if (pad === 2) base64 += '==';
+    else if (pad === 3) base64 += '=';
+    return JSON.parse(atob(base64));
+  } catch (err) {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSessionState] = useState<CustomSession | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const params =
-      typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
-    const code = params?.get("code");
-    const isGoogleCallback =
-      typeof window !== "undefined" && window.location.pathname.includes("/auth/google/callback");
-    const shouldExchange = code && !isGoogleCallback;
+  const setSession = (s: CustomSession | null) => {
+    if (s) {
+      localStorage.setItem("panopublish_session", JSON.stringify(s));
+    } else {
+      localStorage.removeItem("panopublish_session");
+    }
+    setSessionState(s);
+  };
 
-    const initializeAuth = async () => {
-      if (shouldExchange && code) {
-        try {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) {
-            console.error("Error exchanging code for session:", error);
-            const { toast } = await import("sonner");
-            toast.error("Email verification failed: " + error.message);
-          } else {
-            const { toast } = await import("sonner");
-            toast.success("Email confirmed successfully! Welcome.");
+  useEffect(() => {
+    const initializeAuth = () => {
+      try {
+        const sessionStr = localStorage.getItem("panopublish_session");
+        if (sessionStr) {
+          const s = JSON.parse(sessionStr);
+          if (s?.access_token) {
+            const payload = decodeJWT(s.access_token);
+            if (payload?.exp && payload.exp > Date.now() / 1000) {
+              setSessionState(s);
+            } else {
+              localStorage.removeItem("panopublish_session");
+            }
           }
-        } catch (err) {
-          console.error("Unexpected error exchanging code:", err);
-        } finally {
-          const url = new URL(window.location.href);
-          url.searchParams.delete("code");
-          window.history.replaceState({}, document.title, url.pathname + url.search);
         }
+      } catch (err) {
+        console.error("Failed to load session from local storage:", err);
+      } finally {
+        setLoading(false);
       }
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
     };
 
     initializeAuth();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      setLoading(false);
-    });
-
-    return () => sub.subscription.unsubscribe();
+    // Custom event listener for storage changes to sync tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "panopublish_session") {
+        if (e.newValue) {
+          setSessionState(JSON.parse(e.newValue));
+        } else {
+          setSessionState(null);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   return (
@@ -69,8 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         user: session?.user ?? null,
         loading,
+        setSession,
         signOut: async () => {
-          await supabase.auth.signOut();
+          setSession(null);
+          window.location.href = "/login";
         },
       }}
     >

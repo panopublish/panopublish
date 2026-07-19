@@ -68,17 +68,18 @@ function CreateTour() {
       .select("id,name,city")
       .eq("user_id", user.id)
       .order("name")
-      .then(({ data }) => setClients(data ?? []));
+      .then(({ data }: any) => setClients(data ?? []));
   }, [user]);
 
   useEffect(() => {
     if (!user) return;
+    const userId = user.id;
     async function checkLimits() {
       try {
         const { data: prof, error: profErr } = await supabase
           .from("profiles")
           .select("plan")
-          .eq("id", user.id)
+          .eq("id", userId)
           .single();
 
         if (profErr) throw profErr;
@@ -86,7 +87,7 @@ function CreateTour() {
         const { count, error: countErr } = await supabase
           .from("tours")
           .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
 
         if (countErr) throw countErr;
 

@@ -670,7 +670,7 @@ function PublishPage() {
     let freshToken = accessToken;
     try {
       const { data, error } = await supabase.functions.invoke("google-oauth", {
-        body: { action: "get_valid_token", user_id: user.id },
+        body: { action: "get_valid_token", user_id: user?.id },
       });
       if (!error && data?.access_token) {
         freshToken = data.access_token;
@@ -811,7 +811,7 @@ function PublishPage() {
         .select("streetview_status")
         .eq("tour_id", tourId);
       const allPublishedNow = latestPhotos
-        ? latestPhotos.every((p) => p.streetview_status === "PUBLISHED")
+        ? latestPhotos.every((p: any) => p.streetview_status === "PUBLISHED")
         : false;
       await supabase
         .from("tours")
@@ -835,7 +835,7 @@ function PublishPage() {
     let freshToken = accessToken;
     try {
       const { data, error } = await supabase.functions.invoke("google-oauth", {
-        body: { action: "get_valid_token", user_id: user.id },
+        body: { action: "get_valid_token", user_id: user?.id },
       });
       if (!error && data?.access_token) {
         freshToken = data.access_token;
@@ -896,7 +896,7 @@ function PublishPage() {
       let freshToken = accessToken;
       try {
         const { data, error } = await supabase.functions.invoke("google-oauth", {
-          body: { action: "get_valid_token", user_id: user.id },
+          body: { action: "get_valid_token", user_id: user?.id },
         });
         if (!error && data?.access_token) {
           freshToken = data.access_token;

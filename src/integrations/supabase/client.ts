@@ -1,76 +1,43 @@
-// Custom PanoPublish Supabase Client Proxy (Cloudflare D1 & R2 Backend Bridge)
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "./types";
+// Custom PanoPublish Client Proxy (Cloudflare D1 & R2 Backend Bridge)
 import { getEnv } from "@/lib/env";
 import { runD1Query } from "@/lib/d1-server";
 import { handleGoogleOauthServerFn, handleStreetViewPublishServerFn } from "@/lib/functions-server";
 
-// Real Supabase client for Auth and OAuth redirects
-function createSupabaseClient() {
-  const SUPABASE_URL = getEnv("VITE_SUPABASE_URL") || getEnv("SUPABASE_URL");
-  const SUPABASE_PUBLISHABLE_KEY =
-    getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("SUPABASE_PUBLISHABLE_KEY");
-
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ["SUPABASE_URL"] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+function decodeJWT(token: string) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    if (pad === 2) base64 += '==';
+    else if (pad === 3) base64 += '=';
+    const jsonStr = atob(base64);
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    return null;
   }
-
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: {
-      storage: typeof window !== "undefined" ? localStorage : undefined,
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  });
 }
-
-let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
-export const rawSupabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
-  get(_, prop) {
-    if (!_supabase) _supabase = createSupabaseClient();
-    const value = (_supabase as any)[prop];
-    if (typeof value === "function") {
-      return value.bind(_supabase);
-    }
-    return value;
-  },
-});
-
-let activeRefreshPromise: Promise<any> | null = null;
 
 async function getOrRefreshSession() {
-  const sessionRes = await rawSupabase.auth.getSession();
-  let session = sessionRes.data.session;
-  
-  if (session) {
-    return session;
-  }
-  
-  if (activeRefreshPromise) {
-    console.log("[Supabase Proxy] Waiting for active session refresh...");
-    const refreshRes = await activeRefreshPromise;
-    return refreshRes?.data?.session || null;
-  }
-  
-  console.log("[Supabase Proxy] Session is null, starting refreshSession...");
-  activeRefreshPromise = rawSupabase.auth.refreshSession();
+  if (typeof window === "undefined") return null;
+  const sessionStr = localStorage.getItem("panopublish_session");
+  if (!sessionStr) return null;
   try {
-    const refreshRes = await activeRefreshPromise;
-    session = refreshRes?.data?.session || null;
-    return session;
-  } catch (err) {
-    console.error("[Supabase Proxy] refreshSession threw error:", err);
+    const session = JSON.parse(sessionStr);
+    if (session && session.access_token) {
+      const claims = decodeJWT(session.access_token);
+      if (claims && claims.exp) {
+        if (claims.exp - Date.now() / 1000 > 30) {
+          return session;
+        }
+      }
+    }
     return null;
-  } finally {
-    activeRefreshPromise = null;
+  } catch (err) {
+    return null;
   }
 }
+
 
 // Interceptor for supabase.from() database operations redirected to D1 SQLite database
 class D1QueryBuilder {
@@ -227,20 +194,14 @@ class D1QueryBuilder {
     const res = await runD1Query({ data: payload });
     console.log("runD1Query response on client:", res);
 
-    // Auto-logout if session token is invalid/revoked/deleted on server
+    // Auto-logout ONLY for explicit auth revocation errors, not transient token failures
     if (res?.error && (
-      res.error.message.includes("Invalid session token") ||
       res.error.message.includes("User from sub claim") ||
-      res.error.message.includes("user_not_found") ||
-      res.error.message.includes("No session token provided")
+      res.error.message.includes("user_not_found")
     )) {
-      console.warn("[Supabase Proxy] Session invalid on server, clearing session and logging out...");
+      console.warn("[Supabase Proxy] Session revoked on server, clearing session and logging out...");
       if (typeof window !== "undefined") {
-        for (const key of Object.keys(localStorage)) {
-          if (key.startsWith("sb-") || key.includes("supabase")) {
-            localStorage.removeItem(key);
-          }
-        }
+        localStorage.removeItem("panopublish_session");
         window.location.href = "/login";
       }
     }
@@ -332,12 +293,6 @@ export const supabase = new Proxy({} as any, {
     if (prop === "functions") {
       return customFunctions;
     }
-    // Fallback to actual Supabase client for auth, etc.
-    if (!_supabase) _supabase = createSupabaseClient();
-    const value = (_supabase as any)[prop];
-    if (typeof value === "function") {
-      return value.bind(_supabase);
-    }
-    return value;
+    return undefined;
   },
 });

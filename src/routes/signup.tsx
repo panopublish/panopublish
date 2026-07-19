@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { customSignUp } from "@/lib/auth-server";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,15 +18,16 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Start Free 7-Day Trial — PanoPublish" },
+      { title: "Sign Up — PanoPublish" },
       {
         name: "description",
         content:
-          "Create your PanoPublish account today. Publish 360° virtual tours to Google Maps, generate tax invoices, and get WhatsApp support in India.",
+          "Create your PanoPublish account to start managing virtual tours, connections, nadir settings, and client profiles.",
       },
     ],
   }),
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/signup")({
 });
 
 function Signup() {
-  const { user } = useAuth();
+  const { user, setSession } = useAuth();
   const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState("");
@@ -86,73 +87,71 @@ function Signup() {
           setUsernameStatus("available");
         }
       } catch (err) {
+        console.error("Failed to check username availability:", err);
         setUsernameStatus("available");
       }
-    }, 400);
+    }, 500);
 
     return () => clearTimeout(delayDebounce);
   }, [username]);
 
-  const submit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.error("Passwords do not match!");
+      toast.error("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      toast.error("Password must be at least 6 characters long.");
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    if (usernameStatus === "taken") {
+      toast.error("Please choose a different username");
       return;
     }
 
     setLoading(true);
 
-    // Final check for username uniqueness
     try {
-      const { data, error: userCheckErr } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("username", username.trim().toLowerCase())
-        .maybeSingle();
-
-      if (!userCheckErr && data) {
-        setUsernameStatus("taken");
-        toast.error("Username is already taken. Please choose another one.");
-        setLoading(false);
-        return;
-      }
+      // Small delay for UX
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (err) {
       // ignore
     }
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
+    const res = await customSignUp({
+      data: {
+        email,
+        password,
+        metadata: {
           name: fullName,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           company_name: companyName.trim(),
           username: username.toLowerCase().trim(),
         },
-        emailRedirectTo:
-          typeof window !== "undefined" ? window.location.origin + "/dashboard" : undefined,
       },
     });
 
     setLoading(false);
 
-    if (error) {
-      toast.error(error.message);
+    if (res?.error) {
+      toast.error(res.error.message);
       return;
     }
 
-    toast.success("Account created successfully! Please check your email to confirm.");
-    navigate({ to: "/login" });
+    if (res?.data?.session) {
+      setSession(res.data.session);
+      toast.success("Account created successfully! Welcome.");
+      navigate({ to: "/dashboard" });
+    } else {
+      toast.error("Signup failed");
+    }
   };
 
   return (
@@ -180,7 +179,7 @@ function Signup() {
           </p>
         </div>
 
-        <form onSubmit={submit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* First & Last Name */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">

@@ -39,8 +39,8 @@ export async function syncStreetViewConnections(
   const svConnections: Record<string, string[]> = {};
 
   connections.forEach((conn: any) => {
-    const fromP = latestPhotos.find((p) => p.id === conn.from_photo_id);
-    const toP = latestPhotos.find((p) => p.id === conn.to_photo_id);
+    const fromP = latestPhotos.find((p: any) => p.id === conn.from_photo_id);
+    const toP = latestPhotos.find((p: any) => p.id === conn.to_photo_id);
     if (fromP?.streetview_photo_id && toP?.streetview_photo_id) {
       if (!svConnections[fromP.streetview_photo_id]) svConnections[fromP.streetview_photo_id] = [];
       if (!svConnections[toP.streetview_photo_id]) svConnections[toP.streetview_photo_id] = [];
@@ -51,11 +51,11 @@ export async function syncStreetViewConnections(
   });
 
   const formattedConnections = latestPhotos
-    .filter((p) => p.streetview_photo_id)
-    .map((p) => {
+    .filter((p: any) => p.streetview_photo_id)
+    .map((p: any) => {
       let level = undefined;
       if (p.island_id) {
-        const island = islandsList.find((i) => i.id === p.island_id);
+        const island = islandsList.find((i: any) => i.id === p.island_id);
         if (island?.is_level && island.level_name) {
           level = {
             number: island.level_number ?? 0,
