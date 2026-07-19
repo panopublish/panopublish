@@ -30,6 +30,22 @@ export const Route = createFileRoute("/tours/new")({
   component: CreateTour,
 });
 
+function extractCidFromUrl(url: string): string | null {
+  if (!url) return null;
+  const cidMatch = url.match(/cid=([0-9]+)/);
+  if (cidMatch) return cidMatch[1];
+
+  const ftidMatch = url.match(/ftid=(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
+  if (ftidMatch && ftidMatch[2]) {
+    try {
+      return BigInt(ftidMatch[2]).toString();
+    } catch (e) {
+      console.error("Failed to parse CID from hex:", e);
+    }
+  }
+  return null;
+}
+
 function CreateTour() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -43,8 +59,39 @@ function CreateTour() {
   const [clientId, setClientId] = useState<string | "new" | "">("");
   const [search, setSearch] = useState("");
   const [newClientName, setNewClientName] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const [tourInput, setTourInput] = useState("");
+  const [cid, setCid] = useState("");
+
+  const resolveCid = (cidVal: string) => {
+    if (!cidVal || !/^[0-9]+$/.test(cidVal)) return;
+    if (!(window as any).google) return;
+
+    try {
+      const service = new (window as any).google.maps.places.PlacesService(document.createElement("div"));
+      service.textSearch({ query: cidVal }, (results: any, status: any) => {
+        if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
+          const place = results[0];
+          service.getDetails({ placeId: place.place_id }, (placeDetail: any, detailStatus: any) => {
+            if (detailStatus === (window as any).google.maps.places.PlacesServiceStatus.OK) {
+              setTourInput(placeDetail.name || "");
+              setPlaceDetails({
+                address: placeDetail.formatted_address,
+                url: placeDetail.url,
+                place_id: placeDetail.place_id,
+                name: placeDetail.name,
+                lat: placeDetail.geometry?.location?.lat(),
+                lng: placeDetail.geometry?.location?.lng(),
+              });
+            }
+          });
+        }
+      });
+    } catch (e) {
+      console.error("Error resolving CID:", e);
+    }
+  };
   const [placeDetails, setPlaceDetails] = useState<{
     address?: string;
     url?: string;
@@ -124,6 +171,12 @@ function CreateTour() {
       const place = autocomplete.getPlace();
       if (!place.place_id) return;
       setTourInput(place.name || inputRef.current?.value || "");
+
+      const extractedCid = extractCidFromUrl(place.url);
+      if (extractedCid) {
+        setCid(extractedCid);
+      }
+
       setPlaceDetails({
         address: place.formatted_address,
         url: place.url,
@@ -186,19 +239,14 @@ function CreateTour() {
       return;
     }
 
-    if (!tourInput.trim()) {
+    if (!tourInput.trim() && !cid.trim()) {
       toast.error("Please enter a business name or CID");
       setSaving(false);
       return;
     }
 
-    // Determine if it's a CID or business name based on some simple regex
-    let cid = null;
-    let name = placeDetails.name || tourInput;
-    if (/^[0-9]+$/.test(tourInput.trim())) {
-      cid = tourInput.trim();
-      name = "Tour " + cid;
-    }
+    const finalCid = cid.trim() || null;
+    const name = placeDetails.name || tourInput || (finalCid ? "Tour " + finalCid : "Unnamed Tour");
 
     const { data, error } = await supabase
       .from("tours")
@@ -208,7 +256,7 @@ function CreateTour() {
         name,
         type: type || "gmaps",
         status: "draft",
-        cid,
+        cid: finalCid,
         address: placeDetails.address,
         google_place_url: placeDetails.url,
         google_place_id: placeDetails.place_id,
@@ -412,10 +460,12 @@ function CreateTour() {
                       onChange={(e) => {
                         setSearch(e.target.value);
                         setClientId("");
+                        setShowDropdown(true);
                       }}
+                      onFocus={() => setShowDropdown(true)}
                     />
                   </div>
-                  {search && (
+                  {showDropdown && search && (
                     <div className="mt-2 max-h-48 overflow-auto border rounded-md shadow-sm bg-white z-10 absolute w-full max-w-[calc(50%-2rem)]">
                       {filtered.length === 0 ? (
                         <div className="p-3 text-gray-500">No matches</div>
@@ -426,6 +476,7 @@ function CreateTour() {
                             onClick={() => {
                               setClientId(c.id);
                               setSearch(c.name);
+                              setShowDropdown(false);
                             }}
                             className={`p-3 cursor-pointer hover:bg-gray-50 ${clientId === c.id ? "bg-[#e1f5fe] text-[#0277bd] font-medium" : ""}`}
                           >
@@ -453,6 +504,7 @@ function CreateTour() {
                       setNewClientName(e.target.value);
                       setClientId("new");
                       setSearch("");
+                      setShowDropdown(false);
                     }}
                   />
                   {clientId === "new" && (
@@ -466,8 +518,11 @@ function CreateTour() {
               <button
                 disabled={!clientId}
                 onClick={() => setStep(3)}
-                className={`w-full flex items-center justify-between px-6 py-4 rounded-full text-lg font-medium transition-colors ${clientId ? "bg-[#a5b2bc] hover:bg-[#8d9ba6] text-white" : "bg-gray-300 text-gray-100 cursor-not-allowed"}`}
-                style={clientId ? { backgroundColor: "#a1acb4" } : {}}
+                className={`w-full flex items-center justify-between px-6 py-4 rounded-full text-lg font-medium transition-colors ${
+                  clientId
+                    ? "bg-[#a5b2bc] hover:bg-[#8bc34a] text-white cursor-pointer"
+                    : "bg-gray-300 text-gray-100 cursor-not-allowed"
+                }`}
               >
                 <div className="flex items-center gap-2">
                   <ChevronRight className="h-5 w-5" /> Next
@@ -493,8 +548,12 @@ function CreateTour() {
                   placeholder="Business Name, Address, or Google Place URL"
                   value={tourInput}
                   onChange={(e) => {
-                    setTourInput(e.target.value);
-                    if (e.target.value === "") setPlaceDetails({});
+                    const val = e.target.value;
+                    setTourInput(val);
+                    if (val === "") {
+                      setPlaceDetails({});
+                      setCid("");
+                    }
                   }}
                 />
                 <div className="px-4 py-3 bg-gray-50 border-x font-bold text-gray-400 flex items-center shrink-0">
@@ -506,8 +565,16 @@ function CreateTour() {
                 <Input
                   className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 flex-1"
                   placeholder="CID# (most precise)"
-                  value={/^[0-9]+$/.test(tourInput) ? tourInput : ""}
-                  onChange={(e) => setTourInput(e.target.value)}
+                  value={cid}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCid(val);
+                    if (/^[0-9]+$/.test(val.trim()) && val.trim().length >= 8) {
+                      resolveCid(val.trim());
+                    } else if (val.trim() === "") {
+                      setPlaceDetails({});
+                    }
+                  }}
                 />
               </div>
 
@@ -524,8 +591,12 @@ function CreateTour() {
 
               <button
                 onClick={submit}
-                disabled={saving || !tourInput}
-                className="w-full flex items-center justify-center px-6 py-4 rounded-full text-lg font-medium transition-colors bg-gray-400 hover:bg-gray-500 text-white"
+                disabled={saving || (!tourInput && !cid)}
+                className={`w-full flex items-center justify-center px-6 py-4 rounded-full text-lg font-medium transition-colors ${
+                  (tourInput || cid) && !saving
+                    ? "bg-gray-400 hover:bg-[#8bc34a] text-white cursor-pointer"
+                    : "bg-gray-300 text-gray-100 cursor-not-allowed"
+                }`}
               >
                 {saving ? "Building..." : "start building"}
               </button>
