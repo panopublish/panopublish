@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { TourStepNav } from "@/components/TourStepNav";
+import { TourStepsNav } from "@/components/TourStepsNav";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -144,10 +144,10 @@ function LocationPage() {
 
   return (
     <AppShell
-      title="Choose Location"
+      title={title || "Choose Location"}
       breadcrumbs={[
         { label: "Tours", to: "/tours" },
-        { label: title || "Tour" },
+        { label: title || "Tour", to: `/tours/${tourId}` },
         { label: "Choose Location" },
       ]}
     >
@@ -156,7 +156,7 @@ function LocationPage() {
         description="Confirm coordinates and select the business location for Google Maps."
         noIndex={true}
       />
-      <TourStepNav tourId={tourId} current="location" />
+      <TourStepsNav tourId={tourId} activeTab="location" onSave={save} />
 
       {!MAPS_KEY && (
         <div className="mb-4 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
