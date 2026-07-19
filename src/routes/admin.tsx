@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { adminAddUser, adminDeleteUser } from "@/lib/d1-server";
 import {
   Dialog,
   DialogContent,
@@ -93,7 +94,7 @@ type Coupon = {
 };
 
 function AdminDashboard() {
-  const { user, loading: authLoading } = useAuth();
+  const { session, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   // Data State
@@ -127,12 +128,24 @@ function AdminDashboard() {
     expiresInDays: 30,
   });
 
+  const [couponType, setCouponType] = useState<"specific" | "generic">("specific");
+
+  // Form State: Add User Modal
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [addUserForm, setAddUserForm] = useState({
+    email: "",
+    password: "",
+    name: "",
+    companyName: "",
+    plan: "trial",
+  });
+
   // Verify Admin Access
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
         navigate({ to: "/login" });
-      } else if (user.email !== "panopublish@gmail.com" && user.email !== "vista360gtp@gmail.com") {
+      } else if (user.email !== "vista360gtp@gmail.com" && user.email !== "er.prashantyadav37@gmail.com") {
         toast.error("Access denied. Admin access only.");
         navigate({ to: "/dashboard" });
       }
@@ -168,7 +181,7 @@ function AdminDashboard() {
   useEffect(() => {
     if (
       user &&
-      (user.email === "panopublish@gmail.com" || user.email === "vista360gtp@gmail.com")
+      (user.email === "vista360gtp@gmail.com" || user.email === "er.prashantyadav37@gmail.com")
     ) {
       loadData();
     }
@@ -187,7 +200,13 @@ function AdminDashboard() {
   // Create Coupon Code
   const handleCreateCoupon = async () => {
     if (!couponForm.code.trim()) return toast.error("Coupon code is required");
-    if (!couponForm.email.trim()) return toast.error("Target email is required");
+    
+    let targetEmail = couponForm.email.trim().toLowerCase();
+    if (couponType === "specific") {
+      if (!targetEmail) return toast.error("Target email is required");
+    } else {
+      targetEmail = "*"; // generic
+    }
 
     const expiresAt = couponForm.expiresInDays
       ? new Date(Date.now() + couponForm.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
@@ -196,7 +215,7 @@ function AdminDashboard() {
     try {
       const { error } = await supabase.from("coupons").insert({
         code: couponForm.code.trim().toUpperCase(),
-        email: couponForm.email.trim().toLowerCase(),
+        email: targetEmail,
         discount_percent: Number(couponForm.discountPercent),
         plan: couponForm.plan === "all" ? null : couponForm.plan,
         expires_at: expiresAt,
@@ -218,6 +237,75 @@ function AdminDashboard() {
       }
     } catch (err: any) {
       toast.error("Create coupon error: " + err.message);
+    }
+  };
+
+  // Add User handler
+  const handleAddUser = async () => {
+    if (!addUserForm.email.trim()) return toast.error("Email is required");
+    if (!addUserForm.password.trim()) return toast.error("Password is required");
+
+    try {
+      const res = await adminAddUser({
+        data: {
+          token: session?.access_token || "",
+          email: addUserForm.email.trim().toLowerCase(),
+          password: addUserForm.password.trim(),
+          name: addUserForm.name.trim(),
+          companyName: addUserForm.companyName.trim(),
+          plan: addUserForm.plan,
+        },
+      });
+
+      if (res?.error) {
+        toast.error("Failed to add user: " + res.error.message);
+      } else {
+        toast.success("User added successfully!");
+        setAddUserOpen(false);
+        setAddUserForm({
+          email: "",
+          password: "",
+          name: "",
+          companyName: "",
+          plan: "trial",
+        });
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error("Add user error: " + err.message);
+    }
+  };
+
+  // Delete User handler
+  const handleDeleteUser = async (targetUser: Profile) => {
+    if (targetUser.id === user?.id) {
+      return toast.error("You cannot delete your own admin account.");
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to permanently delete user "${targetUser.name || targetUser.email}"?\n\nThis will cascade delete all their tours, photos, and clients. This action CANNOT be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await adminDeleteUser({
+        data: {
+          token: session?.access_token || "",
+          userId: targetUser.id,
+        },
+      });
+
+      if (res?.error) {
+        toast.error("Failed to delete user: " + res.error.message);
+      } else {
+        toast.success("User and all their data deleted successfully.");
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error("Delete user error: " + err.message);
     }
   };
 
@@ -316,15 +404,24 @@ function AdminDashboard() {
                 Company Console
               </h1>
             </div>
-            <Button
-              onClick={loadData}
-              disabled={loading}
-              variant="outline"
-              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-sm flex items-center gap-2 cursor-pointer transition-all"
-            >
-              <RefreshCw className={`h-4.5 w-4.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh Data
-            </Button>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setAddUserOpen(true)}
+                className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl shadow-sm flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <Plus className="h-4.5 w-4.5" />
+                Add User
+              </Button>
+              <Button
+                onClick={loadData}
+                disabled={loading}
+                variant="outline"
+                className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-sm flex items-center gap-2 cursor-pointer transition-all"
+              >
+                <RefreshCw className={`h-4.5 w-4.5 ${loading ? "animate-spin" : ""}`} />
+                Refresh Data
+              </Button>
+            </div>
           </div>
 
           {/* Premium Dashboard Metrics Grid */}
@@ -516,15 +613,26 @@ function AdminDashboard() {
                                 </td>
 
                                 <td className="p-4 pr-6 text-right">
-                                  <Button
-                                    onClick={() => handleOpenEditProfile(p)}
-                                    variant="ghost"
-                                    size="icon"
-                                    className="hover:bg-slate-100 text-slate-600 hover:text-slate-800"
-                                    title="Edit User Limits & Plan"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
+                                  <div className="flex justify-end gap-1.5">
+                                    <Button
+                                      onClick={() => handleOpenEditProfile(p)}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="hover:bg-slate-100 text-slate-600 hover:text-slate-800 cursor-pointer rounded-xl"
+                                      title="Edit User Limits & Plan"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleDeleteUser(p)}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer rounded-xl"
+                                      title="Delete User Account"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -669,9 +777,15 @@ function AdminDashboard() {
 
                                 <td
                                   className="p-4 text-xs font-semibold text-slate-600 truncate max-w-[150px]"
-                                  title={c.email}
+                                  title={c.email === "*" ? "Any User" : c.email}
                                 >
-                                  {c.email}
+                                  {c.email === "*" ? (
+                                    <span className="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-black uppercase rounded px-2 py-0.5 inline-block">
+                                      Generic / Any User
+                                    </span>
+                                  ) : (
+                                    c.email
+                                  )}
                                 </td>
 
                                 <td className="p-4">
@@ -763,19 +877,38 @@ function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Targeted Email */}
+                  {/* Coupon Type Selector */}
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-500">Target User Email</Label>
-                    <Input
-                      placeholder="e.g. user@gmail.com"
-                      value={couponForm.email}
-                      type="email"
-                      onChange={(e) =>
-                        setCouponForm((prev) => ({ ...prev, email: e.target.value }))
-                      }
-                      className="bg-slate-50 border-slate-200 rounded-xl"
-                    />
+                    <Label className="text-xs font-bold text-slate-500">Coupon Type</Label>
+                    <Select
+                      value={couponType}
+                      onValueChange={(val: "specific" | "generic") => setCouponType(val)}
+                    >
+                      <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="specific">User Specific</SelectItem>
+                        <SelectItem value="generic">Generic (Any User)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
+                  {/* Targeted Email */}
+                  {couponType === "specific" && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <Label className="text-xs font-bold text-slate-500">Target User Email</Label>
+                      <Input
+                        placeholder="e.g. user@gmail.com"
+                        value={couponForm.email}
+                        type="email"
+                        onChange={(e) =>
+                          setCouponForm((prev) => ({ ...prev, email: e.target.value }))
+                        }
+                        className="bg-slate-50 border-slate-200 rounded-xl"
+                      />
+                    </div>
+                  )}
 
                   {/* Discount percentage */}
                   <div className="grid grid-cols-2 gap-4">
@@ -861,7 +994,7 @@ function AdminDashboard() {
                   user plans, increment credits, or configure user limits.
                 </p>
                 <div className="text-[10px] text-slate-500 font-bold bg-slate-900 rounded p-2.5 font-mono">
-                  Admins: panopublish@gmail.com, vista360gtp@gmail.com
+                  Admins: vista360gtp@gmail.com, er.prashantyadav37@gmail.com
                 </div>
               </div>
             </div>
@@ -957,6 +1090,111 @@ function AdminDashboard() {
             </DialogFooter>
           </DialogContent>
         )}
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog
+        open={addUserOpen}
+        onOpenChange={(open) => !open && setAddUserOpen(false)}
+      >
+        <DialogContent className="rounded-2xl max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-800">
+              Create New User Account
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            {/* Name */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500">Full Name</Label>
+              <Input
+                placeholder="e.g. John Doe"
+                value={addUserForm.name}
+                onChange={(e) =>
+                  setAddUserForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500">Email Address</Label>
+              <Input
+                type="email"
+                placeholder="e.g. user@gmail.com"
+                value={addUserForm.email}
+                onChange={(e) =>
+                  setAddUserForm((prev) => ({ ...prev, email: e.target.value }))
+                }
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+
+            {/* Password */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500">Password</Label>
+              <Input
+                type="password"
+                placeholder="Secure password"
+                value={addUserForm.password}
+                onChange={(e) =>
+                  setAddUserForm((prev) => ({ ...prev, password: e.target.value }))
+                }
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+
+            {/* Company */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500">Company Name</Label>
+              <Input
+                placeholder="e.g. Vista360"
+                value={addUserForm.companyName}
+                onChange={(e) =>
+                  setAddUserForm((prev) => ({ ...prev, companyName: e.target.value }))
+                }
+                className="rounded-xl border-slate-200"
+              />
+            </div>
+
+            {/* Plan selection */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-500">Initial Plan</Label>
+              <Select
+                value={addUserForm.plan}
+                onValueChange={(val) => setAddUserForm((prev) => ({ ...prev, plan: val }))}
+              >
+                <SelectTrigger className="rounded-xl border-slate-200">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trial">Trial</SelectItem>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="agency">Agency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setAddUserOpen(false)}
+              className="rounded-xl border-slate-200"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddUser}
+              className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl px-5"
+            >
+              Create Account
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </AppShell>
   );

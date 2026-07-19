@@ -262,11 +262,15 @@ function CreateTour() {
     );
   };
 
+  const isAdmin =
+    user?.email === "vista360gtp@gmail.com" ||
+    user?.email === "er.prashantyadav37@gmail.com";
+
   const isTrialLimitReached = profile?.plan === "trial" && (tourCount ?? 0) >= 1;
   const isBasicLimitReached = profile?.plan === "basic" && (tourCount ?? 0) >= 5;
   const isProLimitReached = profile?.plan === "pro" && (tourCount ?? 0) >= 25;
 
-  const isLimitReached = isTrialLimitReached || isBasicLimitReached || isProLimitReached;
+  const isLimitReached = !isAdmin && (isTrialLimitReached || isBasicLimitReached || isProLimitReached);
 
   if (checkingLimits) {
     return (

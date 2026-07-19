@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getEnv, getBinding } from "./env";
-import { verifyJWT } from "./auth-server";
+import { verifyJWT, hashPassword } from "./auth-server";
 
 function decodeJWT(token: string) {
   try {
@@ -25,7 +25,7 @@ interface CachedUser {
 const tokenCache = new Map<string, CachedUser>();
 const CACHE_TTL_MS = 60 * 1000; // 1 minute cache
 
-const ADMIN_EMAILS = ["panopublish.com@gmail.com", "panopublish@gmail.com", "vista360gtp@gmail.com"];
+const ADMIN_EMAILS = ["vista360gtp@gmail.com", "er.prashantyadav37@gmail.com"];
 
 function checkIsAdmin(user: any) {
   return user?.email && ADMIN_EMAILS.includes(user.email);
@@ -410,3 +410,99 @@ export const runD1Query = createServerFn({ method: "POST" })
     return { data: null, error: { message: err.message || "Unknown database error" } };
   }
 });
+
+export const adminAddUser = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const { token, email, password, name, companyName, plan } = ctx.data;
+
+      // 1. Verify caller is admin
+      const caller = await getUserFromToken(token);
+      if (!checkIsAdmin(caller)) {
+        throw new Error("Access denied. Admin access only.");
+      }
+
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding missing");
+
+      // Check if user already exists
+      const existing = await db.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+      if (existing) {
+        return { error: { message: "User already exists with this email" } };
+      }
+
+      const id = crypto.randomUUID();
+      const salt = crypto.randomUUID();
+      const password_hash = await hashPassword(password, salt);
+
+      // Insert into users
+      await db.prepare("INSERT INTO users (id, email, password_hash, salt) VALUES (?, ?, ?, ?)")
+        .bind(id, email, password_hash, salt)
+        .run();
+
+      // Insert profile
+      const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      const username = `${baseUsername}_${id.slice(0, 4)}`;
+      const displayName = name || email.split("@")[0];
+
+      await db.prepare(`
+        INSERT INTO profiles (id, email, name, username, company_name, plan, trial_ends_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        id,
+        email,
+        displayName,
+        username,
+        companyName || "",
+        plan || "trial",
+        new Date(Date.now() + 14 * 86400000).toISOString()
+      ).run();
+
+      return { data: { success: true, id }, error: null };
+    } catch (err: any) {
+      console.error("adminAddUser error:", err);
+      return { error: { message: err.message || "Failed to add user" } };
+    }
+  });
+
+export const adminDeleteUser = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const { token, userId } = ctx.data;
+
+      // 1. Verify caller is admin
+      const caller = await getUserFromToken(token);
+      if (!checkIsAdmin(caller)) {
+        throw new Error("Access denied. Admin access only.");
+      }
+
+      if (userId === caller.id) {
+        throw new Error("Cannot delete your own admin account.");
+      }
+
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding missing");
+
+      // Cascade delete user and all their records from related tables
+      const queries = [
+        db.prepare("DELETE FROM users WHERE id = ?").bind(userId),
+        db.prepare("DELETE FROM profiles WHERE id = ?").bind(userId),
+        db.prepare("DELETE FROM clients WHERE user_id = ?").bind(userId),
+        db.prepare("DELETE FROM tours WHERE user_id = ?").bind(userId),
+        db.prepare("DELETE FROM islands WHERE user_id = ?").bind(userId),
+        db.prepare("DELETE FROM photos WHERE user_id = ?").bind(userId),
+        db.prepare("DELETE FROM subscriptions WHERE user_id = ?").bind(userId),
+        db.prepare("DELETE FROM google_tokens WHERE user_id = ?").bind(userId),
+        db.prepare("DELETE FROM constellations WHERE user_id = ?").bind(userId),
+      ];
+
+      await db.batch(queries);
+
+      return { data: { success: true }, error: null };
+    } catch (err: any) {
+      console.error("adminDeleteUser error:", err);
+      return { error: { message: err.message || "Failed to delete user" } };
+    }
+  });

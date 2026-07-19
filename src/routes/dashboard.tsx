@@ -183,9 +183,8 @@ function Dashboard() {
   };
 
   const isAdmin =
-    user?.email === "panopublish@gmail.com" ||
     user?.email === "vista360gtp@gmail.com" ||
-    user?.email === "panopublish@gmail.com";
+    user?.email === "er.prashantyadav37@gmail.com";
   const limit = planLimit[profile?.plan ?? "trial"] ?? 1;
   const tourCount = profile?.billing_cycle_tours_used ?? 0;
   const usagePct = Math.min(100, (tourCount / limit) * 100);
