@@ -42,7 +42,7 @@ async function getOrRefreshSession() {
 // Interceptor for supabase.from() database operations redirected to D1 SQLite database
 class D1QueryBuilder {
   private table: string;
-  private action: "select" | "insert" | "update" | "delete" = "select";
+  private action: "select" | "insert" | "update" | "upsert" | "delete" = "select";
   private selects: string = "*";
   private filters: Array<{ type: string; column: string; value: any }> = [];
   private orderCol?: string;
