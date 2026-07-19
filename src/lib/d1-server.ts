@@ -318,6 +318,88 @@ export const runD1Query = createServerFn({ method: "POST" })
       return { data: processedResults, count, error: null };
     }
 
+    if (action === "upsert") {
+      const data = payload.data;
+      const rows = Array.isArray(data) ? data : [data];
+      const upsertedRows: any[] = [];
+
+      for (const row of rows) {
+        const rowCopy = { ...row };
+        if (!rowCopy.id) {
+          rowCopy.id = crypto.randomUUID();
+        }
+        const tablesWithUserId = ["clients", "tours", "islands", "photos", "subscriptions", "google_tokens", "constellations"];
+        if (tablesWithUserId.includes(table) && !rowCopy.user_id) {
+          rowCopy.user_id = userId;
+        }
+
+        const cleanedRow: any = {};
+        for (const [k, v] of Object.entries(rowCopy)) {
+          if (v !== undefined) {
+            cleanedRow[k] = v;
+          }
+        }
+
+        let exists = false;
+        if (cleanedRow.id) {
+          const checkSql = `SELECT 1 FROM ${table} WHERE id = ?`;
+          const existingRow = await db.prepare(checkSql).bind(cleanedRow.id).first();
+          if (existingRow) {
+            exists = true;
+          }
+        }
+
+        if (exists) {
+          const dataToUpdate = { ...cleanedRow };
+          delete dataToUpdate.id;
+          delete dataToUpdate.user_id;
+
+          const cleanedData: any = {};
+          for (const [k, v] of Object.entries(dataToUpdate)) {
+            if (v !== undefined) {
+              cleanedData[k] = v;
+            }
+          }
+
+          const keys = Object.keys(cleanedData);
+          const values = Object.values(cleanedData);
+          const setClause = keys.map((k) => `${k} = ?`).join(", ");
+
+          let updateSql = `UPDATE ${table} SET ${setClause}`;
+          const updateParams = [...values];
+
+          const isAdmin = checkIsAdmin(user);
+          if (isAdmin) {
+            updateSql += ` WHERE id = ?`;
+            updateParams.push(cleanedRow.id);
+          } else {
+            if (table === "profiles") {
+              updateSql += ` WHERE id = ?`;
+              updateParams.push(cleanedRow.id);
+            } else {
+              updateSql += ` WHERE id = ? AND user_id = ?`;
+              updateParams.push(cleanedRow.id, userId);
+            }
+          }
+
+          console.log(`D1 UPSERT (UPDATE) SQL: ${updateSql} with params:`, updateParams);
+          await db.prepare(updateSql).bind(...updateParams).run();
+        } else {
+          const keys = Object.keys(cleanedRow);
+          const values = Object.values(cleanedRow);
+          const placeholders = keys.map(() => "?").join(", ");
+
+          const insertSql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`;
+          console.log(`D1 UPSERT (INSERT) SQL: ${insertSql} with params:`, values);
+          await db.prepare(insertSql).bind(...values).run();
+        }
+        upsertedRows.push(cleanedRow);
+      }
+
+      const returnData = Array.isArray(data) ? upsertedRows : upsertedRows[0];
+      return { data: returnData, error: null };
+    }
+
     if (action === "insert") {
       const data = payload.data;
       const rows = Array.isArray(data) ? data : [data];

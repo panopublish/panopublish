@@ -121,6 +121,12 @@ class D1QueryBuilder {
     return this;
   }
 
+  upsert(data: any) {
+    this.action = "upsert";
+    this.dataToSave = data;
+    return this;
+  }
+
   delete() {
     this.action = "delete";
     return this;
