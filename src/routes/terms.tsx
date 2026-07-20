@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { FileText, Award, AlertCircle, HelpCircle, ArrowLeft } from "lucide-react";
 import { SEO } from "@/components/SEO";
+import { PublicHeader } from "@/components/PublicHeader";
+import { PublicFooter } from "@/components/PublicFooter";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -29,24 +31,7 @@ function TermsConditions() {
           { name: "Terms of Service", url: "https://app.panopublish.com/terms" },
         ]}
       />
-      {/* Navigation */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4 max-w-6xl">
-          <Link to="/">
-            <Logo logoClassName="text-primary h-8 w-8" className="text-lg" />
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm">Start Free Trial</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 py-12 max-w-4xl">
@@ -282,23 +267,7 @@ function TermsConditions() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t py-8 bg-card mt-12">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground space-y-2 max-w-6xl">
-          <div>Made with ❤️ in India | © 2026 PanoPublish</div>
-          <div className="flex justify-center gap-4">
-            <Link to="/privacy" className="hover:text-foreground underline">
-              Privacy Policy
-            </Link>
-            <Link to="/terms" className="hover:text-foreground underline">
-              Terms & Conditions
-            </Link>
-            <Link to="/" className="hover:text-foreground underline">
-              Home
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

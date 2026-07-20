@@ -19,6 +19,8 @@ import { formatINR, waLink } from "@/lib/format";
 import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
+import { PublicHeader } from "@/components/PublicHeader";
+import { PublicFooter } from "@/components/PublicFooter";
 
 const landingSchemas = [
   {
@@ -302,51 +304,7 @@ function Landing() {
         description="Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!"
         schema={landingSchemas}
       />
-      {/* Dynamic top banner */}
-      <div className="bg-gradient-to-r from-primary to-primary-glow text-white text-center text-xs font-semibold py-2 px-4 select-none animate-pulse">
-        🚀 Start publishing today! Try PanoPublish free for 7 days. No credit card required.{" "}
-        <Link
-          to="/signup"
-          className="underline hover:text-white/80 transition-colors ml-1 inline-flex items-center gap-0.5"
-        >
-          Sign up now <ChevronRight className="h-3 w-3" />
-        </Link>
-      </div>
-
-      {/* Nav */}
-      <header className="sticky top-0 z-50 backdrop-blur-md bg-background/80 border-b">
-        <div className="container mx-auto flex items-center justify-between px-4 py-3.5 max-w-6xl">
-          <Link to="/">
-            <Logo logoClassName="text-primary h-8 w-8" className="text-xl" />
-          </Link>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <a href="#features" className="hover:text-primary transition-colors">
-              Features
-            </a>
-            <a href="#workflow" className="hover:text-primary transition-colors">
-              How It Works
-            </a>
-            <a href="#pricing" className="hover:text-primary transition-colors">
-              Pricing
-            </a>
-            <a href="#faq" className="hover:text-primary transition-colors">
-              FAQ
-            </a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm" id="btn-nav-login">
-                Sign in
-              </Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm" className="shadow-elegant" id="btn-nav-signup">
-                Start Free Trial
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicHeader />
 
       {/* Main Container */}
       <main className="flex-1">
@@ -788,68 +746,7 @@ function Landing() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t py-12 bg-card">
-        <div className="container mx-auto px-4 max-w-6xl flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-muted-foreground">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <Logo logoClassName="text-primary h-7 w-7" className="text-lg font-bold" />
-            <div className="text-xs">Made with ❤️ in India | © 2026 PanoPublish</div>
-            <div className="text-[11px] font-medium text-muted-foreground/80 mt-1">
-              Support Email: hello@panopublish.com
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center md:items-end gap-3 w-full md:w-auto">
-            {/* Keyword-rich internal links for crawl paths */}
-            <div className="flex flex-wrap gap-x-5 gap-y-2 justify-center md:justify-end font-semibold text-xs text-muted-foreground/90">
-              <a href="#features" className="hover:text-primary transition-colors">
-                360° Virtual Tour Features
-              </a>
-              <a href="#pricing" className="hover:text-primary transition-colors">
-                Pricing Plans — INR
-              </a>
-              <a href="#workflow" className="hover:text-primary transition-colors">
-                How Street View Publishing Works
-              </a>
-              <a href="#faq" className="hover:text-primary transition-colors">
-                Frequently Asked Questions
-              </a>
-              <Link
-                to="/signup"
-                className="hover:text-primary transition-colors font-bold text-primary"
-              >
-                Start Free Trial
-              </Link>
-              <Link
-                to="/privacy"
-                className="hover:text-primary transition-colors underline underline-offset-2"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                to="/terms"
-                className="hover:text-primary transition-colors underline underline-offset-2"
-              >
-                Terms & Conditions
-              </Link>
-            </div>
-
-            <div className="text-xs flex items-center gap-1.5 bg-whatsapp/10 text-whatsapp px-3 py-1 rounded-full font-bold">
-              <MessageCircle className="h-4 w-4 fill-whatsapp text-white" />
-              <a
-                href={waLink("Hi, I have a query regarding PanoPublish plans")}
-                target="_blank"
-                rel="noreferrer"
-                className="hover:underline"
-              >
-                WhatsApp Support: Mon-Sat, 10am-7pm IST
-              </a>
-            </div>
-          </div>
-        </div>
-        {/* Hidden in markup but visible for crawlers */}
-        <p className="sr-only">PanoPublish is a virtual tour platform.</p>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

@@ -18,9 +18,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToursIndexRouteImport } from './routes/tours.index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ToursNewRouteImport } from './routes/tours.new'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ToursTourIdIndexRouteImport } from './routes/tours.$tourId.index'
 import { Route as ToursTourIdPublishRouteImport } from './routes/tours.$tourId.publish'
 import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
@@ -73,6 +76,11 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SlugRoute = SlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -83,9 +91,19 @@ const ToursIndexRoute = ToursIndexRouteImport.update({
   path: '/tours/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ToursNewRoute = ToursNewRouteImport.update({
   id: '/tours/new',
   path: '/tours/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ToursTourIdIndexRoute = ToursTourIdIndexRouteImport.update({
@@ -121,6 +139,7 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/admin': typeof AdminRoute
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
@@ -130,7 +149,9 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/tours/new': typeof ToursNewRoute
+  '/blog/': typeof BlogIndexRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
@@ -141,6 +162,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/admin': typeof AdminRoute
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
@@ -150,7 +172,9 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/tours/new': typeof ToursNewRoute
+  '/blog': typeof BlogIndexRoute
   '/tours': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
@@ -162,6 +186,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/admin': typeof AdminRoute
   '/clients': typeof ClientsRoute
   '/dashboard': typeof DashboardRoute
@@ -171,7 +196,9 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/tours/new': typeof ToursNewRoute
+  '/blog/': typeof BlogIndexRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
@@ -184,6 +211,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$slug'
     | '/admin'
     | '/clients'
     | '/dashboard'
@@ -193,7 +221,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/terms'
+    | '/blog/$slug'
     | '/tours/new'
+    | '/blog/'
     | '/tours/'
     | '/auth/google/callback'
     | '/tours/$tourId/analytics'
@@ -204,6 +234,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$slug'
     | '/admin'
     | '/clients'
     | '/dashboard'
@@ -213,7 +244,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/terms'
+    | '/blog/$slug'
     | '/tours/new'
+    | '/blog'
     | '/tours'
     | '/auth/google/callback'
     | '/tours/$tourId/analytics'
@@ -224,6 +257,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$slug'
     | '/admin'
     | '/clients'
     | '/dashboard'
@@ -233,7 +267,9 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/terms'
+    | '/blog/$slug'
     | '/tours/new'
+    | '/blog/'
     | '/tours/'
     | '/auth/google/callback'
     | '/tours/$tourId/analytics'
@@ -245,6 +281,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SlugRoute: typeof SlugRoute
   AdminRoute: typeof AdminRoute
   ClientsRoute: typeof ClientsRoute
   DashboardRoute: typeof DashboardRoute
@@ -254,7 +291,9 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   ToursNewRoute: typeof ToursNewRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ToursIndexRoute: typeof ToursIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
   ToursTourIdAnalyticsRoute: typeof ToursTourIdAnalyticsRoute
@@ -329,6 +368,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$slug': {
+      id: '/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof SlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -343,11 +389,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tours/new': {
       id: '/tours/new'
       path: '/tours/new'
       fullPath: '/tours/new'
       preLoaderRoute: typeof ToursNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tours/$tourId/': {
@@ -397,6 +457,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SlugRoute: SlugRoute,
   AdminRoute: AdminRoute,
   ClientsRoute: ClientsRoute,
   DashboardRoute: DashboardRoute,
@@ -406,7 +467,9 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  BlogSlugRoute: BlogSlugRoute,
   ToursNewRoute: ToursNewRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ToursIndexRoute: ToursIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
   ToursTourIdAnalyticsRoute: ToursTourIdAnalyticsRoute,
