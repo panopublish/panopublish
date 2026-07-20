@@ -14,9 +14,9 @@ import {
   Camera,
   Layers,
   ChevronDown,
+  ChevronRight,
   Sparkles,
   MessageCircle,
-  HelpCircle as FaqIcon,
   ShieldCheck,
   BadgeAlert,
   ArrowLeft
@@ -257,11 +257,12 @@ function SeoPage() {
                       <p className="text-xs text-muted-foreground">{page.cityName}, India</p>
                     </div>
                   </div>
-                  <div className="h-28 rounded-lg bg-slate-100 flex items-center justify-center border border-dashed border-slate-300 relative group overflow-hidden">
-                    <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
-                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-semibold">
-                      <Camera className="h-4 w-4" /> 360° Panorama Linked to Maps Listing
-                    </span>
+                  <div className="h-32 rounded-lg overflow-hidden border relative group bg-slate-100">
+                    <img
+                      src="/city-maps-showcase.png"
+                      alt={`360 Virtual Tour Showcase in ${page.cityName}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
                   </div>
                   <div className="flex justify-between items-center text-xs border-t pt-3">
                     <span className="text-muted-foreground">POIs Coordinates Loaded</span>
@@ -405,7 +406,7 @@ function SeoPage() {
         <section className="py-16 md:py-24 border-t">
           <div className="container mx-auto px-4 max-w-3xl">
             <div className="flex items-center gap-2 justify-center mb-10 text-center">
-              <FaqIcon className="h-6 w-6 text-primary" />
+              <HelpCircle className="h-6 w-6 text-primary" />
               <h2 className="text-2xl md:text-3xl font-bold font-serif text-foreground">
                 Frequently Asked Questions
               </h2>
