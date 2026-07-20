@@ -141,12 +141,24 @@ function Dashboard() {
         }
       }
 
+      const clientsCount = c.count ?? 0;
+      const toursCount = tours.length;
+      const publishedCount = tours.filter((x: any) => x.status === "published").length;
+      const uploadedCount = photos.length;
+
+      const allDone = clientsCount > 0 && toursCount > 0 && uploadedCount > 0 && publishedCount > 0;
+      
+      if (allDone && userProfile && !userProfile.onboarding_dismissed) {
+        await supabase.from("profiles").update({ onboarding_dismissed: true }).eq("id", user.id);
+        userProfile.onboarding_dismissed = true;
+      }
+
       setStats({
-        clients: c.count ?? 0,
-        tours: tours.length,
-        published: tours.filter((x: any) => x.status === "published").length,
+        clients: clientsCount,
+        tours: toursCount,
+        published: publishedCount,
         processing: tours.filter((x: any) => x.status === "processing").length,
-        uploaded: 0,
+        uploaded: uploadedCount,
       });
     })();
   }, [user]);
@@ -192,7 +204,7 @@ function Dashboard() {
   const onboarding = [
     { label: "Create your first client", done: (stats?.clients ?? 0) > 0, to: "/clients" },
     { label: "Create your first tour", done: (stats?.tours ?? 0) > 0, to: "/tours/new" },
-    { label: "Upload your first photo", done: false, to: "/tours" },
+    { label: "Upload your first photo", done: (stats?.uploaded ?? 0) > 0, to: "/tours" },
     { label: "Publish to Google Maps", done: (stats?.published ?? 0) > 0, to: "/tours" },
   ];
   const doneCount = onboarding.filter((o) => o.done).length;
@@ -257,7 +269,7 @@ function Dashboard() {
           </p>
         </div>
 
-        {!profile?.onboarding_dismissed && (
+        {!profile?.onboarding_dismissed && doneCount < onboarding.length && (
           <div className="rounded-xl border bg-card p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold flex items-center gap-2">
