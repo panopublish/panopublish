@@ -1,4 +1,4 @@
-﻿import { createServerFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import { getBinding, getEnv } from "./env";
 
 // ─── Password Hashing ────────────────────────────────────────────────────────
@@ -93,28 +93,73 @@ function generateOtp(): string {
 // ─── Email Sender ─────────────────────────────────────────────────────────────
 
 async function sendOtpEmail(env: any, toEmail: string, subject: string, code: string, bodyHtml: string): Promise<void> {
-  if (!env?.EMAIL) {
-    console.log(`[EMAIL DEV] To: ${toEmail} | Subject: ${subject} | OTP Code: ${code}`);
-    return;
+  // ── Try Cloudflare native Email Service binding first ─────────────────────
+  if (env?.EMAIL) {
+    try {
+      const { EmailMessage } = await import("cloudflare:email");
+      const rawEmail = [
+        `From: PanoPublish <noreply@panopublish.com>`,
+        `To: ${toEmail}`,
+        `Subject: ${subject}`,
+        `MIME-Version: 1.0`,
+        `Content-Type: text/html; charset=UTF-8`,
+        ``,
+        bodyHtml,
+      ].join("\r\n");
+      const msg = new EmailMessage("noreply@panopublish.com", toEmail, rawEmail);
+      await env.EMAIL.send(msg);
+      console.log(`[EMAIL] Sent via Cloudflare Email Service to ${toEmail}`);
+      return;
+    } catch (err) {
+      console.error("[EMAIL] Cloudflare Email Service failed, trying MailChannels:", err);
+    }
   }
+
+  // ── MailChannels fallback (free, zero API key, native Cloudflare Workers) ─
   try {
-    const { EmailMessage } = await import("cloudflare:email");
-    const rawEmail = [
-      `From: PanoPublish <noreply@panopublish.com>`,
-      `To: ${toEmail}`,
-      `Subject: ${subject}`,
-      `MIME-Version: 1.0`,
-      `Content-Type: text/html; charset=UTF-8`,
-      ``,
-      bodyHtml,
-    ].join("\r\n");
-    const msg = new EmailMessage("noreply@panopublish.com", toEmail, rawEmail);
-    await env.EMAIL.send(msg);
+    const mcPayload = {
+      personalizations: [
+        {
+          to: [{ email: toEmail }],
+          dkim_domain: "panopublish.com",
+          dkim_selector: "mailchannels",
+          dkim_private_key: env?.DKIM_PRIVATE_KEY || "",
+        },
+      ],
+      from: {
+        email: "noreply@panopublish.com",
+        name: "PanoPublish",
+      },
+      subject,
+      content: [
+        {
+          type: "text/html",
+          value: bodyHtml,
+        },
+      ],
+    };
+
+    const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(mcPayload),
+    });
+
+    if (mcRes.ok || mcRes.status === 202) {
+      console.log(`[EMAIL] Sent via MailChannels to ${toEmail}`);
+      return;
+    }
+
+    const errText = await mcRes.text();
+    console.error(`[EMAIL] MailChannels failed: ${mcRes.status} ${errText}`);
   } catch (err) {
-    console.error("[EMAIL] Failed to send email:", err);
-    console.log(`[EMAIL FALLBACK] OTP for ${toEmail}: ${code}`);
+    console.error("[EMAIL] MailChannels exception:", err);
   }
+
+  // ── Dev fallback: print to console ────────────────────────────────────────
+  console.log(`[EMAIL DEV] To: ${toEmail} | Subject: ${subject} | OTP Code: ${code}`);
 }
+
 
 function verificationEmailBody(code: string): string {
   return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px"><div style="text-align:center;margin-bottom:24px"><span style="font-size:28px;font-weight:900;color:#1D4ED8">P°</span><span style="font-size:20px;font-weight:700;color:#1D4ED8">anoPublish</span></div><h2 style="margin:0 0 8px;font-size:22px;color:#0f172a">Verify your email</h2><p style="color:#64748b;margin:0 0 24px;font-size:15px">Use the code below to verify your account. It expires in <strong>15 minutes</strong>.</p><div style="background:#1D4ED8;color:#fff;font-size:36px;font-weight:800;letter-spacing:10px;text-align:center;padding:20px;border-radius:12px;margin-bottom:24px">${code}</div><p style="color:#94a3b8;font-size:12px;text-align:center">If you didn't create an account, ignore this email.</p></div>`;
