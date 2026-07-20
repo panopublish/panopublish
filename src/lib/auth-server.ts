@@ -92,8 +92,44 @@ function generateOtp(): string {
 
 // ─── Email Sender ─────────────────────────────────────────────────────────────
 
-async function sendOtpEmail(env: any, toEmail: string, subject: string, code: string, bodyHtml: string): Promise<void> {
-  // ── Try Cloudflare native Email Service binding first ─────────────────────
+async function sendOtpEmail(
+  env: any,
+  toEmail: string,
+  subject: string,
+  code: string,
+  bodyHtml: string
+): Promise<void> {
+
+  // ── 1. Resend (primary — works immediately, free tier 3k emails/month) ────
+  const resendKey = env?.RESEND_API_KEY;
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "PanoPublish <noreply@panopublish.com>",
+          to: [toEmail],
+          subject,
+          html: bodyHtml,
+        }),
+      });
+
+      if (res.ok || res.status === 200 || res.status === 201) {
+        console.log(`[EMAIL] Sent via Resend to ${toEmail}`);
+        return;
+      }
+      const errBody = await res.text();
+      console.error(`[EMAIL] Resend failed: ${res.status} ${errBody}`);
+    } catch (err) {
+      console.error("[EMAIL] Resend exception:", err);
+    }
+  }
+
+  // ── 2. Cloudflare native Email Service (requires dashboard binding setup) ─
   if (env?.EMAIL) {
     try {
       const { EmailMessage } = await import("cloudflare:email");
@@ -111,55 +147,15 @@ async function sendOtpEmail(env: any, toEmail: string, subject: string, code: st
       console.log(`[EMAIL] Sent via Cloudflare Email Service to ${toEmail}`);
       return;
     } catch (err) {
-      console.error("[EMAIL] Cloudflare Email Service failed, trying MailChannels:", err);
+      console.error("[EMAIL] Cloudflare Email Service failed:", err);
     }
   }
 
-  // ── MailChannels fallback (free, zero API key, native Cloudflare Workers) ─
-  try {
-    const mcPayload = {
-      personalizations: [
-        {
-          to: [{ email: toEmail }],
-          dkim_domain: "panopublish.com",
-          dkim_selector: "mailchannels",
-          dkim_private_key: env?.DKIM_PRIVATE_KEY || "",
-        },
-      ],
-      from: {
-        email: "noreply@panopublish.com",
-        name: "PanoPublish",
-      },
-      subject,
-      content: [
-        {
-          type: "text/html",
-          value: bodyHtml,
-        },
-      ],
-    };
-
-    const mcRes = await fetch("https://api.mailchannels.net/tx/v1/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(mcPayload),
-    });
-
-    if (mcRes.ok || mcRes.status === 202) {
-      console.log(`[EMAIL] Sent via MailChannels to ${toEmail}`);
-      return;
-    }
-
-    const errText = await mcRes.text();
-    console.error(`[EMAIL] MailChannels failed: ${mcRes.status} ${errText}`);
-  } catch (err) {
-    console.error("[EMAIL] MailChannels exception:", err);
-  }
-
-  // ── Dev fallback: print to console ────────────────────────────────────────
-  console.log(`[EMAIL DEV] To: ${toEmail} | Subject: ${subject} | OTP Code: ${code}`);
+  // ── 3. Local dev fallback — check Worker logs ─────────────────────────────
+  console.warn(`[EMAIL DEV] No email provider configured.`);
+  console.warn(`[EMAIL DEV] To: ${toEmail} | Subject: ${subject}`);
+  console.warn(`[EMAIL DEV] OTP CODE: ${code}`);
 }
-
 
 function verificationEmailBody(code: string): string {
   return `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px"><div style="text-align:center;margin-bottom:24px"><span style="font-size:28px;font-weight:900;color:#1D4ED8">P°</span><span style="font-size:20px;font-weight:700;color:#1D4ED8">anoPublish</span></div><h2 style="margin:0 0 8px;font-size:22px;color:#0f172a">Verify your email</h2><p style="color:#64748b;margin:0 0 24px;font-size:15px">Use the code below to verify your account. It expires in <strong>15 minutes</strong>.</p><div style="background:#1D4ED8;color:#fff;font-size:36px;font-weight:800;letter-spacing:10px;text-align:center;padding:20px;border-radius:12px;margin-bottom:24px">${code}</div><p style="color:#94a3b8;font-size:12px;text-align:center">If you didn't create an account, ignore this email.</p></div>`;
