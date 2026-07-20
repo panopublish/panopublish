@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { customSignUp } from "@/lib/auth-server";
+import { useEffect, useState, useRef } from "react";
+import { customSignUp, customVerifyEmail, customResendVerification } from "@/lib/auth-server";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
+
+// ─── OTP state helpers ───────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -53,6 +55,14 @@ function Signup() {
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">(
     "idle",
   );
+
+  // Email verification state
+  const [verifyState, setVerifyState] = useState<{ required: boolean; userId: string; email: string } | null>(null);
+  const [otp, setOtp] = useState(["\u0000", "\u0000", "\u0000", "\u0000", "\u0000", "\u0000"].map(() => ""));
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [resendingCode, setResendingCode] = useState(false);
+  const [resendCountdown, setResendCountdown] = useState(0);
 
   useEffect(() => {
     if (user) navigate({ to: "/dashboard" });
@@ -94,6 +104,13 @@ function Signup() {
 
     return () => clearTimeout(delayDebounce);
   }, [username]);
+
+  // Resend countdown
+  useEffect(() => {
+    if (resendCountdown <= 0) return;
+    const t = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCountdown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,6 +162,18 @@ function Signup() {
       return;
     }
 
+    if (res?.data?.verificationRequired) {
+      setVerifyState({
+        required: true,
+        userId: (res.data as any).userId,
+        email: (res.data as any).email || email,
+      });
+      setResendCountdown(60);
+      toast.success("Account created! Check your email for a verification code.");
+      return;
+    }
+
+    // Legacy: direct session (should not happen now, but keep as fallback)
     if (res?.data?.session) {
       setSession(res.data.session);
       toast.success("Account created successfully! Welcome.");
@@ -152,6 +181,44 @@ function Signup() {
     } else {
       toast.error("Signup failed");
     }
+  };
+
+  // OTP input handling
+  const handleOtpChange = (idx: number, val: string) => {
+    const digit = val.replace(/\D/g, "").slice(-1);
+    const next = [...otp];
+    next[idx] = digit;
+    setOtp(next);
+    if (digit && idx < 5) otpRefs.current[idx + 1]?.focus();
+  };
+  const handleOtpKeyDown = (idx: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[idx] && idx > 0) otpRefs.current[idx - 1]?.focus();
+  };
+  const otpCode = otp.join("");
+
+  const submitVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otpCode.length !== 6) { toast.error("Please enter all 6 digits"); return; }
+    setVerifyingOtp(true);
+    const res = await customVerifyEmail({ data: { userId: verifyState!.userId, code: otpCode } });
+    setVerifyingOtp(false);
+    if (res?.error) { toast.error(res.error.message); return; }
+    if (res?.data?.session) {
+      setSession(res.data.session);
+      toast.success("Email verified! Welcome to PanoPublish 🎉");
+      navigate({ to: "/dashboard" });
+    }
+  };
+
+  const resendVerification = async () => {
+    setResendingCode(true);
+    const res = await customResendVerification({ data: { userId: verifyState!.userId } });
+    setResendingCode(false);
+    if (res?.error) { toast.error(res.error.message); return; }
+    toast.success("New code sent to " + verifyState!.email);
+    setResendCountdown(60);
+    setOtp(["", "", "", "", "", ""]);
+    otpRefs.current[0]?.focus();
   };
 
   return (
@@ -164,7 +231,70 @@ function Signup() {
           { name: "Signup", url: "https://app.panopublish.com/signup" },
         ]}
       />
-      <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col p-8 md:p-10">
+
+      {/* ── EMAIL VERIFICATION OTP SCREEN ── */}
+      {verifyState?.required && (
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-gray-100 p-8 flex flex-col items-center text-center gap-6">
+          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Mail className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Verify your email</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              We sent a 6-digit code to <strong>{verifyState.email}</strong>
+            </p>
+          </div>
+          <form onSubmit={submitVerifyEmail} className="w-full space-y-5">
+            <div className="flex gap-2 justify-center">
+              {otp.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => { otpRefs.current[idx] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  className="w-11 h-12 text-center text-xl font-bold border-2 rounded-xl bg-gray-50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              ))}
+            </div>
+            <button
+              type="submit"
+              disabled={verifyingOtp || otpCode.length !== 6}
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-md disabled:opacity-50 transition-all"
+            >
+              {verifyingOtp ? "Verifying…" : "Verify & Get Started"}
+            </button>
+          </form>
+          <div>
+            {resendCountdown > 0 ? (
+              <p className="text-xs text-gray-400">Resend code in <strong>{resendCountdown}s</strong></p>
+            ) : (
+              <button
+                type="button"
+                onClick={resendVerification}
+                disabled={resendingCode}
+                className="text-xs text-primary font-semibold hover:underline focus:outline-none disabled:opacity-50"
+              >
+                {resendingCode ? "Sending…" : "Resend code"}
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setVerifyState(null)}
+            className="text-xs text-gray-400 hover:text-gray-600 focus:outline-none"
+          >
+            ← Back to signup
+          </button>
+        </div>
+      )}
+
+      {/* ── MAIN SIGNUP FORM ── */}
+      {!verifyState?.required && (
+        <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col p-8 md:p-10">
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <Link
@@ -407,6 +537,7 @@ function Signup() {
           </Link>
         </p>
       </div>
+      )}
     </div>
   );
 }
