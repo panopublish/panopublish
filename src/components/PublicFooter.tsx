@@ -78,12 +78,12 @@ export function PublicFooter() {
             </ul>
           </div>
 
-          {/* Alternatives/Comparisons block */}
+          {/* Alternatives block */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-4">
               Alternatives
             </h4>
-            <ul className="space-y-2 text-xs mb-6">
+            <ul className="space-y-2 text-xs">
               {comparisonLinks.map((link) => (
                 <li key={link.url}>
                   <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
@@ -92,14 +92,17 @@ export function PublicFooter() {
                 </li>
               ))}
             </ul>
+          </div>
 
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">
+          {/* Resources block */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-4">
               Resources
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link to="/blog" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
-                  SEO Blog Articles
+                  Blog Articles
                 </Link>
               </li>
               <li>
@@ -112,22 +115,6 @@ export function PublicFooter() {
                   Terms & Conditions
                 </Link>
               </li>
-            </ul>
-          </div>
-
-          {/* Cities Local SEO block */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-4">
-              Local SEO India
-            </h4>
-            <ul className="space-y-2 text-xs grid grid-cols-2 md:grid-cols-1 gap-x-4">
-              {cityLinks.map((link) => (
-                <li key={link.url}>
-                  <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
             </ul>
           </div>
         </div>

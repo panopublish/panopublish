@@ -5,7 +5,7 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Calendar, Clock, User, ArrowRight, BookOpen } from "lucide-react";
+import { Calendar, Clock, User, ArrowRight, BookOpen, MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/blog/")({
   component: BlogIndex,
@@ -59,9 +59,20 @@ function BlogIndex() {
           {/* Featured Blog */}
           {featuredBlog && (
             <div className="group rounded-3xl border bg-white overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 grid md:grid-cols-2">
-              <div className="bg-gradient-to-br from-primary/10 to-primary/2 flex items-center justify-center p-8 min-h-[250px] relative">
-                <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
-                <BookOpen className="h-20 w-20 text-primary/30 group-hover:scale-105 transition-transform duration-300" />
+              <div className="flex items-center justify-center min-h-[250px] relative overflow-hidden bg-slate-100 w-full">
+                {featuredBlog.image ? (
+                  <img
+                    src={featuredBlog.image}
+                    alt={featuredBlog.heading}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/2" />
+                    <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:16px_16px] opacity-15" />
+                    <BookOpen className="h-20 w-20 text-primary/30 group-hover:scale-105 transition-transform duration-300 z-10" />
+                  </>
+                )}
               </div>
               <div className="p-8 flex flex-col justify-between space-y-6">
                 <div className="space-y-3">
@@ -114,9 +125,20 @@ function BlogIndex() {
                   className="group hover:shadow-md hover:translate-y-[-2px] transition-all duration-300 flex flex-col justify-between bg-white border"
                 >
                   <CardHeader className="p-0">
-                    <div className="bg-slate-50 flex items-center justify-center p-6 h-40 border-b relative">
-                      <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:12px_12px] opacity-10" />
-                      <BookOpen className="h-12 w-12 text-slate-300 group-hover:scale-105 transition-transform duration-300" />
+                    <div className="h-40 border-b relative overflow-hidden bg-slate-50 flex items-center justify-center">
+                      {blog.image ? (
+                        <img
+                          src={blog.image}
+                          alt={blog.heading}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <>
+                          <div className="absolute inset-0 bg-slate-50" />
+                          <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:12px_12px] opacity-10" />
+                          <BookOpen className="h-12 w-12 text-slate-300 group-hover:scale-105 transition-transform duration-300 z-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="p-5 flex-1 space-y-3">
@@ -147,6 +169,32 @@ function BlogIndex() {
                   </CardFooter>
                 </Card>
               ))}
+            </div>
+
+            {/* City Coverage Index (Local SEO Links) */}
+            <div className="border-t pt-16 space-y-6">
+              <div className="text-center max-w-2xl mx-auto space-y-2">
+                <h3 className="text-xl md:text-2xl font-bold font-serif text-foreground">
+                  Virtual Tour Services in India
+                </h3>
+                <p className="text-muted-foreground text-xs md:text-sm">
+                  Explore our local 360° publishing and maps optimization services in top business hubs.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2.5 justify-center max-w-4xl mx-auto pt-4">
+                {Object.values(seoPages)
+                  .filter((p) => p.type === "city")
+                  .map((city) => (
+                    <Link
+                      key={city.slug}
+                      to={`/${city.slug}`}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border bg-white text-xs md:text-sm font-semibold text-foreground hover:text-primary hover:border-primary/30 hover:shadow-xs transition-all"
+                    >
+                      <MapPin className="h-3.5 w-3.5 text-primary" /> {city.cityName}
+                    </Link>
+                  ))}
+              </div>
             </div>
           </div>
         </div>

@@ -87,7 +87,18 @@ function BlogPost() {
 
       {/* ARTICLE LAYOUT */}
       <div className="flex-1 bg-white py-12 md:py-16">
-        <div className="container mx-auto px-4 max-w-4xl grid md:grid-cols-[220px_1fr] gap-12 items-start">
+        <div className="container mx-auto px-4 max-w-4xl space-y-10">
+          {page.image && (
+            <div className="rounded-3xl overflow-hidden border shadow-sm aspect-video max-h-[380px] w-full relative">
+              <img
+                src={page.image}
+                alt={page.heading}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+          
+          <div className="grid md:grid-cols-[220px_1fr] gap-12 items-start pt-4">
           {/* STICKY SIDEBAR (TOC) */}
           <aside className="sticky top-24 hidden md:block space-y-4 border-l pl-4 shrink-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -197,6 +208,7 @@ function BlogPost() {
           </article>
         </div>
       </div>
+    </div>
 
       <PublicFooter />
     </div>

@@ -443,6 +443,30 @@ function SeoPage() {
           </div>
         </section>
 
+        {/* LOCAL CITIES INDEX (For Service Pages Crawler Support) */}
+        {page.type === "service" && (
+          <section className="py-12 bg-white border-t">
+            <div className="container mx-auto px-4 max-w-5xl text-center space-y-6">
+              <h2 className="text-xl font-bold font-serif text-foreground">
+                Available in Top Indian Cities
+              </h2>
+              <div className="flex flex-wrap gap-2.5 justify-center max-w-3xl mx-auto">
+                {Object.values(seoPages)
+                  .filter((p) => p.type === "city")
+                  .map((city) => (
+                    <Link
+                      key={city.slug}
+                      to={`/${city.slug}`}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border hover:border-primary/20 text-xs font-semibold text-muted-foreground hover:text-primary transition-all bg-slate-50/50"
+                    >
+                      <MapPin className="h-3 w-3 text-primary" /> {city.cityName}
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* FINAL CTA DRAWER */}
         <section className="bg-gradient-to-br from-primary to-[#38BDF8] text-white py-16 text-center select-none">
           <div className="container mx-auto px-4 max-w-3xl">
@@ -450,7 +474,7 @@ function SeoPage() {
               Publish your first virtual tour today
             </h2>
             <p className="mt-4 text-sm md:text-base text-white/80 max-w-lg mx-auto">
-              Ready to claim your local SEO advantage? Try PanoPublish free for 7 days. No credit card required.
+              Ready to claim your local market advantage? Try PanoPublish free for 7 days. No credit card required.
             </p>
             <div className="mt-8 flex justify-center">
               <Link to="/signup">
