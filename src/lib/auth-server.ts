@@ -184,26 +184,32 @@ export const customSignUp = createServerFn({ method: "POST" })
       const salt = crypto.randomUUID();
       const password_hash = await hashPassword(password, salt);
 
-      await db.prepare("INSERT INTO users (id, email, password_hash, salt, email_verified) VALUES (?, ?, ?, ?, 0)")
-        .bind(id, email.toLowerCase(), password_hash, salt)
-        .run();
+      // Generate OTP code
+      const code = generateOtp();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
+      // Clean up metadata to construct pending info
       const baseUsername = email.split("@")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
       const username = metadata?.username || `${baseUsername}_${id.slice(0, 4)}`;
       const name = metadata?.name || email.split("@")[0];
 
-      await db.prepare(`INSERT INTO profiles (id, email, name, username, company_name, first_name, last_name, plan, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        .bind(id, email.toLowerCase(), name, username, metadata?.company_name || "", metadata?.first_name || "", metadata?.last_name || "", "trial", new Date(Date.now() + 14 * 86400000).toISOString())
+      const pendingMetadata = JSON.stringify({
+        name,
+        username,
+        company_name: metadata?.company_name || "",
+        first_name: metadata?.first_name || "",
+        last_name: metadata?.last_name || "",
+      });
+
+      // Insert or update in pending_users table
+      await db.prepare("DELETE FROM pending_users WHERE email = ?").bind(email.toLowerCase()).run();
+      await db.prepare(`
+        INSERT INTO pending_users (id, email, password_hash, salt, code, metadata, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).bind(id, email.toLowerCase(), password_hash, salt, code, pendingMetadata, expiresAt)
         .run();
 
-      // Generate OTP
-      const code = generateOtp();
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      await db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(id).run();
-      await db.prepare("INSERT INTO email_verification_tokens (id, user_id, code, expires_at) VALUES (?, ?, ?, ?)")
-        .bind(crypto.randomUUID(), id, code, expiresAt)
-        .run();
-
+      // Send the OTP
       await sendOtpEmail(email, "Verify your PanoPublish account", code, verificationEmailBody(code));
 
       return { data: { verificationRequired: true, userId: id, email }, error: null };
@@ -223,25 +229,48 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
       const db = getBinding("DB");
       if (!db) throw new Error("Database binding missing");
 
-      const token = await db.prepare(
-        "SELECT * FROM email_verification_tokens WHERE user_id = ? AND code = ? ORDER BY created_at DESC LIMIT 1"
+      // Check pending registration
+      const pending = await db.prepare(
+        "SELECT * FROM pending_users WHERE id = ? AND code = ? ORDER BY created_at DESC LIMIT 1"
       ).bind(userId, code).first();
 
-      if (!token) return { error: { message: "Invalid verification code" } };
-      if (new Date(token.expires_at as string) < new Date()) {
+      if (!pending) return { error: { message: "Invalid verification code" } };
+      if (new Date(pending.expires_at as string) < new Date()) {
         return { error: { message: "Code expired. Please request a new one." } };
       }
 
-      await db.prepare("UPDATE users SET email_verified = 1 WHERE id = ?").bind(userId).run();
-      await db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(userId).run();
+      // 1. Move to users table
+      await db.prepare("INSERT INTO users (id, email, password_hash, salt, email_verified) VALUES (?, ?, ?, ?, 1)")
+        .bind(pending.id, pending.email, pending.password_hash, pending.salt)
+        .run();
 
-      const user = await db.prepare("SELECT email FROM users WHERE id = ?").bind(userId).first();
+      // 2. Parse metadata and create profile
+      const meta = JSON.parse(pending.metadata as string);
+      await db.prepare(`
+        INSERT INTO profiles (id, email, name, username, company_name, first_name, last_name, plan, trial_ends_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        pending.id,
+        pending.email,
+        meta.name,
+        meta.username,
+        meta.company_name,
+        meta.first_name,
+        meta.last_name,
+        "trial",
+        new Date(Date.now() + 14 * 86400000).toISOString()
+      ).run();
+
+      // 3. Delete from pending registrations
+      await db.prepare("DELETE FROM pending_users WHERE id = ?").bind(userId).run();
+
+      // 4. Issue JWT access token
       const jwtSecret = getEnv("JWT_SECRET") || "secret";
       const exp = Math.floor(Date.now() / 1000) + 30 * 86400;
-      const accessToken = await signJWT({ sub: userId, email: user?.email, exp }, jwtSecret);
+      const accessToken = await signJWT({ sub: pending.id, email: pending.email, exp }, jwtSecret);
 
       return {
-        data: { session: { access_token: accessToken, expires_at: exp, user: { id: userId, email: user?.email } } },
+        data: { session: { access_token: accessToken, expires_at: exp, user: { id: pending.id, email: pending.email } } },
         error: null
       };
     } catch (err: any) {
@@ -260,18 +289,14 @@ export const customResendVerification = createServerFn({ method: "POST" })
       const db = getBinding("DB");
       if (!db) throw new Error("Database binding missing");
 
-      const user = await db.prepare("SELECT email, email_verified FROM users WHERE id = ?").bind(userId).first();
-      if (!user) return { error: { message: "User not found" } };
-      if (user.email_verified) return { error: { message: "Email already verified" } };
+      const pending = await db.prepare("SELECT email FROM pending_users WHERE id = ?").bind(userId).first();
+      if (!pending) return { error: { message: "Pending registration not found. Please sign up again." } };
 
       const code = generateOtp();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      await db.prepare("DELETE FROM email_verification_tokens WHERE user_id = ?").bind(userId).run();
-      await db.prepare("INSERT INTO email_verification_tokens (id, user_id, code, expires_at) VALUES (?, ?, ?, ?)")
-        .bind(crypto.randomUUID(), userId, code, expiresAt)
-        .run();
+      await db.prepare("UPDATE pending_users SET code = ?, expires_at = ? WHERE id = ?").bind(code, expiresAt, userId).run();
 
-      await sendOtpEmail(user.email as string, "Your new PanoPublish verification code", code, verificationEmailBody(code));
+      await sendOtpEmail(pending.email as string, "Your new PanoPublish verification code", code, verificationEmailBody(code));
       return { data: { success: true }, error: null };
     } catch (err: any) {
       console.error("ResendVerification error:", err);

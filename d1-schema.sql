@@ -192,3 +192,16 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+
+-- Temporary storage for signups prior to OTP verification completion
+CREATE TABLE IF NOT EXISTS pending_users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  salt TEXT NOT NULL,
+  code TEXT NOT NULL,
+  metadata TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
