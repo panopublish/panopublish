@@ -111,7 +111,9 @@ async function sendOtpEmail(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "PanoPublish <noreply@panopublish.com>",
+          // NOTE: Using resend.dev from address until panopublish.com domain is verified in Resend dashboard.
+          // After verification at resend.com/domains, change this to: "PanoPublish <noreply@panopublish.com>"
+          from: "PanoPublish <onboarding@resend.dev>",
           to: [toEmail],
           subject,
           html: bodyHtml,
