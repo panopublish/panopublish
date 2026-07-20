@@ -162,47 +162,13 @@ function Login() {
     setNewPassword(""); setConfirmNewPassword(""); setResetToken("");
   };
 
-  // ── OTP Box Component ─────────────────────────────────────────────────────
-  const OtpBoxes = () => (
-    <div className="flex gap-2 justify-center">
-      {otp.map((digit, idx) => (
-        <input
-          key={idx}
-          ref={(el) => { otpRefs.current[idx] = el; }}
-          type="text"
-          inputMode="numeric"
-          maxLength={1}
-          value={digit}
-          onChange={(e) => handleOtpChange(idx, e.target.value)}
-          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-          className="w-11 h-13 text-center text-xl font-bold border-2 rounded-xl bg-gray-50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-        />
-      ))}
-    </div>
-  );
 
-  const ResendButton = ({ onResend }: { onResend: () => void }) => (
-    <div className="text-center">
-      {resendCountdown > 0 ? (
-        <p className="text-xs text-muted-foreground">Resend code in <strong>{resendCountdown}s</strong></p>
-      ) : (
-        <button
-          type="button"
-          onClick={onResend}
-          disabled={resendingCode}
-          className="text-xs text-primary font-semibold hover:underline focus:outline-none disabled:opacity-50"
-        >
-          {resendingCode ? "Sending…" : "Resend code"}
-        </button>
-      )}
-    </div>
-  );
 
   // ─── Layout ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <SEO
-        title={step === "login" ? "Sign In" : step.startsWith("forgot") ? "Reset Password" : "Verify Email"}
+        title={step === "login" ? "Sign In" : "Reset Password"}
         description="Sign in to your PanoPublish dashboard."
         breadcrumbs={[
           { name: "Home", url: "https://app.panopublish.com/" },
@@ -350,7 +316,21 @@ function Login() {
                 We sent a 6-digit code to <strong>{pendingEmail}</strong>
               </p>
             </div>
-            <OtpBoxes />
+            <div className="flex gap-2 justify-center">
+              {otp.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => { otpRefs.current[idx] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  className="w-11 h-13 text-center text-xl font-bold border-2 rounded-xl bg-gray-50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              ))}
+            </div>
             <Button
               type="submit"
               className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-md"
@@ -358,7 +338,21 @@ function Login() {
             >
               {verifyingOtp ? "Verifying…" : "Verify Code"}
             </Button>
-            <ResendButton onResend={resendResetCode} />
+            
+            <div className="text-center">
+              {resendCountdown > 0 ? (
+                <p className="text-xs text-muted-foreground">Resend code in <strong>{resendCountdown}s</strong></p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={resendResetCode}
+                  disabled={resendingCode}
+                  className="text-xs text-primary font-semibold hover:underline focus:outline-none disabled:opacity-50"
+                >
+                  {resendingCode ? "Sending…" : "Resend code"}
+                </button>
+              )}
+            </div>
             <div className="text-center">
               <button type="button" onClick={() => setStep("forgot-email")} className="text-xs text-muted-foreground hover:text-foreground font-medium focus:outline-none">
                 ← Try different email
