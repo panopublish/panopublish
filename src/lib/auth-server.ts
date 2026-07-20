@@ -93,7 +93,6 @@ function generateOtp(): string {
 // ─── Email Sender ─────────────────────────────────────────────────────────────
 
 async function sendOtpEmail(
-  env: any,
   toEmail: string,
   subject: string,
   code: string,
@@ -101,7 +100,7 @@ async function sendOtpEmail(
 ): Promise<void> {
 
   // ── 1. Resend (primary — works immediately, free tier 3k emails/month) ────
-  const resendKey = env?.RESEND_API_KEY;
+  const resendKey = getEnv("RESEND_API_KEY");
   if (resendKey) {
     try {
       const res = await fetch("https://api.resend.com/emails", {
@@ -132,7 +131,8 @@ async function sendOtpEmail(
   }
 
   // ── 2. Cloudflare native Email Service (requires dashboard binding setup) ─
-  if (env?.EMAIL) {
+  const emailBinding = getBinding("EMAIL");
+  if (emailBinding) {
     try {
       const { EmailMessage } = await import("cloudflare:email");
       const rawEmail = [
@@ -145,7 +145,7 @@ async function sendOtpEmail(
         bodyHtml,
       ].join("\r\n");
       const msg = new EmailMessage("noreply@panopublish.com", toEmail, rawEmail);
-      await env.EMAIL.send(msg);
+      await emailBinding.send(msg);
       console.log(`[EMAIL] Sent via Cloudflare Email Service to ${toEmail}`);
       return;
     } catch (err) {
@@ -204,7 +204,7 @@ export const customSignUp = createServerFn({ method: "POST" })
         .bind(crypto.randomUUID(), id, code, expiresAt)
         .run();
 
-      await sendOtpEmail(ctx.env, email, "Verify your PanoPublish account", code, verificationEmailBody(code));
+      await sendOtpEmail(email, "Verify your PanoPublish account", code, verificationEmailBody(code));
 
       return { data: { verificationRequired: true, userId: id, email }, error: null };
     } catch (err: any) {
@@ -271,7 +271,7 @@ export const customResendVerification = createServerFn({ method: "POST" })
         .bind(crypto.randomUUID(), userId, code, expiresAt)
         .run();
 
-      await sendOtpEmail(ctx.env, user.email as string, "Your new PanoPublish verification code", code, verificationEmailBody(code));
+      await sendOtpEmail(user.email as string, "Your new PanoPublish verification code", code, verificationEmailBody(code));
       return { data: { success: true }, error: null };
     } catch (err: any) {
       console.error("ResendVerification error:", err);
@@ -342,7 +342,7 @@ export const customResetPasswordRequest = createServerFn({ method: "POST" })
         .bind(crypto.randomUUID(), user.id as string, code, expiresAt)
         .run();
 
-      await sendOtpEmail(ctx.env, user.email as string, "Reset your PanoPublish password", code, passwordResetEmailBody(code));
+      await sendOtpEmail(user.email as string, "Reset your PanoPublish password", code, passwordResetEmailBody(code));
       return { data: { success: true, userId: user.id }, error: null };
     } catch (err: any) {
       console.error("ResetPasswordRequest error:", err);
