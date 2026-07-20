@@ -1,12 +1,10 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import {
   customSignIn,
   customResetPasswordRequest,
   customVerifyResetCode,
   customUpdatePassword,
-  customVerifyEmail,
-  customResendVerification,
 } from "@/lib/auth-server";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -15,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
-import { Eye, EyeOff, Mail, Lock, User, KeyRound, RotateCcw, Check } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, KeyRound, Check } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -27,7 +25,7 @@ export const Route = createFileRoute("/login")({
   component: Login,
 });
 
-type Step = "login" | "verify-email" | "forgot-email" | "forgot-otp" | "forgot-newpass";
+type Step = "login" | "forgot-email" | "forgot-otp" | "forgot-newpass";
 
 function Login() {
   const navigate = useNavigate();
@@ -83,14 +81,6 @@ function Login() {
     setLoading(false);
 
     if (res?.error) {
-      if (res.error.message === "VERIFICATION_REQUIRED") {
-        setPendingUserId((res.error as any).userId || "");
-        setPendingEmail((res.error as any).email || identifier);
-        startResendCountdown();
-        setStep("verify-email");
-        toast.info("Please verify your email to continue.");
-        return;
-      }
       toast.error(res.error.message);
       return;
     }
@@ -117,32 +107,7 @@ function Login() {
   };
   const otpCode = otp.join("");
 
-  // ── Verify email OTP (post-signup) ───────────────────────────────────────
-  const submitVerifyEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length !== 6) { toast.error("Please enter all 6 digits"); return; }
-    setVerifyingOtp(true);
-    const res = await customVerifyEmail({ data: { userId: pendingUserId, code: otpCode } });
-    setVerifyingOtp(false);
-    if (res?.error) { toast.error(res.error.message); return; }
-    if (res?.data?.session) {
-      setSession(res.data.session);
-      toast.success("Email verified! Welcome to PanoPublish 🎉");
-      navigate({ to: "/dashboard" });
-    }
-  };
 
-  // ── Resend email verification code ───────────────────────────────────────
-  const resendVerification = async () => {
-    setResendingCode(true);
-    const res = await customResendVerification({ data: { userId: pendingUserId } });
-    setResendingCode(false);
-    if (res?.error) { toast.error(res.error.message); return; }
-    toast.success("New code sent to " + pendingEmail);
-    startResendCountdown();
-    setOtp(["", "", "", "", "", ""]);
-    otpRefs.current[0]?.focus();
-  };
 
   // ── Forgot password – send OTP ────────────────────────────────────────────
   const submitForgotEmail = async (e: React.FormEvent) => {
@@ -333,34 +298,6 @@ function Login() {
           </form>
         )}
 
-        {/* ── VERIFY EMAIL (post signup or VERIFICATION_REQUIRED) ──────── */}
-        {step === "verify-email" && (
-          <form onSubmit={submitVerifyEmail} className="w-full max-w-sm space-y-6">
-            <div className="text-center space-y-1">
-              <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 mb-2">
-                <Mail className="h-7 w-7 text-primary" />
-              </div>
-              <h1 className="text-2xl font-semibold">Check your email</h1>
-              <p className="text-sm text-muted-foreground">
-                We sent a 6-digit code to <strong>{pendingEmail}</strong>
-              </p>
-            </div>
-            <OtpBoxes />
-            <Button
-              type="submit"
-              className="w-full h-11 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold shadow-md"
-              disabled={verifyingOtp || otpCode.length !== 6}
-            >
-              {verifyingOtp ? "Verifying…" : "Verify & Sign In"}
-            </Button>
-            <ResendButton onResend={resendVerification} />
-            <div className="text-center">
-              <button type="button" onClick={() => setStep("login")} className="text-xs text-muted-foreground hover:text-foreground font-medium focus:outline-none">
-                ← Back to sign in
-              </button>
-            </div>
-          </form>
-        )}
 
         {/* ── FORGOT PASSWORD – STEP 1: Enter email ────────────────────── */}
         {step === "forgot-email" && (

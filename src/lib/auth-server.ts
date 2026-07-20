@@ -306,9 +306,7 @@ export const customSignIn = createServerFn({ method: "POST" })
       const hash = await hashPassword(password, user.salt as string);
       if (hash !== user.password_hash) return { error: { message: "Invalid email/username or password" } };
 
-      if (!user.email_verified) {
-        return { error: { message: "VERIFICATION_REQUIRED", userId: user.id as string, email: user.email as string } };
-      }
+      // Sign in is allowed regardless of email_verified — OTP verification is a signup-only step.
 
       const jwtSecret = getEnv("JWT_SECRET") || "secret";
       const exp = Math.floor(Date.now() / 1000) + 30 * 86400;
