@@ -10,10 +10,11 @@
     "SUPABASE_URL": "https://rhpyhlrwwzmagohmbitk.supabase.co",
     "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_VWJt5AbN92-EHHyczJF8Fg_DMOR5Py9",
     "VITE_SUPABASE_PROJECT_ID": "rhpyhlrwwzmagohmbitk",
-    "VITE_RAZORPAY_KEY_ID": "",
+    "VITE_RAZORPAY_KEY_ID": "rzp_live_TG32aPdqadAYlN",
     "VITE_GOOGLE_MAPS_API_KEY": "AIzaSyB_oZLa7HmgpsFtXKu4va8GY7_R1ympdDE",
     "VITE_GOOGLE_CLIENT_ID": "823257480066-j32lqpguvvp6ghg4bvgvm8t1i038ovgr.apps.googleusercontent.com",
-    "JWT_SECRET": "7fa725965b2dc68249b6b7a95610b2df7e8c39e248b61e2f7b88afd31406c9e0"
+    "JWT_SECRET": "7fa725965b2dc68249b6b7a95610b2df7e8c39e248b61e2f7b88afd31406c9e0",
+    "RAZORPAY_KEY_SECRET": "bTvkQ55Ctxdm59FlUm6HMQfX"
   },
   "d1_databases": [
     {

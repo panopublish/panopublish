@@ -457,7 +457,8 @@ function SeoPage() {
                   .map((city) => (
                     <Link
                       key={city.slug}
-                      to={`/${city.slug}`}
+                      to="/$slug"
+                      params={{ slug: city.slug }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border hover:border-primary/20 text-xs font-semibold text-muted-foreground hover:text-primary transition-all bg-slate-50/50"
                     >
                       <MapPin className="h-3 w-3 text-primary" /> {city.cityName}

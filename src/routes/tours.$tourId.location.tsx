@@ -112,7 +112,10 @@ function LocationPage() {
   }, [title]);
 
   const save = async () => {
-    if (!user || !confirmed || !coords) return toast.error("Confirm a location first");
+    if (!user || !confirmed || !coords) {
+      toast.error("Confirm a location first");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase
       .from("tours")
@@ -126,7 +129,10 @@ function LocationPage() {
       })
       .eq("id", tourId);
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     toast.success("Location saved");
     navigate({ to: "/tours/$tourId", params: { tourId } });
   };

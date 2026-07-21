@@ -1,7 +1,7 @@
 // Custom PanoPublish Client Proxy (Cloudflare D1 & R2 Backend Bridge)
 import { getEnv } from "@/lib/env";
 import { runD1Query } from "@/lib/d1-server";
-import { handleGoogleOauthServerFn, handleStreetViewPublishServerFn } from "@/lib/functions-server";
+import { handleGoogleOauthServerFn, handleStreetViewPublishServerFn, handleRazorpayServerFn } from "@/lib/functions-server";
 
 function decodeJWT(token: string) {
   try {
@@ -144,10 +144,7 @@ class D1QueryBuilder {
 
   async execute() {
     const session = await getOrRefreshSession();
-    console.log("[Supabase Proxy] Client-side final session:", session);
-    
     const token = session?.access_token || "";
-    console.log("[Supabase Proxy] Client-side final session token:", token ? `${token.substring(0, 10)}...` : "EMPTY");
 
     // If auth is required but token is empty, auto-logout
     if (!token) {
@@ -167,7 +164,6 @@ class D1QueryBuilder {
       const isPublicQuery = isUsernameCheck || isPublicCouponCheck;
 
       if (!isPublicQuery) {
-        console.warn("[Supabase Proxy] Authentication required but no session token found. Redirecting to login...");
         if (typeof window !== "undefined") {
           for (const key of Object.keys(localStorage)) {
             if (key.startsWith("sb-") || key.includes("supabase")) {
@@ -198,14 +194,12 @@ class D1QueryBuilder {
 
     // Wrap argument inside { data: ... } for TanStack Start's client RPC routing
     const res = await runD1Query({ data: payload });
-    console.log("runD1Query response on client:", res);
 
     // Auto-logout ONLY for explicit auth revocation errors, not transient token failures
     if (res?.error && (
       res.error.message.includes("User from sub claim") ||
       res.error.message.includes("user_not_found")
     )) {
-      console.warn("[Supabase Proxy] Session revoked on server, clearing session and logging out...");
       if (typeof window !== "undefined") {
         localStorage.removeItem("panopublish_session");
         window.location.href = "/login";
@@ -277,6 +271,10 @@ const customFunctions = {
       }
       if (functionName === "streetview-publish") {
         const res = await handleStreetViewPublishServerFn({ data: body });
+        return { data: res, error: null };
+      }
+      if (functionName === "razorpay") {
+        const res = await handleRazorpayServerFn({ data: body });
         return { data: res, error: null };
       }
       return { data: null, error: { message: `Function ${functionName} not found` } };

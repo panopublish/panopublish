@@ -83,7 +83,7 @@ function BlogIndex() {
                     <span className="text-xs text-muted-foreground">{featuredBlog.category}</span>
                   </div>
                   <h2 className="text-xl md:text-2xl font-bold font-serif text-foreground group-hover:text-primary transition-colors">
-                    <Link to={`/blog/${featuredBlog.slug}`}>{featuredBlog.heading}</Link>
+                    <Link to="/blog/$slug" params={{ slug: featuredBlog.slug }}>{featuredBlog.heading}</Link>
                   </h2>
                   <p className="text-muted-foreground text-xs md:text-sm leading-relaxed line-clamp-3">
                     {featuredBlog.introText}
@@ -102,7 +102,7 @@ function BlogIndex() {
                       <Clock className="h-3.5 w-3.5" /> {featuredBlog.readTime}
                     </span>
                   </div>
-                  <Link to={`/blog/${featuredBlog.slug}`}>
+                  <Link to="/blog/$slug" params={{ slug: featuredBlog.slug }}>
                     <Button className="w-full md:w-auto font-bold flex items-center gap-1.5 group-hover:translate-x-0.5 transition-transform">
                       Read Article <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -146,7 +146,7 @@ function BlogIndex() {
                       {blog.category}
                     </span>
                     <h4 className="font-bold text-sm md:text-base text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                      <Link to={`/blog/${blog.slug}`}>{blog.heading}</Link>
+                      <Link to="/blog/$slug" params={{ slug: blog.slug }}>{blog.heading}</Link>
                     </h4>
                     <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                       {blog.introText}
@@ -161,7 +161,7 @@ function BlogIndex() {
                         <Clock className="h-3 w-3" /> {blog.readTime}
                       </span>
                     </div>
-                    <Link to={`/blog/${blog.slug}`} className="w-full">
+                    <Link to="/blog/$slug" params={{ slug: blog.slug }} className="w-full">
                       <Button variant="ghost" size="sm" className="w-full text-xs font-bold justify-between group-hover:text-primary p-0">
                         Read Guide <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                       </Button>
@@ -188,7 +188,8 @@ function BlogIndex() {
                   .map((city) => (
                     <Link
                       key={city.slug}
-                      to={`/${city.slug}`}
+                      to="/$slug"
+                      params={{ slug: city.slug }}
                       className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border bg-white text-xs md:text-sm font-semibold text-foreground hover:text-primary hover:border-primary/30 hover:shadow-xs transition-all"
                     >
                       <MapPin className="h-3.5 w-3.5 text-primary" /> {city.cityName}

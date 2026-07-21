@@ -348,7 +348,7 @@ function SettingsPage() {
       toast.dismiss(tid);
 
       // 2. Open Razorpay Checkout modal
-      const keyId = getEnv("VITE_RAZORPAY_KEY_ID") || "rzp_test_SvUlzHxrvbZ3KW";
+      const keyId = getEnv("VITE_RAZORPAY_KEY_ID") || "";
 
       const options = {
         key: keyId,

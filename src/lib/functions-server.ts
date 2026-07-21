@@ -561,3 +561,140 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
     return { success: false, error: err.message };
   }
 });
+
+// ─── Razorpay Subscription Server Function ─────────────────────────────────
+
+// Razorpay plan IDs (live) — Basic ₹499, Pro ₹1499, Agency ₹2999 (monthly)
+const RAZORPAY_PLAN_IDS: Record<string, string> = {
+  basic: "plan_TG3QOVMzMRt5sz",
+  pro: "plan_TG3QtyAtMlA9V5",
+  agency: "plan_TG3RnJeND7hh9t",
+};
+
+export const handleRazorpayServerFn = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const payload = ctx.data;
+      const keyId = getEnv("VITE_RAZORPAY_KEY_ID") || "";
+      const keySecret = getEnv("RAZORPAY_KEY_SECRET") || "";
+
+      if (!keyId || !keySecret) {
+        throw new Error("Razorpay API keys not configured");
+      }
+
+      const authHeader = "Basic " + btoa(`${keyId}:${keySecret}`);
+
+      // ── Create Subscription ──────────────────────────────────────────────
+      if (payload.action === "create_subscription") {
+        const { plan_name } = payload;
+        const planId = RAZORPAY_PLAN_IDS[plan_name?.toLowerCase()];
+
+        if (!planId) {
+          throw new Error(`Unknown plan: ${plan_name}`);
+        }
+
+        const res = await fetch("https://api.razorpay.com/v1/subscriptions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({
+            plan_id: planId,
+            quantity: 1,
+            total_count: 120, // 10 years max
+            notify_info: {
+              notify_phone: payload.phone || null,
+              notify_email: payload.email || null,
+            },
+          }),
+        });
+
+        const data: any = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data?.error?.description || "Failed to create Razorpay subscription");
+        }
+
+        return { success: true, subscription_id: data.id };
+      }
+
+      // ── Verify Subscription Payment ──────────────────────────────────────
+      if (payload.action === "verify_subscription") {
+        const {
+          razorpay_payment_id,
+          razorpay_subscription_id,
+          razorpay_signature,
+          plan_name,
+          user_id,
+        } = payload;
+
+        // Verify signature using HMAC SHA256
+        const message = `${razorpay_payment_id}|${razorpay_subscription_id}`;
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(keySecret);
+        const msgData = encoder.encode(message);
+
+        const cryptoKey = await crypto.subtle.importKey(
+          "raw",
+          keyData,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"],
+        );
+        const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+        const computedSignature = Array.from(new Uint8Array(signatureBuffer))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+
+        if (computedSignature !== razorpay_signature) {
+          throw new Error("Signature verification failed: payment signature mismatch");
+        }
+
+        // Update subscription in D1 database
+        if (user_id) {
+          const db = getBinding("DB");
+          if (db) {
+            const planTourLimits: Record<string, number> = {
+              basic: 5,
+              pro: 25,
+              agency: 9999,
+            };
+            const trialEndsAt = new Date(Date.now() + 30 * 86400000).toISOString();
+            const planLower = plan_name?.toLowerCase() || "basic";
+            const tourLimit = planTourLimits[planLower] ?? 5;
+
+            // Upsert subscription record
+            await db.prepare(`
+              INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, current_period_end)
+              VALUES (?, ?, ?, 'active', ?, ?)
+              ON CONFLICT(user_id) DO UPDATE SET
+                plan = excluded.plan,
+                status = 'active',
+                razorpay_subscription_id = excluded.razorpay_subscription_id,
+                current_period_end = excluded.current_period_end
+            `).bind(
+              crypto.randomUUID(),
+              user_id,
+              planLower,
+              razorpay_subscription_id,
+              trialEndsAt,
+            ).run();
+
+            // Update profile plan
+            await db.prepare(`
+              UPDATE profiles SET plan = ?, trial_ends_at = ?, tour_limit = ? WHERE id = ?
+            `).bind(planLower, trialEndsAt, tourLimit, user_id).run();
+          }
+        }
+
+        return { success: true };
+      }
+
+      throw new Error(`Unknown razorpay action: ${payload.action}`);
+    } catch (err: any) {
+      console.error("Razorpay Server Function error:", err);
+      return { success: false, error: err.message };
+    }
+  });

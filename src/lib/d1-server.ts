@@ -39,7 +39,6 @@ async function getUserFromToken(token: string) {
   const now = Date.now();
   const cached = tokenCache.get(token);
   if (cached && cached.expiry > now) {
-    console.log("[D1 SERVER] Returning cached user for token");
     return cached.user;
   }
 
@@ -78,7 +77,6 @@ export const runD1Query = createServerFn({ method: "POST" })
   .handler(async (ctx: any) => {
     try {
       const payload = ctx.data;
-      console.log("[D1 SERVER] received token in payload:", payload?.token ? `${payload.token.substring(0, 15)}...` : "UNDEFINED/EMPTY");
       
       // Determine if auth is strictly required
       const isUsernameCheck = 
@@ -193,7 +191,6 @@ export const runD1Query = createServerFn({ method: "POST" })
 
       if (payload.countOption === "exact") {
         const countSql = `SELECT COUNT(*) as total FROM ${table}${whereSql}`;
-        console.log(`D1 COUNT SQL: ${countSql} with params:`, params);
         const countRes = await db
           .prepare(countSql)
           .bind(...params)
@@ -247,7 +244,6 @@ export const runD1Query = createServerFn({ method: "POST" })
         sql += ` LIMIT 1`;
       }
 
-      console.log(`D1 SELECT SQL: ${sql} with params:`, params);
       const stmt = db.prepare(sql);
       let { results } = await stmt.bind(...params).all();
 
@@ -286,7 +282,6 @@ export const runD1Query = createServerFn({ method: "POST" })
         // Use INSERT OR IGNORE to prevent unique constraint failures from parallel self-heals
         const insertSql = `INSERT OR IGNORE INTO profiles (${keys.join(", ")}) VALUES (${placeholders})`;
 
-        console.log(`D1 profiles Self-Heal SQL: ${insertSql} with params:`, values);
         await db.prepare(insertSql).bind(...values).run();
 
         // Query again to get the inserted profile in correct select field format
@@ -382,7 +377,6 @@ export const runD1Query = createServerFn({ method: "POST" })
             }
           }
 
-          console.log(`D1 UPSERT (UPDATE) SQL: ${updateSql} with params:`, updateParams);
           await db.prepare(updateSql).bind(...updateParams).run();
         } else {
           const keys = Object.keys(cleanedRow);
@@ -390,7 +384,6 @@ export const runD1Query = createServerFn({ method: "POST" })
           const placeholders = keys.map(() => "?").join(", ");
 
           const insertSql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`;
-          console.log(`D1 UPSERT (INSERT) SQL: ${insertSql} with params:`, values);
           await db.prepare(insertSql).bind(...values).run();
         }
         upsertedRows.push(cleanedRow);
@@ -430,8 +423,6 @@ export const runD1Query = createServerFn({ method: "POST" })
         const placeholders = keys.map(() => "?").join(", ");
 
         sql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`;
-        console.log(`D1 INSERT SQL: ${sql} with params:`, values);
-
         await db
           .prepare(sql)
           .bind(...values)
@@ -464,7 +455,6 @@ export const runD1Query = createServerFn({ method: "POST" })
       params.push(...values);
       sql += buildWhereClause();
 
-      console.log(`D1 UPDATE SQL: ${sql} with params:`, params);
       await db
         .prepare(sql)
         .bind(...params)
@@ -477,7 +467,6 @@ export const runD1Query = createServerFn({ method: "POST" })
       sql = `DELETE FROM ${table}`;
       sql += buildWhereClause();
 
-      console.log(`D1 DELETE SQL: ${sql} with params:`, params);
       await db
         .prepare(sql)
         .bind(...params)

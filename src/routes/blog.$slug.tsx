@@ -197,7 +197,7 @@ function BlogPost() {
                       Start 7-Day Free Trial
                     </Button>
                   </Link>
-                  <Link to="/#pricing">
+                  <Link to="/" hash="pricing">
                     <Button variant="ghost" size="sm" className="text-white hover:bg-white/10 font-semibold flex items-center gap-1">
                       See Pricing <ArrowRight className="h-4 w-4" />
                     </Button>

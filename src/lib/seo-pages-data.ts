@@ -40,6 +40,7 @@ export interface SeoPageData {
   readTime?: string;
   tags?: string[];
   cityName?: string;
+  image?: string;
 }
 
 export const seoPages: Record<string, SeoPageData> = {

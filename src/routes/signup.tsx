@@ -174,8 +174,9 @@ function Signup() {
     }
 
     // Legacy: direct session (should not happen now, but keep as fallback)
-    if (res?.data?.session) {
-      setSession(res.data.session);
+    const signupData = res?.data as any;
+    if (signupData?.session) {
+      setSession(signupData.session);
       toast.success("Account created successfully! Welcome.");
       navigate({ to: "/dashboard" });
     } else {
