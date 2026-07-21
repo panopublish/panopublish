@@ -28,7 +28,7 @@ const landingSchemas = [
     "@type": "WebSite",
     name: "PanoPublish",
     alternateName: "PanoPublish Platform",
-    url: "https://app.panopublish.com/",
+    url: "https://panopublish.com/",
     description:
       "Publish 360° virtual tours to Google Maps & Street View. Built for photographers, agencies, hotels, and real estate professionals in India.",
     inLanguage: "en-IN",
@@ -36,7 +36,7 @@ const landingSchemas = [
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: "https://app.panopublish.com/signup",
+        urlTemplate: "https://panopublish.com/signup",
       },
       "query-input": "required name=search_term_string",
     },
@@ -48,10 +48,10 @@ const landingSchemas = [
     operatingSystem: "Web",
     applicationCategory: "BusinessApplication",
     applicationSubCategory: "Virtual Tour Software",
-    url: "https://app.panopublish.com/",
+    url: "https://panopublish.com/",
     description:
       "SaaS platform for publishing 360° panoramic photos to Google Street View and Google Maps. Designed for Indian photographers and marketing agencies.",
-    screenshot: "https://app.panopublish.com/robot_beach_upload.png",
+    screenshot: "https://panopublish.com/robot_beach_upload.png",
     featureList: [
       "Direct Google Street View publishing",
       "360° photo management",
@@ -68,7 +68,7 @@ const landingSchemas = [
         priceCurrency: "INR",
         billingIncrement: "P1M",
         description: "1 user, 5 tours, 50 photos per tour, email support",
-        url: "https://app.panopublish.com/signup",
+        url: "https://panopublish.com/signup",
       },
       {
         "@type": "Offer",
@@ -77,7 +77,7 @@ const landingSchemas = [
         priceCurrency: "INR",
         billingIncrement: "P1M",
         description: "3 users, 25 tours, 200 photos per tour, WhatsApp support",
-        url: "https://app.panopublish.com/signup",
+        url: "https://panopublish.com/signup",
       },
       {
         "@type": "Offer",
@@ -86,7 +86,7 @@ const landingSchemas = [
         priceCurrency: "INR",
         billingIncrement: "P1M",
         description: "Unlimited users, unlimited tours, dedicated manager",
-        url: "https://app.panopublish.com/signup",
+        url: "https://panopublish.com/signup",
       },
     ],
     aggregateRating: {
@@ -154,8 +154,8 @@ const landingSchemas = [
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "PanoPublish",
-    url: "https://app.panopublish.com",
-    logo: "https://app.panopublish.com/og-image.png",
+    url: "https://panopublish.com",
+    logo: "https://panopublish.com/favicon.png",
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",

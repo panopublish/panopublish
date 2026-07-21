@@ -24,8 +24,8 @@ function BlogIndex() {
   const regularBlogs = blogs.filter((b) => b.slug !== featuredBlog?.slug);
 
   const breadcrumbs = [
-    { name: "Home", url: "https://app.panopublish.com/" },
-    { name: "Blog", url: "https://app.panopublish.com/blog" },
+    { name: "Home", url: "https://panopublish.com/" },
+    { name: "Blog", url: "https://panopublish.com/blog" },
   ];
 
   return (

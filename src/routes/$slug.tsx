@@ -42,8 +42,8 @@ function SeoPage() {
 
   // Generate breadcrumbs for SEO
   const breadcrumbs = [
-    { name: "Home", url: "https://app.panopublish.com/" },
-    { name: page.heading, url: `https://app.panopublish.com/${page.slug}` },
+    { name: "Home", url: "https://panopublish.com/" },
+    { name: page.heading, url: `https://panopublish.com/${page.slug}` },
   ];
 
   // Helper to generate dynamic schema

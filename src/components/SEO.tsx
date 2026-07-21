@@ -15,7 +15,7 @@ export function SEO({
   title,
   description,
   canonical,
-  ogImage = "https://app.panopublish.com/og-image.png",
+  ogImage = "https://panopublish.com/og-image.png",
   ogType = "website",
   noIndex = false,
   schema,
@@ -26,7 +26,7 @@ export function SEO({
     canonical ||
     (typeof window !== "undefined"
       ? window.location.origin + window.location.pathname
-      : "https://app.panopublish.com");
+      : "https://panopublish.com");
 
   const breadcrumbSchema = breadcrumbs
     ? {

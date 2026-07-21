@@ -53,8 +53,8 @@ function ContactUs() {
         title="Contact Us — PanoPublish"
         description="Have questions? Get in touch with the PanoPublish team for support, custom enterprise pricing, or API integrations."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Contact", url: "https://app.panopublish.com/contact" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Contact", url: "https://panopublish.com/contact" },
         ]}
       />
       <PublicHeader />

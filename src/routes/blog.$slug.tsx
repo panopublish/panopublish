@@ -32,9 +32,9 @@ function BlogPost() {
   const page = Route.useLoaderData();
 
   const breadcrumbs = [
-    { name: "Home", url: "https://app.panopublish.com/" },
-    { name: "Blog", url: "https://app.panopublish.com/blog" },
-    { name: page.heading, url: `https://app.panopublish.com/blog/${page.slug}` },
+    { name: "Home", url: "https://panopublish.com/" },
+    { name: "Blog", url: "https://panopublish.com/blog" },
+    { name: page.heading, url: `https://panopublish.com/blog/${page.slug}` },
   ];
 
   return (

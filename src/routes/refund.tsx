@@ -26,8 +26,8 @@ function RefundPolicy() {
         title="Refund & Cancellation Policy"
         description="Review PanoPublish's Refund & Cancellation Policy. Learn about our 7-day free trial, cancellation steps, and refund request conditions."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Refund Policy", url: "https://app.panopublish.com/refund" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Refund Policy", url: "https://panopublish.com/refund" },
         ]}
       />
       <PublicHeader />

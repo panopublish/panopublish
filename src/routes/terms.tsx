@@ -27,8 +27,8 @@ function TermsConditions() {
         title="Terms & Conditions"
         description="Review the terms of service and usage conditions for the PanoPublish virtual tour publishing SaaS platform in India."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Terms of Service", url: "https://app.panopublish.com/terms" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Terms of Service", url: "https://panopublish.com/terms" },
         ]}
       />
       <PublicHeader />

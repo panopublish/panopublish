@@ -98,8 +98,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "PanoPublish" },
-      { property: "og:url", content: "https://app.panopublish.com" },
-      { property: "og:image", content: "https://app.panopublish.com/og-image.png" },
+      { property: "og:url", content: "https://panopublish.com" },
+      { property: "og:image", content: "https://panopublish.com/og-image.png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -113,10 +113,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
       },
-      { name: "twitter:image", content: "https://app.panopublish.com/og-image.png" },
+      { name: "twitter:image", content: "https://panopublish.com/og-image.png" },
       { name: "google-site-verification", content: "google8601514a32a20709" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "shortcut icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "stylesheet", href: appCss },
       {

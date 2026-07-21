@@ -71,8 +71,8 @@ function PricingPage() {
         title="Pricing Plans — PanoPublish"
         description="Choose the perfect plan for virtual tour publishing. Transparent monthly plans in INR with a 7-day free trial. Start publishing to Google Maps today."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Pricing", url: "https://app.panopublish.com/pricing" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Pricing", url: "https://panopublish.com/pricing" },
         ]}
       />
       <PublicHeader />

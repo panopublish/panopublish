@@ -171,8 +171,8 @@ function Login() {
         title={step === "login" ? "Sign In" : "Reset Password"}
         description="Sign in to your PanoPublish dashboard."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Login", url: "https://app.panopublish.com/login" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Login", url: "https://panopublish.com/login" },
         ]}
       />
 

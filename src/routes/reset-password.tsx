@@ -120,8 +120,8 @@ function ResetPassword() {
         title="Reset Password"
         description="Reset your PanoPublish account password securely."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Reset Password", url: "https://app.panopublish.com/reset-password" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Reset Password", url: "https://panopublish.com/reset-password" },
         ]}
       />
       <div className="hidden md:flex gradient-hero text-primary-foreground p-10 flex-col justify-between">

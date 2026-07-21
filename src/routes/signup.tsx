@@ -228,8 +228,8 @@ function Signup() {
         title="Start Free 7-Day Trial"
         description="Create your PanoPublish account today. Publish 360° virtual tours to Google Maps, generate tax invoices, and get WhatsApp support in India."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Signup", url: "https://app.panopublish.com/signup" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Signup", url: "https://panopublish.com/signup" },
         ]}
       />
 

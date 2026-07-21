@@ -27,8 +27,8 @@ function PrivacyPolicy() {
         title="Privacy Policy"
         description="Read PanoPublish's privacy policy. Learn how we handle your personal data, Google Account connections, and panorama uploads securely."
         breadcrumbs={[
-          { name: "Home", url: "https://app.panopublish.com/" },
-          { name: "Privacy Policy", url: "https://app.panopublish.com/privacy" },
+          { name: "Home", url: "https://panopublish.com/" },
+          { name: "Privacy Policy", url: "https://panopublish.com/privacy" },
         ]}
       />
       <PublicHeader />
