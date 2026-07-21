@@ -1093,11 +1093,7 @@ function SettingsPage() {
                         </tbody>
                       </table>
                     </div>
-                    <p className="text-[10px] text-gray-400 flex items-center gap-1.5 mt-1.5">
-                      <AlertCircle className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                      18% GST invoice compiled automatically. For custom company GSTIN billing,
-                      contact help desk support.
-                    </p>
+
                   </div>
                 </div>
               )}
@@ -1259,7 +1255,7 @@ function SettingsPage() {
                       <p className="text-[11px] text-gray-400 leading-relaxed">
                         Payments are processed securely via Razorpay, supporting UPI (GPay, PhonePe,
                         Paytm), net banking, standard EMI credit/debit cards, and corporate
-                        corporate cards. Invoices will automatically compile 18% CGST/SGST.
+                        corporate cards.
                       </p>
                     </div>
                   </div>

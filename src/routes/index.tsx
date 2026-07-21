@@ -58,7 +58,6 @@ const landingSchemas = [
       "Multi-client workspace",
       "Custom nadir branding",
       "Indian payment methods (UPI, cards)",
-      "GST invoice generation",
       "WhatsApp support",
     ],
     offers: [
@@ -108,7 +107,7 @@ const landingSchemas = [
         "@type": "Review",
         author: { "@type": "Person", name: "Priya S." },
         reviewBody:
-          "Finally, a platform built for India with INR pricing, tax invoice generation, and real WhatsApp support.",
+          "Finally, a platform built for India with INR pricing and real WhatsApp support.",
         reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
       },
     ],
@@ -147,14 +146,6 @@ const landingSchemas = [
         acceptedAnswer: {
           "@type": "Answer",
           text: "Yes. PanoPublish's Custom Nadir feature lets you apply a stretch blur to hide your tripod at the bottom of the panorama, or upload your company logo to brand every scene before publishing to Google Street View.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "How are subscription payments and GST invoices handled?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "Payments are processed securely and support UPI, credit/debit cards, net banking, and EMI. You can enter your GSTIN to automatically receive GST-compliant tax invoices for every transaction, suitable for input tax credit claims.",
         },
       },
     ],
@@ -264,7 +255,6 @@ const plans = [
       "Unlimited virtual tours",
       "Unlimited scenes and photos",
       "Dedicated relationship manager",
-      "GST & custom corporate invoicing",
       "White-label client presentation mode",
     ],
   },
@@ -288,8 +278,8 @@ const faqs = [
     "Yes, absolutely. The Pro and Agency plans include server-side Nadir processing tools. You can apply a standard bottom blur, stretch-blur, or overlay your client's custom circular logo directly at the bottom pole of the 360° scene, hiding the tripod seamlessly.",
   ],
   [
-    "How are subscription payments and GST invoices handled?",
-    "Payments are processed securely, supporting UPI, credit cards, debit cards, net banking, and EMI. If you enter your GSTIN during checkout or in your Settings, a tax-compliant GST invoice is generated and emailed to you automatically for tax filing and input credit claims.",
+    "How are subscription payments handled?",
+    "Payments are processed securely via Razorpay, supporting UPI, credit cards, debit cards, net banking, and EMI.",
   ],
 ];
 
@@ -391,10 +381,10 @@ function Landing() {
           <div className="container mx-auto px-4 max-w-6xl flex flex-wrap items-center justify-around gap-6 text-center md:text-left">
             <div>
               <div className="text-xl font-bold">
-                Need customized media pricing or GST integration?
+                Need customized media pricing or enterprise support?
               </div>
               <p className="text-white/80 text-sm mt-0.5">
-                We provide tax-compliant billing and prioritized processing for Indian creators.
+                We provide prioritized processing and dedicated support for Indian creators.
               </p>
             </div>
             <Link to="/signup">
@@ -448,8 +438,8 @@ function Landing() {
               },
               {
                 i: Sparkles,
-                t: "Tax-Compliant billing",
-                d: "Enter your company GSTIN to receive automatic GST tax invoices. Fully localized Indian payment methods including UPI and Net Banking.",
+                t: "Secure Indian Payments",
+                d: "Pay via UPI, Net Banking, credit/debit cards, or EMI — all processed securely via Razorpay in INR.",
               },
             ].map((f) => (
               <div

@@ -211,7 +211,7 @@ function PrivacyPolicy() {
                   To operate, maintain, and provide the features and functionality of the
                   PanoPublish SaaS platform.
                 </li>
-                <li>To manage your active subscription plans and process GST invoicing.</li>
+                <li>To manage your active subscription plans and process billing.</li>
                 <li>
                   To connect photo nodes, construct virtual island paths, and publish scenes to
                   Google Maps.

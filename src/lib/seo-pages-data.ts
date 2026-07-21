@@ -78,10 +78,10 @@ export const seoPages: Record<string, SeoPageData> = {
       },
       {
         title: "SaaS Features Built Specifically for India",
-        content: "We understand the pain of using foreign software. PanoPublish provides Indian payment options, GST-compliant tax invoices, and real human support via WhatsApp.",
+        content: "We understand the pain of using foreign software. PanoPublish provides Indian payment options, secure INR invoices, and real human support via WhatsApp.",
         listItems: [
           "Affordable plans starting at ₹499/month, payable via UPI, NetBanking, and local cards.",
-          "Automatic GST invoices with your company's GSTIN for easy input tax credit claims.",
+          "Automatic billing invoices with your company's company details for easy expense tracking.",
           "Dedicated technical support operating on Indian Standard Time (IST)."
         ]
       }
@@ -126,7 +126,7 @@ export const seoPages: Record<string, SeoPageData> = {
         content: "Review your uploads in real-time with our built-in WebGL-based panoramic viewer. Align, preview, and customize scenes instantly in the browser without loading heavy programs.",
         listItems: [
           "Lag-free, high-performance rendering of 360° panoramic spheres.",
-          "Precise yaw/pitch rotation tools to set default viewport angles.",
+          "Precise yaw/ph rotation tools to set default viewport angles.",
           "Easy scene deletion, reordering, and tagging."
         ]
       }
@@ -204,10 +204,10 @@ export const seoPages: Record<string, SeoPageData> = {
         ]
       },
       {
-        title: "Agency Scaling & GST Compliance",
+        title: "Agency Scaling & compliance",
         content: "Filing taxes and claiming input credit is vital for growing companies in India. Our billing system is optimized for Indian corporate finance, ensuring your agency runs legally and cost-effectively.",
         listItems: [
-          "Enter corporate details and GSTIN once to get automated commercial invoices.",
+          "Enter corporate details and company details once to get automated commercial invoices.",
           "Flexible subscription seats under the Agency Plan for multiple photographers.",
           "Affordable local pricing in INR to avoid international transaction markups."
         ]
@@ -277,7 +277,7 @@ export const seoPages: Record<string, SeoPageData> = {
     sections: [
       {
         title: "Immersive Virtual Open Houses",
-        content: "Walk buyers through luxury villas, residential apartments, or commercial office blocks. Using our connection editor, you can create a smooth walking flow from the entrance door, into the living room, kitchen, master bedroom, and balcony views.",
+        content: "Walk buyers through luxury villas, residential apartments, or commercial office blocks. Using our connection editor, you can create a smooth walking flow from the entrance door, into the living room, khen, master bedroom, and balcony views.",
         listItems: [
           "Connect scenes to mimic realistic room-to-room transitions.",
           "Add nadir branding featuring the developer's corporate logo.",
@@ -330,8 +330,8 @@ export const seoPages: Record<string, SeoPageData> = {
         content: "PanoPublish uploads your panoramas and connects them directly to your restaurant's business profile point of interest (POI) on Google Maps. This adds a permanent 'See Inside' thumbnail to your search card.",
         listItems: [
           "Direct connection to restaurant location listings on Google Maps.",
-          "Showcases the clean environment, kitchen safety, and theme decor.",
-          "GST invoices provided to claim corporate marketing business expenses."
+          "Showcases the clean environment, khen safety, and theme decor.",
+          "billing invoices provided to claim corporate marketing business expenses."
         ]
       }
     ],
@@ -393,7 +393,7 @@ export const seoPages: Record<string, SeoPageData> = {
     slug: "tourbuilder-alternative-india",
     type: "comparison",
     title: "TourBuilder Alternative India — PanoPublish vs TourBuilder",
-    description: "Looking for a TourBuilder alternative in India? Compare pricing, GST invoices, WhatsApp support, and publishing speed. Choose PanoPublish.",
+    description: "Looking for a TourBuilder alternative in India? Compare pricing, billing invoices, WhatsApp support, and publishing speed. Choose PanoPublish.",
     primaryKeyword: "tourbuilder alternative india",
     category: "Comparisons",
     heading: "PanoPublish vs TourBuilder",
@@ -401,11 +401,11 @@ export const seoPages: Record<string, SeoPageData> = {
     introText: "TourBuilder is a widely used tool for publishing virtual tours to Google Maps. However, for Indian photographers, digital agencies, and startups, dealing with international currency conversions, lack of local customer support, and standard tax invoicing can be challenging. PanoPublish is the premier TourBuilder alternative designed specifically for India.",
     sections: [
       {
-        title: "Why Indian Agencies are Switching from TourBuilder",
-        content: "While TourBuilder has useful publishing features, its dollar pricing makes it expensive. Furthermore, Indian businesses require standard GST invoices to claim input tax credits, which international SaaS platforms do not offer. PanoPublish solves all these localized issues while providing a faster browser-based publishing experience.",
+        title: "Why Indian Agencies are Swhing from TourBuilder",
+        content: "While TourBuilder has useful publishing features, its dollar pricing makes it expensive. Furthermore, Indian businesses require standard billing invoices to claim input tax credits, which international SaaS platforms do not offer. PanoPublish solves all these localized issues while providing a faster browser-based publishing experience.",
         listItems: [
           "Priced in Indian Rupees (INR) to avoid credit card markup and forex conversion charges.",
-          "Instant GST invoices generated for every transaction supporting Input Tax Credit (ITC).",
+          "Instant billing invoices generated for every transaction supporting expense tracking.",
           "Dedicated customer service accessible via WhatsApp during Indian working hours."
         ]
       }
@@ -415,7 +415,7 @@ export const seoPages: Record<string, SeoPageData> = {
       headers: ["Feature / Metric", "PanoPublish", "TourBuilder"],
       rows: [
         { feature: "Starting Price", panopublish: "₹499 / month (~$6)", competitor: "$29 / month (~₹2,400)", isHighlight: true },
-        { feature: "GST Invoices (India ITC)", panopublish: "✅ Automatic with GSTIN support", competitor: "❌ Not available (US entity)" },
+        { feature: "billing invoices (India )", panopublish: "✅ Automatic with company details support", competitor: "❌ Not available (US entity)" },
         { feature: "Payment Options", panopublish: "✅ UPI, NetBanking, RuPay, Local Cards", competitor: "❌ International credit cards only" },
         { feature: "Customer Support", panopublish: "✅ WhatsApp Support (10 AM - 7 PM IST)", competitor: "⚠️ Email ticket system only (US Timezone)" },
         { feature: "Nadir Custom Branding", panopublish: "✅ Yes (Logo overlays + blur editor)", competitor: "✅ Yes" },
@@ -460,7 +460,7 @@ export const seoPages: Record<string, SeoPageData> = {
       headers: ["Feature / Metric", "PanoPublish", "GoThru"],
       rows: [
         { feature: "Pricing Model", panopublish: "✅ Unlimited publishing subscription plans", competitor: "⚠️ Pay-per-credit or limited tiers" },
-        { feature: "INR Currency & GST", panopublish: "✅ Supported (UPI + GST Invoices)", competitor: "❌ US Dollars only" },
+        { feature: "INR Currency & UPI", panopublish: "✅ Supported (UPI + billing invoices)", competitor: "❌ US Dollars only" },
         { feature: "UI/UX Design", panopublish: "✅ Modern, clean, and highly intuitive", competitor: "⚠️ Legacy interface with learning curve" },
         { feature: "Browser Performance", panopublish: "✅ WebGL accelerated, responsive preview", competitor: "⚠️ Heavy rendering loads" },
         { feature: "Nadir Editing", panopublish: "✅ Blur editor + logo overlays in-app", competitor: "⚠️ Complex setup" },
@@ -559,7 +559,7 @@ export const seoPages: Record<string, SeoPageData> = {
       },
       {
         title: "3. Publishing Software Subscriptions",
-        content: "To connect panoramas, remove tripods, and manage client assets, you need publishing software. Standard international tools charge in USD, often costing $29 to $99 per month. PanoPublish is designed for India, offering plans starting at ₹499/month, saving you money and providing GST support."
+        content: "To connect panoramas, remove tripods, and manage client assets, you need publishing software. Standard international tools charge in USD, often costing $29 to $99 per month. PanoPublish is designed for India, offering plans starting at ₹499/month, saving you money and providing local billing support."
       },
       {
         title: "4. Professional Photography Service Rates",
@@ -572,8 +572,8 @@ export const seoPages: Record<string, SeoPageData> = {
         answer: "No. Our pricing is transparent. You only pay the monthly subscription fee, and we do not charge per publish, per node, or require credit purchases."
       },
       {
-        question: "Can we get a GST invoice for our subscription?",
-        answer: "Yes, you can input your GSTIN during checkout, and we will automatically email you a tax-compliant invoice suitable for input tax credit claims."
+        question: "Can we get a billing invoice for our subscription?",
+        answer: "Yes, you can input your company details during checkout, and we will automatically email you a tax-compliant invoice suitable for expense tracking."
       }
     ]
   },
@@ -597,7 +597,7 @@ export const seoPages: Record<string, SeoPageData> = {
         title: "1. Ricoh Theta Z1 (The Professional Choice)",
         content: "The Ricoh Theta Z1 remains a popular choice for professional virtual tour photographers. It features dual 1-inch back-illuminated CMOS sensors, providing excellent low-light performance and dynamic range. It supports RAW shooting, letting you capture detailed shadow detail inside properties.",
         listItems: [
-          "Pros: Outstanding RAW dynamic range, clean stitch lines, native plugins.",
+          "Pros: Outstanding RAW dynamic range, clean sth lines, native plugins.",
           "Cons: Expensive (approx. ₹95,000 - ₹1,05,000 in India), internal storage only.",
           "Verdict: Recommended for high-end hospitality and luxury real estate."
         ]
@@ -613,7 +613,7 @@ export const seoPages: Record<string, SeoPageData> = {
       },
       {
         title: "3. Ricoh Theta X (The Streamlined Workflow)",
-        content: "The Ricoh Theta X features a large touchscreen display and a removable battery, making it easy to manage files on site. It shoots 60-megapixel equirectangular images with built-in stitching, allowing you to upload files directly to PanoPublish without desktop pre-processing.",
+        content: "The Ricoh Theta X features a large touchscreen display and a removable battery, making it easy to manage files on site. It shoots 60-megapixel equirectangular images with built-in sthing, allowing you to upload files directly to PanoPublish without desktop pre-processing.",
         listItems: [
           "Pros: High 60MP resolution, built-in GPS, removable battery and memory card.",
           "Cons: Dynamic range is slightly lower than the Theta Z1.",
@@ -627,8 +627,8 @@ export const seoPages: Record<string, SeoPageData> = {
         answer: "Yes, the GoPro Max can shoot 360° photos. However, its dynamic range and resolution are slightly lower than the newer Insta360 and Ricoh models, making it better for outdoor action rather than indoor real estate."
       },
       {
-        question: "Do I need to stitch images manually?",
-        answer: "Most modern 360° cameras stitch images automatically. If your camera outputs raw files, you can stitch them using the manufacturer's software (like Insta360 Studio or Ricoh Theta Stitcher) before uploading to PanoPublish."
+        question: "Do I need to sth images manually?",
+        answer: "Most modern 360° cameras sth images automatically. If your camera outputs raw files, you can sth them using the manufacturer's software (like Insta360 Studio or Ricoh Theta Sther) before uploading to PanoPublish."
       }
     ]
   },
@@ -709,7 +709,7 @@ export const seoPages: Record<string, SeoPageData> = {
         content: "Google's requirements for the Trusted Photographer program are simple but require consistency:",
         listItems: [
           "Publish at least fifty (50) high-quality 360-degree photo spheres to Google Maps.",
-          "Ensure your photos meet Google's image quality standards (minimum 14MP resolution, 2:1 aspect ratio, clean stitching).",
+          "Ensure your photos meet Google's image quality standards (minimum 14MP resolution, 2:1 aspect ratio, clean sthing).",
           "Ensure photos are geo-located correctly and connected to a physical business listing (POI)."
         ]
       },
@@ -781,7 +781,7 @@ export const seoPages: Record<string, SeoPageData> = {
       },
       {
         title: "4. Streamlining Your Workflow",
-        content: "Save time by automating tasks. Shoot in HDR mode, use manufacturer software for auto-stitching, and use PanoPublish to clean up tripod marks, connect nodes, and publish to Google Maps."
+        content: "Save time by automating tasks. Shoot in HDR mode, use manufacturer software for auto-sthing, and use PanoPublish to clean up tripod marks, connect nodes, and publish to Google Maps."
       }
     ],
     faqs: [
@@ -815,7 +815,7 @@ export const seoPages: Record<string, SeoPageData> = {
         listItems: [
           "Showcases your seating layout and decor to customers browsing on Google Maps.",
           "Improves local search visibility and click-through rates.",
-          "Includes WhatsApp support and GST invoices for Mumbai-based marketing agencies."
+          "Includes WhatsApp support and billing invoices for Mumbai-based marketing agencies."
         ]
       }
     ],
@@ -825,8 +825,8 @@ export const seoPages: Record<string, SeoPageData> = {
         answer: "Many freelance photographers in Mumbai use PanoPublish to manage client uploads. Contact our support team if you need a recommendation."
       },
       {
-        question: "Does PanoPublish support GST invoices for Maharashtra businesses?",
-        answer: "Yes. PanoPublish provides GST-compliant tax invoices showing SGST/CGST, allowing Maharashtra-registered agencies to claim input tax credits."
+        question: "Does PanoPublish support billing invoices for Maharashtra businesses?",
+        answer: "Yes. PanoPublish provides secure INR invoices showing Sbilling/Cbilling, allowing Maharashtra-registered agencies to claim input tax credits."
       }
     ]
   },
@@ -877,7 +877,7 @@ export const seoPages: Record<string, SeoPageData> = {
         listItems: [
           "Showcases meeting rooms, event zones, and cafeteria spaces in 360° details.",
           "Improves local map visibility and citation strength.",
-          "GST invoices provided to claim corporate marketing business expenses."
+          "billing invoices provided to claim corporate marketing business expenses."
         ]
       }
     ],
@@ -906,7 +906,7 @@ export const seoPages: Record<string, SeoPageData> = {
         listItems: [
           "Publish retail showroom walks to attract local shoppers.",
           "Showcase clean manufacturing environments to B2B clients.",
-          "Localized support and GST invoices for easy business expense filing."
+          "Localized support and billing invoices for easy business expense filing."
         ]
       }
     ],
@@ -951,7 +951,7 @@ export const seoPages: Record<string, SeoPageData> = {
     type: "city",
     cityName: "Chennai",
     title: "Virtual Tour Publishing Software Chennai — 360 Maps Tours",
-    description: "The best virtual tour publishing software for photographers and agencies in Chennai, Adyar, OMR, and Tambaram. Local billing & GST invoices.",
+    description: "The best virtual tour publishing software for photographers and agencies in Chennai, Adyar, OMR, and Tambaram. Local billing & billing invoices.",
     primaryKeyword: "virtual tour publishing software chennai",
     category: "Chennai Services",
     heading: "Virtual Tour Publishing Software in Chennai",
@@ -964,7 +964,7 @@ export const seoPages: Record<string, SeoPageData> = {
         listItems: [
           "Publish clean, high-resolution interior tours to Google Maps.",
           "Add custom nadir logos featuring your institution's branding.",
-          "GST invoices provided for corporate marketing expense filing."
+          "billing invoices provided for corporate marketing expense filing."
         ]
       }
     ],
@@ -999,8 +999,8 @@ export const seoPages: Record<string, SeoPageData> = {
     ],
     faqs: [
       {
-        question: "Can we get GST invoices for our Pune agency?",
-        answer: "Yes, you can input your GSTIN during checkout, and we will automatically email you a tax invoice suitable for input tax credit claims."
+        question: "Can we get billing invoices for our Pune agency?",
+        answer: "Yes, you can input your company details during checkout, and we will automatically email you a tax invoice suitable for expense tracking."
       }
     ]
   },
@@ -1051,7 +1051,7 @@ export const seoPages: Record<string, SeoPageData> = {
         listItems: [
           "Showcases dining areas, showrooms, and decor in interactive 360° details.",
           "Improves local map search visibility and click-through rates.",
-          "GST invoices provided to claim corporate marketing business expenses."
+          "billing invoices provided to claim corporate marketing business expenses."
         ]
       }
     ],
@@ -1080,7 +1080,7 @@ export const seoPages: Record<string, SeoPageData> = {
         listItems: [
           "Publish commercial showroom tours to showcase inventory to B2B buyers.",
           "Showcase clean diamond workshops and manufacturing environments.",
-          "Affordable local INR plans with UPI payments and GST invoices."
+          "Affordable local INR plans with UPI payments and billing invoices."
         ]
       }
     ],
@@ -1092,3 +1092,4 @@ export const seoPages: Record<string, SeoPageData> = {
     ]
   }
 };
+

@@ -189,7 +189,7 @@ function BlogPost() {
                   Scale your 360° virtual tour publishing on Google Maps
                 </h4>
                 <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
-                  Join professional photographers and digital marketing agencies across India. Add nadir logos, auto-link panoramas, and print tax GST invoices instantly starting at ₹499/month.
+                  Join professional photographers and digital marketing agencies across India. Add nadir logos, auto-link panoramas, and publish to Google Street View starting at ₹499/month.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-2">
                   <Link to="/signup">

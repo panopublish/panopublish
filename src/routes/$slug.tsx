@@ -240,9 +240,7 @@ function SeoPage() {
                     <li className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-primary shrink-0" /> Local support operating in Indian Standard Time (IST)
                     </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-primary shrink-0" /> 100% compliant local GST invoices
-                    </li>
+
                   </ul>
                 </div>
                 {/* Visual Placeholder representing Maps Embed */}
@@ -389,14 +387,13 @@ function SeoPage() {
               </div>
             </div>
 
-            {/* GST Details */}
             <div className="mt-12 flex flex-col items-center justify-center gap-4 text-center max-w-xl mx-auto border bg-white p-4 rounded-xl shadow-xs">
               <div className="flex items-center gap-2 text-xs md:text-sm font-semibold text-foreground">
                 <ShieldCheck className="h-5 w-5 text-green-600 shrink-0" />
-                GST-Compliant Tax Invoices & UPI Checkout
+                Secure Payments via Razorpay
               </div>
               <p className="text-xs text-muted-foreground">
-                All plans include standard GST invoice generation. Add your GSTIN during billing to claim your Input Tax Credit (ITC). Payments are processed securely via Razorpay in INR.
+                Pay via UPI, Net Banking, credit/debit cards, or EMI — processed securely via Razorpay in INR.
               </p>
             </div>
           </div>

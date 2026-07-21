@@ -144,8 +144,8 @@ function TermsConditions() {
               </h2>
               <p className="leading-relaxed mb-3">
                 PanoPublish offers both free trial periods and paid subscription plans. Paid plans
-                are billed in Indian Rupees (INR) and are inclusive of relevant GST rates (tax
-                invoices will be sent to your email).
+                are billed in Indian Rupees (INR). All subscriptions are managed securely via
+                Razorpay.
               </p>
               <ul className="list-disc pl-5 space-y-1 text-sm leading-relaxed mb-3">
                 <li>
