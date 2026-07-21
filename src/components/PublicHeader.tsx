@@ -28,14 +28,17 @@ export function PublicHeader() {
             <a href="/#workflow" className="hover:text-primary transition-colors">
               How It Works
             </a>
-            <a href="/#pricing" className="hover:text-primary transition-colors">
+            <Link to="/pricing" className="hover:text-primary transition-colors">
               Pricing
-            </a>
+            </Link>
             <a href="/#faq" className="hover:text-primary transition-colors">
               FAQ
             </a>
             <Link to="/blog" className="hover:text-primary transition-colors">
               Blog
+            </Link>
+            <Link to="/contact" className="hover:text-primary transition-colors">
+              Contact
             </Link>
           </nav>
           <div className="flex items-center gap-3">
