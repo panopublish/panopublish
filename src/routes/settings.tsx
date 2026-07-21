@@ -29,7 +29,6 @@ import {
   CheckCircle2,
   FileText,
   MessageCircle,
-  AlertCircle,
 } from "lucide-react";
 import { waLink, formatDateIN } from "@/lib/format";
 
@@ -137,15 +136,6 @@ function SettingsPage() {
     loadProfile();
   }, [user]);
 
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
 
   const saveBasic = async () => {
     if (!user) return;
@@ -328,6 +318,23 @@ function SettingsPage() {
     }
   };
 
+  // Lazy-load Razorpay checkout script only when user initiates a payment
+  const loadRazorpayScript = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if ((window as any).Razorpay) return resolve();
+      const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+      if (existing) {
+        existing.addEventListener("load", () => resolve());
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+      script.onload = () => resolve();
+      document.body.appendChild(script);
+    });
+  };
+
   const triggerRazorpaySimulate = async (planName: string) => {
     const planNameLower = planName.toLowerCase();
     const tid = toast.loading(`Initializing subscription for ${planName} plan...`);
@@ -347,7 +354,8 @@ function SettingsPage() {
 
       toast.dismiss(tid);
 
-      // 2. Open Razorpay Checkout modal
+      // 2. Lazily load Razorpay script then open Checkout modal
+      await loadRazorpayScript();
       const keyId = getEnv("VITE_RAZORPAY_KEY_ID") || "";
 
       const options = {
