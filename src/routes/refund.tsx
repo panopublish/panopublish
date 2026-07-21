@@ -138,7 +138,7 @@ function RefundPolicy() {
                 If you believe you qualify for a refund, or if you need assistance with cancelling your plan, please contact our support desk:
               </p>
               <ul className="list-none mt-2 space-y-1 text-muted-foreground font-semibold">
-                <li>📧 Email: hello@panopublish.com</li>
+                <li>📧 Email: contact@panopublish.com</li>
                 <li>💬 WhatsApp: Mon-Sat, 10 AM to 7 PM IST</li>
               </ul>
             </section>

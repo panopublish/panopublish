@@ -85,7 +85,7 @@ function ContactUs() {
                 </div>
                 <div>
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</h4>
-                  <p className="text-sm font-semibold mt-0.5">hello@panopublish.com</p>
+                  <p className="text-sm font-semibold mt-0.5">contact@panopublish.com</p>
                 </div>
               </div>
 
@@ -124,8 +124,8 @@ function ContactUs() {
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registered Office</h4>
                   <p className="text-sm mt-0.5 text-foreground leading-relaxed">
                     <strong>PanoPublish Solutions</strong><br />
-                    102, First Floor, Sector 3, Mansarovar<br />
-                    Jaipur, Rajasthan, 302020<br />
+                    5, Jay Ambe Nagar, Hatkeshwar,<br />
+                    Ahmedabad, Gujarat, 380026<br />
                     India
                   </p>
                 </div>
