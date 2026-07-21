@@ -181,7 +181,7 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
     const apiKey = getEnv("VITE_GOOGLE_MAPS_API_KEY");
     if (!apiKey) throw new Error("VITE_GOOGLE_MAPS_API_KEY missing");
 
-    const referer = "https://app.panopublish.com/";
+    const referer = "https://panopublish.com/";
     const access_token = payload.access_token;
 
     if (payload.action === "publish_photo" || payload.action === "publish_photo_bytes") {
