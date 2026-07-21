@@ -21,7 +21,7 @@ Disallow: /*.json$
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://app.panopublish.com/sitemap.xml
+Sitemap: https://panopublish.com/sitemap.xml
 
 # Allow Google image bot for OG images
 User-agent: Googlebot-Image

@@ -20,7 +20,7 @@ while ((match = regex.exec(content)) !== null) {
 
 console.log(`Found ${pages.length} dynamic pages.`);
 
-const baseUrl = 'https://app.panopublish.com';
+const baseUrl = 'https://panopublish.com';
 
 // Start building XML
 let xml = `<?xml version="1.0" encoding="UTF-8"?>
