@@ -159,6 +159,18 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-LQ2MM2T7DK" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-LQ2MM2T7DK');
+            `,
+          }}
+        />
         <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: envScript }} />
       </head>
       <body>
