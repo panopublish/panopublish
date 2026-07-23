@@ -2358,5 +2358,1222 @@ export const seoPages: Record<string, SeoPageData> = {
         "answer": "Once published via PanoPublish and indexed by Google Maps (typically 24-48 hours), you should notice increased map card interaction metrics within 2 to 4 weeks."
       }
     ]
+  },
+  "virtual-tour-real-estate-roi": {
+    "slug": "virtual-tour-real-estate-roi",
+    "type": "blog",
+    "title": "Measuring Virtual Tour ROI in Real Estate Marketing",
+    "description": "Learn how to calculate and measure the ROI of 360 degree virtual tours for residential and commercial real estate properties.",
+    "primaryKeyword": "real estate virtual tour ROI",
+    "category": "Real Estate Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "The ROI of Virtual Tours in Real Estate Marketing",
+    "subheading": "A B2B guide for brokers, developers, and marketing managers to analyze dwell time, lead quality, and customer acquisition costs.",
+    "introText": "Real estate agencies invest heavily in photography and visual assets to attract buyers. Understanding the Return on Investment (ROI) of virtual tours is essential to justify marketing budgets. In this guide, we analyze the metrics that drive virtual tour ROI, including visitor engagement, conversion rates, and time-on-market reduction.",
+    "sections": [
+      {
+        "title": "Key Metrics to Measure ROI",
+        "content": "To evaluate the success of 360° walkthroughs, track digital marketing metrics across your listing portals and agency websites.",
+        "listItems": [
+          "Dwell Time: Virtual tours increase time spent on listing pages by up to 300% [VERIFY].",
+          "Qualified Leads: Buyers who view tours have higher intent, reducing unqualified site visits.",
+          "Conversion Rates: Listings with tours generate up to 50% more email and phone inquiries [VERIFY]."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "How do virtual tours reduce site visits?",
+        "answer": "By offering a realistic 360° view of the property, remote buyers can filter out unsuitable layouts before booking a physical walkthrough."
+      }
+    ]
+  },
+  "how-to-photograph-commercial-real-estate": {
+    "slug": "how-to-photograph-commercial-real-estate",
+    "type": "blog",
+    "title": "How to Photograph Commercial Real Estate in 360",
+    "description": "Master the art of 360° commercial real estate photography. Tips on lighting warehouses, offices, retail spaces, and matching floorplans.",
+    "primaryKeyword": "photograph commercial real estate",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "How to Photograph Commercial Real Estate in 360°",
+    "subheading": "A detailed photography guide for shooting large office layouts, warehouses, and commercial showrooms.",
+    "introText": "Commercial properties—like warehouses, corporate campuses, and retail showrooms—present unique photographic challenges. Capturing high-quality 360° panoramas requires precise planning, advanced lighting setups, and organized node paths to help tenants inspect spatial amenities remotely.",
+    "sections": [
+      {
+        "title": "Lighting Large Commercial Spaces",
+        "content": "Large offices and warehouses often have uneven lighting. Using bracketed HDR exposure setups is critical to capture high dynamic range details without highlights blowing out near windows.",
+        "listItems": [
+          "Set up exposure bracketing to capture 5 or 7 separate shots.",
+          "Coordinate shooting hours during overcast skies to minimize direct window glare.",
+          "Verify that all overhead office lights are functional and switched on."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "How do I align commercial floorplans?",
+        "answer": "PanoPublish supports uploading structural office floorplans to pin individual panorama locations, keeping the layout logical."
+      }
+    ]
+  },
+  "360-video-vs-360-photo": {
+    "slug": "360-video-vs-360-photo",
+    "type": "blog",
+    "title": "360 Video vs 360 Photo Virtual Tours: Key Differences",
+    "description": "Compare 360 degree video and 360 degree photo virtual tours. Understand hosting costs, bandwidth limits, and user experience.",
+    "primaryKeyword": "360 video vs 360 photo",
+    "category": "Industry Insights",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-cost.png",
+    "heading": "360 Video vs 360 Photo Virtual Tours",
+    "subheading": "Which visual format is best for your website, Google Maps, and user engagement?",
+    "introText": "When planning a virtual walkthrough, marketers evaluate 360° videos vs 360° static photos. While 360° video offers a linear cinematic experience, 360° photos provide high resolution, fast loading speeds, and direct compatibility with Google Street View. We compare the two formats in detail.",
+    "sections": [
+      {
+        "title": "Resolution, Bandwidth, and Hosting Trade-offs",
+        "content": "360° video requires high bandwidth and compresses heavily, reducing image clarity [VERIFY]. 360° photos maintain sharp textures, load instantly over mobile networks, and allow users to navigate at their own pace.",
+        "listItems": [
+          "360° Photo: Higher resolution (up to 16K), lower file sizes (under 20MB), faster load speeds.",
+          "360° Video: Heavy compression, larger file sizes (100MB+), high mobile data usage [VERIFY].",
+          "WebGL player support is native for 360° photos on standard mobile browsers."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I publish 360 videos to Google Maps?",
+        "answer": "Google Maps supports short Street View video uploads for path mapping, but high-resolution static 360° photo constellations are preferred for business listings."
+      }
+    ]
+  },
+  "virtual-tours-for-local-seo": {
+    "slug": "virtual-tours-for-local-seo",
+    "type": "blog",
+    "title": "How Virtual Tours Boost Local SEO Search Rankings",
+    "description": "Discover how publishing 360 virtual tours directly to Google Maps increases local search visibility and map click-through rates.",
+    "primaryKeyword": "virtual tours local SEO",
+    "category": "Local SEO Tuts",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/city-maps-showcase.png",
+    "heading": "How Virtual Tours Boost Local SEO Search Rankings",
+    "subheading": "A detailed analysis of click-through rates, user interaction signals, and local map rankings.",
+    "introText": "Local businesses compete heavily to rank in Google's Local 3-Pack. Publishing a connected 360° virtual tour to your Google Business Profile profile is a highly effective way to improve search rankings, increase user engagement, and drive foot traffic.",
+    "sections": [
+      {
+        "title": "Algorithms, Interactions, and Map Visibility",
+        "content": "Google's search algorithm prioritizes complete, optimized business profiles. Placing interactive virtual tours on your listing increases place profile dwell time, which Google recognizes as a quality signal, boosting map search ranks.",
+        "listItems": [
+          "Dwell Time: Visitors spend longer on listings with interactive tours.",
+          "Click-Through Rate: Listings with 360 views receive up to 35% more clicks [VERIFY].",
+          "NAP Consistency: Integrate official GPS coordinates to verify physical store locations."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "How do I publish a tour to my Google Business Profile?",
+        "answer": "PanoPublish connects directly with the official Google Maps API, allowing you to sync tours under your verified business listing."
+      }
+    ]
+  },
+  "virtual-tours-for-hospitality": {
+    "slug": "virtual-tours-for-hospitality",
+    "type": "blog",
+    "title": "Virtual Tours for Hotels & Resorts: Hospitality Marketing",
+    "description": "Discover how virtual tours boost resort and hotel bookings. Learn nadir branding, lobby showcases, and room walkthrough tips.",
+    "primaryKeyword": "hotel virtual tour software",
+    "category": "Hospitality",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "Virtual Tours for Hotels, Resorts & Hospitality",
+    "subheading": "Showcase guest rooms, restaurants, spas, and event halls in interactive 360° detail.",
+    "introText": "Resorts and boutique hotels rely on visual marketing to secure bookings. A 360° virtual walkthrough allows prospective travelers to inspect guest room layouts, check views, and explore amenities before booking, driving direct reservation rates and building trust.",
+    "sections": [
+      {
+        "title": "Key Hospitality Visual Showcases",
+        "content": "To build traveler confidence, hotels must highlight premium guest spaces.",
+        "listItems": [
+          "Lobby & Entrance: Showcase luxury decor and check-in areas.",
+          "Guest Rooms: Allow travelers to inspect bed layouts and bathroom cleanliness.",
+          "Pools & Spas: Showcase relaxation environments in immersive WebGL detail."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I link booking engines directly inside the tour?",
+        "answer": "Yes, PanoPublish supports adding interactive link hotspots that redirect viewers straight to reservation pages."
+      }
+    ]
+  },
+  "gopro-max-street-view-guide": {
+    "slug": "gopro-max-street-view-guide",
+    "type": "blog",
+    "title": "GoPro MAX Google Street View Publishing Guide",
+    "description": "Learn how to capture and publish Google Street View paths using GoPro MAX. Camera settings, GPS tracking, and workflow tips.",
+    "primaryKeyword": "gopro max street view",
+    "category": "Hardware Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "GoPro MAX Google Street View Publishing Guide",
+    "subheading": "A technical walkthrough of camera configurations, path modes, GPS parsing, and upload workflows.",
+    "introText": "The GoPro MAX is an affordable, durable 360° camera widely used by outdoor guides and Street View publishers. In this guide, we show you how to configure your GoPro MAX, record GPS-tagged paths, and publish seamless virtual walks to Google Maps.",
+    "sections": [
+      {
+        "title": "GoPro MAX Camera Settings for Street View",
+        "content": "To capture high-quality Street View paths, configure your GoPro MAX for optimal lighting and GPS tracking.",
+        "listItems": [
+          "Mode: Select 360 Photo mode or Time Lapse 360 Photo mode at 2-second intervals.",
+          "GPS: Verify GPS connection status indicators are active before recording.",
+          "Exposure: Set bracketed exposures manually to balance outdoor highlights."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does PanoPublish read GoPro MAX GPS metadata?",
+        "answer": "Yes. Our upload engine automatically reads embedded EXIF GPS latitude, longitude, and altitude from GoPro MAX files."
+      }
+    ]
+  },
+  "ricoh-theta-x-review": {
+    "slug": "ricoh-theta-x-review",
+    "type": "blog",
+    "title": "Ricoh Theta X Review: Best Camera for Google Maps?",
+    "description": "An objective review of the Ricoh Theta X 360 camera. Evaluate photo resolution, GPS parsing, battery life, and Street View sync.",
+    "primaryKeyword": "ricoh theta x review",
+    "category": "Hardware Reviews",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-camera.png",
+    "heading": "Ricoh Theta X Review: A Professional Google Maps Camera",
+    "subheading": "An objective look at photo resolution, battery life, in-camera stitching, and workflow efficiency.",
+    "introText": "The Ricoh Theta X is a popular choice for Google Street View publishers due to its high-resolution sensor and built-in touchscreen. We evaluate the Ricoh Theta X on image clarity, GPS precision, and workflow efficiency for commercial local guides.",
+    "sections": [
+      {
+        "title": "Key Specifications & Features",
+        "content": "The Ricoh Theta X features distinct hardware upgrades over older Theta models [VERIFY].",
+        "listItems": [
+          "Resolution: Up to 60MP (11K) equirectangular JPEG exports.",
+          "Screen: 2.2-inch touchscreen for offline setting controls.",
+          "Storage: MicroSD card slot and removable battery options [VERIFY]."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does the Theta X auto-stitch HDR photos?",
+        "answer": "Yes, the camera auto-stitches bracketed HDR photos in-camera, allowing direct uploads to PanoPublish."
+      }
+    ]
+  },
+  "insta360-x4-real-estate-guide": {
+    "slug": "insta360-x4-real-estate-guide",
+    "type": "blog",
+    "title": "Insta360 X4 Real Estate Photography Guide (2026)",
+    "description": "Master real estate photography using the Insta360 X4. Learn ideal settings, tripod setups, HDR configurations, and editor workflows.",
+    "primaryKeyword": "insta360 x4 real estate",
+    "category": "Hardware Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "Insta360 X4 Real Estate Photography Guide",
+    "subheading": "How to capture professional 360° property tours using the Insta360 X4.",
+    "introText": "The Insta360 X4 is a popular camera choice for real estate brokers and local guides. In this guide, we show you how to configure your X4, set up tripod heights, utilize HDR mode, and import files into PanoPublish to create walkthroughs.",
+    "sections": [
+      {
+        "title": "Optimal Insta360 X4 Settings for Real Estate",
+        "content": "Configure your Insta360 X4 for clean, high-resolution interior property shots.",
+        "listItems": [
+          "Resolution: Select 72MP 360 Photo mode for maximum detail.",
+          "Format: Shoot in Pureshot HDR mode for balanced room lighting.",
+          "Interval: Use self-timer mode to hide in adjacent corridors before the shutter triggers."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do I need to stitch X4 files manually?",
+        "answer": "No. Insta360 X4 files can be auto-stitched inside the Insta360 Studio desktop app before uploading flat JPEGs to PanoPublish."
+      }
+    ]
+  },
+  "how-to-use-nadir-blur-online": {
+    "slug": "how-to-use-nadir-blur-online",
+    "type": "blog",
+    "title": "How to Hide Tripods in 360 Photos: Nadir Blurring Tutorial",
+    "description": "Step-by-step tutorial on hiding camera tripods in 360 degree photos using browser-based nadir blurring and logo overlays.",
+    "primaryKeyword": "hide tripod 360 photos",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-trusted.png",
+    "heading": "How to Hide Camera Tripods in 360° Photos",
+    "subheading": "A browser-based nadir blurring and custom logo disk overlay tutorial.",
+    "introText": "Hiding camera tripod legs at the bottom pole (nadir) of 360° photos is essential to produce clean virtual tours. PanoPublish features a browser-based nadir editor, eliminating the need for complex offline photo editing. We show you how to apply blurs and overlays in seconds.",
+    "sections": [
+      {
+        "title": "Radial Blur vs Custom Logo Overlay",
+        "content": "Photographers can choose to apply a radial blur over tripod mounts or cover them with custom branding graphics.",
+        "listItems": [
+          "Radial Blur: Applies a clean blur effect over tripod stands.",
+          "Logo Overlay: Covers tripod mounts with custom circular branding files (PNG format).",
+          "Branding Templates: Apply nadir logos across all project scenes automatically."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What image formats are supported for logo disks?",
+        "answer": "PanoPublish supports transparent PNG files for logo overlays, keeping branding clean and modern."
+      }
+    ]
+  },
+  "top-5-360-cameras-for-guides-2026": {
+    "slug": "top-5-360-cameras-for-guides-2026",
+    "type": "blog",
+    "title": "Best 360 Cameras for Google Street View in 2026",
+    "description": "Compare the top 5 360 degree cameras for Google Maps publishing. Evaluate Ricoh Theta, Insta360, GoPro, and DSLR rigs.",
+    "primaryKeyword": "best 360 camera google maps",
+    "category": "Hardware Reviews",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "Best 360 Cameras for Google Street View in 2026",
+    "subheading": "An objective comparison of resolution, GPS accuracy, stitching, and price across the top 5 models.",
+    "introText": "Selecting a 360° camera for Google Maps publishing depends on resolution requirements and budget. We compare the top 5 cameras—evaluate Ricoh Theta Z1, Ricoh Theta X, Insta360 X4, GoPro MAX, and DSLR panorama rigs on local guide performance.",
+    "sections": [
+      {
+        "title": "Comparative Analysis: Gear Options",
+        "content": "Each camera option offers distinct trade-offs for commercial publishers.",
+        "listItems": [
+          "Ricoh Theta Z1: Best low-light details, 1-inch sensor, RAW support [VERIFY].",
+          "Ricoh Theta X: Fastest workflow, built-in GPS, 60MP JPEG exports [VERIFY].",
+          "Insta360 X4: Best budget-friendly high resolution (72MP) option.",
+          "GoPro MAX: Rugged build, ideal for outdoor bike path mapping [VERIFY].",
+          "DSLR Rigs: Absolute maximum resolution (100MP+), high manual effort [VERIFY]."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Which camera is best for indoor virtual tours?",
+        "answer": "The Ricoh Theta Z1 is highly recommended for indoor spaces due to its 1-inch sensors and RAW capture support."
+      }
+    ]
+  },
+  "white-label-virtual-tours-agencies": {
+    "slug": "white-label-virtual-tours-agencies",
+    "type": "blog",
+    "title": "How to Sell Branded Virtual Tours: Agency Guide",
+    "description": "Agency guide to selling white label virtual tours. Learn domain mapping, client pricing models, and workspace setup.",
+    "primaryKeyword": "branded virtual tours agency",
+    "category": "Agency Business",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-business.png",
+    "heading": "How to Sell Branded Virtual Tours to Local Clients",
+    "subheading": "A B2B marketing guide for digital agencies, SEO consultants, and commercial photographers.",
+    "introText": "Digital marketing agencies packaging local SEO services can increase margins by offering branded 360° virtual tours. PanoPublish provides white label capabilities, custom CNAME domain mapping, and multi-client workspaces, allowing you to sell tours under your agency brand.",
+    "sections": [
+      {
+        "title": "Agency Pricing & Packaging Models",
+        "content": "To build recurring revenue, package virtual tours alongside local SEO search optimization plans.",
+        "listItems": [
+          "One-Time Setup: Charge setup fees for photography and scene node linking.",
+          "Monthly Hosting: Charge recurring hosting and profile monitoring fees.",
+          "Local SEO Bundles: Include Google Maps virtual tours in monthly local SEO packages."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I remove PanoPublish branding?",
+        "answer": "Yes. PanoPublish Agency plans remove all brand logos and links from embeds and share urls."
+      }
+    ]
+  },
+  "virtual-tours-for-gyms": {
+    "slug": "virtual-tours-for-gyms",
+    "type": "blog",
+    "title": "How Virtual Tours Drive Gym & Fitness Studio Admissions",
+    "description": "Discover how 360 virtual tours boost gym memberships. Showcase workout facilities, cardio rooms, and lock rooms online.",
+    "primaryKeyword": "gym virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Virtual Tours Drive Gym & Fitness Studio Memberships",
+    "subheading": "Showcase gym equipment, cardio spaces, and studio environments on Google Maps.",
+    "introText": "Prospective gym members evaluate facility layouts and equipment quality online before visiting. A 360° virtual tour allows fitness centers and yoga studios to showcase equipment, clean locker rooms, and workout areas directly on Google Business Profile listings, driving admissions.",
+    "sections": [
+      {
+        "title": "Gym Areas to Showcase in 360",
+        "content": "To attract members, showcase premium fitness environments and high-end equipment.",
+        "listItems": [
+          "Cardio & Weight Areas: Highlight clean, functional equipment layouts.",
+          "Locker Rooms: Build trust by showing clean showers and lockers.",
+          "Spin & Yoga Studios: Showcase class environment layouts."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I link membership sign-up pages inside the tour?",
+        "answer": "Yes, PanoPublish supports adding clickable link hotspots to redirect viewers straight to member registration portals."
+      }
+    ]
+  },
+  "virtual-tours-for-restaurants-india": {
+    "slug": "virtual-tours-for-restaurants-india",
+    "type": "blog",
+    "title": "Virtual Tours for Restaurants in India: Drive Bookings",
+    "description": "Learn how 360° virtual tours drive restaurant table bookings. Showcase banquet halls, fine dining rooms, and kitchens on Google Maps.",
+    "primaryKeyword": "restaurant virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Restaurant Virtual Tours Drive Table Bookings",
+    "subheading": "Showcase restaurant seating, fine dining rooms, and banquet halls on Google Maps.",
+    "introText": "Indian diners search Google Maps to find restaurants, check decor, and verify seating layouts. A 360° virtual tour published directly to your Google Place card builds trust, showcases restaurant ambiance, and drives table reservations.",
+    "sections": [
+      {
+        "title": "Banquet Hall & Event space Bookings",
+        "content": "Restaurants with private banquet halls can secure bookings by providing virtual walkthroughs to event planners, reducing site visit requirements.",
+        "listItems": [
+          "Allow event planners to inspect seating capacity and decor layouts remotely.",
+          "Showcase buffet counter setups and entry points in 360° details.",
+          "Embed responsive virtual tours on your restaurant's website contact page."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does this work with Zomato/Swiggy profiles?",
+        "answer": "You can paste your PanoPublish tour URL in your Zomato/Swiggy listing descriptions, and sync directly with Google Maps."
+      }
+    ]
+  },
+  "virtual-tours-for-schools-admissions": {
+    "slug": "virtual-tours-for-schools-admissions",
+    "type": "blog",
+    "title": "How School & Academy Virtual Tours Boost Admissions",
+    "description": "Learn how school virtual tours boost student enrollments. Showcase classrooms, labs, playgrounds, and libraries online.",
+    "primaryKeyword": "school virtual tour",
+    "category": "Educational",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How School & Academy Virtual Tours Boost Student Admissions",
+    "subheading": "Campus showcases to build trust with parents and out-of-city students.",
+    "introText": "Private schools, coaching institutes, and academies use virtual tours to showcase clean facilities and build trust with parent groups. PanoPublish provides university and school virtual tour software to host, brand, and publish high-resolution campus walkthroughs.",
+    "sections": [
+      {
+        "title": "Key School Environments to Document",
+        "content": "To build parent confidence, highlight safe, clean, and modern student environments.",
+        "listItems": [
+          "Classrooms: Showcase clean benches, smartboards, and ventilation.",
+          "Science Labs: Highlight academic equipment and safety setups.",
+          "Playgrounds & Sports Fields: Showcase outdoor activity areas."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do we need high-end gear to shoot schools?",
+        "answer": "A consumer 360° camera like Ricoh Theta or Insta360 is sufficient. PanoPublish handles hosting and publishing."
+      }
+    ]
+  },
+  "floorplans-vs-360-walkthroughs": {
+    "slug": "floorplans-vs-360-walkthroughs",
+    "type": "blog",
+    "title": "Floorplans vs 360 Virtual Tours: Which is Better?",
+    "description": "Compare structural floor plans vs 360 degree virtual tours. Learn costs, creation times, and how combining both boosts real estate sales.",
+    "primaryKeyword": "floorplans vs 360 virtual tours",
+    "category": "Real Estate Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-cost.png",
+    "heading": "Floorplans vs 360 Virtual Tours: Real Estate Marketing",
+    "subheading": "An analysis of costs, creation time, user preferences, and conversion rates.",
+    "introText": "Property buyers value structural details. While 2D floor plans provide layout dimensions, 360° virtual tours offer immersive spatial visualization. We analyze how combining both formats inside PanoPublish boosts real estate sales.",
+    "sections": [
+      {
+        "title": "Combining Layouts & Walkthroughs",
+        "content": "Instead of choosing one format, brokers integrate floor plans directly into 360° walkthroughs, letting users click on room pins to view specific spaces.",
+        "listItems": [
+          "2D Floor Plan: Best for checking room dimensions and wall layouts.",
+          "360° Walkthrough: Best for inspecting lighting, finishes, and interior volume.",
+          "PanoPublish supports mapping panorama pins onto custom floor plan graphics."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I generate floorplans inside PanoPublish?",
+        "answer": "PanoPublish is a hosting and layout builder. You can upload floor plan image files created using standard architectural software."
+      }
+    ]
+  },
+  "how-to-embed-360-photos-wordpress": {
+    "slug": "how-to-embed-360-photos-wordpress",
+    "type": "blog",
+    "title": "How to Embed 360 Photos on WordPress Websites",
+    "description": "Learn how to embed 360 degree photos and virtual tours on WordPress websites without slowing down page load times. Plugin guide.",
+    "primaryKeyword": "embed 360 photos wordpress",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-trusted.png",
+    "heading": "How to Embed 360 Photos & Tours on WordPress",
+    "subheading": "Add responsive 360° virtual tours to WordPress listings without slowing page speeds.",
+    "introText": "WordPress is the dominant CMS for real estate and business websites. Embedding high-resolution 360° photos directly on your site can slow page load speeds if not optimized. We show you how to embed responsive PanoPublish tours using standard HTML iframe codes.",
+    "sections": [
+      {
+        "title": "Responsive Iframe Embed Method",
+        "content": "PanoPublish hosts your tour assets on a global CDN and provides a responsive HTML iframe code snippet. Simply paste this snippet into the WordPress Gutenberg editor using the Custom HTML block.",
+        "listItems": [
+          "Copy the iframe code snippet from your PanoPublish project dashboard.",
+          "Configure standard height and width attributes for layout responsiveness.",
+          "Use standard HTML lazy loading tags to prevent page loading blockages."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do I need a WordPress 360 plugin?",
+        "answer": "No. Since PanoPublish hosts and streams files, you only need to paste our responsive iframe code, eliminating plugin bloat."
+      }
+    ]
+  },
+  "virtual-tour-pricing-model-photographers": {
+    "slug": "virtual-tour-pricing-model-photographers",
+    "type": "blog",
+    "title": "Virtual Tour Pricing Guide: How Much to Charge?",
+    "description": "Virtual tour pricing guide for professional 360 photographers. Learn shoot rates, hosting fees, and client packaging models.",
+    "primaryKeyword": "virtual tour pricing guide",
+    "category": "Photographer Business",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-cost.png",
+    "heading": "Virtual Tour Pricing Guide: Rates & Packages",
+    "subheading": "How to price your 360° photography and Google Maps publishing services for profit.",
+    "introText": "360° photographers serving local businesses, hotels, and real estate face pricing challenges. Charging too low reduces profitability, while charging too high limits client acquisition. We share a pricing guide to help you build packages and set rates.",
+    "sections": [
+      {
+        "title": "Standard Photographer Pricing Models",
+        "content": "Most professional local guides charge clients based on 3 distinct packages.",
+        "listItems": [
+          "Flat Shoot Rate: Charge based on the number of panoramas captured (e.g. ₹500 to ₹1,000 per scene).",
+          "Workspace Setup: Charge setup fees to connect tour links to Google Maps.",
+          "Hosting Markups: Charge monthly fees to cover ongoing hosting and CDN costs."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Should I include tripod blurring in packages?",
+        "answer": "Yes, offering nadir blurring and logo disk placement adds value and increases professional aesthetics."
+      }
+    ]
+  },
+  "google-street-view-trusted-program-2026": {
+    "slug": "google-street-view-trusted-program-2026",
+    "type": "blog",
+    "title": "Google Street View Trusted Program Guide (2026)",
+    "description": "Learn how to join the Google Street View Trusted Photographer program. Requirements, badge benefits, and publishing workflows.",
+    "primaryKeyword": "google street view trusted program",
+    "category": "Local Guide Info",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-trusted.png",
+    "heading": "Google Street View Trusted Program Guide",
+    "subheading": "How to earn your Trusted Photographer badge and build local client trust.",
+    "introText": "The Google Street View Trusted Photographer program recognizes professional creators who publish high-quality 360° photos to Google Maps. Earning this badge helps build client trust and drives B2B local guide leads. We show you the requirements and workflow to join.",
+    "sections": [
+      {
+        "title": "Badge Requirements & Status Verification",
+        "content": "To qualify for the Street View Trusted badge, publishers must meet Google's quality and quantity standards.",
+        "listItems": [
+          "Quantity: Publish at least 50 high-resolution 360° photos to Google Maps [VERIFY].",
+          "Stitching Quality: Photos must be level, stitched cleanly, and show minimal blur.",
+          "EXIF Data: Photos must include embedded GPS location data and correct yaw directions."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does Google pay Trusted Photographers directly?",
+        "answer": "No. The program only provides a badge and listing visibility. Trusted Photographers charge local businesses directly for photography."
+      }
+    ]
+  },
+  "stitching-hdr-panoramas-ptgui": {
+    "slug": "stitching-hdr-panoramas-ptgui",
+    "type": "blog",
+    "title": "How to Stitch HDR Panoramas in PTGui: DSLR Guide",
+    "description": "Step-by-step tutorial on stitching bracketed HDR panoramas in PTGui. Best DSLR settings, bracket merging, and export settings.",
+    "primaryKeyword": "stitch HDR panoramas PTGui",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "How to Stitch HDR Panoramas in PTGui Pro",
+    "subheading": "A detailed workflow for DSLR photographers to stitch bracketed exposure panoramas.",
+    "introText": "DSLR cameras produce high-resolution, sharp 360° panoramas when stitched manually. PTGui Pro is the industry standard stitching software program used to align shots, merge exposure brackets, and export 2:1 JPEG files [VERIFY]. We share a detailed stitching workflow.",
+    "sections": [
+      {
+        "title": "PTGui Stitching Workflow Step-by-Step",
+        "content": "Stitching bracketed exposures in PTGui Pro involves 3 key steps: loading images, merging exposures, and exporting JPEGs.",
+        "listItems": [
+          "Load Images: Import raw exposure bracket files (typically 3, 5, or 7 brackets per direction).",
+          "Align Images: Run the auto-alignment tool to detect control points and create stitching maps.",
+          "Merge & Stitch: Configure PTGui's bracket merge parameters to output HDR equirectangular files."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What format should I export for PanoPublish?",
+        "answer": "Export flat 2:1 equirectangular JPEG files up to 75MB. Our platform handles hosting and direct Google Maps sync."
+      }
+    ]
+  },
+  "interactive-hotspots-user-engagement": {
+    "slug": "interactive-hotspots-user-engagement",
+    "type": "blog",
+    "title": "How Interactive Hotspots Boost Virtual Tour Engagement",
+    "description": "Learn how using interactive info hotspots, navigation arrows, and image popups increases virtual tour dwell time.",
+    "primaryKeyword": "virtual tour hotspots engagement",
+    "category": "Real Estate Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Hotspots Boost Virtual Tour Engagement",
+    "subheading": "Why interactive elements keep online viewers engaged longer and increase conversions.",
+    "introText": "Static 360° photos only provide a view of a single room. To keep visitors engaged, virtual tours must include interactive elements. Using navigation hotspots and information hover cards inside PanoPublish increases viewer dwell time and drives conversions.",
+    "sections": [
+      {
+        "title": "Interaction Design in 360 Spaces",
+        "content": "Adding interactive hotspots allows viewers to explore spaces dynamically.",
+        "listItems": [
+          "Navigation Arrows: Allow users to navigate adjoining rooms at their own pace.",
+          "Informational Popups: Detail product dimensions, finishes, or prices directly on the view.",
+          "Call to Actions: Embed reservation forms or booking links inside scenes."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I add contact links inside hotspots?",
+        "answer": "Yes, PanoPublish supports adding link hotspots to guide viewers directly to contact or registration pages."
+      }
+    ]
+  },
+  "360-panorama-metadata-exif": {
+    "slug": "360-panorama-metadata-exif",
+    "type": "blog",
+    "title": "Understanding 360 Panorama EXIF GPS Metadata",
+    "description": "Learn how Google Maps reads EXIF GPS metadata from 360 photos. Correct photo heading direction, yaw, and coordinates.",
+    "primaryKeyword": "360 photo EXIF metadata",
+    "category": "Technical SEO",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/city-maps-showcase.png",
+    "heading": "Understanding 360 Photo EXIF GPS Metadata",
+    "subheading": "How Google Maps reads coordinates and yaw compass headings to align virtual tours.",
+    "introText": "To publish connected 360° virtual tours to Google Maps, your photos must contain correct EXIF GPS metadata. Google reads latitude, longitude, and yaw compass directions from this metadata to place and orient panoramas. PanoPublish auto-extracts this data to streamline publishing.",
+    "sections": [
+      {
+        "title": "Key EXIF Metadata Tags for Google Maps",
+        "content": "Google's system requires 3 key EXIF tags to align photos on Maps.",
+        "listItems": [
+          "GPS Latitude/Longitude: Defines the physical location pin on Google Maps.",
+          "PoseHeadingDegrees: Defines camera heading yaw relative to true North (0 to 360 degrees).",
+          "SourcePhotosCount: Identifies the number of source frames used in the panorama."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What if my camera doesn't have built-in GPS?",
+        "answer": "PanoPublish's interactive map builder allows you to set coordinates and compass headings manually before publishing."
+      }
+    ]
+  },
+  "google-street-view-publishing-errors": {
+    "slug": "google-street-view-publishing-errors",
+    "type": "blog",
+    "title": "How to Fix Google Street View Map Alignment & Publishing Errors",
+    "description": "Troubleshooting guide for Google Maps publishing. Fix processing loop, wrong pin location, split paths, and oauth issues.",
+    "primaryKeyword": "google maps publishing errors",
+    "category": "Troubleshooting",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/city-maps-showcase.png",
+    "heading": "How to Fix Google Street View Publishing Errors",
+    "subheading": "Troubleshoot wrong pin placements, split path connections, and processing queues.",
+    "introText": "Google Maps processing queues can occasionally return publishing errors or misplaced pins. In this troubleshooting guide, we show you how to correct wrong GPS alignments, fix split path connections, and resolve OAuth authorization issues.",
+    "sections": [
+      {
+        "title": "Resolving Common Google Maps API Issues",
+        "content": "If your published virtual tour doesn't display correctly on Maps, check these common alignment steps.",
+        "listItems": [
+          "Wait Time: Google Maps takes up to 48 hours to complete processing queues.",
+          "Heading Alignment: Adjust visual yaw directions in PanoPublish's editor before publishing.",
+          "POI ID Check: Verify that the tour is correctly linked to the official business place listing."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Why is my tour split into separate scenes on Maps?",
+        "answer": "This occurs if node distance spans are too large. Keep panoramas within 3-5 meters of each other to ensure Google's system links them."
+      }
+    ]
+  },
+  "virtual-tours-for-co-working-spaces": {
+    "slug": "virtual-tours-for-co-working-spaces",
+    "type": "blog",
+    "title": "How Virtual Tours Increase Co-Working Space Memberships",
+    "description": "Discover how virtual tours boost co-working space bookings. Showcase desks, meeting rooms, cafeteria, and cabin spaces online.",
+    "primaryKeyword": "co-working virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Virtual Tours Increase Co-Working Space Memberships",
+    "subheading": "Showcase hot desks, private offices, meeting rooms, and amenities on Google Maps.",
+    "introText": "Freelancers, startups, and remote corporate teams compare co-working locations online before booking memberships. A 360° virtual tour allows co-working centers to showcase desk layouts, conference facilities, and lounge spaces on Google Maps, driving bookings.",
+    "sections": [
+      {
+        "title": "Co-Working Environments to Highlight in 360",
+        "content": "To build booking confidence, showcase workspace cleanliness and premium facilities.",
+        "listItems": [
+          "Hot Desk Areas: Showcase spacious desk layouts and office lightning.",
+          "Meeting Rooms: Highlight conference tables, screens, and seating capacity.",
+          "Cafeteria & Lounge: Showcase leisure areas to convey community culture."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I add meeting room booking links inside the tour?",
+        "answer": "Yes, PanoPublish supports adding clickable link hotspots to redirect viewers straight to reservation portals."
+      }
+    ]
+  },
+  "3d-dollhouse-vs-360-spacial-tours": {
+    "slug": "3d-dollhouse-vs-360-spacial-tours",
+    "type": "blog",
+    "title": "3D Dollhouse vs 360 Virtual Tours: Real Estate Choice",
+    "description": "Compare Matterport 3D dollhouse view vs standard 360 degree virtual tours. Learn costs, camera hardware, and loading speeds.",
+    "primaryKeyword": "3d dollhouse vs 360 tour",
+    "category": "Real Estate Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-cost.png",
+    "heading": "3D Dollhouse vs 360 Virtual Tours",
+    "subheading": "Evaluate costs, camera hardware requirements, and mobile loading speeds.",
+    "introText": "Brokers and property developers choose between 3D dollhouse views and 360° virtual walkthroughs for listing promotion. While Matterport's 3D mesh is impressive [VERIFY], it requires high camera hardware investments. PanoPublish provides a lightweight 360° alternative.",
+    "sections": [
+      {
+        "title": "Comparative Trade-Offs",
+        "content": "Choose the visual format that matches your real estate marketing budget and workflow.",
+        "listItems": [
+          "Matterport 3D Dollhouse: High precision, requires proprietary spatial cameras, strict active space limits [VERIFY].",
+          "PanoPublish 360 Walkthrough: Lightweight, works with any camera, flat monthly subscription plans."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I use standard 360 cameras on PanoPublish?",
+        "answer": "Yes. PanoPublish works with files from Ricoh, Insta360, GoPro, or DSLR rigs, saving you thousands on gear costs."
+      }
+    ]
+  },
+  "virtual-tour-hosting-alternatives": {
+    "slug": "virtual-tour-hosting-alternatives",
+    "type": "blog",
+    "title": "Best 360 Virtual Tour Hosting Platforms (2026)",
+    "description": "Compare the best virtual tour hosting platforms. Evaluate PanoPublish, Kuula, CloudPano, and Matterport on price and features.",
+    "primaryKeyword": "virtual tour hosting platform",
+    "category": "Software Comparison",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-cost.png",
+    "heading": "Best 360 Virtual Tour Hosting Platforms in 2026",
+    "subheading": "An in-depth comparison of storage limits, CDN delivery speeds, and pricing plans.",
+    "introText": "Choosing a virtual tour hosting platform is critical to ensure fast tour loading speeds on visitor devices. We compare the top 360° hosting options—evaluate PanoPublish, Kuula, CloudPano, and Matterport on storage capacities, pricing, and Google Maps API support.",
+    "sections": [
+      {
+        "title": "Hosting Features & API Support",
+        "content": "Evaluate platforms based on local payment integrations and direct Google Maps syncing.",
+        "listItems": [
+          "PanoPublish: Flat INR rates, UPI support, unthrottled Google Maps API publishing.",
+          "Kuula: USD pricing only, manual constellation exports required [VERIFY].",
+          "CloudPano: USD pricing, extra settings needed for Maps integration [VERIFY]."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Is direct Google Maps publishing included in PanoPublish?",
+        "answer": "Yes, direct Google Street View API publishing is included in all monthly plans with zero extra per-publish fees."
+      }
+    ]
+  },
+  "virtual-tours-for-car-showrooms": {
+    "slug": "virtual-tours-for-car-showrooms",
+    "type": "blog",
+    "title": "How Virtual Tours Increase Car Showroom Sales & Bookings",
+    "description": "Discover how 360 virtual tours boost car dealership sales. Showcase vehicle models, luxury cabins, and service bays online.",
+    "primaryKeyword": "car showroom virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Virtual Tours Boost Car Showroom Bookings",
+    "subheading": "Showcase luxury vehicle models, interior cabins, and service bays on Google Maps.",
+    "introText": "Car buyers research dealership inventory online before visiting physically. An interactive 360° virtual tour allows car showrooms and dealerships to showcase vehicle models, luxury interiors, and service environments directly on Google Business Profile cards, driving test drive bookings.",
+    "sections": [
+      {
+        "title": "Showroom Areas to Showcase in 360",
+        "content": "To attract buyers, showcase premium vehicle models and clean dealership interiors.",
+        "listItems": [
+          "Vehicle Interiors: Capture detailed 360 views inside luxury cabins.",
+          "Showroom Floor: Highlight vehicle lineups and customer lounges.",
+          "Service Bays: Build trust by showing clean service environments."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I add vehicle specifications inside the tour?",
+        "answer": "Yes. You can place informative hotspots on vehicles to display engine details, pricing, and test drive booking links."
+      }
+    ]
+  },
+  "ricoh-theta-z1-street-view": {
+    "slug": "ricoh-theta-z1-street-view",
+    "type": "blog",
+    "title": "Ricoh Theta Z1 Google Street View Guide: Settings & Stitching",
+    "description": "Master Google Street View publishing using the Ricoh Theta Z1. Learn ideal settings, RAW capture, HDR bracketing, and PTGui tips.",
+    "primaryKeyword": "ricoh theta z1 street view",
+    "category": "Hardware Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "Ricoh Theta Z1 Google Street View Guide",
+    "subheading": "How to capture professional, high-dynamic-range panoramas using the Ricoh Theta Z1.",
+    "introText": "The Ricoh Theta Z1 remains a favorite among professional Google Trusted Photographers due to its large 1-inch sensors and RAW capture support [VERIFY]. We show you how to configure the Z1 for HDR bracketing, process RAW files, and upload flat JPEGs to PanoPublish.",
+    "sections": [
+      {
+        "title": "Ideal Ricoh Theta Z1 Settings for Street View",
+        "content": "Configure your Z1 to capture detailed details in challenging lighting environments.",
+        "listItems": [
+          "Format: Shoot in RAW (DNG) mode for maximum dynamic range control [VERIFY].",
+          "Plugin: Use the Dual-Fisheye HDR plugin to automate bracket exposures [VERIFY].",
+          "Tripod: Use a lightweight stand to keep bottom nadir footprints small."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do I need to edit Z1 RAW files manually?",
+        "answer": "You can stitch RAW files using PTGui or Ricoh's Lightroom plug-in before importing standard JPEGs to PanoPublish."
+      }
+    ]
+  },
+  "insta360-one-rs-1-inch-360": {
+    "slug": "insta360-one-rs-1-inch-360",
+    "type": "blog",
+    "title": "Insta360 ONE RS 1-Inch 360 Review for Real Estate",
+    "description": "An objective review of the Insta360 ONE RS 1-Inch 360 camera. Evaluate photo quality, low-light details, and virtual tour sync.",
+    "primaryKeyword": "insta360 one rs 1 inch 360 review",
+    "category": "Hardware Reviews",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-camera.png",
+    "heading": "Insta360 ONE RS 1-Inch 360 Review for Real Estate",
+    "subheading": "An evaluation of photo resolution, low-light details, and workflow efficiency.",
+    "introText": "The Insta360 ONE RS 1-Inch 360 Edition was engineered in partnership with Leica, featuring dual 1-inch sensors to deliver image quality [VERIFY]. We evaluate the ONE RS 1-Inch on photo resolution, low-light details, and integration compatibility with PanoPublish.",
+    "sections": [
+      {
+        "title": "Key Specifications & Features",
+        "content": "The ONE RS 1-Inch delivers upgrades for professional interior photographers [VERIFY].",
+        "listItems": [
+          "Resolution: Up to 21MP equirectangular JPEG exports [VERIFY].",
+          "Sensors: Dual 1-inch sensors for dynamic range in low light.",
+          "Format: Supports RAW (DNG) and bracketed exposure captures."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Is the ONE RS 1-Inch better than Theta Z1?",
+        "answer": "The Z1 offers RAW plugin workflows, but the ONE RS 1-Inch features newer sensor geometry, making both options standard for real estate."
+      }
+    ]
+  },
+  "google-maps-360-blue-lines": {
+    "slug": "google-maps-360-blue-lines",
+    "type": "blog",
+    "title": "How to Get 360 Blue Line Paths on Google Maps & Street View",
+    "description": "Learn how to publish connected 360 blue line paths to Google Maps. Coordinates alignment, yaw compass heading, and path requirements.",
+    "primaryKeyword": "google maps 360 blue lines",
+    "category": "Google Maps Publishing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/city-maps-showcase.png",
+    "heading": "How to Publish 360 Blue Line Paths to Google Maps",
+    "subheading": "A detailed guide to path connection requirements, node distances, and publishing queues.",
+    "introText": "Connected 360° virtual walks display as continuous blue line paths on Google Maps, letting users walk down virtual hallways. We show you the GPS alignment rules and node distance requirements to publish seamless blue line paths using PanoPublish.",
+    "sections": [
+      {
+        "title": "Google Maps Blue Line Path Requirements",
+        "content": "To generate a connected blue line, ensure your panoramas satisfy Google's alignment and spacing guidelines.",
+        "listItems": [
+          "Spacing: Place panoramas 3 to 5 meters (10 to 15 feet) apart to ensure connection.",
+          "GPS Accuracy: Ensure coordinate offsets are under 1 meter before publishing.",
+          "Yaw Heading: Set correct compass directions so navigation matches true North."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "How long does the blue line take to appear?",
+        "answer": "Google typically completes path connections and displays the blue line on Maps within 48 to 72 hours."
+      }
+    ]
+  },
+  "drone-360-panoramas-google-maps": {
+    "slug": "drone-360-panoramas-google-maps",
+    "type": "blog",
+    "title": "How to Publish Drone 360 Aerial Panoramas to Google Maps",
+    "description": "Learn how to capture and publish drone 360 aerial panoramas to Google Maps. Stitching guide, GPS tagging, and height tips.",
+    "primaryKeyword": "drone 360 panoramas google maps",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-camera.png",
+    "heading": "How to Publish Drone 360° Aerial Panoramas",
+    "subheading": "A step-by-step guide to drone photography settings, raw stitching, and altitude coordinates.",
+    "introText": "Aerial 360° panoramas captured using drones provide views of resorts, parks, and industrial complexes. We show you how to capture bracketed drone shots, stitch them into flat JPEGs, set altitude coordinates, and publish them to Google Maps using PanoPublish.",
+    "sections": [
+      {
+        "title": "Drone Camera Settings for Aerial 360s",
+        "content": "Configure your drone camera to capture clean, high-resolution spherical panoramas.",
+        "listItems": [
+          "Mode: Select Spherical Panorama mode (typically captures 26 to 34 overlapping frames).",
+          "Exposure: Use Manual mode to lock exposure settings across all frames.",
+          "Altitude: Note the drone's flight altitude to input coordinates accurately."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I stitch drone photos in-camera?",
+        "answer": "Some drones auto-stitch panoramas, but manual stitching in PTGui is recommended for optimal sky details and resolution."
+      }
+    ]
+  },
+  "virtual-tours-for-retail-stores": {
+    "slug": "virtual-tours-for-retail-stores",
+    "type": "blog",
+    "title": "How Virtual Tours Boost Retail Store Local Traffic",
+    "description": "Discover how 360 virtual tours boost local retail traffic. Showcase showrooms, visual merchandising, and entrance paths on Google Maps.",
+    "primaryKeyword": "retail virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Virtual Tours Boost Retail Store Local Traffic",
+    "subheading": "Showcase showroom interiors, inventory, and merchandising layouts on Google Maps.",
+    "introText": "Local shoppers search Google Maps to find nearby stores, check inventory, and evaluate showroom ambiance. An interactive 360° virtual tour displayed on your Google Business Profile page builds trust, showcases store interiors, and drives physical foot traffic.",
+    "sections": [
+      {
+        "title": "Showcase Showroom Merchandising in 360",
+        "content": "Highlighting clean store layouts and well-stocked shelves attracts local shoppers and encourages physical store visits.",
+        "listItems": [
+          "Capture detailed 360 views of clothing racks, product shelves, and payment zones.",
+          "Link virtual tours to Google Maps search place cards via official API.",
+          "Embed responsive virtual walks on your brand's website locator pages."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I add product pricing tags inside the tour?",
+        "answer": "Yes, you can place info hotspots on retail items to show prices, descriptions, and links to online stores."
+      }
+    ]
+  },
+  "how-to-start-360-photography-business-india": {
+    "slug": "how-to-start-360-photography-business-india",
+    "type": "blog",
+    "title": "How to Start a 360 Photography Business in India (2026)",
+    "description": "Step-by-step business guide to starting a 360 photography business in India. Learn gear requirements, client pitching, and monthly packages.",
+    "primaryKeyword": "start 360 photography business",
+    "category": "Photographer Business",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-business.png",
+    "heading": "How to Start a 360° Photography Business in India",
+    "subheading": "A B2B business guide covering startup costs, gear selection, client pitching, and tax invoicing.",
+    "introText": "Starting a 360° photography business in India is a lucrative opportunity due to the massive demand for virtual tours from real estate developers, local restaurants, hotels, and schools. We share a business guide covering gear investments, client packages, and billing workflows.",
+    "sections": [
+      {
+        "title": "Startup Cost & Gear Selection",
+        "content": "To build profitability, balance your initial camera investment with recurring marketing margins.",
+        "listItems": [
+          "Gear: Start with a mid-range 360° camera (Insta360 X4 or Theta X) and light stand.",
+          "Software: Use PanoPublish Pro (₹1,499/mo) to edit, blur, and publish tours for clients.",
+          "Pricing: Charge a flat setup rate plus recurring hosting margins to build recurring income."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do I need a commercial GST registration to invoice clients?",
+        "answer": "You can start as a sole proprietor. Once revenue scales, registering for GST allows you to offer inputs tax credits to corporate clients."
+      }
+    ]
+  },
+  "google-street-view-api-pricing": {
+    "slug": "google-street-view-api-pricing",
+    "type": "blog",
+    "title": "Understanding Google Street View API Cost & Publishing Fees",
+    "description": "Learn how the Google Maps Street View API pricing structure works. Zero publishing fees, Maps API usage, and billing verification.",
+    "primaryKeyword": "google maps API pricing",
+    "category": "Technical SEO",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/city-maps-showcase.png",
+    "heading": "Google Street View API Cost & Publishing Fees Explained",
+    "subheading": "Verify billing requirements, Maps API usage, and how to publish tours for free.",
+    "introText": "Publishers and developers look for details on Google Maps API pricing. While embedding interactive Street View maps via the Static/Dynamic Street View API has usage-based billing, publishing photos to Google Maps via the official Street View Publish API is 100% free of charge. We explain the difference.",
+    "sections": [
+      {
+        "title": "API Publishing vs Map Embedding Costs",
+        "content": "Ensure you understand Google's billing rules to avoid unexpected API usage costs.",
+        "listItems": [
+          "Street View Publish API: 100% free of charge. Google does not charge to upload or host photos.",
+          "Maps JavaScript API: Pay-as-you-go billing for custom website embeddings [VERIFY].",
+          "PanoPublish includes unthrottled Google Maps API publishing with zero per-publish fees."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do I need a Google Cloud billing account?",
+        "answer": "No. Since PanoPublish uses our official API channels to publish, you do not need to set up Google Cloud console billing."
+      }
+    ]
+  },
+  "virtual-tours-for-event-venues": {
+    "slug": "virtual-tours-for-event-venues",
+    "type": "blog",
+    "title": "How Virtual Tours Boost Event Venue & Banquet Hall Bookings",
+    "description": "Discover how virtual tours drive banquet hall and wedding venue bookings. Showcase decor, layout space, and facilities in 360.",
+    "primaryKeyword": "banquet hall virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Virtual Tours Boost Event Venue Bookings",
+    "subheading": "Showcase wedding halls, conference centers, and stage layouts on Google Maps.",
+    "introText": "Wedding planners, event coordinators, and corporate clients search event locations online. Providing a high-resolution 360° virtual tour allows event venues and banquet halls to showcase capacity, layouts, and decor, driving reservations and reducing physical visits.",
+    "sections": [
+      {
+        "title": "Banquet Hall & Stage Layout Showcases",
+        "content": "Detailing table layouts, stage dimensions, and entryway clearance helps event coordinators organize events remotely.",
+        "listItems": [
+          "Capture detailed 360 views of banquet tables, stage, and catering zones.",
+          "Link event tours to Google Maps listings to improve local SEO search rankings.",
+          "Embed responsive walkthroughs on your venue's landing page."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I show multiple seating configurations?",
+        "answer": "Yes, you can upload separate projects showing the banquet hall configured for theater seating, dining tables, or empty space."
+      }
+    ]
+  },
+  "how-to-do-nadir-logo-overlay": {
+    "slug": "how-to-do-nadir-logo-overlay",
+    "type": "blog",
+    "title": "How to Add a Nadir Logo to 360 Photos: Branding Tutorial",
+    "description": "Step-by-step guide to adding a nadir logo to 360 degree photos. Custom branding template, transparent PNG disk overlays, and size tips.",
+    "primaryKeyword": "add nadir logo 360 photos",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-trusted.png",
+    "heading": "How to Add a Nadir Logo to 360° Photos",
+    "subheading": "A branding guide to configuring PNG circular logo disks and tripod blurs.",
+    "introText": "Covering your camera tripod mount with a branded graphic overlay is an excellent way to market your business. PanoPublish features a browser-based nadir overlay tool, letting you apply custom logo disks across all scenes. We show you the sizing rules and configuration settings.",
+    "sections": [
+      {
+        "title": "Configuring Your Nadir Logo File",
+        "content": "To ensure your branding displays cleanly without distortion, follow these simple graphic guidelines.",
+        "listItems": [
+          "Format: Transparent PNG circular graphic overlay.",
+          "Resolution: Save files in square format (typically 512x512 pixels).",
+          "Alignment: Center your logo graphics inside the square frame to prevent layout skewing."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I apply different logos for different clients?",
+        "answer": "Yes. Our workspace organizer allows you to save multiple client profile templates and apply relevant logos by project folder."
+      }
+    ]
+  },
+  "virtual-tours-for-interior-designers": {
+    "slug": "virtual-tours-for-interior-designers",
+    "type": "blog",
+    "title": "How Virtual Tours Showcase Interior Design Portfolios in 360",
+    "description": "Discover how virtual tours boost bookings for interior designers. Showcase residential and commercial design portfolios in 360.",
+    "primaryKeyword": "interior designer virtual tour",
+    "category": "Local Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How Virtual Tours Showcase Interior Design Portfolios",
+    "subheading": "Immersive 360° portfolios to highlight decor textures, custom lighting, and room layouts.",
+    "introText": "Interior designers and renovation agencies rely on high-quality portfolios to secure clients. A 360° virtual tour allows prospective clients to virtually walk through renovated apartments, inspect finishes, and experience room layouts, driving portfolio conversions.",
+    "sections": [
+      {
+        "title": "Highlighting Renovated Spaces in 360",
+        "content": "Standard flat photos struggle to capture small spaces like bathrooms or corridors. A 360° walkthrough showcases entire room integrations in one unified visual.",
+        "listItems": [
+          "Showcase kitchen layouts, cabinet designs, and lighting details in 360°.",
+          "Use info hotspots to highlight material selections and design brands.",
+          "Embed portfolios directly on your designer website."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I use DSLR HDR stitching for interior design?",
+        "answer": "Yes. DSLR HDR stitching (using PTGui Pro) is recommended to capture precise lighting details and texture accuracy."
+      }
+    ]
+  },
+  "best-tripod-heads-for-360-photography": {
+    "slug": "best-tripod-heads-for-360-photography",
+    "type": "blog",
+    "title": "Best Tripod Heads & Stands for 360 Photography",
+    "description": "Gear guide to the best tripod heads, nodal rotators, and light stands for 360 panoramic photography. Eliminate nadir parallax errors.",
+    "primaryKeyword": "best tripod 360 photography",
+    "category": "Hardware Reviews",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-camera.png",
+    "heading": "Best Tripod Heads & Stands for 360 Photography",
+    "subheading": "A detailed gear guide to nodal rotators, stands, and weights to eliminate parallax errors.",
+    "introText": "Using standard camera tripods for 360° photography can leave a large bottom shadow (nadir) and cause stitching offset errors. Professional local guides use nodal rotators and compact light stands to minimize bottom footprint and eliminate parallax errors. We review the best gear configurations.",
+    "sections": [
+      {
+        "title": "Recommended Gear Setups",
+        "content": "To produce seamless stitches, configure your tripod stand and rotator gear manually.",
+        "listItems": [
+          "Light Stands: Use slim, durable stands (like Manfrotto Nano) instead of bulky tripods [VERIFY].",
+          "Nodal Rotators: Use indexed rotators (like Nodal Ninja) to capture precise overlapping angles [VERIFY].",
+          "Weights: Use sandbags or counterweights to stabilize lightweight stands outdoors."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What is parallax error in 360 photos?",
+        "answer": "Parallax occurs when the camera lens shifts position between shots, causing stitching alignment offsets. A nodal head eliminates this by rotating around the lens nodal point."
+      }
+    ]
+  },
+  "virtual-tours-for-real-estate-brokers-mumbai": {
+    "slug": "virtual-tours-for-real-estate-brokers-mumbai",
+    "type": "blog",
+    "title": "Mumbai Real Estate Virtual Tours: Broker Guide",
+    "description": "Learn how Mumbai real estate brokers use virtual tours. Boost residential and commercial property sales, and reach NRI buyers in Mumbai.",
+    "primaryKeyword": "mumbai real estate virtual tour",
+    "category": "Real Estate Marketing",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "Mumbai Real Estate Virtual Tours: Broker Guide",
+    "subheading": "Showcase residential and commercial listings, and reach NRI buyers looking in Mumbai.",
+    "introText": "In Mumbai's competitive property market—from premium residential towers in Worli and Bandra to commercial complexes in BKC—brokers leverage 360° walkthroughs to secure listings and close transactions. We share a guide on how Mumbai agents package property tours to reach NRI investors.",
+    "sections": [
+      {
+        "title": "Reaching NRI Investors Looking in Mumbai",
+        "content": "Out-of-city and NRI buyers invest heavily in Mumbai real estate. Providing detailed 360° virtual walks of apartments, building lobbies, and society gardens lets remote buyers inspect properties thoroughly, driving bookings.",
+        "listItems": [
+          "Showcase luxury apartment layouts, balcony views, and finishes.",
+          "Group panoramas by floors using PanoPublish's Island & Level organizer.",
+          "Verify project details with tax invoices for corporate marketing filings."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I manage multiple Mumbai listing projects?",
+        "answer": "Yes. PanoPublish Pro and Agency plans support multi-client workspaces, letting you segregate listings by building project or owner."
+      }
+    ]
   }
 };
