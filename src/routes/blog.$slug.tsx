@@ -131,7 +131,7 @@ function BlogPost() {
                   {idx + 1}. {section.title}
                 </a>
               ))}
-              {page.faqs.length > 0 && (
+              {page.faqs && page.faqs.length > 0 && (
                 <a
                   href="#sec-faqs"
                   className="text-muted-foreground hover:text-primary transition-colors block leading-relaxed"
@@ -173,7 +173,7 @@ function BlogPost() {
             ))}
 
             {/* FAQs section */}
-            {page.faqs.length > 0 && (
+            {page.faqs && page.faqs.length > 0 && (
               <section id="sec-faqs" className="scroll-mt-24 space-y-6 pt-6 border-t">
                 <div className="flex items-center gap-2 font-serif text-xl md:text-2xl font-bold text-foreground">
                   <BookOpen className="h-6 w-6 text-primary" />

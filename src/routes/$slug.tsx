@@ -434,46 +434,48 @@ function SeoPage() {
         </section>
 
         {/* FAQs ACCORDION SECTION */}
-        <section className="py-16 md:py-24 border-t">
-          <div className="container mx-auto px-4 max-w-3xl">
-            <div className="flex items-center gap-2 justify-center mb-10 text-center">
-              <HelpCircle className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl md:text-3xl font-bold font-serif text-foreground">
-                Frequently Asked Questions
-              </h2>
-            </div>
+        {page.faqs && page.faqs.length > 0 && (
+          <section className="py-16 md:py-24 border-t">
+            <div className="container mx-auto px-4 max-w-3xl">
+              <div className="flex items-center gap-2 justify-center mb-10 text-center">
+                <HelpCircle className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl md:text-3xl font-bold font-serif text-foreground">
+                  Frequently Asked Questions
+                </h2>
+              </div>
 
-            <div className="divide-y border-y">
-              {page.faqs.map((faq, i) => (
-                <div key={i} className="py-2.5">
-                  <h3>
-                    <button
-                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                      className="flex flex-1 items-center justify-between py-4 font-semibold text-left text-sm md:text-base text-foreground hover:text-primary transition-colors cursor-pointer w-full"
-                      aria-expanded={openFaq === i}
+              <div className="divide-y border-y">
+                {page.faqs.map((faq, i) => (
+                  <div key={i} className="py-2.5">
+                    <h3>
+                      <button
+                        onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                        className="flex flex-1 items-center justify-between py-4 font-semibold text-left text-sm md:text-base text-foreground hover:text-primary transition-colors cursor-pointer w-full"
+                        aria-expanded={openFaq === i}
+                      >
+                        <span className="font-serif pr-4">{faq.question}</span>
+                        <ChevronDown
+                          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                    </h3>
+                    <div
+                      className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
+                        openFaq === i ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                      }`}
                     >
-                      <span className="font-serif pr-4">{faq.question}</span>
-                      <ChevronDown
-                        className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                  </h3>
-                  <div
-                    className={`grid transition-[grid-template-rows] duration-200 ease-in-out ${
-                      openFaq === i ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <p className="text-muted-foreground text-xs md:text-sm leading-relaxed pb-4 pr-4">
-                        {faq.answer}
-                      </p>
+                      <div className="overflow-hidden">
+                        <p className="text-muted-foreground text-xs md:text-sm leading-relaxed pb-4 pr-4">
+                          {faq.answer}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* LOCAL CITIES INDEX (For Service Pages Crawler Support) */}
         {page.type === "service" && (
