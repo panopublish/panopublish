@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "node generate-sitemap.cjs && vite build",
+    "postbuild": "node prerender-routes.cjs",
     "build:dev": "node generate-sitemap.cjs && vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -84,8 +85,54 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "prettier": "^3.7.3",
+    "react-snap": "^1.23.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
+  },
+  "reactSnap": {
+    "source": "dist/client",
+    "skipThirdPartyRequests": true,
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ],
+    "include": [
+      "/",
+      "/blog",
+      "/pricing",
+      "/contact",
+      "/signup",
+      "/login",
+      "/terms",
+      "/privacy",
+      "/refund",
+      "/google-street-view-publishing",
+      "/360-virtual-tour-publishing-platform",
+      "/nadir-branding-street-view",
+      "/virtual-tour-client-management-software",
+      "/google-street-view-for-hotels-india",
+      "/virtual-tour-real-estate-india",
+      "/google-street-view-restaurant-india",
+      "/360-photo-connection-builder-online",
+      "/tourbuilder-alternative-india",
+      "/gothru-alternative",
+      "/blog/how-to-publish-360-photos-to-google-street-view",
+      "/blog/google-street-view-publishing-cost-in-india",
+      "/blog/best-360-camera-for-google-street-view",
+      "/blog/google-street-view-vs-indoor-tour",
+      "/blog/how-to-become-google-trusted-photographer-india",
+      "/blog/360-photography-business-guide-india",
+      "/google-street-view-publishing-mumbai",
+      "/360-virtual-tour-software-delhi",
+      "/street-view-tour-publishing-bangalore",
+      "/360-tour-publishing-ahmedabad",
+      "/google-maps-360-tour-hyderabad",
+      "/virtual-tour-publishing-software-chennai",
+      "/street-view-photographer-software-pune",
+      "/360-photography-publishing-jaipur",
+      "/google-street-view-tour-kolkata",
+      "/virtual-tour-software-surat"
+    ]
   }
 }

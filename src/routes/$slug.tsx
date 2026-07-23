@@ -135,6 +135,16 @@ function SeoPage() {
                 </Button>
               </a>
             </div>
+
+            {page.image && (
+              <div className="mt-10 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl max-h-[400px] w-full relative">
+                <img
+                  src={page.image}
+                  alt={`${page.heading} — ${page.primaryKeyword}`}
+                  className="w-full h-full object-cover object-center"
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -1,28 +1,26 @@
-User-agent: *
-Allow: /
-Allow: /pricing
-Allow: /features
-Allow: /signup
-Allow: /login
+# ==============================================================================
+# PanoPublish - Robots Exclusion Protocol (robots.txt)
+# ==============================================================================
 
-# Block authenticated/private pages
+# Default rules for all web crawlers (including Googlebot, Bingbot, GPTBot, PerplexityBot, ClaudeBot, etc.)
+User-agent: *
+
+# Block Authenticated, Admin, and Private API Routes
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
 Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /tours
 Disallow: /tours/
+Disallow: /clients
 Disallow: /clients/
 Disallow: /settings
+Disallow: /settings/
 Disallow: /billing
+Disallow: /billing/
 Disallow: /auth/
+Disallow: /reset-password
 
-# Block API and utility routes
-Disallow: /api/
-Disallow: /*.json$
-
-# Crawl delay for bots
-Crawl-delay: 1
-
-# Sitemap location
+# XML Sitemap Location
 Sitemap: https://panopublish.com/sitemap.xml
-
-# Allow Google image bot for OG images
-User-agent: Googlebot-Image
-Allow: /
