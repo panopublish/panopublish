@@ -7,15 +7,17 @@ export function PublicFooter() {
   const serviceLinks = [
     { name: "Google Street View Publishing", url: "/google-street-view-publishing" },
     { name: "360° Virtual Tour Platform", url: "/360-virtual-tour-publishing-platform" },
+    { name: "Real Estate Virtual Tour Software", url: "/real-estate-virtual-tour-software" },
     { name: "Custom Nadir Branding", url: "/nadir-branding-street-view" },
     { name: "Multi-Client Workspace", url: "/virtual-tour-client-management-software" },
     { name: "Street View for Hotels", url: "/google-street-view-for-hotels-india" },
     { name: "Street View for Real Estate", url: "/virtual-tour-real-estate-india" },
-    { name: "Street View for Restaurants", url: "/google-street-view-restaurant-india" },
     { name: "360 Photo Connection Builder", url: "/360-photo-connection-builder-online" },
   ];
 
   const comparisonLinks = [
+    { name: "PanoPublish vs CloudPano", url: "/cloudpano-alternative" },
+    { name: "PanoPublish vs Matterport", url: "/matterport-alternative" },
     { name: "PanoPublish vs TourBuilder", url: "/tourbuilder-alternative-india" },
     { name: "PanoPublish vs GoThru", url: "/gothru-alternative" },
   ];
