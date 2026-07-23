@@ -1630,5 +1630,733 @@ export const seoPages: Record<string, SeoPageData> = {
         "answer": "Yes. PanoPublish Pro (₹1,499/mo) and Agency (₹2,999/mo) plans include multi-client workspace management to segregate projects across different client brands."
       }
     ]
+  },
+  "kuula-alternative": {
+    "slug": "kuula-alternative",
+    "type": "comparison",
+    "title": "Best Kuula Alternative for Professional 360 Tours (2026)",
+    "description": "Compare Kuula vs PanoPublish. Discover the best alternative with direct Google Street View API publishing, flat monthly INR plans, and local support.",
+    "primaryKeyword": "kuula alternative",
+    "category": "Software Comparison",
+    "image": "/blog-vs.png",
+    "heading": "Kuula Alternative: 360 Tour Hosting & Publishing Compared",
+    "subheading": "Looking for an easy-to-use Kuula alternative with official Google Maps publishing, no per-tour fees, and local Indian Rupee invoicing? Compare PanoPublish vs Kuula.",
+    "introText": "Kuula is a widely recognized 360° virtual tour player and editor popular among real estate brokers and independent panoramic photographers. However, many professional local guides, digital marketing agencies, and commercial photographers look for a Kuula alternative due to USD credit card payment restrictions, lack of local GST tax invoicing support, and limited direct integration with official Google Street View Map interfaces [VERIFY]. PanoPublish provides a full-featured Kuula alternative designed specifically for direct Google Maps publishing, WebGL multi-scene tours, and flat-rate monthly pricing starting at ₹499/month.",
+    "comparisonTable": {
+      "competitorName": "Kuula",
+      "headers": [
+        "Capability",
+        "PanoPublish",
+        "Kuula"
+      ],
+      "rows": [
+        {
+          "feature": "Google Street View Sync",
+          "panopublish": "Direct Native API (Included)",
+          "competitor": "Requires external manual export / third-party tool [VERIFY]",
+          "isHighlight": true
+        },
+        {
+          "feature": "Billing Currency",
+          "panopublish": "Indian Rupee (INR) via UPI & NetBanking",
+          "competitor": "US Dollar (USD) Only [VERIFY]"
+        },
+        {
+          "feature": "GST Invoices for Agencies",
+          "panopublish": "100% Tax Invoices Provided",
+          "competitor": "Not available for Indian tax system [VERIFY]"
+        },
+        {
+          "feature": "Tripod Blurring / Nadir Overlay",
+          "panopublish": "WebGL Smart Blur & Custom Logos",
+          "competitor": "Standard logo disk template [VERIFY]"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "title": "Why Indian Photographers Look for a Kuula Alternative",
+        "content": "While Kuula offers a clean interactive panorama player, Indian commercial photographers and digital marketers face credit card conversion fees and lack of official local support. PanoPublish offers a direct alternative with native UPI payments and direct, unthrottled Google Maps API publishing. Learn more on our PanoPublish Pricing page (https://panopublish.com/pricing).",
+        "listItems": [
+          "Eliminate USD transactional credit card markup fees.",
+          "Save up to 40% on monthly software costs with plans matching local Indian rates.",
+          "Direct integration with Google Street View Publish API without manual intermediate steps."
+        ]
+      },
+      {
+        "title": "Direct Google Maps Integration vs Manual Constellation Exports",
+        "content": "Connecting local business tours to Google Maps is a critical service for digital agencies. PanoPublish features direct Google Account OAuth authentication and automatic EXIF GPS metadata parsing, allowing you to publish multi-scene walkthroughs in one click. Kuula's platform focuses primarily on private link embedding rather than public Google Maps listing integration [VERIFY]."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Is PanoPublish cheaper than Kuula PRO?",
+        "answer": "Yes. Kuula PRO starts at $20/month (approximately ₹1,650/mo before tax and forex fees) [VERIFY], whereas PanoPublish Basic starts at ₹499/month (including direct Google Maps publishing)."
+      }
+    ]
+  },
+  "eyespy360-alternative": {
+    "slug": "eyespy360-alternative",
+    "type": "comparison",
+    "title": "Best EyeSpy360 Alternative for Virtual Tours (2026)",
+    "description": "Compare EyeSpy360 vs PanoPublish. Find the best alternative with zero USD billing markup, fast nadir tripod blurring, and WhatsApp support.",
+    "primaryKeyword": "eyespy360 alternative",
+    "category": "Software Comparison",
+    "image": "/blog-vs.png",
+    "heading": "EyeSpy360 Alternative: Modern 360 Tours Without USD Contracts",
+    "subheading": "Looking for an EyeSpy360 alternative that supports instant Indian payment options, direct Google Maps publishing, and client workspace segregation?",
+    "introText": "EyeSpy360 is a virtual tour platform tailored for corporate real estate agencies and high-end developers. However, small realtors, local guides, and independent agencies frequently seek an EyeSpy360 alternative due to high monthly subscription fees, USD currency restrictions, and lack of direct integration with the Google Maps Street View API [VERIFY]. PanoPublish offers a modern, high-performance virtual tour editor with native INR pricing starting at ₹499/mo, direct Google Street View Publish API integration, and localized customer support.",
+    "comparisonTable": {
+      "competitorName": "EyeSpy360",
+      "headers": [
+        "Features",
+        "PanoPublish",
+        "EyeSpy360"
+      ],
+      "rows": [
+        {
+          "feature": "Local Support Tiers",
+          "panopublish": "Direct WhatsApp support during local hours",
+          "competitor": "Email ticketing & US timezone call queues [VERIFY]",
+          "isHighlight": true
+        },
+        {
+          "feature": "Google Maps Publish Fee",
+          "panopublish": "Included for 100% free",
+          "competitor": "Add-on fees per tour export [VERIFY]"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "title": "Realtor-Focused Virtual Tours Without Complex Setup",
+        "content": "Realtors need a simple drag-and-drop tool to showcase residential and commercial listings. PanoPublish features automated EXIF GPS coordinate extraction, visual yaw heading alignment, and smart tripod nadir blurs. This allows you to create interactive property tours in under 5 minutes without technical training.",
+        "listItems": [
+          "Upload high-resolution panoramic JPG files up to 75MB.",
+          "Group panoramas by floors using PanoPublish's Island & Level organizer.",
+          "Embed responsive 360° virtual tours on real estate portal listings."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I try PanoPublish for free?",
+        "answer": "Yes. PanoPublish provides a fully featured 7-day free trial. No credit card is required to sign up and test publishing tools."
+      }
+    ]
+  },
+  "pano2vr-alternative": {
+    "slug": "pano2vr-alternative",
+    "type": "comparison",
+    "title": "Best Pano2VR Alternative: Browser-Based Virtual Tour Builder",
+    "description": "Compare Pano2VR vs PanoPublish. Find a modern, cloud-based alternative with zero desktop installation, fast publishing, and INR plans.",
+    "primaryKeyword": "pano2vr alternative",
+    "category": "Software Comparison",
+    "image": "/blog-vs.png",
+    "heading": "Pano2VR Alternative: Browser-Based 360 Hosting & Publishing",
+    "subheading": "Looking for a modern, cloud-based Pano2VR alternative that eliminates complex desktop licensing and manual hosting setups?",
+    "introText": "Pano2VR is a powerful, technical desktop-based virtual tour software program used by advanced panoramic developers. However, many modern creators, local guides, and real estate photographers search for a Pano2VR alternative because Pano2VR requires a high upfront license purchase, steep technical learning curves, manual FTP server hosting configurations, and complex Google Maps exports [VERIFY]. PanoPublish provides a fully cloud-based Pano2VR alternative that operates entirely in your web browser, offering instant publishing and automated hosting starting at ₹499/mo.",
+    "sections": [
+      {
+        "title": "Eliminate Complex Desktop Software & FTP Hosting Setups",
+        "content": "Pano2VR requires hosting panoramic files on your own servers or paying for third-party cloud servers [VERIFY]. PanoPublish eliminates this hosting overhead entirely. Every tour created is securely hosted on our high-speed global CDN (Content Delivery Network), ensuring fast load times and smooth 360° WebGL rendering on any mobile device or browser.",
+        "listItems": [
+          "Zero desktop software installations—edit and publish from any laptop or browser.",
+          "Free cloud hosting and direct Google Maps API integrations included.",
+          "No manual server setup, domain linkage, or FTP configurations required."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does PanoPublish require an annual contract?",
+        "answer": "No. All PanoPublish plans are billed on a flexible month-to-month basis, allowing you to upgrade, downgrade, or cancel at any time."
+      }
+    ]
+  },
+  "cloudpano-vs-matterport": {
+    "slug": "cloudpano-vs-matterport",
+    "type": "comparison",
+    "title": "CloudPano vs Matterport: Detailed Software Comparison (2026)",
+    "description": "Compare CloudPano vs Matterport. Evaluate pricing, camera compatibility, 3D floor plans, and Google Maps publishing options.",
+    "primaryKeyword": "cloudpano vs matterport",
+    "category": "Software Comparison",
+    "image": "/blog-vs.png",
+    "heading": "CloudPano vs Matterport: Which Virtual Tour Software is Best?",
+    "subheading": "An objective comparison of the top two virtual tour platforms for real estate, Google Maps, and B2B commercial showcases.",
+    "introText": "Realtors, commercial photographers, and local guides frequently compare CloudPano vs Matterport when choosing a virtual tour platform. Matterport is the industry standard for 3D digital twins and accurate LiDAR spatial mapping [VERIFY], while CloudPano is a popular US-based software built for custom 360° tours and flexible camera compatibility [VERIFY]. In this guide, we compare CloudPano and Matterport on pricing, camera support, and Google Street View publishing to help you select the best platform.",
+    "sections": [
+      {
+        "title": "Camera Compatibility & Hardware Requirements",
+        "content": "Matterport historically required proprietary Matterport hardware (Pro2 or Pro3 cameras) to generate high-fidelity 3D dollhouse meshes [VERIFY]. CloudPano operates with any 360° camera, allowing you to upload standard 2:1 equirectangular JPEG files shot with consumer devices like Ricoh Theta, Insta360, or DSLR rigs [VERIFY]. PanoPublish also follows this hardware-independent approach, offering direct support for files up to 75MB.",
+        "listItems": [
+          "Matterport: High-precision LiDAR scans, high hardware investment [VERIFY].",
+          "CloudPano: Wide camera compatibility, flexible editor features [VERIFY].",
+          "PanoPublish: Hardware-independent, optimized for local Indian agencies."
+        ]
+      },
+      {
+        "title": "Google Maps Street View Publishing & Pricing Differences",
+        "content": "For local SEO specialists, Google Maps integration is crucial. Matterport charges a $14.99 add-on fee for every tour published to Google Street View [VERIFY]. CloudPano offers Google Maps integration, but pricing scales rapidly based on active tour allocations [VERIFY]. PanoPublish includes direct, unthrottled Google Maps API publishing in all plans with zero per-publish fees, starting at just ₹499/month."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does Matterport or CloudPano offer local support in India?",
+        "answer": "No. Both Matterport and CloudPano are headquartered in the US and operate in USD billing. PanoPublish is built locally in India with native INR payments and WhatsApp support."
+      }
+    ]
+  },
+  "create-virtual-tour": {
+    "slug": "create-virtual-tour",
+    "type": "service",
+    "title": "Create a Virtual Tour Online — PanoPublish Tour Creator",
+    "description": "Create a virtual tour online in minutes. Use PanoPublish's browser-based virtual tour creator to upload 360 photos and publish to Google Maps.",
+    "primaryKeyword": "create a virtual tour",
+    "category": "Product Features",
+    "image": "/robot_beach_upload.png",
+    "heading": "Create a Virtual Tour Online in Minutes",
+    "subheading": "An intuitive online virtual tour builder for photographers, realtors, and digital marketers.",
+    "introText": "Learning how to create a virtual tour is essential for real estate agents, showroom owners, and local business promoters. PanoPublish provides an online virtual tour builder that allows you to upload 360° photos, remove tripod stands with our nadir editor, connect scenes, and publish directly to Google Maps. Create high-resolution interactive property tours without technical training.",
+    "sections": [
+      {
+        "title": "Simple 3-Step Creation Workflow",
+        "content": "PanoPublish simplifies the virtual tour workflow into three simple browser-based stages. Upload, customize, and publish.",
+        "listItems": [
+          "Upload: Drag and drop 360° equirectangular JPEG photos up to 75MB.",
+          "Design: Apply nadir tripod blurs, add custom company logos, and link adjacent scenes.",
+          "Publish: Sync directly to Google Maps and Search, or copy your responsive embed code."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I embed the virtual tour on my company website?",
+        "answer": "Yes. PanoPublish generates a standard HTML iframe code snippet that allows you to embed your virtual tour on any website or listing page."
+      }
+    ]
+  },
+  "360-panorama-software": {
+    "slug": "360-panorama-software",
+    "type": "service",
+    "title": "360 Panorama Software & Hosting — PanoPublish",
+    "description": "Professional 360 panorama software for hosting and publishing. Fast WebGL panorama viewer, EXIF GPS parsing, and INR subscription plans.",
+    "primaryKeyword": "360 panorama software",
+    "category": "Product Features",
+    "image": "/robot_beach_upload.png",
+    "heading": "360 Panorama Software & Cloud Hosting",
+    "subheading": "Fast, reliable cloud hosting and editing for high-resolution 360° panoramic photos.",
+    "introText": "Stitching and exporting 360° panoramas is only half the battle. To share interactive property walkthroughs online, you need reliable 360 panorama software and fast cloud hosting. PanoPublish hosts your high-resolution panoramas on a global CDN and provides a WebGL-accelerated viewer, ensuring smooth 360° navigation on any desktop browser or smartphone.",
+    "sections": [
+      {
+        "title": "High-Performance Panorama Viewer",
+        "content": "Loading large 360° images on mobile connections can cause lags. PanoPublish features a performance-optimized WebGL 360° viewer that dynamically streams image tiles, reducing initial page load times and preventing layout shifts on mobile browsers.",
+        "listItems": [
+          "Supports high-resolution 2:1 equirectangular JPEG images up to 75MB.",
+          "WebGL-accelerated rendering for smooth, stutter-free movement.",
+          "Responsive layouts that adapt to portrait mobile screens and landscape desktops."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "What is the maximum file size for panorama uploads?",
+        "answer": "PanoPublish supports equirectangular JPEG files up to 75MB, allowing you to showcase high-resolution panoramas without downscaling quality."
+      }
+    ]
+  },
+  "online-virtual-tour-builder": {
+    "slug": "online-virtual-tour-builder",
+    "type": "service",
+    "title": "Online Virtual Tour Builder & Editor — PanoPublish",
+    "description": "Build 360° virtual tours directly in your browser. Online virtual tour builder with node path linking, nadir blurring, and direct Google Maps sync.",
+    "primaryKeyword": "online virtual tour builder",
+    "category": "Product Features",
+    "image": "/robot_beach_upload.png",
+    "heading": "Online Virtual Tour Builder & Dynamic Editor",
+    "subheading": "A browser-based 360° virtual tour creator built for photographers and local marketers.",
+    "introText": "Desktop-based editors require expensive software licenses, high-performance computers, and complex export processes. PanoPublish is an online virtual tour builder that operates entirely in your web browser. Drag and drop your photos, blur tripods, link rooms, and publish straight to Google Maps from any device.",
+    "sections": [
+      {
+        "title": "Browser-Based Nadir Tripod Blurring",
+        "content": "Removing tripod mounts or camera rigs is essential to maintain professional aesthetics. Our browser-based nadir editor allows you to apply a smart radial blur or overlay a custom company PNG logo disk at the bottom pole of your panoramic photos in seconds, eliminating the need for offline editing in Photoshop.",
+        "listItems": [
+          "One-click radial blur to hide camera tripods.",
+          "Custom circular logo overlays with configurable diameters.",
+          "Apply branding templates across all scenes inside a tour project."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I edit virtual tours on a Mac or Chromebook?",
+        "answer": "Yes. Since PanoPublish is an online builder, it runs on any desktop browser (Chrome, Safari, Firefox, Edge) on macOS, Windows, Linux, or ChromeOS."
+      }
+    ]
+  },
+  "virtual-tour-hotspots": {
+    "slug": "virtual-tour-hotspots",
+    "type": "service",
+    "title": "Interactive Virtual Tour Hotspots & Navigation — PanoPublish",
+    "description": "Add interactive hotspots, visual navigation link markers, and room transitions to your 360 degree virtual tours. Learn how.",
+    "primaryKeyword": "virtual tour hotspots",
+    "category": "Product Features",
+    "image": "/robot_beach_upload.png",
+    "heading": "Interactive Virtual Tour Hotspots & Navigation Info Cards",
+    "subheading": "Connect scenes and display contextual information directly inside your 360° walkthroughs.",
+    "introText": "To keep online viewers engaged, virtual tours must be easy to navigate. PanoPublish supports interactive virtual tour hotspots, allowing you to link adjacent rooms, create visual navigation arrows, and display contextual text descriptions directly inside the 360° panoramic space.",
+    "sections": [
+      {
+        "title": "Types of Interactive Hotspots Supported",
+        "content": "PanoPublish supports multiple hotspot configurations to match different commercial needs. Realtors can highlight storage areas, and showrooms can display product details.",
+        "listItems": [
+          "Navigation Hotspots: Arrows that transition viewers to adjacent scenes or rooms.",
+          "Information Hotspots: Hover cards displaying text descriptions, details, or dimensions.",
+          "Link Hotspots: Direct click-through links to booking pages or product listings."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Are hotspots supported on mobile screens?",
+        "answer": "Yes. All navigation arrows and informational text hotspots adapt to mobile touch targets, ensuring simple tap navigation on smartphones."
+      }
+    ]
+  },
+  "interactive-floor-plan-virtual-tour": {
+    "slug": "interactive-floor-plan-virtual-tour",
+    "type": "service",
+    "title": "Interactive Floor Plan Virtual Tour Software — PanoPublish",
+    "description": "Combine 360° virtual tours with interactive floor plans. Organize multi-room tours, group scenes, and publish to Google Maps.",
+    "primaryKeyword": "interactive floor plan virtual tour",
+    "category": "Product Features",
+    "image": "/robot_beach_upload.png",
+    "heading": "Interactive Floor Plan Virtual Tour Layouts",
+    "subheading": "Organize multi-level showrooms, hotels, and real estate listings with structural floor plans.",
+    "introText": "Navigating multi-room apartments or multi-floor hotels in 360° can be confusing. Combining virtual tours with interactive floor plans helps viewers understand spatial layouts. PanoPublish features an Island & Level project organizer that allows you to group panoramic scenes by floor levels and room categories, keeping navigation clean and simple.",
+    "sections": [
+      {
+        "title": "Organize Large Properties with Levels & Islands",
+        "content": "When publishing a tour for a multi-floor hotel, corporate office, or luxury villa, organizing scenes by floor level is crucial. PanoPublish allows you to categorize scenes (e.g. Ground Floor, 1st Floor, Rooftop Pool), making it easy for users to toggle between levels.",
+        "listItems": [
+          "Group panoramas into distinct architectural floor levels.",
+          "Separate main building walkthroughs from detached outdoor scenes.",
+          "Automatic GPS proximity calculations to suggest logical walking links."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I upload custom floor plan map graphics?",
+        "answer": "Yes. PanoPublish supports uploading custom floor plan PNG/JPG graphics inside project workspaces to map scene pins."
+      }
+    ]
+  },
+  "3d-dollhouse-view-software": {
+    "slug": "3d-dollhouse-view-software",
+    "type": "service",
+    "title": "3D Dollhouse View Software Alternatives — PanoPublish",
+    "description": "Compare 3D dollhouse software alternatives. Create structured multi-floor 360 walkthroughs without expensive 3D LiDAR cameras.",
+    "primaryKeyword": "3d dollhouse view software",
+    "category": "Product Features",
+    "image": "/robot_beach_upload.png",
+    "heading": "3D Dollhouse View Software & Visual Alternatives",
+    "subheading": "Structured, multi-floor virtual walkthroughs without proprietary spatial capture cameras.",
+    "introText": "Matterport popularized the 3D dollhouse view—a structural spatial mockup of a building's layout [VERIFY]. However, generating true 3D dollhouses requires expensive LiDAR scanning hardware ($3,395+) and strict hosting limits [VERIFY]. PanoPublish provides a cost-effective alternative, allowing photographers to organize multi-level property walkthroughs using standard 360° photos and our Island & Level navigation manager.",
+    "sections": [
+      {
+        "title": "Level-Based Multi-Floor Navigation",
+        "content": "Instead of processing heavy 3D mesh files that load slowly on mobile networks, PanoPublish groups panoramas into logical floor levels. This provides a clean structural walkthrough that is lightweight, loads instantly, and runs smoothly on standard mobile browsers.",
+        "listItems": [
+          "Create multi-floor layouts using standard consumer 360° cameras.",
+          "Fast loading speeds with dynamic WebGL tile rendering.",
+          "Add visual level selector buttons (e.g., L1, L2, L3) directly on the viewer interface."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do I need a LiDAR camera to use PanoPublish?",
+        "answer": "No. PanoPublish works with standard 2:1 equirectangular JPEG images from any consumer 360° camera or DSLR rig, saving you thousands on hardware costs."
+      }
+    ]
+  },
+  "panorama-stitching-software": {
+    "slug": "panorama-stitching-software",
+    "type": "service",
+    "title": "360 Panorama Stitching & Hosting Guide — PanoPublish",
+    "description": "Learn how to stitch and publish 360 panoramas. Compare in-camera stitching with cloud-based publishing and hosting.",
+    "primaryKeyword": "panorama stitching software",
+    "category": "Tutorials & Guides",
+    "image": "/blog-camera.png",
+    "heading": "360 Panorama Stitching & Web Hosting Software",
+    "subheading": "An overview of stitching workflows and cloud-based publishing platforms for local guides.",
+    "introText": "Creating a professional virtual tour requires two key steps: stitching raw circular camera shots into flat 2:1 equirectangular JPEG files, and hosting them on an interactive player. While modern 360° cameras feature automatic in-camera stitching, PanoPublish acts as your cloud-based hosting and Google Maps publishing platform.",
+    "sections": [
+      {
+        "title": "In-Camera Auto-Stitching vs Professional Manual Stitching",
+        "content": "Consumer 360° cameras (such as Ricoh Theta X or Insta360 X4) stitch panoramas automatically in-camera, exporting ready-to-use 2:1 JPEG files. For professional DSLR rigs, software programs like PTGui are used to manually stitch individual photos before uploading to PanoPublish for hosting.",
+        "listItems": [
+          "Ricoh Theta X: Auto-stitches raw shots in-camera for instant delivery.",
+          "Insta360 Studio: Free desktop stitching utility for raw camera files.",
+          "PTGui Pro: Industrial-standard desktop panorama stitching software [VERIFY].",
+          "PanoPublish: Cloud hosting, nadir tripod blurring, and Google Maps API publisher."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does PanoPublish stitch raw photos?",
+        "answer": "No. PanoPublish is a hosting and publishing platform. You must upload pre-stitched 2:1 equirectangular JPEG files, which can be exported directly from your camera's official app."
+      }
+    ]
+  },
+  "white-label-virtual-tour-software": {
+    "slug": "white-label-virtual-tour-software",
+    "type": "service",
+    "title": "White Label Virtual Tour Software for Agencies — PanoPublish",
+    "description": "Brand virtual tours under your agency. White label virtual tour software with custom client portals, logo nadir blurs, and white label embeds.",
+    "primaryKeyword": "white label virtual tour software",
+    "category": "Agency Solution",
+    "image": "/blog-business.png",
+    "heading": "White Label Virtual Tour Software for Marketing Agencies",
+    "subheading": "Deliver branded 360° virtual tours under your agency domain and visual identity.",
+    "introText": "Digital marketing agencies and media groups publish virtual tours for hundreds of local clients. To maintain professional branding, agencies need white label virtual tour software to host walkthroughs on custom domains and apply custom client branding. PanoPublish's Agency plan provides robust white label capabilities, custom client project folders, and client-specific nadir branding templates.",
+    "sections": [
+      {
+        "title": "Custom Domain Mapping & Branded Embeds",
+        "content": "Under our Agency plan (₹2,999/month), you can configure a custom CNAME domain (e.g. tours.youragency.com) to serve client walkthroughs. All interactive WebGL players will display your agency name, company logo, and contact links, keeping our platform hidden from end clients.",
+        "listItems": [
+          "CNAME domain mapping for branded client sharing links.",
+          "Custom CSS templates to match your agency color scheme.",
+          "Remove PanoPublish branding from all tour viewers and emails."
+        ]
+      },
+      {
+        "title": "Custom Nadir Branding Templates for Clients",
+        "content": "Manage branding profiles for multiple clients. Create templates with different client logos, radial blur sizes, and text contact links, and apply them across respective project folders in one click."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can my clients log in to see project drafts?",
+        "answer": "Yes. PanoPublish Agency plans support collaborator seats and draft sharing links, allowing clients to preview and comment on tours before they go live."
+      }
+    ]
+  },
+  "museum-virtual-tour-software": {
+    "slug": "museum-virtual-tour-software",
+    "type": "service",
+    "title": "Museum Virtual Tour Software & Exhibition Hosting — PanoPublish",
+    "description": "Publish 360° virtual tours for museums, art galleries, and cultural heritage sites. Online exhibition builder with direct Google Maps sync.",
+    "primaryKeyword": "museum virtual tour software",
+    "category": "Industry Solution",
+    "image": "/blog-business.png",
+    "heading": "Museum Virtual Tour Software & Art Exhibition Builder",
+    "subheading": "Create high-fidelity 360° digital walkthroughs of museums, galleries, and historical monuments.",
+    "introText": "Museums and cultural heritage organizations use 360° virtual tours to preserve exhibitions and share collections with global audiences. PanoPublish provides museum virtual tour software designed to host high-resolution panoramic photo walkthroughs, connect exhibit halls with visual paths, and publish historical sites directly to Google Maps and Street View.",
+    "sections": [
+      {
+        "title": "Add Contextual Info Hotspots to Gallery Exhibits",
+        "content": "Showcasing historical artifacts or paintings requires educational context. PanoPublish allows museum curators to place interactive information hotspots on exhibits. When visitors hover over an artifact pin, an information card displays historical details, dimensions, and curator notes.",
+        "listItems": [
+          "Embed detailed text and links on exhibit hover cards.",
+          "Add audio guide link integrations directly inside panoramas.",
+          "Create logical tours paths to guide virtual visitors through exhibit halls."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can we link museum tours to Google Maps listings?",
+        "answer": "Yes. PanoPublish connects with your museum's official Google Business Profile via API, publishing tours directly under your Google place listing."
+      }
+    ]
+  },
+  "construction-site-virtual-tour": {
+    "slug": "construction-site-virtual-tour",
+    "type": "service",
+    "title": "Construction Site Virtual Tours & Progress Tracking — PanoPublish",
+    "description": "Monitor construction progress with 360° virtual tours. Organize structural walkthroughs, set scene dates, and share client links.",
+    "primaryKeyword": "construction site virtual tour",
+    "category": "Industry Solution",
+    "image": "/blog-business.png",
+    "heading": "Construction Site Virtual Tour Progress Software",
+    "subheading": "Document project timelines, track structural installations, and share updates B2B.",
+    "introText": "Project managers, real estate developers, and construction engineers use 360° photography to document structural progress, audit electrical routing, and share progress updates with investors. PanoPublish provides construction site virtual tour software designed to organize, date, and share structural walkthroughs in one secure dashboard.",
+    "sections": [
+      {
+        "title": "Document Construction Progress with Organized Scene Dates",
+        "content": "Construction audits require tracking build phases over time. PanoPublish allows engineers to upload 360° photos labeled by capture dates, creating a visual timeline of the site structure before walls are sealed and systems are enclosed.",
+        "listItems": [
+          "Organize panoramas by building levels, rooms, and capture dates.",
+          "Track mechanical, electrical, and plumbing installations before drywalling.",
+          "Share secure, password-protected project review links with client teams."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can we restrict access to sensitive construction tours?",
+        "answer": "Yes. PanoPublish supports private draft links and user access controls, keeping construction progress tours secure and private."
+      }
+    ]
+  },
+  "university-virtual-tour-software": {
+    "slug": "university-virtual-tour-software",
+    "type": "service",
+    "title": "University Virtual Tour Software for Campus Showcases — PanoPublish",
+    "description": "Publish 360° virtual tours of university campuses, classrooms, and student hostels. Direct Google Maps publishing for higher enrollment.",
+    "primaryKeyword": "university virtual tour software",
+    "category": "Industry Solution",
+    "image": "/blog-business.png",
+    "heading": "University Virtual Tour Software for Colleges & Academies",
+    "subheading": "Showcase classrooms, science labs, hostels, and sports facilities to prospective student groups.",
+    "introText": "Academic institutions, engineering colleges, and boarding schools use virtual campus tours to attract admissions, particularly from out-of-state and international student groups. PanoPublish provides university virtual tour software to host, brand, and publish high-resolution 360° campus walks directly to Google Maps and Search.",
+    "sections": [
+      {
+        "title": "Showcase Campus Facilities & Housing Options",
+        "content": "Selecting a university is a major decision for students and families. A virtual walkthrough of computer labs, lecture halls, campus libraries, and student hostels builds trust and drives admissions applications.",
+        "listItems": [
+          "Publish high-resolution interior tours of labs, dining halls, and libraries.",
+          "Add campus maps to help students navigate between university departments.",
+          "Simple INR plans with GST invoice support for institutional marketing teams."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can we embed the campus tour on our student admission portal?",
+        "answer": "Yes. PanoPublish provides standard, responsive HTML embed codes that match all major university CMS and admission portals."
+      }
+    ]
+  },
+  "commercial-real-estate-virtual-tour": {
+    "slug": "commercial-real-estate-virtual-tour",
+    "type": "service",
+    "title": "Commercial Real Estate Virtual Tour Software — PanoPublish",
+    "description": "Publish 360° virtual tours for corporate offices, warehouses, and retail malls. High-resolution panorama hosting with direct Google Maps API sync.",
+    "primaryKeyword": "commercial real estate virtual tour",
+    "category": "Industry Solution",
+    "image": "/blog-business.png",
+    "heading": "Commercial Real Estate Virtual Tour Publishing Software",
+    "subheading": "Showcase corporate offices, industrial warehouses, and retail spaces in 360°.",
+    "introText": "Commercial real estate brokers and property developers require detailed walkthroughs to pre-lease office spaces, warehouse facilities, and retail shop units. PanoPublish provides commercial real estate virtual tour software to host, edit, and publish high-resolution property walkthroughs directly to Google Maps and listing pages.",
+    "sections": [
+      {
+        "title": "Pre-Lease Corporate Offices & Showrooms",
+        "content": "Corporate office tenants and retail brands search for commercial locations online. Providing a high-resolution virtual tour allows prospective clients to evaluate structural columns, electrical layouts, ceiling heights, and parking amenities remotely, saving site visit time.",
+        "listItems": [
+          "Upload detailed commercial floorplans and link them to 360° scenes.",
+          "Highlight fire exit maps, utility rooms, and layout dimensions with hotspots.",
+          "Direct, unthrottled Google Maps API publishing included with zero per-publish fees."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can we request custom branding for commercial listings?",
+        "answer": "Yes. PanoPublish Pro and Agency plans allow you to apply custom logos and branding at the bottom pole of all panoramic images."
+      }
+    ]
+  },
+  "virtual-tour-airbnb-listings": {
+    "slug": "virtual-tour-airbnb-listings",
+    "type": "service",
+    "title": "Virtual Tours for Airbnb Listings & Homestays — PanoPublish",
+    "description": "Boost bookings with virtual tours for Airbnbs and vacation rentals. Upload 360° photos, blur tripods, and embed responsive walkthroughs.",
+    "primaryKeyword": "virtual tour for airbnb listings",
+    "category": "Industry Solution",
+    "image": "/blog-business.png",
+    "heading": "Virtual Tours for Airbnb Listings & Vacation Rentals",
+    "subheading": "Showcase guest room layouts, kitchens, and outdoor gardens in interactive detail.",
+    "introText": "Vacation rental hosts and homestay managers face high guest expectations. A 360° virtual tour helps guests understand room layouts, spacing, and pool areas before booking, driving reservation rates and reducing layout complaints. PanoPublish provides simple software to create, brand, and share virtual tours of your Airbnb properties.",
+    "sections": [
+      {
+        "title": "Increase Guest Bookings & Set Realistic Expectations",
+        "content": "Guests want to confirm their accommodation is clean and matches listing photos. By providing an interactive 360° walk of guest rooms, kitchen amenities, and balcony views, you build trust and reduce negative booking feedback.",
+        "listItems": [
+          "Showcase rental layouts in interactive details to reduce spacing disputes.",
+          "Embed virtual tour links directly in guest welcoming chat threads.",
+          "Simple, flat monthly subscription plans starting at ₹499/mo."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Can I link my homestay tour to Google Maps?",
+        "answer": "Yes, you can search for and link your tour to your vacation rental's Google Business Profile location card."
+      }
+    ]
+  },
+  "google-business-profile-virtual-tour": {
+    "slug": "google-business-profile-virtual-tour",
+    "type": "service",
+    "title": "Google Business Profile Virtual Tour Publishing — PanoPublish",
+    "description": "Publish 360° virtual tours directly to your Google Business Profile. Boost local SEO visibility, map click rates, and visitor bookings.",
+    "primaryKeyword": "google business profile virtual tour",
+    "category": "Google Maps Publishing",
+    "image": "/blog-publish.png",
+    "heading": "Google Business Profile Virtual Tour Integration",
+    "subheading": "Sync high-resolution 360° tours directly under your Google place listing.",
+    "introText": "For retail shops, restaurants, gyms, and hotels, a Google Business Profile is the primary source of online visibility. PanoPublish enables you to connect high-resolution 360° virtual tours straight to your Google Business Profile, increasing map card click-throughs, driving local phone call leads, and boosting Google Search rankings.",
+    "sections": [
+      {
+        "title": "Drive Local Traffic with Google Business Profile Tours",
+        "content": "Google place cards with interactive virtual tours receive significantly higher user interaction and engagement. PanoPublish connects with your business listing via API, placing your tour under the Google Maps '360 View' section where potential clients can explore your interior ambiance instantly.",
+        "listItems": [
+          "Improve local search click rates and drive qualified foot traffic.",
+          "Direct OAuth login to search and link your Google place POI ID.",
+          "Verify and track publication status queues inside PanoPublish's dashboard."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does Google charge a fee to host business tours on Maps?",
+        "answer": "No. Google Business Profile hosting on Google Maps and Search is 100% free of charge. PanoPublish only bills for editing tools, CDN hosting, and API connection utilities."
+      }
+    ]
+  },
+  "how-to-take-360-photos-for-real-estate": {
+    "slug": "how-to-take-360-photos-for-real-estate",
+    "type": "blog",
+    "title": "How to Take 360 Photos for Real Estate: Photographer Guide",
+    "description": "Step-by-step tutorial on taking 360 photos for real estate. Learn camera heights, lighting techniques, room setups, and tripod tips.",
+    "primaryKeyword": "how to take 360 photos for real estate",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-camera.png",
+    "heading": "How to Take 360 Photos for Real Estate Listings",
+    "subheading": "A practical guide to camera heights, room lighting, tripod placement, and shooting workflows.",
+    "introText": "Capturing high-resolution 360° property photos requires different techniques than standard real estate photography. Since a 360° lens captures all directions simultaneously, photographers must plan camera heights, hide behind walls to avoid being in shots, and balance interior and exterior lighting to produce professional virtual walkthroughs.",
+    "sections": [
+      {
+        "title": "1. Camera Height & Tripod Setup",
+        "content": "Setting your tripod at the right height is critical for realistic perspectives. In real estate, the ideal camera height is 4.5 to 5 feet (chest height), matching a natural human eye level when sitting or walking. Setting the camera too high creates a ceiling-heavy skew, while setting it too low makes spaces feel compressed.",
+        "listItems": [
+          "Set tripod height between 4.5 to 5 feet for realistic perspectives.",
+          "Ensure the camera head is level using in-camera gyroscope sensors.",
+          "Use a compact, thin light stand to minimize bottom nadir shadows."
+        ]
+      },
+      {
+        "title": "2. Lighting Adjustments & Bracketed HDR Shooting",
+        "content": "Rooms with bright windows and dark corners have high contrast. To capture clean details inside and outside windows, use bracketed HDR shooting. Set your 360° camera to capture 3, 5, or 7 bracketed exposures per scene, then merge them in-camera or via stitching software to balance highlights and shadows.",
+        "listItems": [
+          "Use HDR mode to capture window details and indoor lighting.",
+          "Open all doors between adjacent rooms to create clean visual walk lines.",
+          "Turn on all interior lights and open window blinds to maximize brightness."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Should I be in the room when triggering the shot?",
+        "answer": "No. Hide in an adjacent hallway or behind a wall, and trigger the shutter remotely using your camera's mobile app over Wi-Fi."
+      }
+    ]
+  },
+  "how-to-add-virtual-tour-to-mls": {
+    "slug": "how-to-add-virtual-tour-to-mls",
+    "type": "blog",
+    "title": "How to Add Virtual Tour to MLS Listings: Broker Guide",
+    "description": "Learn how to add virtual tours to MLS systems. Step-by-step instructions for real estate agents to link 360 tours on listing portals.",
+    "primaryKeyword": "how to add virtual tour to mls",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/blog-business.png",
+    "heading": "How to Add Virtual Tours to MLS Property Listings",
+    "subheading": "A step-by-step guide for real estate brokers to link unbranded 360° walkthroughs on local MLS networks.",
+    "introText": "Adding a 360° virtual tour link to Multiple Listing Services (MLS) properties is a standard requirement for residential and commercial brokers. Most MLS systems have strict rules requiring unbranded virtual tour links—meaning the player must hide agent contact details, brokerage branding, and marketing lead forms [VERIFY]. In this guide, we show you how to generate compliant unbranded virtual tour links and add them to your MLS listing forms.",
+    "sections": [
+      {
+        "title": "Understanding MLS Branded vs Unbranded Link Rules",
+        "content": "Most regional MLS portals require unbranded virtual tour links in the primary property listing field to prevent buyer leads from bypassing buyer agents [VERIFY]. PanoPublish allows you to generate a separate unbranded tour link that hides company logos and contact forms, keeping your listing compliant with MLS regulations.",
+        "listItems": [
+          "Configure MLS-compliant links with agent details hidden in one click.",
+          "Copy the unbranded URL and paste it into your MLS 'Virtual Tour URL' field.",
+          "Verify links are active and load correctly before final submission."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Does PanoPublish support MLS portals in India?",
+        "answer": "Yes. PanoPublish unbranded tour links are compatible with all major real estate portals and listing databases in India and internationally."
+      }
+    ]
+  },
+  "benefits-of-virtual-tours-real-estate": {
+    "slug": "benefits-of-virtual-tours-real-estate",
+    "type": "blog",
+    "title": "Benefits of Virtual Tours for Real Estate: Agency Insights",
+    "description": "Discover the key benefits of virtual tours for real estate. Increase property view times, boost listing leads, and attract NRI buyers.",
+    "primaryKeyword": "benefits of virtual tours for real estate",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "9 min read",
+    "image": "/blog-business.png",
+    "heading": "Benefits of Virtual Tours for Real Estate Marketing",
+    "subheading": "Why modern real estate agencies, brokerages, and developers rely on 360° virtual tours to close deals.",
+    "introText": "In competitive residential and commercial real estate markets, standard photos are no longer enough to stand out. Providing interactive 360° property walkthroughs has become standard practice for real estate marketing. In this guide, we discuss the key B2B marketing benefits of virtual tours for real estate brokerages, developers, and photographers.",
+    "sections": [
+      {
+        "title": "1. Boost Listing Click-Through Rates & Time-on-Site",
+        "content": "Properties with virtual tours receive up to 87% more views on property listings than those with standard flat photos [VERIFY]. Buyers spend more time exploring rooms, checking layouts, and viewing amenities, helping boost your listing visibility on search pages.",
+        "listItems": [
+          "Increase visitor dwell time on property listing portals.",
+          "Attract serious buyers, reducing unqualified physical site visits.",
+          "Generate higher-quality listing leads with clear purchase intent."
+        ]
+      },
+      {
+        "title": "2. Attract Remote & NRI Real Estate Investors",
+        "content": "For NRI (Non-Resident Indian) buyers and remote property investors looking at real estate in major hubs like Bengaluru, Pune, or Mumbai, physical site visits are difficult. An interactive, detailed 360° property tour allows remote buyers to evaluate listings thoroughly, building purchase confidence."
+      }
+    ],
+    "faqs": [
+      {
+        "question": "Do virtual tours help with local SEO?",
+        "answer": "Yes. Publishing virtual tours directly to Google Maps using PanoPublish increases your Google Business Profile engagement, boosting local SEO search visibility."
+      }
+    ]
+  },
+  "increase-local-seo-with-virtual-tour": {
+    "slug": "increase-local-seo-with-virtual-tour",
+    "type": "blog",
+    "title": "How to Increase Local SEO with Virtual Tours (2026)",
+    "description": "Learn how to boost local SEO rankings using Google Maps virtual tours. Improve search click-through rates and place profile engagement.",
+    "primaryKeyword": "increase local seo with virtual tour",
+    "category": "Tutorials & Guides",
+    "author": "PanoPublish Team",
+    "date": "2026-07-23",
+    "readTime": "8 min read",
+    "image": "/city-maps-showcase.png",
+    "heading": "How to Increase Local SEO Rankings Using Virtual Tours",
+    "subheading": "Boost local search visibility, map click-through rates, and Google place listings interaction.",
+    "introText": "Local businesses, hotels, gyms, and retail showrooms compete heavily for search visibility on Google Maps and the Local 3-Pack. Publishing connected 360° virtual tours to your Google Business Profile is a highly effective way to improve local SEO rankings. In this guide, we show you how virtual tours impact local search rankings and how to optimize your publishing workflow for local SEO.",
+    "sections": [
+      {
+        "title": "How Google Maps Virtual Tours Impact Local SEO Rankings",
+        "content": "Google's search algorithm prioritizes complete, active local place listings. Placing a connected 360° virtual tour on your Google Business Profile listing increases visitor dwell time, which Google recognizes as a strong indicator of place listing quality, boosting local map rankings.",
+        "listItems": [
+          "Boost search click-through rates (CTR) on local Google Place cards.",
+          "Increase place listing interaction signals (website visits, directions clicks).",
+          "Ensure your Google place profile is 100% optimized and complete."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "question": "How long does it take for virtual tours to impact local SEO?",
+        "answer": "Once published via PanoPublish and indexed by Google Maps (typically 24-48 hours), you should notice increased map card interaction metrics within 2 to 4 weeks."
+      }
+    ]
   }
 };

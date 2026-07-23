@@ -37,6 +37,18 @@ function BlogPost() {
     { name: page.heading, url: `https://panopublish.com/blog/${page.slug}` },
   ];
 
+  const getImageSchema = () => {
+    if (!page.image) return undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "ImageObject",
+      "url": `https://panopublish.com${page.image}`,
+      "width": "800",
+      "height": "450",
+      "caption": page.heading
+    };
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
@@ -44,6 +56,8 @@ function BlogPost() {
         description={page.description}
         breadcrumbs={breadcrumbs}
         ogType="article"
+        ogImage={page.image ? `https://panopublish.com${page.image}` : undefined}
+        schema={getImageSchema()}
       />
       <PublicHeader />
 
@@ -92,7 +106,10 @@ function BlogPost() {
             <div className="rounded-3xl overflow-hidden border shadow-sm aspect-video max-h-[380px] w-full relative">
               <img
                 src={page.image}
-                alt={page.heading}
+                alt={`${page.heading} — ${page.primaryKeyword}`}
+                width={800}
+                height={450}
+                loading="eager"
                 className="w-full h-full object-cover"
               />
             </div>

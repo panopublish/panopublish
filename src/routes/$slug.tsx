@@ -86,13 +86,31 @@ function SeoPage() {
     return undefined;
   };
 
+  const getFullSchema = () => {
+    const pageSchema = getPageSchema();
+    if (!page.image) return pageSchema;
+    
+    const imageSchema = {
+      "@context": "https://schema.org",
+      "@type": "ImageObject",
+      "url": `https://panopublish.com${page.image}`,
+      "width": "800",
+      "height": "450",
+      "caption": page.heading
+    };
+
+    if (!pageSchema) return imageSchema;
+    return Array.isArray(pageSchema) ? [...pageSchema, imageSchema] : [pageSchema, imageSchema];
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
         title={page.title}
         description={page.description}
         breadcrumbs={breadcrumbs}
-        schema={getPageSchema()}
+        ogImage={page.image ? `https://panopublish.com${page.image}` : undefined}
+        schema={getFullSchema()}
       />
       <PublicHeader />
 
@@ -141,6 +159,9 @@ function SeoPage() {
                 <img
                   src={page.image}
                   alt={`${page.heading} — ${page.primaryKeyword}`}
+                  width={800}
+                  height={450}
+                  loading="eager"
                   className="w-full h-full object-cover object-center"
                 />
               </div>
