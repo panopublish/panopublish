@@ -1,4 +1,4 @@
-import { getBlogSections } from "./blog-content-generator";
+import { getBlogSections, getBlogImage } from "./blog-content-generator";
 
 export interface SeoPageData {
   slug: string;
@@ -4586,6 +4586,8 @@ Object.keys(seoPages).forEach((key) => {
       page.category,
       competitorName
     );
+    page.image = getBlogImage(page.slug, page.primaryKeyword);
   }
 });
+
 

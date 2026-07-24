@@ -225,3 +225,57 @@ Additionally, to optimize SEO, PanoPublish serves pre-rendered HTML templates vi
     }
   ];
 }
+
+export function getBlogImage(slug: string, keyword: string): string {
+  const kw = keyword.toLowerCase();
+  const s = slug.toLowerCase();
+
+  // 1. Camera / Gear
+  if (s.includes("camera") || kw.includes("camera") || s.includes("gear") || s.includes("tripod") || s.includes("theta") || s.includes("insta360") || s.includes("gopro")) {
+    return "/blog-camera.png";
+  }
+
+  // 2. Cost / Pricing
+  if (s.includes("cost") || s.includes("price") || s.includes("pricing") || s.includes("fees") || kw.includes("cost") || kw.includes("price")) {
+    return "/blog-cost.png";
+  }
+
+  // 3. Trusted Photographer / Google Trusted / Blue lines
+  if (s.includes("trusted") || s.includes("blue-line") || s.includes("program") || kw.includes("trusted") || s.includes("google-maps-360")) {
+    return "/blog-trusted.png";
+  }
+
+  // 4. Alternatives / Comparisons
+  if (s.includes("alternative") || s.includes("vs") || kw.includes("alternative") || kw.includes("vs")) {
+    return "/blog-vs.png";
+  }
+
+  // 5. Publishing / Embedding / How-To
+  if (s.includes("publish") || s.includes("embed") || s.includes("overlay") || s.includes("stitching") || s.includes("exif") || s.includes("metadata") || s.includes("errors") || s.includes("nadir-blur")) {
+    return "/blog-publish.png";
+  }
+
+  // 6. Real Estate / Airbnb / Hotel
+  if (s.includes("estate") || s.includes("airbnb") || s.includes("hotel") || s.includes("brokers") || s.includes("residential") || s.includes("showroom")) {
+    return "/blog-real-estate.png";
+  }
+
+  // 7. University / College / Museum / Construction / Schools
+  if (s.includes("university") || s.includes("museum") || s.includes("construction") || s.includes("schools") || s.includes("venue") || s.includes("college") || s.includes("campus")) {
+    return "/blog-university.png";
+  }
+
+  // 8. Software / Virtual Tour editor / Hotspots / Floorplan / 3D Dollhouse
+  if (s.includes("software") || s.includes("hotspots") || s.includes("floor-plan") || s.includes("dollhouse") || s.includes("builder") || s.includes("panorama") || s.includes("virtual-tour") || s.includes("tour-builder")) {
+    return "/blog-software.png";
+  }
+
+  // 9. Business / Start-Up / Agency
+  if (s.includes("business") || s.includes("start") || s.includes("agency") || s.includes("agencies") || s.includes("marketing") || s.includes("seo") || s.includes("roi")) {
+    return "/blog-business.png";
+  }
+
+  // Default fallback
+  return "/blog-publish.png";
+}
+
