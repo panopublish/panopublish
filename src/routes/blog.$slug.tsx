@@ -155,7 +155,7 @@ function BlogPost() {
                 <h2 className="text-xl md:text-2xl font-bold font-serif text-foreground border-b pb-2">
                   {idx + 1}. {section.title}
                 </h2>
-                <p className="whitespace-pre-line text-muted-foreground">{section.content}</p>
+                <RichTextRenderer content={section.content} />
 
                 {section.listItems && (
                   <ul className="grid gap-3 pt-2 pl-2">
@@ -231,3 +231,73 @@ function BlogPost() {
     </div>
   );
 }
+
+function RichTextRenderer({ content }: { content: string }) {
+  const blocks = content.split('\n\n');
+
+  return (
+    <div className="space-y-4 text-muted-foreground text-sm md:text-base leading-relaxed">
+      {blocks.map((block, idx) => {
+        const trimmed = block.trim();
+        if (!trimmed) return null;
+
+        // Handle blockquotes: starting with '>'
+        if (trimmed.startsWith('>')) {
+          const rawText = trimmed.replace(/^>\s*/, '');
+          return (
+            <blockquote
+              key={idx}
+              className="border-l-4 border-primary pl-4 py-2.5 my-4 italic text-foreground/80 bg-slate-50/50 rounded-r-lg"
+            >
+              {parseInlineFormatting(rawText)}
+            </blockquote>
+          );
+        }
+
+        // Handle bullet lists: paragraph containing lines that start with '-' or '*'
+        const lines = trimmed.split('\n');
+        const isList = lines.every(line => {
+          const l = line.trim();
+          return l.startsWith('-') || l.startsWith('*');
+        });
+
+        if (isList && lines.length > 0) {
+          return (
+            <ul key={idx} className="list-disc pl-5 space-y-2 my-4 text-muted-foreground">
+              {lines.map((line, lineIdx) => {
+                const cleanLine = line.trim().replace(/^[-*]\s*/, '');
+                return (
+                  <li key={lineIdx} className="leading-relaxed">
+                    {parseInlineFormatting(cleanLine)}
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        }
+
+        // Handle regular paragraph
+        return (
+          <p key={idx} className="whitespace-pre-line">
+            {parseInlineFormatting(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function parseInlineFormatting(text: string) {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+

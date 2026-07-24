@@ -1,3 +1,5 @@
+import { getBlogSections } from "./blog-content-generator";
+
 export interface SeoPageData {
   slug: string;
   type: "comparison" | "service" | "city" | "blog";
@@ -22,7 +24,7 @@ export interface SeoPageData {
       competitor: string;
       isHighlight?: boolean;
     }[];
-  };
+  } | null;
   sections: {
     title: string;
     content: string;
@@ -4571,3 +4573,19 @@ export const seoPages: Record<string, SeoPageData> = {
     ]
   }
 };
+
+// Dynamically generate deep, rich and reader-friendly blog content for all blogs
+Object.keys(seoPages).forEach((key) => {
+  const page = seoPages[key];
+  if (page.type === "blog") {
+    const competitorName = page.comparisonTable?.competitorName;
+    page.sections = getBlogSections(
+      page.slug,
+      page.heading,
+      page.primaryKeyword,
+      page.category,
+      competitorName
+    );
+  }
+});
+
