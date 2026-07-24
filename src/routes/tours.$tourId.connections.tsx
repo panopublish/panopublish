@@ -36,6 +36,7 @@ import {
   AlertTriangle,
   Info,
   MousePointer2,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePanoramaMap } from "@/hooks/usePanoramaMap";
@@ -79,6 +80,7 @@ type Conn = {
   pitch: number;
   spacing: string | null;
   is_locked: boolean;
+  metadata?: string | null;
 };
 type Constellation = { id: string; name: string };
 type Island = { id: string; name: string; order_index: number };
@@ -148,6 +150,7 @@ function ConnectionsPage() {
     name: string;
     latitude: number | null;
     longitude: number | null;
+    type?: string | null;
   } | null>(null);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [autoAlign, setAutoAlign] = useState(true);
@@ -159,6 +162,36 @@ function ConnectionsPage() {
     fromId: string;
     toId: string;
   } | null>(null);
+  const [hotspotIcon, setHotspotIcon] = useState<string>("arrow");
+  const [hotspotLabel, setHotspotLabel] = useState<string>("");
+  const [savingHotspot, setSavingHotspot] = useState<boolean>(false);
+
+  const activeConnObj = useMemo(() => {
+    if (!selectedConnection) return null;
+    return conns.find(
+      (c) =>
+        c.from_photo_id === selectedConnection.fromId &&
+        c.to_photo_id === selectedConnection.toId,
+    );
+  }, [selectedConnection, conns]);
+
+  useEffect(() => {
+    if (activeConnObj) {
+      let meta: any = {};
+      try {
+        if (activeConnObj.metadata) {
+          meta = JSON.parse(activeConnObj.metadata);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      setHotspotIcon(meta.icon_type || "arrow");
+      setHotspotLabel(meta.label || "");
+    } else {
+      setHotspotIcon("arrow");
+      setHotspotLabel("");
+    }
+  }, [activeConnObj]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [currentHeading, setCurrentHeading] = useState(0);
   const [islands, setIslands] = useState<Island[]>([]);
@@ -210,7 +243,7 @@ function ConnectionsPage() {
     if (!user) return;
     const [{ data: t }, { data: ps }, { data: cs }, { data: cons }, { data: is }] =
       await Promise.all([
-        supabase.from("tours").select("name,latitude,longitude").eq("id", tourId).maybeSingle(),
+        supabase.from("tours").select("name,latitude,longitude,type").eq("id", tourId).maybeSingle(),
         supabase.from("photos").select("*").eq("tour_id", tourId),
         supabase.from("connections").select("*").eq("tour_id", tourId),
         supabase.from("constellations").select("id,name").eq("tour_id", tourId).order("created_at"),
@@ -1054,6 +1087,28 @@ function ConnectionsPage() {
     load();
   }, [selectedConnection, photos, load, markConnectionsUnsynced]);
 
+  const handleSaveConnectionMetadata = async () => {
+    if (!selectedConnection || !activeConnObj) return;
+    setSavingHotspot(true);
+    const updatedMetadata = JSON.stringify({
+      icon_type: hotspotIcon,
+      label: hotspotLabel,
+    });
+
+    const { error } = await supabase
+      .from("connections")
+      .update({ metadata: updatedMetadata } as any)
+      .eq("id", activeConnObj.id);
+
+    setSavingHotspot(false);
+    if (error) {
+      toast.error("Failed to save hotspot settings: " + error.message);
+    } else {
+      toast.success("Hotspot settings updated!");
+      load();
+    }
+  };
+
   const onConnectionSelect = useCallback((fromId: string | null, toId: string | null) => {
     if (fromId === null || toId === null) {
       setSelectedConnection(null);
@@ -1400,6 +1455,7 @@ function ConnectionsPage() {
       <TourStepsNav
         tourId={tourId}
         activeTab="connections"
+        tourType={tour?.type ?? undefined}
         onSave={async () => {
           const tid = toast.loading("Saving tour changes...");
           try {
@@ -1458,6 +1514,92 @@ function ConnectionsPage() {
               />
             )}
           </div>
+
+          {selectedConnection && activeConnObj && (
+            <div className="mx-2 my-2 bg-slate-900 text-white p-4 rounded-xl border border-slate-700/60 shadow-lg space-y-3 shrink-0 animate-in slide-in-from-top duration-200">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-300">
+                  Hotspot Settings
+                </h4>
+                <button
+                  onClick={() => setSelectedConnection(null)}
+                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="text-[10px] text-slate-400 font-mono">
+                Direction: Scene {photos.findIndex((p) => p.id === selectedConnection.fromId)} ➔ Scene {photos.findIndex((p) => p.id === selectedConnection.toId)}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                  Hotspot Icon
+                </label>
+                <div className="grid grid-cols-5 gap-1 bg-slate-950 p-1.5 rounded-lg border border-slate-800">
+                  {[
+                    { id: "arrow", label: "Arrow" },
+                    { id: "double-arrow", label: "Double" },
+                    { id: "chevron", label: "Chevron" },
+                    { id: "info", label: "Info" },
+                    { id: "help", label: "Help" },
+                    { id: "cart", label: "Cart" },
+                    { id: "pin", label: "Pin" },
+                    { id: "door", label: "Door" },
+                    { id: "camera", label: "Camera" },
+                    { id: "eye", label: "Eye" }
+                  ].map((icon) => {
+                    const isSelected = hotspotIcon === icon.id;
+                    return (
+                      <button
+                        key={icon.id}
+                        type="button"
+                        onClick={() => setHotspotIcon(icon.id)}
+                        className={`py-1 rounded text-[9px] font-bold text-center border transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#0277bd] text-white border-[#0288d1]"
+                            : "bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200"
+                        }`}
+                        title={icon.label}
+                      >
+                        <span className="capitalize">{icon.id.replace("-", " ")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-black tracking-widest text-slate-400 block font-bold">
+                  Hover Label / Tooltip
+                </label>
+                <Input
+                  className="bg-slate-950 border-slate-850 text-white text-xs h-9 focus-visible:ring-[#0277bd]"
+                  placeholder="e.g. Enter Living Room"
+                  value={hotspotLabel}
+                  onChange={(e) => setHotspotLabel(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button
+                  onClick={handleSaveConnectionMetadata}
+                  disabled={savingHotspot}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold h-8 text-xs rounded-lg transition-colors cursor-pointer"
+                >
+                  {savingHotspot ? "Saving..." : "Save Settings"}
+                </Button>
+                <Button
+                  onClick={onDeleteConnection}
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold h-8 text-xs px-3 rounded-lg transition-colors cursor-pointer border-0"
+                  title="Delete Connection"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto bg-slate-50/50 p-2 space-y-2.5">
             {/* Connected scenes grouped by island */}

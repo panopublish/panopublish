@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { TourStepsNav } from "@/components/TourStepsNav";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -23,11 +26,15 @@ import {
   Upload as UploadIcon,
   Trash2,
   Share2,
+  Download,
+  Eye,
+  Image as ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
 import { syncStreetViewConnections } from "@/lib/streetview";
+import { exportMarzipanoTour, generateLivePreviewUrl } from "@/lib/marzipano-exporter";
 
 const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
 
@@ -438,6 +445,30 @@ function PublishPage() {
     null,
   );
 
+  // Connections state
+  const [connections, setConnections] = useState<any[]>([]);
+
+  // Custom settings states
+  const [brandingName, setBrandingName] = useState("");
+  const [brandingLink, setBrandingLink] = useState("");
+  const [themeColor, setThemeColor] = useState("#0277bd");
+  const [showWatermark, setShowWatermark] = useState(true);
+  const [logoUrl, setLogoUrl] = useState("");
+
+  const [zoomButtons, setZoomButtons] = useState(true);
+  const [scrollZoom, setScrollZoom] = useState(true);
+  const [autorotate, setAutorotate] = useState(false);
+  const [autorotateSpeed, setAutorotateSpeed] = useState(10);
+
+  const [waEnabled, setWaEnabled] = useState(false);
+  const [waNumber, setWaNumber] = useState("");
+  const [waMessage, setWaMessage] = useState("");
+  const [waPosition, setWaPosition] = useState("bottom-right");
+
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{ message: string; pct: number } | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
   const saveNadirSettings = async (newType: string, newSize: string, newPos: string) => {
     localStorage.setItem(`tour-nadir-type-${tourId}`, newType);
     localStorage.setItem(`tour-size-${tourId}`, newSize);
@@ -478,8 +509,39 @@ function PublishPage() {
       setNadirType(fetchedNadirType);
       setSize(t.nadir_size || localStorage.getItem(`tour-size-${tourId}`) || "13%");
       setPos(t.nadir_pos || localStorage.getItem(`tour-pos-${tourId}`) || "btm");
+
+      // Load custom settings if tour is type 'custom'
+      if (t.custom_settings) {
+        try {
+          const cs = JSON.parse(t.custom_settings);
+          setBrandingName(cs.branding?.name || t.name || "");
+          setBrandingLink(cs.branding?.link || "");
+          setThemeColor(cs.branding?.theme_color || "#0277bd");
+          setShowWatermark(cs.branding?.show_watermark !== false);
+          setLogoUrl(cs.branding?.logo_url || "");
+
+          setZoomButtons(cs.controls?.zoom_in_out !== false);
+          setScrollZoom(cs.controls?.scroll_zoom !== false);
+          setAutorotate(!!cs.controls?.autorotate);
+          setAutorotateSpeed(cs.controls?.autorotate_speed || 10);
+
+          setWaEnabled(!!cs.whatsapp?.enabled);
+          setWaNumber(cs.whatsapp?.phone_number || "");
+          setWaMessage(cs.whatsapp?.message || "");
+          setWaPosition(cs.whatsapp?.position || "bottom-right");
+        } catch (e) {
+          console.error("Failed to parse custom settings", e);
+        }
+      } else {
+        setBrandingName(t.name || "");
+      }
     }
     const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
+    
+    // Fetch connections
+    const { data: conns } = await supabase.from("connections").select("*").eq("tour_id", tourId);
+    setConnections(conns ?? []);
+
     const loadedPhotos = ((ps as any[]) ?? []).sort((a, b) => {
       if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
       return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
@@ -951,325 +1013,828 @@ function PublishPage() {
     }
   };
 
+  const handleCustomLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingLogo(true);
+    try {
+      const path = `${user?.id}/${tourId}/custom-logo-${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, {
+        contentType: file.type || "image/png",
+      });
+      if (upErr) throw upErr;
+
+      const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(path);
+      const logoPublicUrl = pub.publicUrl;
+
+      setLogoUrl(logoPublicUrl);
+      toast.success("Logo uploaded successfully! Click Save to apply branding.");
+    } catch (err: any) {
+      toast.error("Failed to upload logo: " + err.message);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleCustomLogoRemove = () => {
+    setLogoUrl("");
+    toast.success("Logo removed. Click Save to apply branding.");
+  };
+
+  const handleSaveCustomSettings = async (showToast = true) => {
+    setSavingSettings(true);
+    const updatedSettings = JSON.stringify({
+      branding: {
+        name: brandingName,
+        link: brandingLink,
+        theme_color: themeColor,
+        show_watermark: showWatermark,
+        logo_url: logoUrl
+      },
+      controls: {
+        zoom_in_out: zoomButtons,
+        scroll_zoom: scrollZoom,
+        autorotate: autorotate,
+        autorotate_speed: Number(autorotateSpeed)
+      },
+      whatsapp: {
+        enabled: waEnabled,
+        phone_number: waNumber,
+        message: waMessage,
+        position: waPosition
+      }
+    });
+
+    const { error } = await supabase
+      .from("tours")
+      .update({ custom_settings: updatedSettings } as any)
+      .eq("id", tourId);
+
+    setSavingSettings(false);
+    if (error) {
+      toast.error("Failed to save custom settings: " + error.message);
+      return false;
+    } else {
+      if (showToast) toast.success("Virtual tour settings saved!");
+      setTour((prev: any) => (prev ? { ...prev, custom_settings: updatedSettings } : null));
+      return true;
+    }
+  };
+
+  const handleExportTour = async () => {
+    const saved = await handleSaveCustomSettings(false);
+    if (!saved) return;
+
+    if (photos.length === 0) {
+      toast.error("Please upload photos to your tour before exporting.");
+      return;
+    }
+
+    try {
+      setExportProgress({ message: "Preparing tour files...", pct: 5 });
+      
+      const blob = await exportMarzipanoTour(
+        {
+          tour: { id: tourId, name: tour.name, custom_settings: tour.custom_settings },
+          photos: photos.map(p => ({
+            id: p.id,
+            file_url: p.file_url,
+            filename: p.filename,
+            heading: p.heading ?? null
+          })),
+          connections: connections.map(c => ({
+            id: c.id,
+            from_photo_id: c.from_photo_id,
+            to_photo_id: c.to_photo_id,
+            heading: c.heading ?? null,
+            metadata: c.metadata ?? null
+          }))
+        },
+        (msg, pct) => {
+          setExportProgress({ message: msg, pct });
+        }
+      );
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${tour.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()}_virtual_tour.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Virtual tour exported successfully!");
+      setExportProgress(null);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Export failed: " + err.message);
+      setExportProgress(null);
+    }
+  };
+
+  const previewUrl = useMemo(() => {
+    if (!tour || photos.length === 0) return "";
+    const tempTour = {
+      id: tourId,
+      name: brandingName || tour.name,
+      custom_settings: JSON.stringify({
+        branding: {
+          name: brandingName,
+          link: brandingLink,
+          theme_color: themeColor,
+          show_watermark: showWatermark,
+          logo_url: logoUrl
+        },
+        controls: {
+          zoom_in_out: zoomButtons,
+          scroll_zoom: scrollZoom,
+          autorotate: autorotate,
+          autorotate_speed: Number(autorotateSpeed)
+        },
+        whatsapp: {
+          enabled: waEnabled,
+          phone_number: waNumber,
+          message: waMessage,
+          position: waPosition
+        }
+      })
+    };
+    return generateLivePreviewUrl({
+      tour: tempTour,
+      photos: photos.map(p => ({
+        id: p.id,
+        file_url: p.file_url,
+        filename: p.filename,
+        heading: p.heading ?? null
+      })),
+      connections: connections.map(c => ({
+        id: c.id,
+        from_photo_id: c.from_photo_id,
+        to_photo_id: c.to_photo_id,
+        heading: c.heading ?? null,
+        metadata: c.metadata ?? null
+      }))
+    });
+  }, [
+    tour,
+    photos,
+    connections,
+    tourId,
+    brandingName,
+    brandingLink,
+    themeColor,
+    showWatermark,
+    logoUrl,
+    zoomButtons,
+    scrollZoom,
+    autorotate,
+    autorotateSpeed,
+    waEnabled,
+    waNumber,
+    waMessage,
+    waPosition
+  ]);
+
   return (
     <AppShell
-      title="Publish to Google"
+      title={tour?.type === "custom" ? "Virtual Tour Settings" : "Publish to Google"}
       breadcrumbs={[
         { label: "Tours", to: "/tours" },
         { label: tour?.name || "Tour" },
-        { label: "Publish" },
+        { label: tour?.type === "custom" ? "Settings" : "Publish" },
       ]}
     >
       <SEO
-        title="Publish to Google"
-        description="Configure nadir settings and publish your virtual tour to Google Street View and Google Maps."
+        title={tour?.type === "custom" ? "Virtual Tour Settings" : "Publish to Google"}
+        description={
+          tour?.type === "custom"
+            ? "Configure branding, zoom limits, auto-rotation, and export virtual tour as offline-capable ZIP files."
+            : "Configure nadir settings and publish your virtual tour to Google Street View and Google Maps."
+        }
         noIndex={true}
       />
       <TourStepsNav
         tourId={tourId}
         activeTab="publish"
+        tourType={tour?.type ?? undefined}
         onSave={async () => {
-          await saveNadirSettings(nadirType, size, pos);
-          toast.success("Publish and Nadir settings saved!");
+          if (tour?.type === "custom") {
+            await handleSaveCustomSettings(true);
+          } else {
+            await saveNadirSettings(nadirType, size, pos);
+            toast.success("Publish and Nadir settings saved!");
+          }
         }}
         onNadir={() => {
-          setShowNadirModal(true);
+          if (tour?.type !== "custom") {
+            setShowNadirModal(true);
+          }
         }}
       />
 
-      {/* Top info bar */}
-      <div className="mb-4 rounded-xl border bg-card p-3 flex flex-wrap items-center justify-between gap-3 max-w-4xl mx-auto">
-        <div className="text-sm flex items-center gap-2">
-          <span className="text-muted-foreground">owner:</span>
-          <span className="font-medium">{user?.email ?? "—"}</span>
-          {accessToken ? (
-            <span className="text-green-600 flex items-center gap-1 text-xs bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-              <Check className="h-3 w-3" /> Google Connected
-            </span>
-          ) : (
-            <button
-              onClick={connectGoogle}
-              className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 cursor-pointer font-medium"
-            >
-              Connect Google Account
-            </button>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
-          <label className="flex items-center gap-1">
-            <span className="text-muted-foreground">Nadir Type:</span>
-            <select
-              value={nadirType}
-              onChange={async (e) => {
-                const val = e.target.value;
-                setNadirType(val);
-                await saveNadirSettings(val, size, pos);
-              }}
-              className="border rounded px-2 py-1 bg-background font-medium"
-            >
-              <option value="None">None</option>
-              <option value="Stretch Blur">Stretch Blur</option>
-              <option value="Tour level">Tour level</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-1">
-            <span className="text-muted-foreground">Size:</span>
-            <select
-              value={size}
-              onChange={async (e) => {
-                const val = e.target.value;
-                setSize(val);
-                await saveNadirSettings(nadirType, val, pos);
-              }}
-              className="border rounded px-2 py-1 bg-background font-medium"
-            >
-              <option value="5%">5%</option>
-              <option value="10%">10%</option>
-              <option value="13%">13%</option>
-              <option value="15%">15%</option>
-              <option value="20%">20%</option>
-            </select>
-          </label>
-          <label className="flex items-center gap-1">
-            <span className="text-muted-foreground">Pos:</span>
-            <select
-              value={pos}
-              onChange={async (e) => {
-                const val = e.target.value;
-                setPos(val);
-                await saveNadirSettings(nadirType, size, val);
-              }}
-              className="border rounded px-2 py-1 bg-background font-medium"
-            >
-              <option value="btm">btm</option>
-              <option value="top">top</option>
-            </select>
-          </label>
-        </div>
-      </div>
+      {tour?.type === "custom" ? (
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[4fr_6fr] gap-6 items-start animate-in fade-in duration-200">
+          {/* Settings Column */}
+          <div className="rounded-xl border bg-card p-6 space-y-6 shadow-sm">
+            <h3 className="text-lg font-bold border-b pb-3 text-slate-800">Virtual Tour Settings</h3>
 
-      <div className="rounded-xl border bg-card p-8 max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold text-center mb-3">Publish your scenes to Google</h2>
-        <div className="h-1 rounded-full bg-blue-100 mb-8 max-w-xs mx-auto" />
-
-        <div className="grid md:grid-cols-2 gap-6 items-center">
-          <div className="space-y-4">
-            {publishProgress && (
-              <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 shadow-inner animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                    {publishProgress.step === "connecting"
-                      ? "Finalizing"
-                      : `Scene ${publishProgress.current} of ${publishProgress.total}`}
-                  </span>
-                  <span className="text-xs font-black text-blue-600">
-                    {Math.round((publishProgress.current / (publishProgress.total || 1)) * 100)}%
-                  </span>
+            {/* Branding Panel */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Branding & Logo</h4>
+              <div className="space-y-3">
+                <div className="flex gap-4 items-center">
+                  <div className="w-16 h-16 rounded-xl border bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                      <ImageIcon className="h-6 w-6 text-slate-300" />
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Brand Logo</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingLogo}
+                        className="relative cursor-pointer text-xs h-8"
+                      >
+                        {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCustomLogoUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </Button>
+                      {logoUrl && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCustomLogoRemove}
+                          className="text-red-500 hover:text-red-650 border-red-200 hover:bg-red-50 h-8"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {/* Premium Progress Bar */}
-                <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5 border border-blue-100/30">
-                  <div
-                    className="h-full bg-[#0277bd] rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-[#0277bd] to-blue-400"
-                    style={{
-                      width: `${(publishProgress.current / (publishProgress.total || 1)) * 100}%`,
-                    }}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Brand / Company Name</label>
+                  <Input
+                    className="text-xs"
+                    placeholder="e.g. Acme Properties"
+                    value={brandingName}
+                    onChange={(e) => setBrandingName(e.target.value)}
                   />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
-                  <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin" />
-                  <span className="truncate">{publishProgress.message}</span>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 block">Brand Redirect Link</label>
+                  <Input
+                    className="text-xs"
+                    placeholder="e.g. https://acme.com"
+                    value={brandingLink}
+                    onChange={(e) => setBrandingLink(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Theme Color</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={themeColor}
+                        onChange={(e) => setThemeColor(e.target.value)}
+                        className="w-8 h-8 rounded border cursor-pointer border-slate-200 p-0"
+                      />
+                      <Input
+                        className="text-xs font-mono h-8"
+                        value={themeColor}
+                        onChange={(e) => setThemeColor(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                    <Checkbox
+                      id="watermark-check"
+                      checked={showWatermark}
+                      onCheckedChange={(v) => setShowWatermark(!!v)}
+                      className="cursor-pointer"
+                    />
+                    <label htmlFor="watermark-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Show Watermark
+                    </label>
+                  </div>
                 </div>
               </div>
-            )}
-            <Button
-              size="lg"
-              className="w-full bg-[#0277bd] hover:bg-[#01579b]"
-              disabled={publishing || photos.length === 0}
-              onClick={handlePublishClick}
-            >
-              <Send className="h-5 w-5 mr-2" />
-              {publishing
-                ? "Publishing…"
-                : `Publish ${photos.filter((p) => !p.streetview_status || p.streetview_status === "NOT_PUBLISHED").length} scene(s)`}
-            </Button>
-            {photos.some(
-              (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
-            ) && (
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 mt-2 flex items-center justify-center"
-                disabled={publishing}
-                onClick={resetPublishing}
-              >
-                <Trash2 className="h-5 w-5 mr-2" />
-                Reset & Delete from Google
-              </Button>
-            )}
-          </div>
-
-          <div className="relative h-32 rounded-lg bg-gray-50 border flex flex-col items-center justify-center p-4">
-            <Cloud className="h-12 w-12 text-[#0277bd] mb-1 opacity-50" />
-            <div className="text-xs text-gray-500 font-semibold text-center mb-0.5">
-              Processing status will update automatically.
             </div>
-            <div className="text-[10px] text-gray-400 text-center mb-1 max-w-[280px]">
-              Street View processing may take up to 24 hours.
-            </div>
-            {accessToken && photos.some((p) => p.streetview_status === "PROCESSING") && (
-              <button
-                onClick={async () => {
-                  const tid = toast.loading("Checking Google Street View status...");
-                  await load();
-                  toast.success("Status checked!", { id: tid });
-                }}
-                className="text-xs text-[#0277bd] hover:underline font-semibold flex items-center gap-1 cursor-pointer mt-1"
-              >
-                <Clock className="h-3.5 w-3.5" /> Sync Google Status
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* Per-scene progress */}
-        {photos.length > 0 && (
-          <div className="mt-8 space-y-1.5 max-h-64 overflow-y-auto">
-            {photos.map((p, i) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium"
-              >
-                <span className="text-muted-foreground w-8">{i}</span>
-                <span className="flex-1 truncate">{p.filename}</span>
-                {p.streetview_status === "PUBLISHED" ? (
-                  <div className="flex items-center gap-3">
-                    <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
-                      <CheckCheck className="h-4 w-4 text-green-600" /> PUBLISHED
-                    </span>
-                    {p.streetview_share_link && (
-                      <a
-                        href={p.streetview_share_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors"
-                      >
-                        View on Maps
-                      </a>
-                    )}
+            {/* Navigation & Controls Panel */}
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Controls & Rotation</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="zoom-btn-check"
+                    checked={zoomButtons}
+                    onCheckedChange={(v) => setZoomButtons(!!v)}
+                    className="cursor-pointer"
+                  />
+                  <label htmlFor="zoom-btn-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
+                    Zoom Button Controls
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="scroll-zoom-check"
+                    checked={scrollZoom}
+                    onCheckedChange={(v) => setScrollZoom(!!v)}
+                    className="cursor-pointer"
+                  />
+                  <label htmlFor="scroll-zoom-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
+                    Enable Scroll Zoom
+                  </label>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="autorotate-check"
+                    checked={autorotate}
+                    onCheckedChange={(v) => setAutorotate(!!v)}
+                    className="cursor-pointer"
+                  />
+                  <label htmlFor="autorotate-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
+                    Enable Auto-rotation
+                  </label>
+                </div>
+                {autorotate && (
+                  <div className="space-y-1.5 pl-6 animate-in slide-in-from-top-2 duration-200">
+                    <label className="text-[10px] uppercase font-bold text-slate-500 block">Rotation Speed (step duration)</label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[autorotateSpeed]}
+                        onValueChange={(val) => setAutorotateSpeed(val[0])}
+                        min={1}
+                        max={30}
+                        step={1}
+                        className="flex-1 cursor-pointer"
+                      />
+                      <span className="text-xs font-mono bg-slate-50 px-2 py-1 rounded border font-bold">
+                        {autorotateSpeed} ms
+                      </span>
+                    </div>
                   </div>
-                ) : p.streetview_status === "PROCESSING" ? (
-                  <div className="flex items-center gap-3">
-                    <span className="text-amber-600 font-semibold text-xs flex items-center gap-1 animate-pulse">
-                      <Clock className="h-4 w-4 text-amber-500 animate-spin" /> PROCESSING
-                    </span>
-                    {p.streetview_share_link && (
-                      <a
-                        href={p.streetview_share_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors opacity-70"
-                      >
-                        View on Maps
-                      </a>
-                    )}
-                  </div>
-                ) : p.streetview_status === "FAILED" ? (
-                  <span className="text-red-600 font-semibold text-xs flex items-center gap-1">
-                    <XIcon className="h-4 w-4" /> FAILED
-                  </span>
-                ) : (
-                  <span className="text-gray-400 font-semibold text-xs">NOT PUBLISHED</span>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
 
-      <Dialog open={confirm} onOpenChange={setConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm publish</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-2">
-              You are about to publish to Google Street View under <strong>{user?.email}</strong>.
-              Continue?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirm(false)}>
-              Cancel
-            </Button>
-            <Button onClick={publishAll} className="bg-[#0277bd] text-white">
-              Publish
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Nadir Logo Upload Modal */}
-      <Dialog open={showNadirModal} onOpenChange={setShowNadirModal}>
-        <DialogContent className="sm:max-w-md bg-white rounded-xl shadow-2xl p-6 border border-gray-100">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-center text-gray-800">
-              Upload your Nadir by dragging and dropping it below.
-            </DialogTitle>
-            <DialogDescription className="text-xs text-center text-gray-400 mt-1">
-              2000px x 2000px PNG recommended
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col items-center justify-center my-6">
-            {tour?.nadir_logo_url ? (
-              // Circular crop preview with black border matching Image 2!
-              <div className="relative group w-64 h-64 rounded-full overflow-hidden border-[6px] border-black shadow-lg flex items-center justify-center bg-gray-50 transition-transform duration-300 hover:scale-105">
-                <img
-                  src={tour.nadir_logo_url}
-                  alt="Nadir logo preview"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">
-                  Preview
+            {/* WhatsApp Widget Panel */}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">WhatsApp Widget</h4>
+                <div className="flex items-center gap-1.5">
+                  <Checkbox
+                    id="wa-enabled-check"
+                    checked={waEnabled}
+                    onCheckedChange={(v) => setWaEnabled(!!v)}
+                    className="cursor-pointer"
+                  />
+                  <label htmlFor="wa-enabled-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
+                    Enable Widget
+                  </label>
                 </div>
               </div>
-            ) : (
-              // Drag and drop zone
-              <label className="w-64 h-64 rounded-full border-4 border-dashed border-[#0277bd]/30 hover:border-[#0277bd]/60 bg-blue-50/20 hover:bg-blue-50/50 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 shadow-inner group">
-                <UploadIcon className="h-10 w-10 text-[#0277bd]/50 group-hover:text-[#0277bd]/80 group-hover:scale-110 transition-transform mb-3" />
-                <span className="text-xs font-semibold text-[#0277bd]/60 group-hover:text-[#0277bd]/80 text-center px-6">
-                  {uploadingLogo ? "Uploading..." : "Click or drag logo to upload"}
+
+              {waEnabled && (
+                <div className="space-y-3 pl-6 animate-in slide-in-from-top-2 duration-200">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Phone Number (with Country Code)</label>
+                    <Input
+                      className="text-xs"
+                      placeholder="e.g. 919999999999"
+                      value={waNumber}
+                      onChange={(e) => setWaNumber(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Prefilled Text Message</label>
+                    <Input
+                      className="text-xs"
+                      placeholder="Hi, I am interested in this property tour!"
+                      value={waMessage}
+                      onChange={(e) => setWaMessage(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Button Position</label>
+                    <select
+                      value={waPosition}
+                      onChange={(e) => setWaPosition(e.target.value)}
+                      className="text-xs border rounded w-full p-2 bg-background font-medium outline-none cursor-pointer"
+                    >
+                      <option value="bottom-right">Bottom Right</option>
+                      <option value="bottom-left">Bottom Left</option>
+                      <option value="top-right">Top Right</option>
+                      <option value="top-left">Top Left</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold cursor-pointer h-11 rounded-xl shadow-md uppercase tracking-wider border-0"
+              onClick={() => handleSaveCustomSettings(true)}
+              disabled={savingSettings}
+            >
+              {savingSettings ? "Saving Settings..." : "Save Tour Settings"}
+            </Button>
+          </div>
+
+          {/* Export & Actions Column */}
+          <div className="space-y-6">
+            {/* Download Card */}
+            <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 border-b pb-3">Download Tour Package</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Export your custom virtual tour as a fully autonomous, offline-capable package. Extract the downloaded ZIP file and upload the contents to your web server or hosting platform to display the tour on your website.
+              </p>
+
+              {exportProgress && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                      Processing Assets
+                    </span>
+                    <span className="text-xs font-black text-blue-600">
+                      {exportProgress.pct}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5">
+                    <div
+                      className="h-full bg-gradient-to-r from-[#0277bd] to-blue-400 transition-all duration-300 ease-out"
+                      style={{ width: `${exportProgress.pct}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-slate-600 font-semibold truncate">
+                    {exportProgress.message}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                className="w-full bg-[#0277bd] hover:bg-[#0266a1] text-white font-black cursor-pointer h-12 rounded-xl text-sm shadow-md uppercase tracking-wider flex items-center justify-center gap-2 border-0"
+                onClick={handleExportTour}
+                disabled={!!exportProgress}
+              >
+                <Download className="h-5 w-5" /> Export Standalone Tour (ZIP)
+              </Button>
+            </div>
+
+            {/* Live Interactive Preview Card */}
+            <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 border-b pb-3">Interactive Live Preview</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Test the tour player interactions, branding colors, WhatsApp widgets, and linked scene transitions in real time before exporting.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full border-slate-300 hover:bg-slate-50 text-slate-700 font-black cursor-pointer h-11 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                onClick={() => setShowPreviewModal(true)}
+                disabled={photos.length === 0}
+              >
+                <Eye className="h-4.5 w-4.5" /> Launch Live Preview
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Top info bar */}
+          <div className="mb-4 rounded-xl border bg-card p-3 flex flex-wrap items-center justify-between gap-3 max-w-4xl mx-auto">
+            <div className="text-sm flex items-center gap-2">
+              <span className="text-muted-foreground">owner:</span>
+              <span className="font-medium">{user?.email ?? "—"}</span>
+              {accessToken ? (
+                <span className="text-green-600 flex items-center gap-1 text-xs bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                  <Check className="h-3 w-3" /> Google Connected
                 </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingLogo}
-                  onChange={handleLogoUpload}
-                />
+              ) : (
+                <button
+                  onClick={connectGoogle}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 cursor-pointer font-medium"
+                >
+                  Connect Google Account
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <label className="flex items-center gap-1">
+                <span className="text-muted-foreground">Nadir Type:</span>
+                <select
+                  value={nadirType}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setNadirType(val);
+                    await saveNadirSettings(val, size, pos);
+                  }}
+                  className="border rounded px-2 py-1 bg-background font-medium"
+                >
+                  <option value="None">None</option>
+                  <option value="Stretch Blur">Stretch Blur</option>
+                  <option value="Tour level">Tour level</option>
+                </select>
               </label>
+              <label className="flex items-center gap-1">
+                <span className="text-muted-foreground">Size:</span>
+                <select
+                  value={size}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setSize(val);
+                    await saveNadirSettings(nadirType, val, pos);
+                  }}
+                  className="border rounded px-2 py-1 bg-background font-medium"
+                >
+                  <option value="5%">5%</option>
+                  <option value="10%">10%</option>
+                  <option value="13%">13%</option>
+                  <option value="15%">15%</option>
+                  <option value="20%">20%</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-1">
+                <span className="text-muted-foreground">Pos:</span>
+                <select
+                  value={pos}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    setPos(val);
+                    await saveNadirSettings(nadirType, size, val);
+                  }}
+                  className="border rounded px-2 py-1 bg-background font-medium"
+                >
+                  <option value="btm">btm</option>
+                  <option value="top">top</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-xl border bg-card p-8 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-3">Publish your scenes to Google</h2>
+            <div className="h-1 rounded-full bg-blue-100 mb-8 max-w-xs mx-auto" />
+
+            <div className="grid md:grid-cols-2 gap-6 items-center">
+              <div className="space-y-4">
+                {publishProgress && (
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 shadow-inner animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                        {publishProgress.step === "connecting"
+                          ? "Finalizing"
+                          : `Scene ${publishProgress.current} of ${publishProgress.total}`}
+                      </span>
+                      <span className="text-xs font-black text-blue-600">
+                        {Math.round((publishProgress.current / (publishProgress.total || 1)) * 100)}%
+                      </span>
+                    </div>
+                    {/* Premium Progress Bar */}
+                    <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5 border border-blue-100/30">
+                      <div
+                        className="h-full bg-[#0277bd] rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-[#0277bd] to-blue-400"
+                        style={{
+                          width: `${(publishProgress.current / (publishProgress.total || 1)) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
+                      <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin" />
+                      <span className="truncate">{publishProgress.message}</span>
+                    </div>
+                  </div>
+                )}
+                <Button
+                  size="lg"
+                  className="w-full bg-[#0277bd] hover:bg-[#01579b]"
+                  disabled={publishing || photos.length === 0}
+                  onClick={handlePublishClick}
+                >
+                  <Send className="h-5 w-5 mr-2" />
+                  {publishing
+                    ? "Publishing…"
+                    : `Publish ${photos.filter((p) => !p.streetview_status || p.streetview_status === "NOT_PUBLISHED").length} scene(s)`}
+                </Button>
+                {photos.some(
+                  (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
+                ) && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 mt-2 flex items-center justify-center"
+                    disabled={publishing}
+                    onClick={resetPublishing}
+                  >
+                    <Trash2 className="h-5 w-5 mr-2" />
+                    Reset & Delete from Google
+                  </Button>
+                )}
+              </div>
+
+              <div className="relative h-32 rounded-lg bg-gray-50 border flex flex-col items-center justify-center p-4">
+                <Cloud className="h-12 w-12 text-[#0277bd] mb-1 opacity-50" />
+                <div className="text-xs text-gray-500 font-semibold text-center mb-0.5">
+                  Processing status will update automatically.
+                </div>
+                <div className="text-[10px] text-gray-400 text-center mb-1 max-w-[280px]">
+                  Street View processing may take up to 24 hours.
+                </div>
+                {accessToken && photos.some((p) => p.streetview_status === "PROCESSING") && (
+                  <button
+                    onClick={async () => {
+                      const tid = toast.loading("Checking Google Street View status...");
+                      await load();
+                      toast.success("Status checked!", { id: tid });
+                    }}
+                    className="text-xs text-[#0277bd] hover:underline font-semibold flex items-center gap-1 cursor-pointer mt-1"
+                  >
+                    <Clock className="h-3.5 w-3.5" /> Sync Google Status
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Per-scene progress */}
+            {photos.length > 0 && (
+              <div className="mt-8 space-y-1.5 max-h-64 overflow-y-auto">
+                {photos.map((p, i) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium"
+                  >
+                    <span className="text-muted-foreground w-8">{i}</span>
+                    <span className="flex-1 truncate">{p.filename}</span>
+                    {p.streetview_status === "PUBLISHED" ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
+                          <CheckCheck className="h-4 w-4 text-green-600" /> PUBLISHED
+                        </span>
+                        {p.streetview_share_link && (
+                          <a
+                            href={p.streetview_share_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors"
+                          >
+                            View on Maps
+                          </a>
+                        )}
+                      </div>
+                    ) : p.streetview_status === "PROCESSING" ? (
+                      <div className="flex items-center gap-3">
+                        <span className="text-amber-600 font-semibold text-xs flex items-center gap-1 animate-pulse">
+                          <Clock className="h-4 w-4 text-amber-500 animate-spin" /> PROCESSING
+                        </span>
+                        {p.streetview_share_link && (
+                          <a
+                            href={p.streetview_share_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors opacity-70"
+                          >
+                            View on Maps
+                          </a>
+                        )}
+                      </div>
+                    ) : p.streetview_status === "FAILED" ? (
+                      <span className="text-red-600 font-semibold text-xs flex items-center gap-1">
+                        <XIcon className="h-4 w-4" /> FAILED
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 font-semibold text-xs">NOT PUBLISHED</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
-          <DialogFooter className="flex sm:justify-center items-center gap-3 w-full border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowNadirModal(false)}
-              className="px-6 rounded-full border-gray-300 hover:bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-wider"
-            >
-              Cancel
-            </Button>
-            {tour?.nadir_logo_url && (
-              <Button
-                type="button"
-                onClick={handleLogoRemove}
-                className="px-6 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider transition-colors"
-              >
-                Remove
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <Dialog open={confirm} onOpenChange={setConfirm}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Confirm publish</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-2">
+                  You are about to publish to Google Street View under <strong>{user?.email}</strong>.
+                  Continue?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={publishAll} className="bg-[#0277bd] text-white">
+                  Publish
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Nadir Logo Upload Modal */}
+          <Dialog open={showNadirModal} onOpenChange={setShowNadirModal}>
+            <DialogContent className="sm:max-w-md bg-white rounded-xl shadow-2xl p-6 border border-gray-100">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold text-center text-gray-800">
+                  Upload your Nadir by dragging and dropping it below.
+                </DialogTitle>
+                <DialogDescription className="text-xs text-center text-gray-400 mt-1">
+                  2000px x 2000px PNG recommended
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex flex-col items-center justify-center my-6">
+                {tour?.nadir_logo_url ? (
+                  <div className="relative group w-64 h-64 rounded-full overflow-hidden border-[6px] border-black shadow-lg flex items-center justify-center bg-gray-50 transition-transform duration-300 hover:scale-105">
+                    <img
+                      src={tour.nadir_logo_url}
+                      alt="Nadir logo preview"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold">
+                      Preview
+                    </div>
+                  </div>
+                ) : (
+                  <label className="w-64 h-64 rounded-full border-4 border-dashed border-[#0277bd]/30 hover:border-[#0277bd]/60 bg-blue-50/20 hover:bg-blue-50/50 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 shadow-inner group">
+                    <UploadIcon className="h-10 w-10 text-[#0277bd]/50 group-hover:text-[#0277bd]/80 group-hover:scale-110 transition-transform mb-3" />
+                    <span className="text-xs font-semibold text-[#0277bd]/60 group-hover:text-[#0277bd]/80 text-center px-6">
+                      {uploadingLogo ? "Uploading..." : "Click or drag logo to upload"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={handleLogoUpload}
+                    />
+                  </label>
+                )}
+              </div>
+
+              <DialogFooter className="flex sm:justify-center items-center gap-3 w-full border-t pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowNadirModal(false)}
+                  className="px-6 rounded-full border-gray-300 hover:bg-gray-50 text-gray-600 text-xs font-bold uppercase tracking-wider"
+                >
+                  Cancel
+                </Button>
+                {tour?.nadir_logo_url && (
+                  <Button
+                    type="button"
+                    onClick={handleLogoRemove}
+                    className="px-6 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+
+      {/* Live Preview Modal */}
+      {showPreviewModal && previewUrl && (
+        <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+          <DialogContent className="max-w-6xl w-[95vw] h-[85vh] p-0 overflow-hidden bg-black border-0 rounded-2xl flex flex-col">
+            <DialogHeader className="bg-slate-900 border-b border-slate-800 p-4 flex flex-row items-center justify-between shrink-0">
+              <div className="space-y-0.5">
+                <DialogTitle className="text-white text-base font-bold">Interactive Live Preview</DialogTitle>
+                <p className="text-[10px] text-slate-400 font-medium">Viewing real-time compiled virtual tour player</p>
+              </div>
+            </DialogHeader>
+            <div className="flex-1 bg-black relative">
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0 absolute inset-0"
+                title="Virtual Tour Player Preview"
+                sandbox="allow-scripts allow-popups allow-forms allow-same-origin"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </AppShell>
   );
 }

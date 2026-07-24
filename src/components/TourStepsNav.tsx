@@ -18,6 +18,7 @@ import { toast } from "sonner";
 interface TourStepsNavProps {
   tourId: string;
   activeTab: "location" | "upload" | "connections" | "publish" | "analytics" | "custom";
+  tourType?: string;
   onSave?: () => void | Promise<void>;
   onNadir?: () => void;
   onShare?: () => void;
@@ -27,6 +28,7 @@ interface TourStepsNavProps {
 export function TourStepsNav({
   tourId,
   activeTab,
+  tourType,
   onSave,
   onNadir,
   onShare,
@@ -35,18 +37,29 @@ export function TourStepsNav({
   const [showHelp, setShowHelp] = useState(false);
   const navigate = useNavigate();
 
-  const tabs = [
-    { id: "location", label: "Choose location", icon: MapPin, to: `/tours/${tourId}/location` },
-    { id: "upload", label: "Upload photos", icon: Upload, to: `/tours/${tourId}` },
-    {
-      id: "connections",
-      label: "Build connections",
-      icon: LinkIcon,
-      to: `/tours/${tourId}/connections`,
-    },
-    { id: "publish", label: "Publish to Google", icon: Globe, to: `/tours/${tourId}/publish` },
-    { id: "analytics", label: "Analytics", icon: BarChart2, to: `/tours/${tourId}/analytics` },
-  ];
+  const tabs = tourType === "custom"
+    ? [
+        { id: "upload", label: "Upload photos", icon: Upload, to: `/tours/${tourId}` },
+        {
+          id: "connections",
+          label: "Build connections",
+          icon: LinkIcon,
+          to: `/tours/${tourId}/connections`,
+        },
+        { id: "publish", label: "Settings & Export", icon: Globe, to: `/tours/${tourId}/publish` },
+      ]
+    : [
+        { id: "location", label: "Choose location", icon: MapPin, to: `/tours/${tourId}/location` },
+        { id: "upload", label: "Upload photos", icon: Upload, to: `/tours/${tourId}` },
+        {
+          id: "connections",
+          label: "Build connections",
+          icon: LinkIcon,
+          to: `/tours/${tourId}/connections`,
+        },
+        { id: "publish", label: "Publish to Google", icon: Globe, to: `/tours/${tourId}/publish` },
+        { id: "analytics", label: "Analytics", icon: BarChart2, to: `/tours/${tourId}/analytics` },
+      ];
 
   return (
     <>
@@ -81,24 +94,26 @@ export function TourStepsNav({
                 toast.success("Tour saved successfully!");
               }
             }}
-            className="hover:text-gray-200 transition-colors"
+            className="hover:text-gray-200 transition-colors cursor-pointer"
             title="Save"
           >
             <Save className="h-5 w-5" />
           </button>
-          <button
-            onClick={() => {
-              if (onNadir) {
-                onNadir();
-              } else {
-                navigate({ to: "/tours/$tourId/publish", params: { tourId } });
-              }
-            }}
-            className="hover:text-gray-200 transition-colors"
-            title="Nadir"
-          >
-            <Compass className="h-5 w-5" />
-          </button>
+          {tourType !== "custom" && (
+            <button
+              onClick={() => {
+                if (onNadir) {
+                  onNadir();
+                } else {
+                  navigate({ to: "/tours/$tourId/publish", params: { tourId } });
+                }
+              }}
+              className="hover:text-gray-200 transition-colors cursor-pointer"
+              title="Nadir"
+            >
+              <Compass className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={() => {
               if (onShare) {
@@ -109,7 +124,7 @@ export function TourStepsNav({
                 toast.success("Opening preview in a new tab!");
               }
             }}
-            className="hover:text-gray-200 transition-colors"
+            className="hover:text-gray-200 transition-colors cursor-pointer"
             title="Share Preview"
           >
             <Share2 className="h-5 w-5" />
@@ -122,7 +137,7 @@ export function TourStepsNav({
                 navigate({ to: "/tours" });
               }
             }}
-            className="hover:text-gray-200 transition-colors"
+            className="hover:text-gray-200 transition-colors cursor-pointer"
             title="Exit"
           >
             <LogOut className="h-5 w-5" />

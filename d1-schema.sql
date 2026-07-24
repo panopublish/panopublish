@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS tours (
   longitude REAL,
   has_been_published BOOLEAN NOT NULL DEFAULT 0,
   streetview_connections_synced BOOLEAN NOT NULL DEFAULT 0,
+  custom_settings TEXT DEFAULT '{}',
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_tours_user_id ON tours(user_id);
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS connections (
   spacing TEXT DEFAULT '3m',
   is_locked BOOLEAN DEFAULT 0,
   constellation_name TEXT DEFAULT '',
+  metadata TEXT DEFAULT '{}',
   created_at TEXT DEFAULT (datetime('now'))
 );
 

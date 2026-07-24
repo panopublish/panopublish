@@ -55,6 +55,7 @@ export type Database = {
           to_photo_id: string;
           tour_id: string;
           user_id: string;
+          metadata: string | null;
         };
         Insert: {
           constellation_id?: string | null;
@@ -69,6 +70,7 @@ export type Database = {
           to_photo_id: string;
           tour_id: string;
           user_id: string;
+          metadata?: string | null;
         };
         Update: {
           constellation_id?: string | null;
@@ -83,6 +85,7 @@ export type Database = {
           to_photo_id?: string;
           tour_id?: string;
           user_id?: string;
+          metadata?: string | null;
         };
         Relationships: [];
       };
@@ -435,6 +438,7 @@ export type Database = {
           status: string;
           type: string;
           user_id: string;
+          custom_settings: string | null;
         };
         Insert: {
           address?: string | null;
@@ -455,6 +459,7 @@ export type Database = {
           status?: string;
           type?: string;
           user_id: string;
+          custom_settings?: string | null;
         };
         Update: {
           address?: string | null;
@@ -475,6 +480,7 @@ export type Database = {
           status?: string;
           type?: string;
           user_id?: string;
+          custom_settings?: string | null;
         };
         Relationships: [
           {

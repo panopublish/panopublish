@@ -501,7 +501,7 @@ function TourDetail() {
         noIndex={true}
       />
       <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] pb-12">
-        <TourStepsNav tourId={tourId} activeTab="upload" />
+        <TourStepsNav tourId={tourId} activeTab="upload" tourType={tour?.type ?? undefined} />
 
         <div className="max-w-6xl mx-auto grid lg:grid-cols-[280px_1fr] gap-0">
           {/* Left Sidebar */}

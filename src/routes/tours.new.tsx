@@ -239,8 +239,14 @@ function CreateTour() {
       return;
     }
 
-    if (!tourInput.trim() && !cid.trim()) {
+    if (type !== "custom" && !tourInput.trim() && !cid.trim()) {
       toast.error("Please enter a business name or CID");
+      setSaving(false);
+      return;
+    }
+
+    if (type === "custom" && !tourInput.trim()) {
+      toast.error("Please enter a tour name");
       setSaving(false);
       return;
     }
@@ -531,7 +537,50 @@ function CreateTour() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 3 && type === "custom" && (
+            <div className="max-w-3xl mx-auto text-center animate-in fade-in zoom-in-95 duration-200">
+              <p className="text-gray-600 mb-8 font-medium">
+                Give your custom virtual tour a name to get started.
+              </p>
+
+              <div className="flex border rounded border-gray-300 overflow-hidden mb-12 bg-white">
+                <div className="px-4 py-3 bg-gray-50 border-r text-gray-500 flex items-center">
+                  <Wand2 className="h-5 w-5" />
+                </div>
+                <Input
+                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 flex-1"
+                  placeholder="e.g. My Premium Virtual Tour"
+                  value={tourInput}
+                  onChange={(e) => setTourInput(e.target.value)}
+                />
+              </div>
+
+              <div className="mb-12 relative flex justify-center">
+                {/* Astronaut Placeholder */}
+                <div className="relative w-[500px] h-[200px] bg-gradient-to-t from-[#4a6378] to-[#1e2f42] rounded-t-full overflow-hidden flex items-end justify-center pb-4">
+                  <div className="absolute inset-x-0 bottom-0 h-[40px] bg-[#668096] rounded-[100%] scale-150 transform translate-y-1/2 opacity-50" />
+                  <Rocket className="h-24 w-24 text-white z-10" />
+                  <div className="absolute top-10 left-10 w-2 h-2 rounded-full bg-white opacity-50" />
+                  <div className="absolute top-20 right-20 w-3 h-3 rounded-full bg-white opacity-40" />
+                  <div className="absolute top-8 right-1/3 w-4 h-4 rounded-full bg-white opacity-30" />
+                </div>
+              </div>
+
+              <button
+                onClick={submit}
+                disabled={saving || !tourInput.trim()}
+                className={`w-full flex items-center justify-center px-6 py-4 rounded-full text-lg font-medium transition-colors ${
+                  tourInput.trim() && !saving
+                    ? "bg-[#0277bd] hover:bg-[#0266a1] text-white cursor-pointer"
+                    : "bg-gray-300 text-gray-100 cursor-not-allowed"
+                }`}
+              >
+                {saving ? "Building..." : "start building"}
+              </button>
+            </div>
+          )}
+
+          {step === 3 && type !== "custom" && (
             <div className="max-w-3xl mx-auto text-center animate-in fade-in zoom-in-95 duration-200">
               <p className="text-gray-600 mb-8 font-medium">
                 To get started, find your place page by cid, business name, address or Google place
