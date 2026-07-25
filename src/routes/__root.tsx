@@ -134,6 +134,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "dns-prefetch", href: "https://cdn.jsdelivr.net" },
     ],
     scripts: [
+      { src: "https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js", defer: true },
       { src: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js", defer: true },
     ],
   }),

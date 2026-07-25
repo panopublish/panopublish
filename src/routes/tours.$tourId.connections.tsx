@@ -96,6 +96,7 @@ declare global {
   interface Window {
     google?: any;
     pannellum?: { viewer: (el: string | HTMLElement, cfg: unknown) => { destroy: () => void } };
+    Marzipano?: any;
   }
 }
 
@@ -283,6 +284,8 @@ function ConnectionsPage() {
 
   const panoRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
+  const marzSceneRef = useRef<any>(null);
+  const marzViewRef = useRef<any>(null);
   const overlayPanoRef = useRef<HTMLDivElement>(null);
   const overlayViewerRef = useRef<any>(null);
   const overlayPanoContainerRef = useRef<HTMLDivElement | null>(null);
@@ -605,60 +608,88 @@ function ConnectionsPage() {
     [mapMode, active, photos],
   );
 
-  // 360 Panorama Main Viewer (Pannellum for Custom Tours, StreetView for GSV)
+  // 360 Panorama Main Viewer (Marzipano for Custom Tours, StreetView for GSV)
   useEffect(() => {
     if (!active || !panoRef.current) return;
 
     if (tour?.type === "custom") {
       let cancelled = false;
 
-      const initPannellum = () => {
-        if (cancelled || !panoRef.current || !window.pannellum) return;
+      const initMarzipano = () => {
+        if (cancelled || !panoRef.current || !window.Marzipano) return;
         try {
           if (viewerRef.current && typeof viewerRef.current.destroy === "function") {
-            viewerRef.current.destroy();
+            try {
+              viewerRef.current.destroy();
+            } catch {}
           }
-          viewerRef.current = window.pannellum.viewer(panoRef.current, {
-            type: "equirectangular",
-            panorama: active.file_url,
-            autoLoad: true,
-            showControls: false,
-            mouseZoom: true,
-            hfov: 100,
-            pitch: 0,
-            yaw: 0,
+
+          const panoElement = panoRef.current;
+          panoElement.innerHTML = ""; // Clear canvas container
+
+          const viewerOpts = {
+            controls: {
+              mouseViewMode: "drag",
+            },
+          };
+
+          const viewer = new window.Marzipano.Viewer(panoElement, viewerOpts);
+          viewerRef.current = viewer;
+
+          const source = window.Marzipano.ImageUrlSource.fromString(active.file_url);
+          const geometry = new window.Marzipano.EquirectGeometry([{ width: 4000 }]);
+          const limitor = window.Marzipano.RectilinearView.limit.traditional(
+            2048,
+            (100 * Math.PI) / 180,
+          );
+
+          const view = new window.Marzipano.RectilinearView(
+            { yaw: 0, pitch: 0, fov: Math.PI / 2 },
+            limitor,
+          );
+
+          const marzScene = viewer.createScene({
+            source: source,
+            geometry: geometry,
+            view: view,
           });
 
+          marzSceneRef.current = marzScene;
+          marzViewRef.current = view;
+
+          marzScene.switchTo();
+
           const syncPov = () => {
-            if (viewerRef.current) {
+            if (view) {
               try {
-                const p = viewerRef.current.getPitch() || 0;
-                const y = ((viewerRef.current.getYaw() || 0) + 360) % 360;
-                const hfov = viewerRef.current.getHfov ? viewerRef.current.getHfov() : 100;
-                const zoom = 180 / (hfov || 100);
-                setCurrentHeading(y);
-                setCurrentPov({ heading: y, pitch: p, zoom });
+                const yRad = view.yaw() || 0;
+                const pRad = view.pitch() || 0;
+                const fovRad = view.fov() || Math.PI / 2;
+
+                const yDeg = Math.round(((yRad * 180 / Math.PI) + 360) % 360);
+                const pDeg = Math.round((pRad * 180) / Math.PI);
+                const zoom = (Math.PI / 2) / fovRad;
+
+                setCurrentHeading(yDeg);
+                setCurrentPov({ heading: yDeg, pitch: pDeg, zoom });
               } catch {}
             }
           };
 
-          if (viewerRef.current) {
-            viewerRef.current.on("animatefinished", syncPov);
-            viewerRef.current.on("mouseup", syncPov);
-            viewerRef.current.on("touchend", syncPov);
-          }
+          view.addEventListener("change", syncPov);
+          syncPov();
         } catch (err) {
-          console.error("Pannellum init error", err);
+          console.error("Marzipano init error", err);
         }
       };
 
-      if (window.pannellum) {
-        initPannellum();
+      if (window.Marzipano) {
+        initMarzipano();
       } else {
         const interval = setInterval(() => {
-          if (window.pannellum) {
+          if (window.Marzipano) {
             clearInterval(interval);
-            initPannellum();
+            initMarzipano();
           }
         }, 150);
         return () => clearInterval(interval);
@@ -977,7 +1008,15 @@ function ConnectionsPage() {
 
     let camPitch = -10;
     let camYaw = currentHeading;
-    if (viewerRef.current) {
+
+    if (tour?.type === "custom" && marzViewRef.current) {
+      try {
+        const pRad = marzViewRef.current.pitch() || 0;
+        const yRad = marzViewRef.current.yaw() || 0;
+        camPitch = Math.round((pRad * 180) / Math.PI);
+        camYaw = Math.round((((yRad * 180) / Math.PI) + 360) % 360);
+      } catch {}
+    } else if (viewerRef.current) {
       try {
         if (typeof viewerRef.current.getPitch === "function") {
           camPitch = Math.round(viewerRef.current.getPitch() || 0);
@@ -1065,7 +1104,15 @@ function ConnectionsPage() {
   const resetHotspotPosition = async (connId: string) => {
     let camPitch = -10;
     let camYaw = currentHeading;
-    if (viewerRef.current) {
+
+    if (tour?.type === "custom" && marzViewRef.current) {
+      try {
+        const pRad = marzViewRef.current.pitch() || 0;
+        const yRad = marzViewRef.current.yaw() || 0;
+        camPitch = Math.round((pRad * 180) / Math.PI);
+        camYaw = Math.round((((yRad * 180) / Math.PI) + 360) % 360);
+      } catch {}
+    } else if (viewerRef.current) {
       try {
         if (typeof viewerRef.current.getPitch === "function") {
           camPitch = Math.round(viewerRef.current.getPitch() || 0);
@@ -1109,9 +1156,30 @@ function ConnectionsPage() {
   };
 
   const handlePointerMoveViewer = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!draggingHotspotId || !viewerRef.current) return;
-    try {
-      if (typeof viewerRef.current.mouseEventToCoords === "function") {
+    if (!draggingHotspotId) return;
+
+    if (tour?.type === "custom" && marzViewRef.current && panoRef.current) {
+      try {
+        const rect = panoRef.current.getBoundingClientRect();
+        const coords = marzViewRef.current.screenToCoordinates({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+        if (coords) {
+          const newPitch = Math.round((coords.pitch * 180) / Math.PI);
+          const newYaw = Math.round((((coords.yaw * 180) / Math.PI) + 360) % 360);
+
+          setConns((prev) =>
+            prev.map((c) =>
+              c.id === draggingHotspotId ? { ...c, pitch: newPitch, heading: newYaw } : c,
+            ),
+          );
+        }
+      } catch (err) {
+        console.warn("Marzipano drag coords calc error", err);
+      }
+    } else if (viewerRef.current && typeof viewerRef.current.mouseEventToCoords === "function") {
+      try {
         const coords = viewerRef.current.mouseEventToCoords(e.nativeEvent);
         if (coords && coords.length === 2) {
           const newPitch = Math.round(coords[0]);
@@ -1123,9 +1191,9 @@ function ConnectionsPage() {
             ),
           );
         }
+      } catch (err) {
+        console.warn("Drag coords calc error", err);
       }
-    } catch (err) {
-      console.warn("Drag coords calc error", err);
     }
   };
 
