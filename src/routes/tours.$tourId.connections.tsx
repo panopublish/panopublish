@@ -40,6 +40,10 @@ import {
   Trash2,
   Camera,
   MapPin,
+  RotateCcw,
+  Edit3,
+  Palette,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePanoramaMap } from "@/hooks/usePanoramaMap";
@@ -271,6 +275,11 @@ function ConnectionsPage() {
   const [customHotspotIcon, setCustomHotspotIcon] = useState<string>("arrow");
   const [customHotspotLabel, setCustomHotspotLabel] = useState<string>("");
   const [editingCustomHotspotId, setEditingCustomHotspotId] = useState<string | null>(null);
+
+  // Interactive Hotspot Popovers & Dragging State
+  const [draggingHotspotId, setDraggingHotspotId] = useState<string | null>(null);
+  const [editingTargetPopoverId, setEditingTargetPopoverId] = useState<string | null>(null);
+  const [editingIconPopoverId, setEditingIconPopoverId] = useState<string | null>(null);
 
   const panoRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
@@ -596,126 +605,136 @@ function ConnectionsPage() {
     [mapMode, active, photos],
   );
 
-  // StreetViewPanorama Main Viewer
+  // 360 Panorama Main Viewer (Pannellum for Custom Tours, StreetView for GSV)
   useEffect(() => {
-    if (!active || !panoRef.current || !mapsReady || !window.google?.maps) return;
+    if (!active || !panoRef.current) return;
 
-    const photoById = new Map(photos.map((p) => [p.id, p]));
+    if (tour?.type === "custom") {
+      let cancelled = false;
 
-    if (!viewerRef.current) {
-      viewerRef.current = new window.google.maps.StreetViewPanorama(panoRef.current, {
-        visible: true,
-        pano: active.id,
-        zoomControl: false,
-        panControl: false,
-        addressControl: false,
-        fullscreenControl: false,
-        linksControl: true,
-        enableCloseButton: false,
-        showRoadLabels: false,
-        panoProvider: (panoId: string) => {
-          const p =
-            active && panoId === active.id
-              ? active
-              : photosRef.current.find((x) => x.id === panoId);
-          if (!p) return null;
-
-          const activeConns = connsRef.current.filter((c) => c.from_photo_id === panoId);
-          const links = activeConns.map((c) => {
-            const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
-            let dynamicHeading = c.heading;
-            if (p && targetPhoto) {
-              const calcH = calcHeading(p, targetPhoto);
-              if (calcH !== null) {
-                dynamicHeading = calcH;
-              }
-            }
-            return {
-              description: targetPhoto?.filename || "Scene",
-              heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
-              pano: c.to_photo_id,
-            };
-          });
-
-          return {
-            location: {
-              pano: p.id,
-              description: p.filename || "Scene",
-              latLng: new window.google.maps.LatLng(
-                p.latitude || tour?.latitude || 0,
-                p.longitude || tour?.longitude || 0,
-              ),
-            },
-            links: links,
-            copyright: "PanoPublish",
-            tiles: {
-              tileSize: new window.google.maps.Size(4096, 2048),
-              worldSize: new window.google.maps.Size(4096, 2048),
-              centerHeading: 0,
-              getTileUrl: () => p.file_url,
-            },
-          };
-        },
-      });
-
-      prevActiveIdRef.current = active.id;
-
-      viewerRef.current.addListener("pov_changed", () => {
-        const pov = viewerRef.current.getPov();
-        if (pov) {
-          const headingVal = (pov.heading + 360) % 360;
-          setCurrentHeading(headingVal);
-          setCurrentPov({
-            heading: headingVal,
-            pitch: pov.pitch ?? 0,
-            zoom: pov.zoom ?? 1,
-          });
-          lastHeadingRef.current = headingVal;
-        }
-      });
-
-      viewerRef.current.addListener("zoom_changed", () => {
-        const pov = viewerRef.current.getPov();
-        if (pov) {
-          setCurrentPov((prev) => ({ ...prev, zoom: pov.zoom ?? 1 }));
-        }
-      });
-
-      viewerRef.current.addListener("pano_changed", () => {
-        const newPano = viewerRef.current.getPano();
-        const currentActive = activeRef.current;
-        const currentPhotos = photosRef.current;
-
-        if (newPano && currentActive && newPano !== currentActive.id) {
-          // Transition POV to maintain geographic heading alignment
-          const prevHeadingOffset = currentActive.heading || 0;
-          const prevPovHeading = lastHeadingRef.current;
-          const absoluteGeographicHeading = (prevPovHeading + prevHeadingOffset) % 360;
-
-          const targetPhoto = currentPhotos.find((p) => p.id === newPano);
-          if (targetPhoto) {
-            const newHeadingOffset = targetPhoto.heading || 0;
-            const targetPovHeading = (absoluteGeographicHeading - newHeadingOffset + 360) % 360;
-
-            const currentPov = viewerRef.current.getPov();
-            viewerRef.current.setPov({
-              heading: targetPovHeading,
-              pitch: currentPov?.pitch ?? 0,
-              zoom: currentPov?.zoom ?? 1,
-            });
-            lastHeadingRef.current = targetPovHeading;
-            setCurrentHeading(targetPovHeading);
-            setCurrentPov({
-              heading: targetPovHeading,
-              pitch: currentPov?.pitch ?? 0,
-              zoom: currentPov?.zoom ?? 1,
-            });
+      const initPannellum = () => {
+        if (cancelled || !panoRef.current || !window.pannellum) return;
+        try {
+          if (viewerRef.current && typeof viewerRef.current.destroy === "function") {
+            viewerRef.current.destroy();
           }
+          viewerRef.current = window.pannellum.viewer(panoRef.current, {
+            type: "equirectangular",
+            panorama: active.file_url,
+            autoLoad: true,
+            showControls: false,
+            mouseZoom: true,
+            hfov: 100,
+            pitch: 0,
+            yaw: 0,
+          });
 
-          const idx = currentPhotos.findIndex((p) => p.id === newPano);
-          if (idx !== -1) setActiveIdx(idx);
-        } else {
-          // Update currentHeading state when pano changes
+          const syncPov = () => {
+            if (viewerRef.current) {
+              try {
+                const p = viewerRef.current.getPitch() || 0;
+                const y = ((viewerRef.current.getYaw() || 0) + 360) % 360;
+                const hfov = viewerRef.current.getHfov ? viewerRef.current.getHfov() : 100;
+                const zoom = 180 / (hfov || 100);
+                setCurrentHeading(y);
+                setCurrentPov({ heading: y, pitch: p, zoom });
+              } catch {}
+            }
+          };
+
+          if (viewerRef.current) {
+            viewerRef.current.on("animatefinished", syncPov);
+            viewerRef.current.on("mouseup", syncPov);
+            viewerRef.current.on("touchend", syncPov);
+          }
+        } catch (err) {
+          console.error("Pannellum init error", err);
+        }
+      };
+
+      if (window.pannellum) {
+        initPannellum();
+      } else {
+        const interval = setInterval(() => {
+          if (window.pannellum) {
+            clearInterval(interval);
+            initPannellum();
+          }
+        }, 150);
+        return () => clearInterval(interval);
+      }
+
+      return () => {
+        cancelled = true;
+        if (viewerRef.current && typeof viewerRef.current.destroy === "function") {
+          try {
+            viewerRef.current.destroy();
+          } catch {}
+          viewerRef.current = null;
+        }
+      };
+    } else {
+      if (!mapsReady || !window.google?.maps) return;
+
+      if (!viewerRef.current) {
+        viewerRef.current = new window.google.maps.StreetViewPanorama(panoRef.current, {
+          visible: true,
+          pano: active.id,
+          zoomControl: false,
+          panControl: false,
+          addressControl: false,
+          fullscreenControl: false,
+          linksControl: true,
+          enableCloseButton: false,
+          showRoadLabels: false,
+          panoProvider: (panoId: string) => {
+            const p =
+              active && panoId === active.id
+                ? active
+                : photosRef.current.find((x) => x.id === panoId);
+            if (!p) return null;
+
+            const activeConns = connsRef.current.filter((c) => c.from_photo_id === panoId);
+            const links = activeConns.map((c) => {
+              const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
+              let dynamicHeading = c.heading;
+              if (p && targetPhoto) {
+                const calcH = calcHeading(p, targetPhoto);
+                if (calcH !== null) {
+                  dynamicHeading = calcH;
+                }
+              }
+              return {
+                description: targetPhoto?.filename || "Scene",
+                heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
+                pano: c.to_photo_id,
+              };
+            });
+
+            return {
+              location: {
+                pano: p.id,
+                description: p.filename || "Scene",
+                latLng: new window.google.maps.LatLng(
+                  p.latitude || tour?.latitude || 0,
+                  p.longitude || tour?.longitude || 0,
+                ),
+              },
+              links: links,
+              copyright: "PanoPublish",
+              tiles: {
+                tileSize: new window.google.maps.Size(4096, 2048),
+                worldSize: new window.google.maps.Size(4096, 2048),
+                centerHeading: 0,
+                getTileUrl: () => p.file_url,
+              },
+            };
+          },
+        });
+
+        prevActiveIdRef.current = active.id;
+
+        viewerRef.current.addListener("pov_changed", () => {
           const pov = viewerRef.current.getPov();
           if (pov) {
             const headingVal = (pov.heading + 360) % 360;
@@ -727,66 +746,74 @@ function ConnectionsPage() {
             });
             lastHeadingRef.current = headingVal;
           }
-        }
-      });
-    } else {
-      const prevId = prevActiveIdRef.current;
-      const currentId = active.id;
-      const viewerPano = viewerRef.current.getPano();
+        });
 
-      if (viewerPano !== currentId) {
-        if (prevId && prevId === viewerPano) {
-          const prevPhoto = photosRef.current.find((p) => p.id === prevId);
-          if (prevPhoto) {
-            const prevHeadingOffset = prevPhoto.heading || 0;
+        viewerRef.current.addListener("zoom_changed", () => {
+          const pov = viewerRef.current.getPov();
+          if (pov) {
+            setCurrentPov((prev) => ({ ...prev, zoom: pov.zoom ?? 1 }));
+          }
+        });
+
+        viewerRef.current.addListener("pano_changed", () => {
+          const newPano = viewerRef.current.getPano();
+          const currentActive = activeRef.current;
+          const currentPhotos = photosRef.current;
+
+          if (newPano && currentActive && newPano !== currentActive.id) {
+            const prevHeadingOffset = currentActive.heading || 0;
             const prevPovHeading = lastHeadingRef.current;
             const absoluteGeographicHeading = (prevPovHeading + prevHeadingOffset) % 360;
-            const newHeadingOffset = active.heading || 0;
-            const targetPovHeading = (absoluteGeographicHeading - newHeadingOffset + 360) % 360;
 
-            viewerRef.current.setPano(active.id);
+            const targetPhoto = currentPhotos.find((p) => p.id === newPano);
+            if (targetPhoto) {
+              const newHeadingOffset = targetPhoto.heading || 0;
+              const targetPovHeading = (absoluteGeographicHeading - newHeadingOffset + 360) % 360;
 
-            const currentPov = viewerRef.current.getPov();
-            viewerRef.current.setPov({
-              heading: targetPovHeading,
-              pitch: currentPov?.pitch ?? 0,
-              zoom: currentPov?.zoom ?? 1,
-            });
+              const currentPov = viewerRef.current.getPov();
+              viewerRef.current.setPov({
+                heading: targetPovHeading,
+                pitch: currentPov?.pitch ?? 0,
+                zoom: currentPov?.zoom ?? 1,
+              });
+              lastHeadingRef.current = targetPovHeading;
+              setCurrentHeading(targetPovHeading);
+              setCurrentPov({
+                heading: targetPovHeading,
+                pitch: currentPov?.pitch ?? 0,
+                zoom: currentPov?.zoom ?? 1,
+              });
+            }
 
-            lastHeadingRef.current = targetPovHeading;
-            setCurrentHeading(targetPovHeading);
+            const idx = currentPhotos.findIndex((p) => p.id === newPano);
+            if (idx !== -1) setActiveIdx(idx);
           } else {
-            viewerRef.current.setPano(active.id);
-          }
-        } else {
-          viewerRef.current.setPano(active.id);
-        }
-      }
-
-      prevActiveIdRef.current = active.id;
-
-      const p = photosRef.current.find((x) => x.id === active.id);
-      if (p) {
-        const activeConns = connsRef.current.filter((c) => c.from_photo_id === active.id);
-        const links = activeConns.map((c) => {
-          const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
-          let dynamicHeading = c.heading;
-          if (p && targetPhoto) {
-            const calcH = calcHeading(p, targetPhoto);
-            if (calcH !== null) {
-              dynamicHeading = calcH;
+            const pov = viewerRef.current.getPov();
+            if (pov) {
+              const headingVal = (pov.heading + 360) % 360;
+              setCurrentHeading(headingVal);
+              setCurrentPov({
+                heading: headingVal,
+                pitch: pov.pitch ?? 0,
+                zoom: pov.zoom ?? 1,
+              });
+              lastHeadingRef.current = headingVal;
             }
           }
-          return {
-            description: targetPhoto?.filename || "Scene",
-            heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
-            pano: c.to_photo_id,
-          };
         });
-        viewerRef.current.setLinks(links);
+      } else {
+        const prevId = prevActiveIdRef.current;
+        const currentId = active.id;
+        const viewerPano = viewerRef.current.getPano();
+
+        if (viewerPano !== currentId) {
+          viewerRef.current.setPano(active.id);
+        }
+
+        prevActiveIdRef.current = active.id;
       }
     }
-  }, [active?.id, mapsReady]);
+  }, [active?.id, active?.file_url, mapsReady, tour?.type]);
 
   // Synchronize 3D chevron links dynamically when coordinates or headings update (e.g. during dragging)
   useEffect(() => {
@@ -937,21 +964,179 @@ function ConnectionsPage() {
     }
   }, [rightPendingTo, active?.id, mapsReady]);
 
-  const handleOpenAddCustomHotspot = () => {
+  const handleOpenAddCustomHotspot = async () => {
     if (!active) {
       toast.error("Please select a scene first.");
       return;
     }
-    setEditingCustomHotspotId(null);
-    setCustomHotspotIcon("arrow");
-    setCustomHotspotLabel("");
     const available = photos.filter((p) => p.id !== active.id);
-    if (available.length > 0) {
-      setCustomHotspotTargetId(available[0].id);
-    } else {
-      setCustomHotspotTargetId("");
+    if (available.length === 0) {
+      toast.error("Upload at least 2 scenes to add hotspots.");
+      return;
     }
-    setAddCustomHotspotOpen(true);
+
+    let camPitch = -10;
+    let camYaw = currentHeading;
+    if (viewerRef.current) {
+      try {
+        if (typeof viewerRef.current.getPitch === "function") {
+          camPitch = Math.round(viewerRef.current.getPitch() || 0);
+        }
+        if (typeof viewerRef.current.getYaw === "function") {
+          const rawY = viewerRef.current.getYaw() || 0;
+          camYaw = Math.round((rawY + 360) % 360);
+        }
+      } catch {}
+    }
+
+    const metaJson = JSON.stringify({
+      icon_type: "arrow",
+      label: "",
+    });
+
+    try {
+      const { data, error } = await supabase
+        .from("connections")
+        .insert({
+          tour_id: tourId,
+          from_photo_id: active.id,
+          to_photo_id: available[0].id,
+          heading: camYaw,
+          pitch: camPitch,
+          spacing: "3m",
+          metadata: metaJson,
+        } as any)
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success("Hotspot added at center of current view!");
+      if (data) {
+        setConns((prev) => [...prev, data as Conn]);
+      }
+      await markConnectionsUnsynced();
+      load();
+    } catch (err: any) {
+      toast.error("Failed to add hotspot: " + err.message);
+    }
+  };
+
+  const updateHotspotTarget = async (connId: string, toPhotoId: string) => {
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ to_photo_id: toPhotoId } as any)
+        .eq("id", connId);
+      if (error) throw error;
+      toast.success("Target scene updated!");
+      setConns((prev) =>
+        prev.map((c) => (c.id === connId ? { ...c, to_photo_id: toPhotoId } : c)),
+      );
+      await markConnectionsUnsynced();
+    } catch (err: any) {
+      toast.error("Failed to update target scene: " + err.message);
+    }
+  };
+
+  const updateHotspotIcon = async (conn: Conn, iconType: string) => {
+    let meta: any = {};
+    try {
+      if (conn.metadata) meta = JSON.parse(conn.metadata);
+    } catch {}
+    meta.icon_type = iconType;
+    const metaJson = JSON.stringify(meta);
+
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ metadata: metaJson } as any)
+        .eq("id", conn.id);
+      if (error) throw error;
+      toast.success("Hotspot icon updated!");
+      setConns((prev) =>
+        prev.map((c) => (c.id === conn.id ? { ...c, metadata: metaJson } : c)),
+      );
+      await markConnectionsUnsynced();
+    } catch (err: any) {
+      toast.error("Failed to update icon: " + err.message);
+    }
+  };
+
+  const resetHotspotPosition = async (connId: string) => {
+    let camPitch = -10;
+    let camYaw = currentHeading;
+    if (viewerRef.current) {
+      try {
+        if (typeof viewerRef.current.getPitch === "function") {
+          camPitch = Math.round(viewerRef.current.getPitch() || 0);
+        }
+        if (typeof viewerRef.current.getYaw === "function") {
+          const rawY = viewerRef.current.getYaw() || 0;
+          camYaw = Math.round((rawY + 360) % 360);
+        }
+      } catch {}
+    }
+
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ pitch: camPitch, heading: camYaw } as any)
+        .eq("id", connId);
+      if (error) throw error;
+      toast.success("Hotspot position reset to view center!");
+      setConns((prev) =>
+        prev.map((c) => (c.id === connId ? { ...c, pitch: camPitch, heading: camYaw } : c)),
+      );
+      await markConnectionsUnsynced();
+    } catch (err: any) {
+      toast.error("Failed to reset position: " + err.message);
+    }
+  };
+
+  const handlePointerDownHotspot = (e: React.PointerEvent, connId: string) => {
+    e.stopPropagation();
+    setDraggingHotspotId(connId);
+  };
+
+  const handlePointerMoveViewer = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingHotspotId || !viewerRef.current) return;
+    try {
+      if (typeof viewerRef.current.mouseEventToCoords === "function") {
+        const coords = viewerRef.current.mouseEventToCoords(e.nativeEvent);
+        if (coords && coords.length === 2) {
+          const newPitch = Math.round(coords[0]);
+          const newYaw = (Math.round(coords[1]) + 360) % 360;
+
+          setConns((prev) =>
+            prev.map((c) =>
+              c.id === draggingHotspotId ? { ...c, pitch: newPitch, heading: newYaw } : c,
+            ),
+          );
+        }
+      }
+    } catch (err) {
+      console.warn("Drag coords calc error", err);
+    }
+  };
+
+  const handlePointerUpViewer = async () => {
+    if (!draggingHotspotId) return;
+    const targetId = draggingHotspotId;
+    setDraggingHotspotId(null);
+
+    const targetConn = conns.find((c) => c.id === targetId);
+    if (targetConn) {
+      try {
+        await supabase
+          .from("connections")
+          .update({ pitch: targetConn.pitch, heading: targetConn.heading } as any)
+          .eq("id", targetId);
+        toast.success("Hotspot position saved!", { duration: 1500 });
+        await markConnectionsUnsynced();
+      } catch (err: any) {
+        toast.error("Failed to save position: " + err.message);
+      }
+    }
   };
 
   const handleEditCustomHotspot = (conn: Conn) => {
@@ -1807,7 +1992,12 @@ function ConnectionsPage() {
 
             {/* Interactive 360° Panorama Viewer */}
             <div className="flex-1 relative bg-black">
-              <div ref={panoRef} className="absolute inset-0" />
+              <div
+                ref={panoRef}
+                className="absolute inset-0 select-none cursor-grab active:cursor-grabbing"
+                onPointerMove={handlePointerMoveViewer}
+                onPointerUp={handlePointerUpViewer}
+              />
 
               {!active && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 text-sm z-20 bg-slate-950 gap-2.5 p-4 text-center select-none">
@@ -1835,7 +2025,7 @@ function ConnectionsPage() {
 
                     const coords = getHotspotScreenCoords(
                       c.heading,
-                      c.pitch ?? -15,
+                      c.pitch ?? -10,
                       currentPov,
                       active?.heading || 0,
                       containerW,
@@ -1846,36 +2036,216 @@ function ConnectionsPage() {
 
                     const iconType = meta.icon_type || "arrow";
                     const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
+                    const isTargetPopoverOpen = editingTargetPopoverId === c.id;
+                    const isIconPopoverOpen = editingIconPopoverId === c.id;
+                    const isDragging = draggingHotspotId === c.id;
 
                     return (
                       <div
                         key={c.id}
-                        className="absolute pointer-events-auto z-10 flex flex-col items-center gap-1.5 cursor-pointer group hover:scale-115 transition-transform"
+                        className="absolute pointer-events-auto z-20 flex flex-col items-center select-none"
                         style={{
                           left: `${coords.x}px`,
                           top: `${coords.y}px`,
                           transform: "translate(-50%, -50%)",
                         }}
-                        onClick={() => handleEditCustomHotspot(c)}
                       >
-                        {/* Tooltip badge */}
-                        <div className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20 shadow-xl opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {/* Tooltip badge at top */}
+                        <div className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-white/20 shadow-xl opacity-90 whitespace-nowrap mb-1">
                           {labelText}
                         </div>
 
-                        {/* Hotspot Icon circle */}
-                        <div className="w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-xl group-hover:bg-[#0288d1] transition-colors">
-                          {iconType === "door" && <span className="text-xl">🚪</span>}
-                          {iconType === "arrow" && <ArrowUp className="h-6 w-6" />}
-                          {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
-                          {iconType === "chevron" && <span className="text-xl">⏫</span>}
-                          {iconType === "info" && <Info className="h-6 w-6" />}
-                          {iconType === "help" && <HelpCircle className="h-6 w-6" />}
-                          {iconType === "cart" && <span className="text-xl">🛒</span>}
-                          {iconType === "pin" && <MapPin className="h-6 w-6" />}
-                          {iconType === "camera" && <Camera className="h-6 w-6" />}
-                          {iconType === "eye" && <Eye className="h-6 w-6" />}
+                        {/* Hotspot Outer Container with Quick Action Control Ring */}
+                        <div className="relative flex items-center justify-center">
+                          {/* Quick Action Floating Controls around the hotspot (Screenshot 2 style) */}
+                          <div className="absolute inset-0 -m-5 pointer-events-none">
+                            {/* 1. Move to Target Scene (Top Right) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetIdx = photos.findIndex((p) => p.id === c.to_photo_id);
+                                if (targetIdx !== -1) setActiveIdx(targetIdx);
+                              }}
+                              className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-slate-900/90 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer"
+                              title="Move to target scene"
+                            >
+                              <LogOut className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* 2. Reset Position (Middle Left) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                resetHotspotPosition(c.id);
+                              }}
+                              className="absolute top-3 -left-6 h-7 w-7 rounded-full bg-slate-900/90 hover:bg-sky-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer"
+                              title="Reset position to view center"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* 3. Delete Hotspot (Bottom Left) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCustomHotspot(c.id);
+                              }}
+                              className="absolute -bottom-2 -left-2 h-7 w-7 rounded-full bg-slate-900/90 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer"
+                              title="Delete hotspot"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* 4. Edit Target Scene (Bottom Right) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingIconPopoverId(null);
+                                setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
+                              }}
+                              className={`absolute -bottom-6 left-3 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer ${
+                                isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/90 hover:bg-sky-600"
+                              }`}
+                              title="Edit target scene"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+
+                            {/* 5. Change Icon Type (Top Left) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTargetPopoverId(null);
+                                setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
+                              }}
+                              className={`absolute -top-6 left-3 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer ${
+                                isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/90 hover:bg-purple-600"
+                              }`}
+                              title="Change icon type"
+                            >
+                              <Palette className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Main Center Hotspot Circle (Draggable Handle) */}
+                          <div
+                            onPointerDown={(e) => handlePointerDownHotspot(e, c.id)}
+                            className={`w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-2xl transition-transform cursor-grab active:cursor-grabbing ${
+                              isDragging ? "scale-125 bg-sky-400 ring-4 ring-sky-300/50" : "hover:scale-110"
+                            }`}
+                            title="Click & drag cursor to move hotspot"
+                          >
+                            {iconType === "door" && <span className="text-xl">🚪</span>}
+                            {iconType === "arrow" && <ArrowUp className="h-6 w-6" />}
+                            {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
+                            {iconType === "chevron" && <span className="text-xl">⏫</span>}
+                            {iconType === "info" && <Info className="h-6 w-6" />}
+                            {iconType === "help" && <HelpCircle className="h-6 w-6" />}
+                            {iconType === "cart" && <span className="text-xl">🛒</span>}
+                            {iconType === "pin" && <MapPin className="h-6 w-6" />}
+                            {iconType === "camera" && <Camera className="h-6 w-6" />}
+                            {iconType === "eye" && <Eye className="h-6 w-6" />}
+                          </div>
                         </div>
+
+                        {/* Screenshot-2 "Select target scene" Popover Box */}
+                        {isTargetPopoverOpen && (
+                          <div
+                            className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-64 z-50 pointer-events-auto"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                              <span className="text-xs font-bold text-slate-200">Select target scene</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingTargetPopoverId(null)}
+                                className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                              {photos
+                                .filter((p) => p.id !== active.id)
+                                .map((p, idx) => {
+                                  const isSelected = c.to_photo_id === p.id;
+                                  return (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      onClick={async () => {
+                                        await updateHotspotTarget(c.id, p.id);
+                                        setEditingTargetPopoverId(null);
+                                      }}
+                                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
+                                        isSelected
+                                          ? "bg-[#0277bd] text-white font-bold"
+                                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                      }`}
+                                    >
+                                      <span className="truncate">{p.filename || `Scene ${idx}`}</span>
+                                      {isSelected && <span className="text-[10px] text-sky-200">✓</span>}
+                                    </button>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Inline "Change Icon Type" Popover Box */}
+                        {isIconPopoverOpen && (
+                          <div
+                            className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-2.5 w-56 z-50 pointer-events-auto"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+                              <span className="text-xs font-bold text-slate-200">Change Icon</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingIconPopoverId(null)}
+                                className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {[
+                                { id: "arrow", icon: "⬆️", label: "Forward" },
+                                { id: "door", icon: "🚪", label: "Door" },
+                                { id: "double-arrow", icon: "⇡", label: "Double" },
+                                { id: "chevron", icon: "⏫", label: "Chevron" },
+                                { id: "info", icon: "ℹ️", label: "Info" },
+                                { id: "help", icon: "❓", label: "Help" },
+                                { id: "cart", icon: "🛒", label: "Cart" },
+                                { id: "pin", icon: "📍", label: "Pin" },
+                              ].map((item) => (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={async () => {
+                                    await updateHotspotIcon(c, item.id);
+                                    setEditingIconPopoverId(null);
+                                  }}
+                                  className={`p-1.5 rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all ${
+                                    iconType === item.id
+                                      ? "bg-[#0277bd] text-white"
+                                      : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                                  }`}
+                                >
+                                  <span className="text-base">{item.icon}</span>
+                                  <span className="text-[8px] truncate">{item.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
