@@ -280,31 +280,25 @@ function ConnectionsPage() {
 
     // Sync activeIdx when connections are added/removed
     setActiveIdx((prevIdx) => {
+      if (sortedPhotos.length === 0) return null;
+      if (prevIdx === null) return 0;
+      if (prevIdx >= sortedPhotos.length) return 0;
+
       const connectedPhotoIds = new Set(
         fetchedConns.flatMap((c: any) => [c.from_photo_id, c.to_photo_id]),
       );
-
-      if (fetchedConns.length === 0) {
-        return null;
-      }
-
-      if (prevIdx === null) {
-        return 0;
-      }
 
       const currentActivePhoto = sortedPhotos[prevIdx];
       if (!currentActivePhoto) {
         return 0;
       }
 
-      // If the currently active photo is no longer connected (e.g. its connections were deleted)
-      if (!connectedPhotoIds.has(currentActivePhoto.id)) {
-        // Automatically select the first connected photo as the new active scene
+      // If connections exist and current photo is not connected, fallback to first connected photo
+      if (fetchedConns.length > 0 && !connectedPhotoIds.has(currentActivePhoto.id)) {
         const firstConnectedIdx = sortedPhotos.findIndex((p) => connectedPhotoIds.has(p.id));
         if (firstConnectedIdx !== -1) {
           return firstConnectedIdx;
         }
-        return 0;
       }
 
       return prevIdx;
@@ -385,7 +379,7 @@ function ConnectionsPage() {
       const finalHeading = (baseHeading + alignFine[0] - 5 + 360) % 360;
       const geographicHeading = finalHeading;
 
-      if (window.google?.maps?.geometry?.spherical) {
+      if (typeof window !== "undefined" && window.google?.maps?.geometry?.spherical) {
         const fromLatLng = new window.google.maps.LatLng(active.latitude, active.longitude);
         const toLatLng = window.google.maps.geometry.spherical.computeOffset(
           fromLatLng,
