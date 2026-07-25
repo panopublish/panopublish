@@ -208,6 +208,13 @@ function ConnectionsPage() {
   const [showLabels, setShowLabels] = useState(true);
   const [expandMap, setExpandMap] = useState(false);
 
+  // Custom Tour Hotspot State
+  const [addCustomHotspotOpen, setAddCustomHotspotOpen] = useState(false);
+  const [customHotspotTargetId, setCustomHotspotTargetId] = useState<string>("");
+  const [customHotspotIcon, setCustomHotspotIcon] = useState<string>("arrow");
+  const [customHotspotLabel, setCustomHotspotLabel] = useState<string>("");
+  const [editingCustomHotspotId, setEditingCustomHotspotId] = useState<string | null>(null);
+
   const panoRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const overlayPanoRef = useRef<HTMLDivElement>(null);
@@ -857,6 +864,108 @@ function ConnectionsPage() {
     }
   }, [rightPendingTo, active?.id, mapsReady]);
 
+  const handleOpenAddCustomHotspot = () => {
+    if (!active) {
+      toast.error("Please select a scene first.");
+      return;
+    }
+    setEditingCustomHotspotId(null);
+    setCustomHotspotIcon("arrow");
+    setCustomHotspotLabel("");
+    const available = photos.filter((p) => p.id !== active.id);
+    if (available.length > 0) {
+      setCustomHotspotTargetId(available[0].id);
+    } else {
+      setCustomHotspotTargetId("");
+    }
+    setAddCustomHotspotOpen(true);
+  };
+
+  const handleEditCustomHotspot = (conn: Conn) => {
+    setEditingCustomHotspotId(conn.id);
+    setCustomHotspotTargetId(conn.to_photo_id);
+    let meta: any = {};
+    try {
+      if (conn.metadata) meta = JSON.parse(conn.metadata);
+    } catch {}
+    setCustomHotspotIcon(meta.icon_type || "arrow");
+    setCustomHotspotLabel(meta.label || "");
+    setAddCustomHotspotOpen(true);
+  };
+
+  const handleSaveCustomHotspot = async () => {
+    if (!active) return;
+    if (!customHotspotTargetId) {
+      toast.error("Please select a target scene to link.");
+      return;
+    }
+
+    const metaJson = JSON.stringify({
+      icon_type: customHotspotIcon,
+      label: customHotspotLabel.trim(),
+    });
+
+    try {
+      if (editingCustomHotspotId) {
+        const { error } = await supabase
+          .from("connections")
+          .update({
+            to_photo_id: customHotspotTargetId,
+            heading: currentHeading,
+            metadata: metaJson,
+          } as any)
+          .eq("id", editingCustomHotspotId);
+        if (error) throw error;
+        toast.success("Hotspot updated!");
+      } else {
+        const { error } = await supabase.from("connections").insert({
+          tour_id: tourId,
+          from_photo_id: active.id,
+          to_photo_id: customHotspotTargetId,
+          heading: currentHeading,
+          spacing: "3m",
+          metadata: metaJson,
+        } as any);
+        if (error) throw error;
+        toast.success("Hotspot added!");
+      }
+
+      await markConnectionsUnsynced();
+      setAddCustomHotspotOpen(false);
+      setEditingCustomHotspotId(null);
+      load();
+    } catch (err: any) {
+      toast.error("Failed to save hotspot: " + err.message);
+    }
+  };
+
+  const handleDeleteCustomHotspot = async (connId: string) => {
+    try {
+      const { error } = await supabase.from("connections").delete().eq("id", connId);
+      if (error) throw error;
+      toast.success("Hotspot deleted!");
+      await markConnectionsUnsynced();
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete hotspot: " + err.message);
+    }
+  };
+
+  const handleSaveInitialView = async () => {
+    if (!active) return;
+    try {
+      const { error } = await supabase
+        .from("photos")
+        .update({ heading: currentHeading } as any)
+        .eq("id", active.id);
+      if (error) throw error;
+      toast.success("Initial view direction saved!");
+      load();
+    } catch (err: any) {
+      toast.error("Failed to save initial view: " + err.message);
+    }
+  };
+
   const ensureConstellation = async (): Promise<string | null> => {
     let name = activeConstName.trim();
     if (!name) {
@@ -1467,9 +1576,252 @@ function ConnectionsPage() {
         }}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[28fr_44fr_28fr] gap-3">
-        {/* LEFT PANEL */}
-        <div className="rounded-xl border bg-card flex flex-col h-[700px]">
+      {tour?.type === "custom" ? (
+        <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 items-start animate-in fade-in duration-200">
+          {/* LEFT COLUMN: Panoramas / Scenes List */}
+          <div className="rounded-2xl border bg-card flex flex-col h-[750px] overflow-hidden shadow-sm">
+            <div className="bg-slate-900 text-white p-3.5 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
+                  Panorama List
+                </h3>
+                <p className="text-[10px] text-slate-400 font-medium">Select a scene to configure</p>
+              </div>
+              <span className="bg-blue-600/30 text-blue-400 border border-blue-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {photos.length} Scenes
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2.5 space-y-2 bg-slate-50/50">
+              {photos.map((p, idx) => {
+                const isActive = activeIdx === idx;
+                const activeHotspotsCount = conns.filter((c) => c.from_photo_id === p.id).length;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => setActiveIdx(idx)}
+                    className={`rounded-xl border p-2 flex items-center gap-3 cursor-pointer transition-all duration-200 group ${
+                      isActive
+                        ? "bg-white border-[#0277bd] ring-2 ring-[#0277bd]/25 shadow-md scale-[1.01]"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-xs"
+                    }`}
+                  >
+                    <div className="w-16 h-12 rounded-lg bg-slate-100 overflow-hidden relative shrink-0 border border-slate-200">
+                      <img
+                        src={p.file_url}
+                        alt=""
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <span className="absolute top-0.5 left-0.5 bg-slate-900/90 text-white text-[9px] font-mono font-bold px-1 rounded shadow">
+                        {String(idx).padStart(2, "0")}
+                      </span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-bold text-slate-800 truncate">
+                        {p.filename || `Scene ${idx}`}
+                      </div>
+                      <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                        <span
+                          className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${
+                            activeHotspotsCount > 0
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {activeHotspotsCount} {activeHotspotsCount === 1 ? "hotspot" : "hotspots"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isActive && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#0277bd] shrink-0 shadow-sm" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: 360° Panorama Viewer + Interactive Hotspot Builder */}
+          <div className="rounded-2xl border bg-card flex flex-col h-[750px] overflow-hidden shadow-sm relative">
+            {/* Top Toolbar */}
+            <div className="bg-slate-900 text-white p-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  Active Scene:
+                </span>
+                <span className="text-xs font-bold bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 text-sky-400">
+                  {active ? active.filename || `Scene ${activeIdx}` : "None Selected"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleOpenAddCustomHotspot}
+                  disabled={!active || photos.length < 2}
+                  className="bg-[#0277bd] hover:bg-[#0266a1] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-md border-0 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" /> Add Hotspot
+                </Button>
+
+                <Button
+                  onClick={handleSaveInitialView}
+                  disabled={!active}
+                  variant="outline"
+                  className="bg-slate-800 hover:bg-slate-700 border-slate-700 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Camera className="h-4 w-4 text-emerald-400" /> Set Initial View
+                </Button>
+              </div>
+            </div>
+
+            {/* Interactive 360° Panorama Viewer */}
+            <div className="flex-1 relative bg-black">
+              <div ref={panoRef} className="absolute inset-0" />
+
+              {!active && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 text-sm z-20 bg-slate-950 gap-2.5 p-4 text-center select-none">
+                  <MousePointer2 className="h-8 w-8 text-sky-400 animate-bounce" />
+                  <div className="font-bold text-white text-base">Select a scene from the left list</div>
+                  <p className="text-xs text-white/50 max-w-[280px]">
+                    Choose a panorama to view in 360° and add interactive hotspots.
+                  </p>
+                </div>
+              )}
+
+              {/* Connected Hotspots overlay on 360 viewer */}
+              {active &&
+                conns
+                  .filter((c) => c.from_photo_id === active.id)
+                  .map((c) => {
+                    const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
+                    let meta: any = {};
+                    try {
+                      if (c.metadata) meta = JSON.parse(c.metadata);
+                    } catch {}
+
+                    const hotspotPixelHeading = (c.heading - (active?.heading || 0) + 360) % 360;
+                    const offset = ((hotspotPixelHeading - currentHeading + 540) % 360) - 180;
+                    if (Math.abs(offset) > 60) return null;
+
+                    const iconType = meta.icon_type || "arrow";
+                    const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
+
+                    return (
+                      <div
+                        key={c.id}
+                        className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center overflow-hidden z-10"
+                        style={{ transform: `translate(${offset * 7}px, 0)` }}
+                      >
+                        <div
+                          className="relative z-10 flex flex-col items-center gap-1.5 cursor-pointer pointer-events-auto group hover:scale-115 transition-transform"
+                          onClick={() => handleEditCustomHotspot(c)}
+                        >
+                          {/* Tooltip badge */}
+                          <div className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20 shadow-xl opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                            {labelText}
+                          </div>
+
+                          {/* Hotspot Icon circle */}
+                          <div className="w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-xl group-hover:bg-[#0288d1] transition-colors">
+                            {iconType === "door" && <span className="text-xl">🚪</span>}
+                            {iconType === "arrow" && <ArrowRight className="h-6 w-6" />}
+                            {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
+                            {iconType === "chevron" && <span className="text-xl">⏫</span>}
+                            {iconType === "info" && <Info className="h-6 w-6" />}
+                            {iconType === "help" && <HelpCircle className="h-6 w-6" />}
+                            {iconType === "cart" && <span className="text-xl">🛒</span>}
+                            {iconType === "pin" && <MapPin className="h-6 w-6" />}
+                            {iconType === "camera" && <Camera className="h-6 w-6" />}
+                            {iconType === "eye" && <Eye className="h-6 w-6" />}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+            </div>
+
+            {/* Bottom Panel: Hotspots configured for this active scene */}
+            {active && (
+              <div className="bg-slate-900 border-t border-slate-800 p-3 shrink-0 z-20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-slate-300">
+                    Hotspots for this scene ({conns.filter((c) => c.from_photo_id === active.id).length})
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Click any hotspot card to edit or delete
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto pr-1">
+                  {conns
+                    .filter((c) => c.from_photo_id === active.id)
+                    .map((c) => {
+                      const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
+                      let meta: any = {};
+                      try {
+                        if (c.metadata) meta = JSON.parse(c.metadata);
+                      } catch {}
+                      const iconType = meta.icon_type || "arrow";
+                      const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
+
+                      return (
+                        <div
+                          key={c.id}
+                          className="bg-slate-800 border border-slate-700 hover:border-slate-600 text-white rounded-xl p-2 flex items-center gap-2.5 text-xs shadow-sm cursor-pointer transition-colors"
+                          onClick={() => handleEditCustomHotspot(c)}
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-[#0277bd] text-white flex items-center justify-center shrink-0">
+                            {iconType === "door" && <span className="text-sm">🚪</span>}
+                            {iconType === "arrow" && <ArrowRight className="h-4 w-4" />}
+                            {iconType === "double-arrow" && <span className="text-sm">⇡</span>}
+                            {iconType === "chevron" && <span className="text-sm">⏫</span>}
+                            {iconType === "info" && <Info className="h-4 w-4" />}
+                            {iconType === "help" && <HelpCircle className="h-4 w-4" />}
+                            {iconType === "cart" && <span className="text-sm">🛒</span>}
+                            {iconType === "pin" && <MapPin className="h-4 w-4" />}
+                            {iconType === "camera" && <Camera className="h-4 w-4" />}
+                            {iconType === "eye" && <Eye className="h-4 w-4" />}
+                          </div>
+
+                          <div className="flex-1 min-w-[120px]">
+                            <div className="font-bold text-white text-[11px] truncate">
+                              {labelText}
+                            </div>
+                            <div className="text-[9px] text-slate-400 truncate">
+                              Target: {targetPhoto?.filename || "Scene"}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomHotspot(c.id);
+                            }}
+                            className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                            title="Delete Hotspot"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                  {conns.filter((c) => c.from_photo_id === active.id).length === 0 && (
+                    <div className="text-xs text-slate-400 italic py-1">
+                      No hotspots added yet. Face viewer in desired direction and click <b>"+ Add Hotspot"</b>.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-[28fr_44fr_28fr] gap-3">
+          {/* LEFT PANEL */}
+          <div className="rounded-xl border bg-card flex flex-col h-[700px]">
           {/* Mini map */}
           <div className="relative h-[250px] flex-shrink-0 bg-muted overflow-hidden">
             <div ref={mapDivRef} className="w-full h-full" />
@@ -2126,6 +2478,103 @@ function ConnectionsPage() {
           </div>
         </div>
       </div>
+    )}
+
+      {/* Custom Hotspot Dialog */}
+      <Dialog open={addCustomHotspotOpen} onOpenChange={setAddCustomHotspotOpen}>
+        <DialogContent className="max-w-md bg-slate-900 border-slate-800 text-white rounded-2xl p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-white">
+              {editingCustomHotspotId ? "Edit Hotspot" : "Add Scene Hotspot"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Target Scene Selector */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 block">Target Scene to Link</label>
+              <select
+                value={customHotspotTargetId}
+                onChange={(e) => setCustomHotspotTargetId(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 text-xs font-semibold outline-none cursor-pointer focus:border-[#0277bd]"
+              >
+                {photos
+                  .filter((p) => active && p.id !== active.id)
+                  .map((p, idx) => (
+                    <option key={p.id} value={p.id}>
+                      {p.filename || `Scene ${idx}`}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Icon Picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 block">Hotspot Icon</label>
+              <div className="grid grid-cols-5 gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                {[
+                  { id: "door", label: "Door 🚪", icon: "🚪" },
+                  { id: "arrow", label: "Arrow ➔", icon: "➔" },
+                  { id: "double-arrow", label: "Double ⇡", icon: "⇡" },
+                  { id: "chevron", label: "Chevron ⏫", icon: "⏫" },
+                  { id: "info", label: "Info ℹ️", icon: "ℹ️" },
+                  { id: "help", label: "Help ❓", icon: "❓" },
+                  { id: "cart", label: "Cart 🛒", icon: "🛒" },
+                  { id: "pin", label: "Pin 📍", icon: "📍" },
+                  { id: "camera", label: "Camera 📷", icon: "📷" },
+                  { id: "eye", label: "Eye 👁️", icon: "👁️" },
+                ].map((item) => {
+                  const isSelected = customHotspotIcon === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setCustomHotspotIcon(item.id)}
+                      className={`p-2 rounded-lg text-xs font-bold flex flex-col items-center justify-center gap-1 border transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-[#0277bd] text-white border-[#0288d1] shadow-md"
+                          : "bg-slate-900 text-slate-400 border-slate-800 hover:text-white hover:bg-slate-850"
+                      }`}
+                    >
+                      <span className="text-base">{item.icon}</span>
+                      <span className="text-[9px] capitalize">{item.id.replace("-", " ")}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tooltip Label */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 block">Hover Label / Tooltip (Optional)</label>
+              <Input
+                value={customHotspotLabel}
+                onChange={(e) => setCustomHotspotLabel(e.target.value)}
+                placeholder="e.g. Enter Living Room"
+                className="bg-slate-950 border-slate-800 text-white text-xs h-10 focus-visible:ring-[#0277bd]"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAddCustomHotspotOpen(false)}
+              className="bg-transparent text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-white text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveCustomHotspot}
+              className="bg-[#0277bd] hover:bg-[#0266a1] text-white text-xs font-bold rounded-xl px-5 border-0 cursor-pointer"
+            >
+              Save Hotspot
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Expanded Map Modal */}
       {expandMap && (

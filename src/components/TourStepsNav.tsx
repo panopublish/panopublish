@@ -144,16 +144,18 @@ export function TourStepsNav({
           </button>
         </div>
 
-        {/* Info Bar */}
-        <div className="w-full max-w-4xl bg-[#e3f2fd] text-[#0277bd] text-sm py-2 px-4 mt-4 rounded-md flex justify-center items-center gap-2">
-          <span>We've updated constellations.</span>
-          <button
-            onClick={() => setShowHelp(true)}
-            className="font-semibold underline flex items-center gap-1 hover:text-[#01579b]"
-          >
-            Need help ?
-          </button>
-        </div>
+        {/* Info Bar - Google Maps/Constellation help (only for gmaps tours) */}
+        {tourType !== "custom" && (
+          <div className="w-full max-w-4xl bg-[#e3f2fd] text-[#0277bd] text-sm py-2 px-4 mt-4 rounded-md flex justify-center items-center gap-2">
+            <span>We've updated constellations.</span>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="font-semibold underline flex items-center gap-1 hover:text-[#01579b]"
+            >
+              Need help ?
+            </button>
+          </div>
+        )}
       </div>
 
       <HelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} />
