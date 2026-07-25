@@ -335,18 +335,20 @@ const JS_SOURCE = `(function() {
   // Auto-rotate settings
   var autorotate = null;
   if (APP_DATA.settings.autorotateEnabled) {
-    autorotate = Marzipano.Autorotate.start({
+    autorotate = Marzipano.autorotate({
       yawSpeed: APP_DATA.settings.autorotateSpeed || 0.01,
       targetPitch: 0,
       targetFov: Math.PI/2
     });
+    viewer.startMovement(autorotate);
   }
 
   // Create Scenes
   var scenes = {};
+  var Equirect = Marzipano.EquirectGeometry || Marzipano.EquirectangularGeometry;
   APP_DATA.scenes.forEach(function(sceneData) {
     var source = Marzipano.ImageUrlSource.fromString(sceneData.image);
-    var geometry = new Marzipano.EquirectangularGeometry([{ width: 4000 }]);
+    var geometry = new Equirect([{ width: 4000 }]);
     
     // Limits
     var limitor = Marzipano.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
@@ -404,7 +406,7 @@ const JS_SOURCE = `(function() {
     if (!sceneObj) return;
 
     if (autorotate) {
-      viewer.stopAutorotate();
+      viewer.stopMovement();
     }
     
     sceneObj.scene.switchTo({
@@ -412,7 +414,7 @@ const JS_SOURCE = `(function() {
     });
 
     if (autorotate) {
-      viewer.startAutorotate(autorotate);
+      viewer.startMovement(autorotate);
     }
   }
 
