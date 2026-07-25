@@ -23,6 +23,7 @@ import {
   Undo2,
   Share2,
   ArrowRight,
+  ArrowUp,
   Eye,
   Navigation,
   Maximize2,
@@ -104,6 +105,55 @@ function calcHeading(from: Photo, to: Photo): number | null {
   let h = Math.atan2(dLon, dLat) * (180 / Math.PI);
   if (h < 0) h += 360;
   return h;
+}
+
+function getHotspotScreenCoords(
+  hotspotHeading: number,
+  hotspotPitch: number,
+  pov: { heading: number; pitch: number; zoom: number },
+  photoHeadingOffset: number,
+  containerWidth: number,
+  containerHeight: number,
+): { x: number; y: number; visible: boolean } {
+  if (!containerWidth || !containerHeight) return { x: 0, y: 0, visible: false };
+
+  // Calculate target yaw in 360 texture space
+  const targetYawDeg = (hotspotHeading - photoHeadingOffset + 360) % 360;
+
+  // Angular difference relative to camera POV heading
+  const dYawDeg = ((targetYawDeg - pov.heading + 540) % 360) - 180;
+  const dYawRad = (dYawDeg * Math.PI) / 180;
+
+  const targetPitchRad = (hotspotPitch * Math.PI) / 180;
+  const povPitchRad = (pov.pitch * Math.PI) / 180;
+
+  // 3D Spherical to Camera View Matrix Transformation
+  const X_cam = Math.sin(dYawRad) * Math.cos(targetPitchRad);
+  const Y_cam =
+    Math.sin(targetPitchRad) * Math.cos(povPitchRad) -
+    Math.cos(dYawRad) * Math.cos(targetPitchRad) * Math.sin(povPitchRad);
+  const Z_cam =
+    Math.cos(dYawRad) * Math.cos(targetPitchRad) * Math.cos(povPitchRad) +
+    Math.sin(targetPitchRad) * Math.sin(povPitchRad);
+
+  // Behind or perpendicular to camera plane
+  if (Z_cam <= 0.05) {
+    return { x: 0, y: 0, visible: false };
+  }
+
+  // Camera focal length from zoom FOV
+  const fovDeg = Math.min(160, Math.max(10, 180 / Math.pow(2, pov.zoom ?? 1)));
+  const fovRad = (fovDeg * Math.PI) / 180;
+  const focalLength = containerWidth / 2 / Math.tan(fovRad / 2);
+
+  // Screen coordinates
+  const x = containerWidth / 2 + (X_cam / Z_cam) * focalLength;
+  const y = containerHeight / 2 - (Y_cam / Z_cam) * focalLength;
+
+  const visible =
+    x >= -50 && x <= containerWidth + 50 && y >= -50 && y <= containerHeight + 50;
+
+  return { x, y, visible };
 }
 
 function useGoogleMaps() {
@@ -196,6 +246,11 @@ function ConnectionsPage() {
   }, [activeConnObj]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [currentHeading, setCurrentHeading] = useState(0);
+  const [currentPov, setCurrentPov] = useState<{ heading: number; pitch: number; zoom: number }>({
+    heading: 0,
+    pitch: 0,
+    zoom: 1,
+  });
   const [islands, setIslands] = useState<Island[]>([]);
   const [islandOpen, setIslandOpen] = useState<Record<string, boolean>>({});
   const [rightIslandOpen, setRightIslandOpen] = useState<Record<string, boolean>>({});
@@ -610,7 +665,19 @@ function ConnectionsPage() {
         if (pov) {
           const headingVal = (pov.heading + 360) % 360;
           setCurrentHeading(headingVal);
+          setCurrentPov({
+            heading: headingVal,
+            pitch: pov.pitch ?? 0,
+            zoom: pov.zoom ?? 1,
+          });
           lastHeadingRef.current = headingVal;
+        }
+      });
+
+      viewerRef.current.addListener("zoom_changed", () => {
+        const pov = viewerRef.current.getPov();
+        if (pov) {
+          setCurrentPov((prev) => ({ ...prev, zoom: pov.zoom ?? 1 }));
         }
       });
 
@@ -638,6 +705,11 @@ function ConnectionsPage() {
             });
             lastHeadingRef.current = targetPovHeading;
             setCurrentHeading(targetPovHeading);
+            setCurrentPov({
+              heading: targetPovHeading,
+              pitch: currentPov?.pitch ?? 0,
+              zoom: currentPov?.zoom ?? 1,
+            });
           }
 
           const idx = currentPhotos.findIndex((p) => p.id === newPano);
@@ -648,6 +720,11 @@ function ConnectionsPage() {
           if (pov) {
             const headingVal = (pov.heading + 360) % 360;
             setCurrentHeading(headingVal);
+            setCurrentPov({
+              heading: headingVal,
+              pitch: pov.pitch ?? 0,
+              zoom: pov.zoom ?? 1,
+            });
             lastHeadingRef.current = headingVal;
           }
         }
@@ -940,10 +1017,53 @@ function ConnectionsPage() {
       const { error } = await supabase.from("connections").delete().eq("id", connId);
       if (error) throw error;
       toast.success("Hotspot deleted!");
+      setConns((prev) => prev.filter((c) => c.id !== connId));
+      if (editingCustomHotspotId === connId) {
+        setAddCustomHotspotOpen(false);
+        setEditingCustomHotspotId(null);
+      }
       await markConnectionsUnsynced();
       load();
     } catch (err: any) {
       toast.error("Failed to delete hotspot: " + err.message);
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to delete this scene? All linked hotspots will also be removed.",
+      )
+    )
+      return;
+    try {
+      const p = photos.find((x) => x.id === photoId);
+      // Delete referencing connections first
+      await supabase
+        .from("connections")
+        .delete()
+        .or(`from_photo_id.eq.${photoId},to_photo_id.eq.${photoId}`);
+
+      if (p && p.filename) {
+        try {
+          await supabase.storage.from("tour-photos").remove([p.filename]);
+        } catch {}
+      }
+      const { error } = await supabase.from("photos").delete().eq("id", photoId);
+      if (error) throw error;
+
+      toast.success("Scene deleted!");
+      setPhotos((prev) => prev.filter((x) => x.id !== photoId));
+      setConns((prev) =>
+        prev.filter((c) => c.from_photo_id !== photoId && c.to_photo_id !== photoId),
+      );
+      if (active?.id === photoId) {
+        setActiveIdx(0);
+      }
+      await markConnectionsUnsynced();
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete scene: " + err.message);
     }
   };
 
@@ -1630,9 +1750,22 @@ function ConnectionsPage() {
                       </div>
                     </div>
 
-                    {isActive && (
-                      <div className="w-2.5 h-2.5 rounded-full bg-[#0277bd] shrink-0 shadow-sm" />
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePhoto(p.id);
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete Scene"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      {isActive && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#0277bd] shrink-0 shadow-sm" />
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -1697,9 +1830,19 @@ function ConnectionsPage() {
                       if (c.metadata) meta = JSON.parse(c.metadata);
                     } catch {}
 
-                    const hotspotPixelHeading = (c.heading - (active?.heading || 0) + 360) % 360;
-                    const offset = ((hotspotPixelHeading - currentHeading + 540) % 360) - 180;
-                    if (Math.abs(offset) > 60) return null;
+                    const containerW = panoRef.current?.clientWidth || 800;
+                    const containerH = panoRef.current?.clientHeight || 600;
+
+                    const coords = getHotspotScreenCoords(
+                      c.heading,
+                      c.pitch ?? -15,
+                      currentPov,
+                      active?.heading || 0,
+                      containerW,
+                      containerH,
+                    );
+
+                    if (!coords.visible) return null;
 
                     const iconType = meta.icon_type || "arrow";
                     const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
@@ -1707,31 +1850,31 @@ function ConnectionsPage() {
                     return (
                       <div
                         key={c.id}
-                        className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center overflow-hidden z-10"
-                        style={{ transform: `translate(${offset * 7}px, 0)` }}
+                        className="absolute pointer-events-auto z-10 flex flex-col items-center gap-1.5 cursor-pointer group hover:scale-115 transition-transform"
+                        style={{
+                          left: `${coords.x}px`,
+                          top: `${coords.y}px`,
+                          transform: "translate(-50%, -50%)",
+                        }}
+                        onClick={() => handleEditCustomHotspot(c)}
                       >
-                        <div
-                          className="relative z-10 flex flex-col items-center gap-1.5 cursor-pointer pointer-events-auto group hover:scale-115 transition-transform"
-                          onClick={() => handleEditCustomHotspot(c)}
-                        >
-                          {/* Tooltip badge */}
-                          <div className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20 shadow-xl opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                            {labelText}
-                          </div>
+                        {/* Tooltip badge */}
+                        <div className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2.5 py-1 rounded-lg border border-white/20 shadow-xl opacity-90 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {labelText}
+                        </div>
 
-                          {/* Hotspot Icon circle */}
-                          <div className="w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-xl group-hover:bg-[#0288d1] transition-colors">
-                            {iconType === "door" && <span className="text-xl">🚪</span>}
-                            {iconType === "arrow" && <ArrowRight className="h-6 w-6" />}
-                            {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
-                            {iconType === "chevron" && <span className="text-xl">⏫</span>}
-                            {iconType === "info" && <Info className="h-6 w-6" />}
-                            {iconType === "help" && <HelpCircle className="h-6 w-6" />}
-                            {iconType === "cart" && <span className="text-xl">🛒</span>}
-                            {iconType === "pin" && <MapPin className="h-6 w-6" />}
-                            {iconType === "camera" && <Camera className="h-6 w-6" />}
-                            {iconType === "eye" && <Eye className="h-6 w-6" />}
-                          </div>
+                        {/* Hotspot Icon circle */}
+                        <div className="w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-xl group-hover:bg-[#0288d1] transition-colors">
+                          {iconType === "door" && <span className="text-xl">🚪</span>}
+                          {iconType === "arrow" && <ArrowUp className="h-6 w-6" />}
+                          {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
+                          {iconType === "chevron" && <span className="text-xl">⏫</span>}
+                          {iconType === "info" && <Info className="h-6 w-6" />}
+                          {iconType === "help" && <HelpCircle className="h-6 w-6" />}
+                          {iconType === "cart" && <span className="text-xl">🛒</span>}
+                          {iconType === "pin" && <MapPin className="h-6 w-6" />}
+                          {iconType === "camera" && <Camera className="h-6 w-6" />}
+                          {iconType === "eye" && <Eye className="h-6 w-6" />}
                         </div>
                       </div>
                     );
@@ -1770,7 +1913,7 @@ function ConnectionsPage() {
                         >
                           <div className="w-7 h-7 rounded-lg bg-[#0277bd] text-white flex items-center justify-center shrink-0">
                             {iconType === "door" && <span className="text-sm">🚪</span>}
-                            {iconType === "arrow" && <ArrowRight className="h-4 w-4" />}
+                            {iconType === "arrow" && <ArrowUp className="h-4 w-4" />}
                             {iconType === "double-arrow" && <span className="text-sm">⇡</span>}
                             {iconType === "chevron" && <span className="text-sm">⏫</span>}
                             {iconType === "info" && <Info className="h-4 w-4" />}
@@ -2510,7 +2653,7 @@ function ConnectionsPage() {
               <div className="grid grid-cols-5 gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
                 {[
                   { id: "door", label: "Door 🚪", icon: "🚪" },
-                  { id: "arrow", label: "Arrow ➔", icon: "➔" },
+                  { id: "arrow", label: "Forward ⬆️", icon: "⬆️" },
                   { id: "double-arrow", label: "Double ⇡", icon: "⇡" },
                   { id: "chevron", label: "Chevron ⏫", icon: "⏫" },
                   { id: "info", label: "Info ℹ️", icon: "ℹ️" },
@@ -2552,22 +2695,36 @@ function ConnectionsPage() {
             </div>
           </div>
 
-          <DialogFooter className="pt-2 flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAddCustomHotspotOpen(false)}
-              className="bg-transparent text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-white text-xs font-bold rounded-xl cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSaveCustomHotspot}
-              className="bg-[#0277bd] hover:bg-[#0266a1] text-white text-xs font-bold rounded-xl px-5 border-0 cursor-pointer"
-            >
-              Save Hotspot
-            </Button>
+          <DialogFooter className="pt-2 flex items-center justify-between gap-2">
+            {editingCustomHotspotId ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => handleDeleteCustomHotspot(editingCustomHotspotId)}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl px-3 cursor-pointer flex items-center gap-1"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete Hotspot
+              </Button>
+            ) : (
+              <div />
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setAddCustomHotspotOpen(false)}
+                className="bg-transparent text-slate-400 border-slate-700 hover:bg-slate-800 hover:text-white text-xs font-bold rounded-xl cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSaveCustomHotspot}
+                className="bg-[#0277bd] hover:bg-[#0266a1] text-white text-xs font-bold rounded-xl px-5 border-0 cursor-pointer"
+              >
+                Save Hotspot
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

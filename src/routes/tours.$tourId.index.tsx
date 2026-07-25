@@ -384,10 +384,19 @@ function TourDetail() {
 
   const deletePhoto = async (p: Photo) => {
     if (!confirm("Delete this photo?")) return;
-    await supabase.storage.from("tour-photos").remove([p.file_path]);
-    await supabase.from("photos").delete().eq("id", p.id);
-    toast.success("Photo deleted");
-    load();
+    try {
+      // First delete all connections linked to this photo
+      await supabase.from("connections").delete().or(`from_photo_id.eq.${p.id},to_photo_id.eq.${p.id}`);
+      if (p.file_path) {
+        await supabase.storage.from("tour-photos").remove([p.file_path]);
+      }
+      const { error } = await supabase.from("photos").delete().eq("id", p.id);
+      if (error) throw error;
+      toast.success("Photo deleted");
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete scene: " + err.message);
+    }
   };
 
   const handleDownloadPhoto = async (p: Photo) => {
