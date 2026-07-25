@@ -81,6 +81,17 @@ export default {
 
       // Intercept file downloads from R2
       if (url.pathname.startsWith("/api/files/")) {
+        if (request.method === "OPTIONS") {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              "Access-Control-Allow-Origin": "*",
+              "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+              "Access-Control-Allow-Headers": "*",
+            },
+          });
+        }
+
         const bucket = (env as any).BUCKET;
         if (!bucket) {
           return new Response("Cloudflare R2 Bucket binding 'BUCKET' is missing", { status: 500 });
@@ -94,6 +105,19 @@ export default {
         object.writeHttpMetadata(headers);
         headers.set("etag", object.httpEtag);
         headers.set("cache-control", "public, max-age=3600");
+        headers.set("Access-Control-Allow-Origin", "*");
+        headers.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+
+        if (!headers.get("content-type") || headers.get("content-type") === "application/octet-stream") {
+          const lower = filePath.toLowerCase();
+          if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+            headers.set("content-type", "image/jpeg");
+          } else if (lower.endsWith(".png")) {
+            headers.set("content-type", "image/png");
+          } else if (lower.endsWith(".webp")) {
+            headers.set("content-type", "image/webp");
+          }
+        }
         return new Response(object.body, { headers });
       }
 

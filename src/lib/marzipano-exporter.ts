@@ -813,5 +813,9 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
 </body>
 </html>`;
 
+  if (typeof window !== "undefined" && window.URL && window.Blob) {
+    const blob = new Blob([iframeContent], { type: "text/html" });
+    return URL.createObjectURL(blob);
+  }
   return `data:text/html;charset=utf-8,${encodeURIComponent(iframeContent)}`;
 }
