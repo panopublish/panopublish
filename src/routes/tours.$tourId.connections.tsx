@@ -37,6 +37,8 @@ import {
   Info,
   MousePointer2,
   Trash2,
+  Camera,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePanoramaMap } from "@/hooks/usePanoramaMap";
