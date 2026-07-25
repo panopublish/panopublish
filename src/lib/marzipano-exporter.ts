@@ -758,6 +758,25 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
 <head>
   <meta charset="utf-8">
   <title>Virtual Tour Preview</title>
+  <script>
+    // Force crossOrigin anonymous on all image elements inside the iframe to prevent WebGL/CORS texture errors.
+    (function() {
+      var OriginalImage = window.Image;
+      window.Image = function() {
+        var img = new OriginalImage();
+        img.crossOrigin = "anonymous";
+        return img;
+      };
+      var originalCreateElement = document.createElement;
+      document.createElement = function(tagName, options) {
+        var element = originalCreateElement.call(document, tagName, options);
+        if (tagName && tagName.toLowerCase() === 'img') {
+          element.crossOrigin = 'anonymous';
+        }
+        return element;
+      };
+    })();
+  </script>
   <style>
     ${CSS_SOURCE}
   </style>
