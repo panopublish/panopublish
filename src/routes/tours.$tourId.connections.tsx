@@ -992,6 +992,7 @@ function ConnectionsPage() {
     const metaJson = JSON.stringify({
       icon_type: "arrow",
       label: "",
+      pitch: camPitch,
     });
 
     try {
@@ -1002,7 +1003,6 @@ function ConnectionsPage() {
           from_photo_id: active.id,
           to_photo_id: available[0].id,
           heading: camYaw,
-          pitch: camPitch,
           spacing: "3m",
           metadata: metaJson,
         } as any)
@@ -1077,15 +1077,25 @@ function ConnectionsPage() {
       } catch {}
     }
 
+    const conn = conns.find((c) => c.id === connId);
+    let meta: any = {};
+    try {
+      if (conn?.metadata) meta = JSON.parse(conn.metadata);
+    } catch {}
+    meta.pitch = camPitch;
+    const metaJson = JSON.stringify(meta);
+
     try {
       const { error } = await supabase
         .from("connections")
-        .update({ pitch: camPitch, heading: camYaw } as any)
+        .update({ heading: camYaw, metadata: metaJson } as any)
         .eq("id", connId);
       if (error) throw error;
       toast.success("Hotspot position reset to view center!");
       setConns((prev) =>
-        prev.map((c) => (c.id === connId ? { ...c, pitch: camPitch, heading: camYaw } : c)),
+        prev.map((c) =>
+          c.id === connId ? { ...c, pitch: camPitch, heading: camYaw, metadata: metaJson } : c,
+        ),
       );
       await markConnectionsUnsynced();
     } catch (err: any) {
@@ -1126,11 +1136,21 @@ function ConnectionsPage() {
 
     const targetConn = conns.find((c) => c.id === targetId);
     if (targetConn) {
+      let meta: any = {};
       try {
-        await supabase
+        if (targetConn.metadata) meta = JSON.parse(targetConn.metadata);
+      } catch {}
+      if (targetConn.pitch !== undefined) {
+        meta.pitch = targetConn.pitch;
+      }
+      const metaJson = JSON.stringify(meta);
+
+      try {
+        const { error } = await supabase
           .from("connections")
-          .update({ pitch: targetConn.pitch, heading: targetConn.heading } as any)
+          .update({ heading: targetConn.heading, metadata: metaJson } as any)
           .eq("id", targetId);
+        if (error) throw error;
         toast.success("Hotspot position saved!", { duration: 1500 });
         await markConnectionsUnsynced();
       } catch (err: any) {
@@ -2025,7 +2045,7 @@ function ConnectionsPage() {
 
                     const coords = getHotspotScreenCoords(
                       c.heading,
-                      c.pitch ?? -10,
+                      meta.pitch ?? c.pitch ?? -10,
                       currentPov,
                       active?.heading || 0,
                       containerW,
