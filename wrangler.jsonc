@@ -32,8 +32,12 @@
   "routes": [
     {
       "pattern": "panopublish.com",
-      "custom_domain": true,
+      "custom_domain": true
     },
+    {
+      "pattern": "www.panopublish.com",
+      "custom_domain": true
+    }
   ],
   "send_email": [
     {
