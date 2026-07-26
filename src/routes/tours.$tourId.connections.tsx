@@ -285,6 +285,7 @@ function ConnectionsPage() {
 
   // Interactive Hotspot Popovers & Dragging State
   const [draggingHotspotId, setDraggingHotspotId] = useState<string | null>(null);
+  const draggingHotspotIdRef = useRef<string | null>(null);
   const [editingTargetPopoverId, setEditingTargetPopoverId] = useState<string | null>(null);
   const [editingIconPopoverId, setEditingIconPopoverId] = useState<string | null>(null);
 
@@ -924,7 +925,7 @@ function ConnectionsPage() {
         const hotspot = container.createHotspot(el, { yaw: yawRad, pitch: pitchRad });
         existing = { el, hotspot };
         marzHotspotsRef.current[c.id] = existing;
-      } else {
+      } else if (draggingHotspotIdRef.current !== c.id) {
         existing.hotspot.setPosition({ yaw: yawRad, pitch: pitchRad });
       }
 
@@ -943,10 +944,18 @@ function ConnectionsPage() {
     const panoEl = panoRef.current;
     if (!viewer || !view || !panoEl) return;
 
+    const targetEl = e.currentTarget as HTMLElement;
+    try {
+      if (typeof targetEl.setPointerCapture === "function") {
+        targetEl.setPointerCapture(e.pointerId);
+      }
+    } catch {}
+
     if (typeof viewer.controls === "function" && viewer.controls()) {
       viewer.controls().disable();
     }
     setDraggingHotspotId(connId);
+    draggingHotspotIdRef.current = connId;
 
     const conn = conns.find((c) => c.id === connId);
     let meta: any = {};
@@ -958,9 +967,15 @@ function ConnectionsPage() {
     let latestYawRad = (targetYawDeg * Math.PI) / 180;
     let latestPitchRad = ((meta.pitch ?? conn?.pitch ?? -10) * Math.PI) / 180;
 
-    const onPointerMove = (moveEvt: MouseEvent | TouchEvent) => {
-      const clientX = "touches" in moveEvt ? moveEvt.touches[0].clientX : moveEvt.clientX;
-      const clientY = "touches" in moveEvt ? moveEvt.touches[0].clientY : moveEvt.clientY;
+    const updateCoordsFromEvent = (moveEvt: PointerEvent | MouseEvent | TouchEvent) => {
+      const clientX =
+        "touches" in moveEvt
+          ? (moveEvt as TouchEvent).touches[0].clientX
+          : (moveEvt as MouseEvent).clientX;
+      const clientY =
+        "touches" in moveEvt
+          ? (moveEvt as TouchEvent).touches[0].clientY
+          : (moveEvt as MouseEvent).clientY;
 
       const rect = panoEl.getBoundingClientRect();
       const coords = view.screenToCoordinates({
@@ -979,20 +994,34 @@ function ConnectionsPage() {
       }
     };
 
-    const onPointerUp = async () => {
-      window.removeEventListener("mousemove", onPointerMove);
-      window.removeEventListener("mouseup", onPointerUp);
-      window.removeEventListener("touchmove", onPointerMove);
-      window.removeEventListener("touchend", onPointerUp);
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      updateCoordsFromEvent(moveEvt);
+    };
+
+    const onPointerUp = async (upEvt: PointerEvent) => {
+      updateCoordsFromEvent(upEvt);
+
+      try {
+        if (typeof targetEl.releasePointerCapture === "function") {
+          targetEl.releasePointerCapture(upEvt.pointerId);
+        }
+      } catch {}
+
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
 
       if (typeof viewer.controls === "function" && viewer.controls()) {
         viewer.controls().enable();
       }
       setDraggingHotspotId(null);
+      draggingHotspotIdRef.current = null;
 
       const relYawDeg = (latestYawRad * 180) / Math.PI;
-      const absHeading = Math.round((relYawDeg + (active?.heading || 0) + 360) % 360);
-      const finalPitch = Math.round((latestPitchRad * 180) / Math.PI);
+      const absHeading = Number(
+        (((relYawDeg + (active?.heading || 0)) % 360 + 360) % 360).toFixed(2),
+      );
+      const finalPitch = Number(((latestPitchRad * 180) / Math.PI).toFixed(2));
 
       meta.pitch = finalPitch;
       const metaJson = JSON.stringify(meta);
@@ -1011,17 +1040,16 @@ function ConnectionsPage() {
           .update({ heading: absHeading, metadata: metaJson } as any)
           .eq("id", connId);
         if (error) throw error;
-        toast.success("Hotspot position saved!", { duration: 1500 });
+        toast.success("Hotspot placed successfully!", { duration: 1500 });
         await markConnectionsUnsynced();
       } catch (err: any) {
         toast.error("Failed to save position: " + err.message);
       }
     };
 
-    window.addEventListener("mousemove", onPointerMove);
-    window.addEventListener("mouseup", onPointerUp);
-    window.addEventListener("touchmove", onPointerMove);
-    window.addEventListener("touchend", onPointerUp);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
   };
 
   // Synchronize 3D chevron links dynamically when coordinates or headings update (e.g. during dragging)
