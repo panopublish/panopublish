@@ -935,25 +935,34 @@ function ConnectionsPage() {
     setPortalContainers(newPortals);
   }, [active?.id, active?.heading, conns, photos, tour?.type]);
 
-  const handleStartMarzipanoDrag = (e: React.PointerEvent, connId: string) => {
+  const handleStartMarzipanoDrag = (
+    e: React.PointerEvent | React.MouseEvent,
+    connId: string,
+  ) => {
     e.preventDefault();
     e.stopPropagation();
+    if (e.nativeEvent && typeof e.nativeEvent.stopImmediatePropagation === "function") {
+      e.nativeEvent.stopImmediatePropagation();
+    }
 
     const viewer = viewerRef.current;
     const view = marzViewRef.current;
     const panoEl = panoRef.current;
-    if (!viewer || !view || !panoEl) return;
+    if (!view || !panoEl) return;
 
     const targetEl = e.currentTarget as HTMLElement;
     try {
-      if (typeof targetEl.setPointerCapture === "function") {
-        targetEl.setPointerCapture(e.pointerId);
+      if ("pointerId" in e && typeof targetEl.setPointerCapture === "function") {
+        targetEl.setPointerCapture((e as React.PointerEvent).pointerId);
       }
     } catch {}
 
-    if (typeof viewer.controls === "function" && viewer.controls()) {
-      viewer.controls().disable();
+    if (viewer && typeof viewer.controls === "function" && viewer.controls()) {
+      try {
+        viewer.controls().disable();
+      } catch {}
     }
+
     setDraggingHotspotId(connId);
     draggingHotspotIdRef.current = connId;
 
@@ -967,16 +976,7 @@ function ConnectionsPage() {
     let latestYawRad = (targetYawDeg * Math.PI) / 180;
     let latestPitchRad = ((meta.pitch ?? conn?.pitch ?? -10) * Math.PI) / 180;
 
-    const updateCoordsFromEvent = (moveEvt: PointerEvent | MouseEvent | TouchEvent) => {
-      const clientX =
-        "touches" in moveEvt
-          ? (moveEvt as TouchEvent).touches[0].clientX
-          : (moveEvt as MouseEvent).clientX;
-      const clientY =
-        "touches" in moveEvt
-          ? (moveEvt as TouchEvent).touches[0].clientY
-          : (moveEvt as MouseEvent).clientY;
-
+    const updateCoordsFromClient = (clientX: number, clientY: number) => {
       const rect = panoEl.getBoundingClientRect();
       const coords = view.screenToCoordinates({
         x: clientX - rect.left,
@@ -994,26 +994,53 @@ function ConnectionsPage() {
       }
     };
 
-    const onPointerMove = (moveEvt: PointerEvent) => {
-      updateCoordsFromEvent(moveEvt);
+    const handleMove = (moveEvt: MouseEvent | TouchEvent | PointerEvent) => {
+      const clientX =
+        "touches" in moveEvt && moveEvt.touches.length > 0
+          ? moveEvt.touches[0].clientX
+          : (moveEvt as MouseEvent).clientX;
+      const clientY =
+        "touches" in moveEvt && moveEvt.touches.length > 0
+          ? moveEvt.touches[0].clientY
+          : (moveEvt as MouseEvent).clientY;
+
+      updateCoordsFromClient(clientX, clientY);
     };
 
-    const onPointerUp = async (upEvt: PointerEvent) => {
-      updateCoordsFromEvent(upEvt);
+    const handleEnd = async (endEvt: MouseEvent | TouchEvent | PointerEvent) => {
+      const clientX =
+        "changedTouches" in endEvt && endEvt.changedTouches.length > 0
+          ? endEvt.changedTouches[0].clientX
+          : (endEvt as MouseEvent).clientX;
+      const clientY =
+        "changedTouches" in endEvt && endEvt.changedTouches.length > 0
+          ? endEvt.changedTouches[0].clientY
+          : (endEvt as MouseEvent).clientY;
+
+      if (clientX !== undefined && clientY !== undefined) {
+        updateCoordsFromClient(clientX, clientY);
+      }
 
       try {
-        if (typeof targetEl.releasePointerCapture === "function") {
-          targetEl.releasePointerCapture(upEvt.pointerId);
+        if ("pointerId" in endEvt && typeof targetEl.releasePointerCapture === "function") {
+          targetEl.releasePointerCapture((endEvt as PointerEvent).pointerId);
         }
       } catch {}
 
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleEnd);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleEnd);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleEnd);
+      window.removeEventListener("pointercancel", handleEnd);
 
-      if (typeof viewer.controls === "function" && viewer.controls()) {
-        viewer.controls().enable();
+      if (viewer && typeof viewer.controls === "function" && viewer.controls()) {
+        try {
+          viewer.controls().enable();
+        } catch {}
       }
+
       setDraggingHotspotId(null);
       draggingHotspotIdRef.current = null;
 
@@ -1047,9 +1074,13 @@ function ConnectionsPage() {
       }
     };
 
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("mousemove", handleMove);
+    window.addEventListener("mouseup", handleEnd);
+    window.addEventListener("touchmove", handleMove, { passive: true });
+    window.addEventListener("touchend", handleEnd);
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleEnd);
+    window.addEventListener("pointercancel", handleEnd);
   };
 
   // Synchronize 3D chevron links dynamically when coordinates or headings update (e.g. during dragging)
@@ -2313,8 +2344,6 @@ function ConnectionsPage() {
               <div
                 ref={panoRef}
                 className="absolute inset-0 select-none cursor-grab active:cursor-grabbing"
-                onPointerMove={handlePointerMoveViewer}
-                onPointerUp={handlePointerUpViewer}
               />
 
               {!active && (
@@ -2430,6 +2459,8 @@ function ConnectionsPage() {
                         {/* Main Center Hotspot Circle (Draggable Handle) */}
                         <div
                           onPointerDown={(e) => handleStartMarzipanoDrag(e, c.id)}
+                          onMouseDown={(e) => handleStartMarzipanoDrag(e, c.id)}
+                          onTouchStart={(e) => handleStartMarzipanoDrag(e as any, c.id)}
                           className={`w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-2xl transition-transform cursor-grab active:cursor-grabbing ${
                             isDragging ? "scale-125 bg-sky-400 ring-4 ring-sky-300/50" : "hover:scale-110"
                           }`}
