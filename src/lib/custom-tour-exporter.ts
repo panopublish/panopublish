@@ -486,14 +486,34 @@ const JS_SOURCE = `(function() {
 
       var waLink = document.getElementById('whatsapp-link');
       var cleanNum = wa.number.replace(/[^0-9]/g, '');
+      var msgText = wa.message ? encodeURIComponent(wa.message) : '';
+
       var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      var url = isMobile
-        ? 'https://wa.me/' + cleanNum
-        : 'https://web.whatsapp.com/send?phone=' + cleanNum;
-      if (wa.message) {
-        url += (isMobile ? '?text=' : '&text=') + encodeURIComponent(wa.message);
-      }
-      waLink.href = url;
+      
+      var defaultUrl = isMobile
+        ? 'https://wa.me/' + cleanNum + (msgText ? '?text=' + msgText : '')
+        : 'https://web.whatsapp.com/send?phone=' + cleanNum + (msgText ? '&text=' + msgText : '');
+
+      waLink.href = defaultUrl;
+
+      waLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (isMobile) {
+          window.location.href = 'whatsapp://send?phone=' + cleanNum + (msgText ? '&text=' + msgText : '');
+          setTimeout(function() {
+            window.open('https://wa.me/' + cleanNum + (msgText ? '?text=' + msgText : ''), '_blank');
+          }, 300);
+        } else {
+          var webUrl = 'https://web.whatsapp.com/send?phone=' + cleanNum + (msgText ? '&text=' + msgText : '');
+          var appUrl = 'whatsapp://send?phone=' + cleanNum + (msgText ? '&text=' + msgText : '');
+          
+          var newWin = window.open(webUrl, '_blank', 'noopener,noreferrer');
+          if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+            window.location.href = appUrl;
+          }
+        }
+      });
     }
 
     // Watermark
