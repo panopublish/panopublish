@@ -6,16 +6,6 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 
 export const Route = createFileRoute("/pricing")({
-  head: () => ({
-    meta: [
-      { title: "PanoPublish Pricing — Free Trial & INR Monthly Plans" },
-      {
-        name: "description",
-        content:
-          "Transparent PanoPublish pricing starting at ₹499/mo. 7-day free trial, zero per-publish fees, direct Google Maps API publishing, and UPI payment support.",
-      },
-    ],
-  }),
   component: PricingPage,
 });
 

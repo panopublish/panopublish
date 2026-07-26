@@ -88,19 +88,41 @@ function SeoPage() {
 
   const getFullSchema = () => {
     const pageSchema = getPageSchema();
-    if (!page.image) return pageSchema;
-    
-    const imageSchema = {
-      "@context": "https://schema.org",
-      "@type": "ImageObject",
-      "url": `https://panopublish.com${page.image}`,
-      "width": "800",
-      "height": "450",
-      "caption": page.heading
-    };
+    const schemas: object[] = [];
 
-    if (!pageSchema) return imageSchema;
-    return Array.isArray(pageSchema) ? [...pageSchema, imageSchema] : [pageSchema, imageSchema];
+    if (pageSchema) {
+      if (Array.isArray(pageSchema)) schemas.push(...pageSchema);
+      else schemas.push(pageSchema);
+    }
+
+    if (page.image) {
+      schemas.push({
+        "@context": "https://schema.org",
+        "@type": "ImageObject",
+        "url": `https://panopublish.com${page.image}`,
+        "width": "800",
+        "height": "450",
+        "caption": page.heading,
+      });
+    }
+
+    // FAQPage schema — unlocks Google FAQ accordion rich results
+    if (page.faqs && page.faqs.length > 0) {
+      schemas.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": page.faqs.map((faq) => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer,
+          },
+        })),
+      });
+    }
+
+    return schemas.length === 0 ? undefined : schemas.length === 1 ? schemas[0] : schemas;
   };
 
   return (
@@ -292,7 +314,7 @@ function SeoPage() {
                   </div>
                   <div className="h-32 rounded-lg overflow-hidden border relative group bg-slate-100">
                     <img
-                      src="/city-maps-showcase.png"
+                      src="/city-maps-showcase.webp"
                       alt={`360 Virtual Tour Showcase in ${page.cityName}`}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />

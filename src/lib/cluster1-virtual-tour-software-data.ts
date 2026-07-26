@@ -14,7 +14,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "14 min read",
-    "image": "/blog-virtual-tour-software-pillar.png",
+    "image": "/blog-virtual-tour-software-pillar.webp",
     "sections": [
       {
         "title": "1. The Business Case: Why 360 Virtual Tours Are Essential in 2026",
@@ -84,7 +84,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-software.png",
+    "image": "/blog-software.webp",
     "sections": [
       {
         "title": "1. Core Criteria When Evaluating Virtual Tour Platforms",
@@ -139,7 +139,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-virtual-tour-creator-ui.png",
+    "image": "/blog-virtual-tour-creator-ui.webp",
     "sections": [
       {
         "title": "1. Phase 1: On-Site 360 Photography & Exposure Setup",
@@ -193,7 +193,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-software.png",
+    "image": "/blog-software.webp",
     "sections": [
       {
         "title": "1. Spatial Node Layout & Intuitive Navigation",
@@ -238,7 +238,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-publish.png",
+    "image": "/blog-publish.webp",
     "sections": [
       {
         "title": "1. Why Traditional Web Hosting Fails for 360 Virtual Tours",
@@ -292,7 +292,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-real-estate.png",
+    "image": "/blog-real-estate.webp",
     "sections": [
       {
         "title": "1. The Psychology of Interactive Hotspots",
@@ -346,7 +346,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-cost.png",
+    "image": "/blog-cost.webp",
     "sections": [
       {
         "title": "1. Common Virtual Tour Pricing Models Explained",
@@ -401,7 +401,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-vs.png",
+    "image": "/blog-vs.webp",
     "sections": [
       {
         "title": "1. Comprehensive Feature Comparison Matrix",
@@ -446,7 +446,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-business.png",
+    "image": "/blog-business.webp",
     "sections": [
       {
         "title": "1. Real Estate & Luxury Residential Listings",
@@ -500,7 +500,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-white-label-dash.png",
+    "image": "/blog-white-label-dash.webp",
     "sections": [
       {
         "title": "1. What is White Label Virtual Tour Software?",
@@ -555,7 +555,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-software.png",
+    "image": "/blog-software.webp",
     "sections": [
       {
         "title": "1. Technical Architecture of Self-Hosted Virtual Tours",
@@ -609,7 +609,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-cost.png",
+    "image": "/blog-cost.webp",
     "sections": [
       {
         "title": "1. Common Limitations of Free Virtual Tour Software",
@@ -664,7 +664,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-real-estate.png",
+    "image": "/blog-real-estate.webp",
     "sections": [
       {
         "title": "1. Understanding Regional MLS Compliance Rules",
@@ -718,7 +718,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-trusted.png",
+    "image": "/blog-trusted.webp",
     "sections": [
       {
         "title": "1. Technical Mechanics of the Google Street View Publish API",
@@ -773,7 +773,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "sections": [
       {
         "title": "1. Camera Hardware Comparison for Virtual Tour Software",
@@ -818,7 +818,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-software.png",
+    "image": "/blog-software.webp",
     "sections": [
       {
         "title": "1. The True Time & Labor Cost of Open-Source Code",
@@ -863,7 +863,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-university.png",
+    "image": "/blog-university.webp",
     "sections": [
       {
         "title": "1. Managing Large Multi-Building Campus Layouts",
@@ -908,7 +908,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-real-estate.png",
+    "image": "/blog-real-estate.webp",
     "sections": [
       {
         "title": "1. Showcasing Hotel Suite Categories & Banquet Facilities",
@@ -953,7 +953,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-software.png",
+    "image": "/blog-software.webp",
     "sections": [
       {
         "title": "1. Mechanics of Floor Plan Radar Cones",
@@ -998,7 +998,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-vr-headset.png",
+    "image": "/blog-vr-headset.webp",
     "sections": [
       {
         "title": "1. The W3C WebXR Device API Standard",
@@ -1043,7 +1043,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-business.png",
+    "image": "/blog-business.webp",
     "sections": [
       {
         "title": "1. The Mechanics of Gated Scene Hotspots",
@@ -1088,7 +1088,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-publish.png",
+    "image": "/blog-publish.webp",
     "sections": [
       {
         "title": "1. Architectural Comparison: Cloud SaaS vs. On-Premise",
@@ -1131,7 +1131,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-university.png",
+    "image": "/blog-university.webp",
     "sections": [
       {
         "title": "1. High-Gigapixel Zoom Detail & Audio Narrations",
@@ -1176,7 +1176,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-vs.png",
+    "image": "/blog-vs.webp",
     "sections": [
       {
         "title": "1. Understanding Technical Differences",
@@ -1221,7 +1221,7 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-business.png",
+    "image": "/blog-business.webp",
     "sections": [
       {
         "title": "1. The 7-Point Agency Selection Checklist",

@@ -51,7 +51,7 @@ const landingSchemas = [
     url: "https://panopublish.com/",
     description:
       "SaaS platform for publishing 360° panoramic photos to Google Street View and Google Maps. Designed for Indian photographers and marketing agencies.",
-    screenshot: "https://panopublish.com/robot_beach_upload.png",
+    screenshot: "https://panopublish.com/robot_beach_upload.webp",
     featureList: [
       "Direct Google Street View publishing",
       "360° photo management",
@@ -198,7 +198,7 @@ export const Route = createFileRoute("/")({
       {
         rel: "preload",
         as: "image",
-        href: "/robot_beach_upload.png",
+        href: "/robot_beach_upload.webp",
       },
     ],
     scripts: [
@@ -362,7 +362,7 @@ function Landing() {
             <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
             <div className="aspect-video w-full rounded-xl bg-muted flex flex-col items-center justify-center relative overflow-hidden">
               <img
-                src="/robot_beach_upload.png"
+                src="/robot_beach_upload.webp"
                 alt="PanoPublish Interactive Map Dashboard interface showing 360 degree photos and camera settings"
                 width={1280}
                 height={720}

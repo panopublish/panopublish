@@ -51,7 +51,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Street View Publishing",
     "subheading": "Immersive 360 maps optimization for local guides, photographers, and agencies.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -94,7 +94,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "360 Virtual Tour Publishing",
     "subheading": "Immersive virtual tour hosting with fast global CDN delivery.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -137,7 +137,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Nadir Branding & Tripod Blur",
     "subheading": "Clean bottom overlays to cover tripods without complex offline editing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -180,7 +180,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Virtual Tour Client Management",
     "subheading": "Segment project directories and assign client team privileges.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -223,7 +223,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Street View for Hotels",
     "subheading": "Drive resort bookings by letting guests walk through room layouts.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -266,7 +266,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Virtual Tour Real Estate Software",
     "subheading": "Convert property listings faster with interactive 360 walkthroughs.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -309,7 +309,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Street View for Restaurants",
     "subheading": "Attract dining bookings by showcasing your place ambiance in 360.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -352,7 +352,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "360 Photo Connection Builder",
     "subheading": "Correct compass headings and visual path layouts before publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -395,7 +395,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "TourBuilder Alternative",
     "subheading": "Flat billing plans, localized INR support, and fast browser editing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": {
       "competitorName": "tourbuilder",
       "headers": [
@@ -464,7 +464,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "GoThru Alternative",
     "subheading": "A modern, browser-based publishing alternative with flat billing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": {
       "competitorName": "gothru",
       "headers": [
@@ -533,7 +533,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "CloudPano Alternative",
     "subheading": "Avoid USD billing markups and explore modern agency features.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": {
       "competitorName": "cloudpano",
       "headers": [
@@ -602,7 +602,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Matterport Alternative",
     "subheading": "Stop paying $14.99 per export. Publish unlimited tours in INR.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": {
       "competitorName": "matterport",
       "headers": [
@@ -671,7 +671,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Real Estate Virtual Tour Software",
     "subheading": "Speed up sales cycle with multi-floor property walkthroughs.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -715,7 +715,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Mumbai.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Mumbai",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -759,7 +759,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Delhi.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Delhi",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -803,7 +803,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Bangalore.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Bangalore",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -847,7 +847,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Ahmedabad.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Ahmedabad",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -891,7 +891,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Hyderabad.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Hyderabad",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -935,7 +935,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Chennai.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Chennai",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -979,7 +979,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Pune.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Pune",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1023,7 +1023,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Jaipur.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Jaipur",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1067,7 +1067,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Kolkata.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Kolkata",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1111,7 +1111,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "subheading": "Optimize local business listings and showcase properties in Surat.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
     "cityName": "Surat",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1154,7 +1154,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Publish 360 Photos to Google Street View",
     "subheading": "Step-by-step guide to uploading and connecting equirectangular panoramas.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1206,7 +1206,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Street View Publishing Cost in India",
     "subheading": "A detailed pricing comparison of hardware, hosting, and API charges.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-cost.png",
+    "image": "/blog-cost.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1258,7 +1258,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best 360 Cameras for Google Street View",
     "subheading": "An objective review of Theta Z1, Theta X, Insta360, and DSLR setups.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1310,7 +1310,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Street View vs Indoor Tours",
     "subheading": "Evaluate map placement and custom interactive website embeds.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1362,7 +1362,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Become a Google Trusted Photographer",
     "subheading": "Badge requirements, local directories profile guide, and workflows.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-trusted.png",
+    "image": "/blog-trusted.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1414,7 +1414,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "360 Photography Business Startup Guide",
     "subheading": "How to register, package services, invoice, and acquire local clients.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1466,7 +1466,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best Kuula Alternative for Professional 360 Tours",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1518,7 +1518,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best EyeSpy360 Alternative for Virtual Tours",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1570,7 +1570,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best Pano2VR Alternative: Browser-Based Builder",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1622,7 +1622,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "CloudPano vs Matterport: Detailed Software Comparison",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1674,7 +1674,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Create a Virtual Tour Online — PanoPublish Builder",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1726,7 +1726,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "360 Panorama Software & Hosting — PanoPublish",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1778,7 +1778,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Online Virtual Tour Builder & Editor — PanoPublish",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1830,7 +1830,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Interactive Virtual Tour Hotspots & Navigation",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1882,7 +1882,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Interactive Floor Plan Virtual Tour Software",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1934,7 +1934,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "3D Dollhouse View Software Alternatives",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -1986,7 +1986,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "360 Panorama Stitching & Hosting Guide",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2038,7 +2038,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "White Label Virtual Tour Software for Agencies",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2090,7 +2090,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Museum Virtual Tour Software & Exhibition Hosting",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2142,7 +2142,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Construction Site Virtual Tours & Progress Tracking",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2194,7 +2194,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "University Virtual Tour Software for Campus Showcases",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2246,7 +2246,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Commercial Real Estate Virtual Tour Software",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2298,7 +2298,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Virtual Tours for Airbnb Listings & Homestays",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2350,7 +2350,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Business Profile Virtual Tour Publishing",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2402,7 +2402,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Take 360 Photos for Real Estate",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2454,7 +2454,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Add Virtual Tour to MLS Listings",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2506,7 +2506,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Benefits of Virtual Tours for Real Estate",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2558,7 +2558,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Increase Local SEO with Virtual Tours",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/city-maps-showcase.png",
+    "image": "/city-maps-showcase.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2610,7 +2610,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Measuring Virtual Tour ROI in Real Estate Marketing",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2662,7 +2662,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Photograph Commercial Real Estate in 360",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2714,7 +2714,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "360 Video vs 360 Photo Virtual Tours: Key Differences",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2766,7 +2766,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Boost Local SEO Search Rankings",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2818,7 +2818,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Virtual Tours for Hotels & Resorts: Hospitality",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2870,7 +2870,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "GoPro MAX Google Street View Publishing Guide",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2922,7 +2922,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Ricoh Theta X Review: Best Camera for Google Maps?",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -2974,7 +2974,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Insta360 X4 Real Estate Photography Guide",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3026,7 +3026,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Hide Tripods in 360 Photos: Nadir Blurring",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-trusted.png",
+    "image": "/blog-trusted.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3078,7 +3078,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best 360 Cameras for Google Street View in 2026",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3130,7 +3130,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Sell Branded Virtual Tours: Agency Guide",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3182,7 +3182,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Drive Gym & Fitness Studio Admissions",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3234,7 +3234,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Virtual Tours for Restaurants in India: Drive Bookings",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3286,7 +3286,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How School & Academy Virtual Tours Boost Admissions",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3338,7 +3338,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Floorplans vs 360 Virtual Tours: Which is Better?",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3390,7 +3390,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Embed 360 Photos on WordPress Websites",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3442,7 +3442,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Virtual Tour Pricing Guide: How Much to Charge?",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-cost.png",
+    "image": "/blog-cost.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3494,7 +3494,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Google Street View Trusted Program Guide (2026)",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-trusted.png",
+    "image": "/blog-trusted.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3546,7 +3546,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Stitch HDR Panoramas in PTGui: DSLR Guide",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3598,7 +3598,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Interactive Hotspots Boost Virtual Tour Engagement",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3650,7 +3650,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Understanding 360 Panorama EXIF GPS Metadata",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3702,7 +3702,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Fix Google Street View Map Alignment Errors",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/city-maps-showcase.png",
+    "image": "/city-maps-showcase.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3754,7 +3754,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Increase Co-Working Memberships",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3806,7 +3806,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "3D Dollhouse vs 360 Virtual Tours: Real Estate Choice",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3858,7 +3858,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best 360 Virtual Tour Hosting Platforms (2026)",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3910,7 +3910,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Increase Car Showroom Sales",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -3962,7 +3962,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Ricoh Theta Z1 Google Street View Guide: Settings",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4014,7 +4014,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Insta360 ONE RS 1-Inch 360 Review for Real Estate",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4066,7 +4066,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Get 360 Blue Line Paths on Google Maps",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/city-maps-showcase.png",
+    "image": "/city-maps-showcase.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4118,7 +4118,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Publish Drone 360 Aerial Panoramas",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4170,7 +4170,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Boost Retail Store Local Traffic",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4222,7 +4222,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Start a 360 Photography Business in India",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4274,7 +4274,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Understanding Google Street View API Cost & Fees",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-cost.png",
+    "image": "/blog-cost.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4326,7 +4326,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Boost Event Venue Bookings",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4378,7 +4378,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How to Add a Nadir Logo to 360 Photos: Branding",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-trusted.png",
+    "image": "/blog-trusted.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4430,7 +4430,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "How Virtual Tours Showcase Interior Design Portfolios",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4482,7 +4482,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Best Tripod Heads & Stands for 360 Photography",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/blog-camera.png",
+    "image": "/blog-camera.webp",
     "comparisonTable": null,
     "sections": [
       {
@@ -4534,7 +4534,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Mumbai Real Estate Virtual Tours: Broker Guide",
     "subheading": "Expert techniques and step-by-step configurations for virtual tour publishing.",
     "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.png",
+    "image": "/robot_beach_upload.webp",
     "comparisonTable": null,
     "sections": [
       {

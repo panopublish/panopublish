@@ -38,7 +38,7 @@ export function PublicFooter() {
   return (
     <footer className="border-t bg-card pt-16 pb-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 border-b pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 border-b pb-12">
           {/* Brand block */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/">
@@ -89,6 +89,22 @@ export function PublicFooter() {
             </h4>
             <ul className="space-y-2 text-xs">
               {comparisonLinks.map((link) => (
+                <li key={link.url}>
+                  <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Cities block */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-4">
+              Cities
+            </h4>
+            <ul className="space-y-2 text-xs">
+              {cityLinks.map((link) => (
                 <li key={link.url}>
                   <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
                     {link.name}

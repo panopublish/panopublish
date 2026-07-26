@@ -23,13 +23,23 @@ export const Route = createFileRoute("/blog/$slug")({
     if (!page || page.type !== "blog") {
       throw notFound();
     }
-    return page;
+    // Build related articles from same category (exclude self, limit to 3)
+    const allBlogPages = Object.values(seoPages).filter(
+      (p) => p.type === "blog" && p.slug !== slug && p.category === page.category
+    );
+    const related = allBlogPages.slice(0, 3);
+    return { page, related };
   },
+  head: ({ loaderData }) => ({
+    links: loaderData?.page?.image
+      ? [{ rel: "preload" as const, as: "image", href: `https://panopublish.com${loaderData.page.image}` }]
+      : [],
+  }),
   component: BlogPost,
 });
 
 function BlogPost() {
-  const page = Route.useLoaderData();
+  const { page, related } = Route.useLoaderData();
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
@@ -37,16 +47,74 @@ function BlogPost() {
     { name: page.heading, url: `https://panopublish.com/blog/${page.slug}` },
   ];
 
-  const getImageSchema = () => {
-    if (!page.image) return undefined;
-    return {
+  // Build all JSON-LD schemas for this article
+  const getSchemas = () => {
+    const schemas: object[] = [];
+
+    // ImageObject schema
+    if (page.image) {
+      schemas.push({
+        "@context": "https://schema.org",
+        "@type": "ImageObject",
+        "url": `https://panopublish.com${page.image}`,
+        "width": "800",
+        "height": "450",
+        "caption": page.heading,
+      });
+    }
+
+    // BlogPosting / Article schema
+    schemas.push({
       "@context": "https://schema.org",
-      "@type": "ImageObject",
-      "url": `https://panopublish.com${page.image}`,
-      "width": "800",
-      "height": "450",
-      "caption": page.heading
-    };
+      "@type": "BlogPosting",
+      "headline": page.heading,
+      "description": page.description,
+      "datePublished": page.date ?? "2026-01-01",
+      "dateModified": page.date ?? "2026-01-01",
+      "author": {
+        "@type": "Person",
+        "name": page.author ?? "PanoPublish Team",
+        "url": "https://panopublish.com/blog",
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "PanoPublish",
+        "url": "https://panopublish.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://panopublish.com/favicon.png",
+          "width": "32",
+          "height": "32",
+        },
+      },
+      "image": page.image
+        ? `https://panopublish.com${page.image}`
+        : "https://panopublish.com/og-image.webp",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": `https://panopublish.com/blog/${page.slug}`,
+      },
+      "inLanguage": "en-IN",
+      "keywords": page.primaryKeyword,
+    });
+
+    // FAQPage schema — only when FAQs exist
+    if (page.faqs && page.faqs.length > 0) {
+      schemas.push({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": page.faqs.map((faq) => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer,
+          },
+        })),
+      });
+    }
+
+    return schemas;
   };
 
   return (
@@ -57,7 +125,7 @@ function BlogPost() {
         breadcrumbs={breadcrumbs}
         ogType="article"
         ogImage={page.image ? `https://panopublish.com${page.image}` : undefined}
-        schema={getImageSchema()}
+        schema={getSchemas()}
       />
       <PublicHeader />
 
@@ -222,6 +290,46 @@ function BlogPost() {
                 </div>
               </div>
             </div>
+
+            {/* RELATED ARTICLES */}
+            {related.length > 0 && (
+              <section className="border-t pt-8 space-y-5">
+                <h3 className="text-base font-bold font-serif text-foreground flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" /> Related Articles
+                </h3>
+                <div className="grid sm:grid-cols-3 gap-4">
+                  {related.map((rel) => (
+                    <Link
+                      key={rel.slug}
+                      to="/blog/$slug"
+                      params={{ slug: rel.slug }}
+                      className="group block border rounded-2xl p-4 hover:border-primary/40 hover:bg-slate-50/60 transition-all space-y-2"
+                    >
+                      {rel.image && (
+                        <div className="rounded-xl overflow-hidden aspect-video">
+                          <img
+                            src={rel.image}
+                            alt={rel.heading}
+                            width={320}
+                            height={180}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      )}
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-primary">{rel.category}</p>
+                      <p className="text-xs font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+                        {rel.heading}
+                      </p>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-primary">
+                        Read more <ArrowRight className="h-3 w-3" />
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
           </article>
         </div>
       </div>

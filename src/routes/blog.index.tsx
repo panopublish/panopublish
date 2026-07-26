@@ -8,6 +8,16 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Calendar, Clock, User, ArrowRight, BookOpen, MapPin } from "lucide-react";
 
 export const Route = createFileRoute("/blog/")({
+  head: () => ({
+    meta: [
+      { title: "360° Virtual Tour & Google Street View Blog — PanoPublish" },
+      {
+        name: "description",
+        content:
+          "Learn how to shoot, edit, brand, and publish 360-degree panoramas to Google Maps. Tutorials, guides, and hardware reviews for Indian photographers and agencies.",
+      },
+    ],
+  }),
   component: BlogIndex,
 });
 

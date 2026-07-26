@@ -14,7 +14,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "14 min read",
-    "image": "/blog-industry-real-estate.png",
+    "image": "/blog-industry-real-estate.webp",
     "sections": [
       {
         "title": "1. PROBLEM: High Open House Dropouts & Friction in Remote Home Buying",
@@ -86,7 +86,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. PROBLEM: High OTA Commissions & Traveler Room Hesitation",
@@ -154,7 +154,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Applicant Dropouts & Geographic Barriers in Recruitment",
@@ -222,7 +222,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Physical Visitor Limits & Temporary Exhibit Losses",
@@ -291,7 +291,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Diners Hesitating to Book Unknown Venues",
@@ -359,7 +359,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Patient Anxiety & Complex Facility Wayfinding",
@@ -428,7 +428,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Costly Site Travel & Sub-Contractor Timeline Disputes",
@@ -497,7 +497,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Lack of Global Awareness for Remote Heritage Sites",
@@ -566,7 +566,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Wasted Physical Site Visits & Client Layout Uncertainty",
@@ -635,7 +635,7 @@ export const cluster4_IndustrySolutionsPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. PROBLEM: Local Shoppers Browsing Competitor Map Cards",

@@ -15,18 +15,14 @@ export function SEO({
   title,
   description,
   canonical,
-  ogImage = "https://panopublish.com/og-image.png",
+  ogImage = "https://panopublish.com/og-image.webp",
   ogType = "website",
   noIndex = false,
   schema,
   breadcrumbs,
 }: SEOProps) {
   const fullTitle = title.includes("PanoPublish") ? title : `${title} | PanoPublish`;
-  const canonicalUrl =
-    canonical ||
-    (typeof window !== "undefined"
-      ? window.location.origin + window.location.pathname
-      : "https://panopublish.com");
+  const canonicalUrl = canonical ?? "https://panopublish.com";
 
   const breadcrumbSchema = breadcrumbs
     ? {
@@ -41,7 +37,13 @@ export function SEO({
       }
     : null;
 
-  const schemas = [schema, breadcrumbSchema].filter(Boolean);
+  // Normalise schema to always be a flat array
+  const schemaArray = schema
+    ? Array.isArray(schema)
+      ? schema
+      : [schema]
+    : [];
+  const allSchemas = [...schemaArray, breadcrumbSchema].filter(Boolean);
 
   return (
     <Helmet>
@@ -71,6 +73,7 @@ export function SEO({
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="PanoPublish" />
+      <meta property="og:locale" content="en_IN" />
 
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
@@ -78,8 +81,8 @@ export function SEO({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
 
-      {/* JSON-LD Structured Data */}
-      {schemas.map((s, i) => (
+      {/* JSON-LD Structured Data — all schemas for this page */}
+      {allSchemas.map((s, i) => (
         <script
           key={i}
           type="application/ld+json"

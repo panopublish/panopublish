@@ -14,7 +14,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "16 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. The Business of 360 Photography in 2026",
@@ -83,7 +83,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-360-cameras-gear.png",
+    "image": "/blog-360-cameras-gear.webp",
     "sections": [
       {
         "title": "1. Core Camera Evaluation Metrics for 360 Creators",
@@ -129,7 +129,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-cameras-gear.png",
+    "image": "/blog-360-cameras-gear.webp",
     "sections": [
       {
         "title": "1. 72MP Photo HDR Mode vs. 8K Video Frame Extraction",
@@ -173,7 +173,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-360-cameras-gear.png",
+    "image": "/blog-360-cameras-gear.webp",
     "sections": [
       {
         "title": "1. Ricoh Theta Z1 vs. Theta X: Which is Better for Your Studio?",
@@ -218,7 +218,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "14 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. Essential Hardware for DSLR 360 Photography",
@@ -263,7 +263,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. Circular Fisheye vs. Full-Frame Diagonal Fisheye",
@@ -307,7 +307,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. Step-by-Step PTGui Pro Workflow",
@@ -353,7 +353,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. Diagnostic Troubleshooting for Stitching Errors",
@@ -397,7 +397,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Multi-Exposure Bracketing Strategy",
@@ -442,7 +442,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-nadir-tripod-editing.png",
+    "image": "/blog-nadir-tripod-editing.webp",
     "sections": [
       {
         "title": "1. Why Carbon Fiber Light Stands Superior to Standard Tripods",
@@ -486,7 +486,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-nadir-tripod-editing.png",
+    "image": "/blog-nadir-tripod-editing.webp",
     "sections": [
       {
         "title": "1. What is Nadir Editing & Why Does It Matter?",
@@ -531,7 +531,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. What is the No-Parallax Point (Entrance Pupil)?",
@@ -576,7 +576,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Configuring Exposure Bracketing Steps",
@@ -621,7 +621,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Aerial 360 Photo Capture Technique",
@@ -665,7 +665,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. On-Site Prep & Room Shooting Sequence",
@@ -710,7 +710,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Shooting Guest Suite Categories & Banquet Facilities",
@@ -755,7 +755,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Shooting Ambiance & Table Layouts",
@@ -799,7 +799,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Campus Photography Planning & Node Organization",
@@ -843,7 +843,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Key Shooting Areas in Fitness Facilities",
@@ -887,7 +887,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Core Settings for Night 360 Photography",
@@ -931,7 +931,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. The 4-Step Lightroom & Photoshop Editing Pipeline",
@@ -977,7 +977,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-ptgui-stitching.png",
+    "image": "/blog-ptgui-stitching.webp",
     "sections": [
       {
         "title": "1. Critical GPano XMP Metadata Headers",
@@ -1022,7 +1022,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Startup Gear Budgeting (Under ₹1 Lakh)",
@@ -1076,7 +1076,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. The Two-Tier Revenue Model for 360 Agencies",
@@ -1120,7 +1120,7 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-360-photography-pillar.png",
+    "image": "/blog-360-photography-pillar.webp",
     "sections": [
       {
         "title": "1. Comparative Engagement & Sales Matrix",

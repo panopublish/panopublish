@@ -14,7 +14,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "15 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. The Commercial Value of Google Street View Publishing in 2026",
@@ -83,7 +83,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. Step 1: On-Site Photography & Node Setup",
@@ -146,7 +146,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. The Four Technical Phases of API Publishing",
@@ -192,7 +192,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. Core API Endpoints & Request Flow",
@@ -237,7 +237,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "13 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. What is the Street View Trusted Program in 2026?",
@@ -291,7 +291,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. The Impact of 360 Virtual Tours on Local SEO",
@@ -336,7 +336,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. Indoor Mapping Rules & Camera Placement",
@@ -381,7 +381,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. Why Blue Line Paths Break on Google Maps",
@@ -426,7 +426,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. Diagnostic Checklist for Common Street View Errors",
@@ -470,7 +470,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. Core Photography Standards",
@@ -515,7 +515,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. Commercial Pricing Tiers for 360 Photographers",
@@ -559,7 +559,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. Why Dining Atmosphere Drives Map Conversions",
@@ -603,7 +603,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. Showcasing Hotel Categories & Banquet Facilities",
@@ -647,7 +647,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. Why Retail Showrooms Need 360 Interior Views",
@@ -691,7 +691,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. Connecting Street Navigation to Property Interiors",
@@ -735,7 +735,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. Organizing Multi-Building Campus Walkthroughs",
@@ -779,7 +779,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. What Prospective Gym Members Look for in 360 Tours",
@@ -823,7 +823,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "10 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. What is Nadir Branding & Why is it Essential?",
@@ -868,7 +868,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. Critical GPano XMP Metadata Headers",
@@ -913,7 +913,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. Recommended Ricoh Theta Z1 Camera Settings",
@@ -957,7 +957,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-blue-line-mapping.png",
+    "image": "/blog-blue-line-mapping.webp",
     "sections": [
       {
         "title": "1. High-Speed Capture Workflows with Insta360 X4",
@@ -1001,7 +1001,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. The 3-Minute Elevator Pitch Formula",
@@ -1046,7 +1046,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-trusted.png",
+    "image": "/blog-street-view-trusted.webp",
     "sections": [
       {
         "title": "1. Core White-Label Agency Capabilities",
@@ -1090,7 +1090,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "12 min read",
-    "image": "/blog-google-street-view-pillar.png",
+    "image": "/blog-google-street-view-pillar.webp",
     "sections": [
       {
         "title": "1. Comparative Financial Matrix",
@@ -1134,7 +1134,7 @@ export const cluster2GoogleStreetViewPages: Record<string, SeoPageData> = {
     "author": "PanoPublish Team",
     "date": "July 26, 2026",
     "readTime": "11 min read",
-    "image": "/blog-street-view-local-seo.png",
+    "image": "/blog-street-view-local-seo.webp",
     "sections": [
       {
         "title": "1. Behavioral Ranking Signals Triggered by 360 Tours",
