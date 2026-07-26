@@ -114,21 +114,23 @@ export function TourStepsNav({
               <Compass className="h-5 w-5" />
             </button>
           )}
-          <button
-            onClick={() => {
-              if (onShare) {
-                onShare();
-              } else {
-                const url = `/tours/${tourId}/connections?preview=true`;
-                window.open(url, "_blank");
-                toast.success("Opening preview in a new tab!");
-              }
-            }}
-            className="hover:text-gray-200 transition-colors cursor-pointer"
-            title="Share Preview"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
+          {tourType !== "custom" && (
+            <button
+              onClick={() => {
+                if (onShare) {
+                  onShare();
+                } else {
+                  const url = `/tours/${tourId}/connections?preview=true`;
+                  window.open(url, "_blank");
+                  toast.success("Opening preview in a new tab!");
+                }
+              }}
+              className="hover:text-gray-200 transition-colors cursor-pointer"
+              title="Share Preview"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={() => {
               if (onExit) {

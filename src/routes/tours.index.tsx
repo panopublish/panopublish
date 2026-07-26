@@ -301,25 +301,26 @@ function ToursPage() {
                         </Button>
                       </Link>
 
-                      {hasConnections ? (
-                        <a
-                          href={`/tours/${t.id}/connections?preview=true`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
+                      {t.type !== "custom" &&
+                        (hasConnections ? (
+                          <a
+                            href={`/tours/${t.id}/connections?preview=true`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
+                              <Share2 className="h-3.5 w-3.5" /> Share Preview
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button
+                            disabled
+                            className="bg-gray-200 text-gray-400 border border-gray-300/40 font-bold h-8 px-4 text-xs rounded cursor-not-allowed gap-1 shadow-none"
+                            title="Add connections in the map editor first to enable preview"
+                          >
                             <Share2 className="h-3.5 w-3.5" /> Share Preview
                           </Button>
-                        </a>
-                      ) : (
-                        <Button
-                          disabled
-                          className="bg-gray-200 text-gray-400 border border-gray-300/40 font-bold h-8 px-4 text-xs rounded cursor-not-allowed gap-1 shadow-none"
-                          title="Add connections in the map editor first to enable preview"
-                        >
-                          <Share2 className="h-3.5 w-3.5" /> Share Preview
-                        </Button>
-                      )}
+                        ))}
                     </div>
                   </div>
 

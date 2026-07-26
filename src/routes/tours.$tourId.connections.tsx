@@ -2188,7 +2188,7 @@ function ConnectionsPage() {
           description="Connect virtual tour panoramas and build walkthrough paths."
           noIndex={true}
         />
-        <TourStepsNav tourId={tourId} activeTab="connections" />
+        <TourStepsNav tourId={tourId} activeTab="connections" tourType={tour?.type ?? undefined} />
         <div className="max-w-[1400px] mx-auto h-[750px] rounded-2xl border bg-card flex flex-col items-center justify-center gap-3 shadow-sm animate-in fade-in duration-150">
           <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-[#0277bd] animate-spin" />
           <span className="text-xs font-bold text-slate-500">Loading tour environment...</span>
