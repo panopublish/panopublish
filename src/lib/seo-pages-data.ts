@@ -2,6 +2,7 @@ import { getBlogSections, getBlogImage } from "./blog-content-generator";
 import { cluster1VirtualTourSoftwarePages } from "./cluster1-virtual-tour-software-data";
 import { cluster2GoogleStreetViewPages } from "./cluster2-google-street-view-data";
 import { cluster3_360PhotographyPages } from "./cluster3-360-photography-data";
+import { cluster4_IndustrySolutionsPages } from "./cluster4-industry-solutions-data";
 
 export interface SeoPageData {
   slug: string;
@@ -4577,10 +4578,11 @@ export const seoPages: Record<string, SeoPageData> = {
   }
 };
 
-// Merge Cluster 1, Cluster 2, and Cluster 3 articles into seoPages
+// Merge Cluster 1, Cluster 2, Cluster 3, and Cluster 4 pages into seoPages
 Object.assign(seoPages, cluster1VirtualTourSoftwarePages);
 Object.assign(seoPages, cluster2GoogleStreetViewPages);
 Object.assign(seoPages, cluster3_360PhotographyPages);
+Object.assign(seoPages, cluster4_IndustrySolutionsPages);
 
 // Dynamically generate deep, rich and reader-friendly blog content for all blogs if sections not already set
 Object.keys(seoPages).forEach((key) => {

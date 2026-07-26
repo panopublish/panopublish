@@ -6,10 +6,12 @@ function getPublicRoutes() {
   const cluster1FilePath = path.join(__dirname, 'src/lib/cluster1-virtual-tour-software-data.ts');
   const cluster2FilePath = path.join(__dirname, 'src/lib/cluster2-google-street-view-data.ts');
   const cluster3FilePath = path.join(__dirname, 'src/lib/cluster3-360-photography-data.ts');
+  const cluster4FilePath = path.join(__dirname, 'src/lib/cluster4-industry-solutions-data.ts');
   const content = fs.readFileSync(seoPagesFilePath, 'utf8') + '\n' + 
     (fs.existsSync(cluster1FilePath) ? fs.readFileSync(cluster1FilePath, 'utf8') : '') + '\n' + 
     (fs.existsSync(cluster2FilePath) ? fs.readFileSync(cluster2FilePath, 'utf8') : '') + '\n' + 
-    (fs.existsSync(cluster3FilePath) ? fs.readFileSync(cluster3FilePath, 'utf8') : '');
+    (fs.existsSync(cluster3FilePath) ? fs.readFileSync(cluster3FilePath, 'utf8') : '') + '\n' + 
+    (fs.existsSync(cluster4FilePath) ? fs.readFileSync(cluster4FilePath, 'utf8') : '');
 
   // Match slug and type from seo-pages-data.ts (supports TS objects and JSON formatting)
   const regex = /"?slug"?:?\s*["']([^"']+)["'][\s\S]*?"?type"?:?\s*["']([^"']+)["']/g;
