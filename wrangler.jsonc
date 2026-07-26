@@ -20,14 +20,14 @@
     {
       "binding": "DB",
       "database_name": "panopublish-db",
-      "database_id": "c968c26b-c9c1-4fb7-96c3-b88afd31406c",
-    },
+      "database_id": "c968c26b-c9c1-4fb7-96c3-b88afd31406c"
+    }
   ],
   "r2_buckets": [
     {
       "binding": "BUCKET",
-      "bucket_name": "panopublish-photos",
-    },
+      "bucket_name": "panopublish-photos"
+    }
   ],
   "routes": [
     {
@@ -44,5 +44,5 @@
       "name": "EMAIL",
       "destination_address": "noreply@panopublish.com"
     }
-  ],
+  ]
 }

@@ -1,0 +1,12 @@
+source_url,target_url,status_code,preserve_path_suffix,include_subdomains,subpath_matching,preserve_query_string
+https://www.panopublish.com/,https://panopublish.com/,301,true,false,true,true
+http://www.panopublish.com/,https://panopublish.com/,301,true,false,true,true
+http://panopublish.com/,https://panopublish.com/,301,true,false,true,true
+https://panopublish.com/app,https://panopublish.com/dashboard,301,true,false,true,true
+https://panopublish.com/signin,https://panopublish.com/login,301,true,false,true,true
+https://panopublish.com/register,https://panopublish.com/signup,301,true,false,true,true
+https://panopublish.com/support,https://panopublish.com/contact,301,true,false,true,true
+https://panopublish.com/docs,https://panopublish.com/blog,301,true,false,true,true
+https://panopublish.com/help,https://panopublish.com/contact,301,true,false,true,true
+https://panopublish.com/billing,https://panopublish.com/settings,301,true,false,true,true
+https://panopublish.com/account,https://panopublish.com/settings,301,true,false,true,true

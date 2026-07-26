@@ -202,6 +202,8 @@ function ConnectionsPage() {
     }
   }, []);
 
+  const [loading, setLoading] = useState(true);
+  const isInitialLoadRef = useRef(true);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [conns, setConns] = useState<Conn[]>([]);
   const [constellations, setConstellations] = useState<Constellation[]>([]);
@@ -321,85 +323,95 @@ function ConnectionsPage() {
 
   const load = useCallback(async () => {
     if (!user) return;
-    const [{ data: t }, { data: ps }, { data: cs }, { data: cons }, { data: is }] =
-      await Promise.all([
-        supabase.from("tours").select("name,latitude,longitude,type").eq("id", tourId).maybeSingle(),
-        supabase.from("photos").select("*").eq("tour_id", tourId),
-        supabase.from("connections").select("*").eq("tour_id", tourId),
-        supabase.from("constellations").select("id,name").eq("tour_id", tourId).order("created_at"),
-        supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index"),
-      ]);
-    setTour(t as any);
+    if (isInitialLoadRef.current) {
+      setLoading(true);
+    }
+    try {
+      const [{ data: t }, { data: ps }, { data: cs }, { data: cons }, { data: is }] =
+        await Promise.all([
+          supabase.from("tours").select("name,latitude,longitude,type").eq("id", tourId).maybeSingle(),
+          supabase.from("photos").select("*").eq("tour_id", tourId),
+          supabase.from("connections").select("*").eq("tour_id", tourId),
+          supabase.from("constellations").select("id,name").eq("tour_id", tourId).order("created_at"),
+          supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index"),
+        ]);
+      setTour(t as any);
 
-    const tourLat = t?.latitude || 23.02463;
-    const tourLng = t?.longitude || 72.56436;
+      const tourLat = t?.latitude || 23.02463;
+      const tourLng = t?.longitude || 72.56436;
 
-    const mappedPhotos = ((ps as any[]) ?? []).map((p) => ({
-      ...p,
-      latitude: p.latitude && p.latitude !== 0 ? p.latitude : tourLat,
-      longitude: p.longitude && p.longitude !== 0 ? p.longitude : tourLng,
-    }));
+      const mappedPhotos = ((ps as any[]) ?? []).map((p) => ({
+        ...p,
+        latitude: p.latitude && p.latitude !== 0 ? p.latitude : tourLat,
+        longitude: p.longitude && p.longitude !== 0 ? p.longitude : tourLng,
+      }));
 
-    const sortedPhotos = mappedPhotos.sort((a, b) => {
-      if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
-      return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
-    });
-    setPhotos(sortedPhotos);
+      const sortedPhotos = mappedPhotos.sort((a, b) => {
+        if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
+        return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
+      });
+      setPhotos(sortedPhotos);
 
-    const fetchedConns = (cs as any) ?? [];
-    setConns(fetchedConns);
+      const fetchedConns = (cs as any) ?? [];
+      setConns(fetchedConns);
 
-    // Sync activeIdx when connections are added/removed
-    setActiveIdx((prevIdx) => {
-      if (sortedPhotos.length === 0) return null;
-      if (prevIdx === null) return 0;
-      if (prevIdx >= sortedPhotos.length) return 0;
+      // Sync activeIdx when connections are added/removed
+      setActiveIdx((prevIdx) => {
+        if (sortedPhotos.length === 0) return null;
+        if (prevIdx === null) return 0;
+        if (prevIdx >= sortedPhotos.length) return 0;
 
-      const connectedPhotoIds = new Set(
-        fetchedConns.flatMap((c: any) => [c.from_photo_id, c.to_photo_id]),
-      );
+        const connectedPhotoIds = new Set(
+          fetchedConns.flatMap((c: any) => [c.from_photo_id, c.to_photo_id]),
+        );
 
-      const currentActivePhoto = sortedPhotos[prevIdx];
-      if (!currentActivePhoto) {
-        return 0;
-      }
-
-      // If connections exist and current photo is not connected, fallback to first connected photo
-      if (fetchedConns.length > 0 && !connectedPhotoIds.has(currentActivePhoto.id)) {
-        const firstConnectedIdx = sortedPhotos.findIndex((p) => connectedPhotoIds.has(p.id));
-        if (firstConnectedIdx !== -1) {
-          return firstConnectedIdx;
+        const currentActivePhoto = sortedPhotos[prevIdx];
+        if (!currentActivePhoto) {
+          return 0;
         }
+
+        // If connections exist and current photo is not connected, fallback to first connected photo
+        if (fetchedConns.length > 0 && !connectedPhotoIds.has(currentActivePhoto.id)) {
+          const firstConnectedIdx = sortedPhotos.findIndex((p) => connectedPhotoIds.has(p.id));
+          if (firstConnectedIdx !== -1) {
+            return firstConnectedIdx;
+          }
+        }
+
+        return prevIdx;
+      });
+
+      setConstellations((cons as any) ?? []);
+      setIslands((is as any) ?? []);
+
+      const iOpen: Record<string, boolean> = {};
+      const riOpen: Record<string, boolean> = {};
+      const firstPhoto = sortedPhotos[0];
+      const initialIsland = firstPhoto ? firstPhoto.island_id || "unassigned" : "unassigned";
+
+      setActiveIslandId(initialIsland);
+
+      (is || []).forEach((island: any) => {
+        iOpen[island.id] = island.id === initialIsland;
+        riOpen[island.id] = island.id === initialIsland;
+      });
+      iOpen["unassigned"] = "unassigned" === initialIsland;
+      riOpen["unassigned"] = "unassigned" === initialIsland;
+      setIslandOpen(iOpen);
+      setRightIslandOpen(riOpen);
+
+      if (cons && cons.length > 0) {
+        if (!activeConstName) setActiveConstName(cons[0].name);
+      } else if (t && t.name) {
+        setActiveConstName(t.name);
+      } else if (!activeConstName) {
+        setActiveConstName("Default Constellation");
       }
-
-      return prevIdx;
-    });
-
-    setConstellations((cons as any) ?? []);
-    setIslands((is as any) ?? []);
-
-    const iOpen: Record<string, boolean> = {};
-    const riOpen: Record<string, boolean> = {};
-    const firstPhoto = sortedPhotos[0];
-    const initialIsland = firstPhoto ? firstPhoto.island_id || "unassigned" : "unassigned";
-
-    setActiveIslandId(initialIsland);
-
-    (is || []).forEach((island: any) => {
-      iOpen[island.id] = island.id === initialIsland;
-      riOpen[island.id] = island.id === initialIsland;
-    });
-    iOpen["unassigned"] = "unassigned" === initialIsland;
-    riOpen["unassigned"] = "unassigned" === initialIsland;
-    setIslandOpen(iOpen);
-    setRightIslandOpen(riOpen);
-
-    if (cons && cons.length > 0) {
-      if (!activeConstName) setActiveConstName(cons[0].name);
-    } else if (t && t.name) {
-      setActiveConstName(t.name);
-    } else if (!activeConstName) {
-      setActiveConstName("Default Constellation");
+    } finally {
+      if (isInitialLoadRef.current) {
+        isInitialLoadRef.current = false;
+        setLoading(false);
+      }
     }
   }, [user, tourId, activeConstName]);
 
@@ -1946,6 +1958,30 @@ function ConnectionsPage() {
           </Button>
         </div>
       </div>
+    );
+  }
+
+  if (loading || !tour) {
+    return (
+      <AppShell
+        title="Build Connections"
+        breadcrumbs={[
+          { label: "Tours", to: "/tours" },
+          { label: "Tour" },
+          { label: "Build Connections" },
+        ]}
+      >
+        <SEO
+          title="Build Connections"
+          description="Connect virtual tour panoramas and build walkthrough paths."
+          noIndex={true}
+        />
+        <TourStepsNav tourId={tourId} activeTab="connections" />
+        <div className="max-w-[1400px] mx-auto h-[750px] rounded-2xl border bg-card flex flex-col items-center justify-center gap-3 shadow-sm animate-in fade-in duration-150">
+          <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-[#0277bd] animate-spin" />
+          <span className="text-xs font-bold text-slate-500">Loading tour environment...</span>
+        </div>
+      </AppShell>
     );
   }
 
