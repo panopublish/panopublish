@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import exifr from "exifr";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
@@ -37,7 +37,7 @@ import { SEO } from "@/components/SEO";
 export const Route = createFileRoute("/tours/$tourId/")({
   head: () => ({
     meta: [
-      { title: "Upload Photos — PanoPublish" },
+      { title: "Upload Photos â€” PanoPublish" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -137,7 +137,10 @@ function TourDetail() {
   const [draggedPhotoId, setDraggedPhotoId] = useState<string | null>(null);
   const [dragOverPhotoId, setDragOverPhotoId] = useState<string | null>(null);
 
-  // No local state needed, derive from activeIsland object
+  // Custom tour simple settings (no island)
+  const [customShowSceneNames, setCustomShowSceneNames] = useState(true);
+
+  const isCustomTour = tour?.type === "custom";
 
   const load = async () => {
     if (!user) return;
@@ -151,29 +154,13 @@ function TourDetail() {
         .eq("id", tourId)
         .maybeSingle();
       setTour(t as any);
-      const { data: is } = await supabase
-        .from("islands")
-        .select("*")
-        .eq("tour_id", tourId)
-        .order("order_index");
-      const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
-      const counts = new Map<string, number>();
-      (ps ?? []).forEach((p: any) => {
-        if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1);
-      });
 
-      const fetchedIslands = (is ?? []).map((i: any) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
-      setIslands(fetchedIslands);
-
-      if (fetchedIslands.length > 0) {
-        setActiveIsland((prev) => {
-          if (prev && fetchedIslands.some((i: any) => i.id === prev)) return prev;
-          return fetchedIslands[0].id;
-        });
-      } else {
-        setActiveIsland(null);
-        setShowAddIsland(true);
+      // Cache tour type in sessionStorage for instant nav
+      if (typeof window !== "undefined" && (t as any)?.type) {
+        try { sessionStorage.setItem(`tour_type_${tourId}`, (t as any).type); } catch (_) {}
       }
+
+      const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
 
       // Sort locally by order_index (if exists) or uploaded_at
       const sortedPhotos = ((ps as any[]) ?? []).sort((a, b) => {
@@ -181,6 +168,31 @@ function TourDetail() {
         return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
       });
       setPhotos(sortedPhotos);
+
+      if ((t as any)?.type !== "custom") {
+        // Only load islands for non-custom tours
+        const { data: is } = await supabase
+          .from("islands")
+          .select("*")
+          .eq("tour_id", tourId)
+          .order("order_index");
+        const counts = new Map<string, number>();
+        (ps ?? []).forEach((p: any) => {
+          if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1);
+        });
+        const fetchedIslands = (is ?? []).map((i: any) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
+        setIslands(fetchedIslands);
+
+        if (fetchedIslands.length > 0) {
+          setActiveIsland((prev) => {
+            if (prev && fetchedIslands.some((i: any) => i.id === prev)) return prev;
+            return fetchedIslands[0].id;
+          });
+        } else {
+          setActiveIsland(null);
+          setShowAddIsland(true);
+        }
+      }
     } catch (err) {
       console.error("Error loading tour details:", err);
     } finally {
@@ -192,7 +204,11 @@ function TourDetail() {
     load();
   }, [user, tourId]);
 
-  const visiblePhotos = activeIsland ? photos.filter((p) => p.island_id === activeIsland) : [];
+  const visiblePhotos = isCustomTour
+    ? photos
+    : activeIsland
+      ? photos.filter((p) => p.island_id === activeIsland)
+      : [];
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedPhotoId(id);
@@ -210,6 +226,7 @@ function TourDetail() {
     setDragOverPhotoId(null);
     if (!draggedPhotoId || draggedPhotoId === targetId) return;
 
+    const sourceList = isCustomTour ? photos : visiblePhotos;
     const newPhotos = [...photos];
     const draggedIndex = newPhotos.findIndex((p) => p.id === draggedPhotoId);
     const targetIndex = newPhotos.findIndex((p) => p.id === targetId);
@@ -284,12 +301,15 @@ function TourDetail() {
 
   const onPickFiles = async (files: FileList | null, islandId?: string) => {
     if (!files) return;
-    const targetIsland = islandId || activeIsland;
-    if (!targetIsland) return toast.error("Please select or create an island first!");
+
+    // For custom tours, no island required â€” use null
+    if (!isCustomTour) {
+      const targetIsland = islandId || activeIsland;
+      if (!targetIsland) return toast.error("Please select or create an island first!");
+    }
 
     const fileList = Array.from(files);
 
-    // Add all files to uploads state queue first
     const newUploads = fileList.map((f) => ({
       id: `${f.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: f.name,
@@ -299,7 +319,6 @@ function TourDetail() {
 
     setUploads((prev) => [...prev, ...newUploads]);
 
-    // Process files sequentially
     for (let i = 0; i < fileList.length; i++) {
       const file = fileList[i];
       const uploadItem = newUploads[i];
@@ -309,6 +328,7 @@ function TourDetail() {
           throw new Error(`File is too large (max 50MB)`);
         }
 
+        const targetIsland = isCustomTour ? null : (islandId || activeIsland);
         await uploadPhoto(file, targetIsland, uploadItem.id);
       } catch (err: any) {
         console.error("Upload failed for file:", file.name, err);
@@ -319,7 +339,6 @@ function TourDetail() {
               : item,
           ),
         );
-        // Automatically remove failed item from progress list after 5 seconds
         setTimeout(() => {
           setUploads((prev) => prev.filter((item) => item.id !== uploadItem.id));
         }, 5000);
@@ -327,20 +346,19 @@ function TourDetail() {
     }
   };
 
-  const uploadPhoto = async (file: File, islandId: string, uploadId: string) => {
+  const uploadPhoto = async (file: File, islandId: string | null, uploadId: string) => {
     if (!user) return;
 
     setUploads((prev) =>
       prev.map((item) => (item.id === uploadId ? { ...item, status: "uploading", pct: 0 } : item)),
     );
 
-    const path = `${user.id}/${tourId}/${islandId}/${Date.now()}-${file.name}`;
+    const path = `${user.id}/${tourId}/${islandId ?? "custom"}/${Date.now()}-${file.name}`;
 
     const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, {
       contentType: file.type || "image/jpeg",
       onUploadProgress: (progress: any) => {
         const pct = Math.round((progress.loaded / progress.total) * 100);
-        // Map 0-100% of upload to 0-90% of overall progress
         const mappedPct = Math.round(pct * 0.9);
         setUploads((prev) =>
           prev.map((item) => (item.id === uploadId ? { ...item, pct: mappedPct } : item)),
@@ -350,7 +368,6 @@ function TourDetail() {
 
     if (upErr) throw upErr;
 
-    // Database update phase
     setUploads((prev) =>
       prev.map((item) => (item.id === uploadId ? { ...item, status: "saving", pct: 95 } : item)),
     );
@@ -376,7 +393,6 @@ function TourDetail() {
 
     if (dbErr) throw dbErr;
 
-    // Success! Remove from uploads list
     setUploads((prev) => prev.filter((item) => item.id !== uploadId));
     toast.success(`${file.name} uploaded`);
     load();
@@ -385,7 +401,6 @@ function TourDetail() {
   const deletePhoto = async (p: Photo) => {
     if (!confirm("Delete this photo?")) return;
     try {
-      // First delete all connections linked to this photo
       await supabase.from("connections").delete().or(`from_photo_id.eq.${p.id},to_photo_id.eq.${p.id}`);
       if (p.file_path) {
         await supabase.storage.from("tour-photos").remove([p.file_path]);
@@ -420,19 +435,16 @@ function TourDetail() {
   const handleSaveBlurredPhoto = async (blob: Blob) => {
     if (!user || !editingPhoto) return;
 
-    const newPath = `${user.id}/${tourId}/${editingPhoto.island_id}/${Date.now()}-blurred-${editingPhoto.filename || "scene.jpg"}`;
+    const newPath = `${user.id}/${tourId}/${editingPhoto.island_id ?? "custom"}/${Date.now()}-blurred-${editingPhoto.filename || "scene.jpg"}`;
 
-    // 1. Upload to Supabase Storage
     const { error: upErr } = await supabase.storage
       .from("tour-photos")
       .upload(newPath, blob, { contentType: "image/jpeg" });
 
     if (upErr) throw upErr;
 
-    // 2. Get Public URL
     const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(newPath);
 
-    // 3. Update database row
     const { error: dbErr } = await supabase
       .from("photos")
       .update({
@@ -443,7 +455,6 @@ function TourDetail() {
 
     if (dbErr) throw dbErr;
 
-    // 4. Delete the old photo from storage (soft fail)
     try {
       await supabase.storage.from("tour-photos").remove([editingPhoto.file_path]);
     } catch (e) {
@@ -451,16 +462,16 @@ function TourDetail() {
     }
 
     setEditingPhoto(null);
-    load(); // Refresh the grid!
+    load();
   };
 
   const sortPhotosByName = async (direction: "asc" | "desc") => {
-    if (!activeIsland || visiblePhotos.length === 0) return;
+    const photosToSort = isCustomTour ? photos : visiblePhotos;
+    if (photosToSort.length === 0) return;
 
     const tid = toast.loading(`Sorting scenes by filename...`);
 
-    // 1. Sort the visible photos array alphabetically by filename (numeric-aware)
-    const sorted = [...visiblePhotos].sort((a, b) => {
+    const sorted = [...photosToSort].sort((a, b) => {
       const nameA = a.filename || "";
       const nameB = b.filename || "";
       return direction === "asc"
@@ -468,16 +479,15 @@ function TourDetail() {
         : nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: "base" });
     });
 
-    // 2. Map new order_index based on their sorted position
     const updatedPhotos = photos.map((p) => {
-      if (p.island_id === activeIsland) {
-        const sortedIdx = sorted.findIndex((x) => x.id === p.id);
-        return { ...p, order_index: sortedIdx };
-      }
-      return p;
+      const sortedIdx = isCustomTour
+        ? sorted.findIndex((x) => x.id === p.id)
+        : p.island_id === activeIsland
+          ? sorted.findIndex((x) => x.id === p.id)
+          : (p.order_index ?? 0);
+      return { ...p, order_index: sortedIdx === -1 ? (p.order_index ?? 0) : sortedIdx };
     });
 
-    // Sort the entire photos list so display is updated immediately
     const sortedPhotos = [...updatedPhotos].sort((a, b) => {
       if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
       return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
@@ -486,23 +496,225 @@ function TourDetail() {
     setPhotos(sortedPhotos);
 
     try {
-      // 3. Save new order_index values sequentially to Supabase
       await Promise.all(
         sorted.map((p, idx) => supabase.from("photos").update({ order_index: idx }).eq("id", p.id)),
       );
-
       toast.success(`Scenes sorted successfully!`, { id: tid });
     } catch (err: any) {
       console.error("Error sorting photos:", err);
       toast.error(`Failed to save sort order: ${err.message}`, { id: tid });
-      load(); // Revert
+      load();
     }
   };
 
+  // â”€â”€â”€ CUSTOM TOUR RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  if (!isLoading && isCustomTour) {
+    return (
+      <AppShell
+        title={tour?.name ?? "Tour"}
+        breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: tour?.name ?? "Loadingâ€¦" }]}
+      >
+        <SEO
+          title="Upload Photos"
+          description="Upload your 360 photos for your virtual tour."
+          noIndex={true}
+        />
+        <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] pb-12">
+          <TourStepsNav tourId={tourId} activeTab="upload" tourType="custom" />
+
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
+              {/* Toolbar */}
+              <div className="p-4 border-b flex justify-between items-center bg-gray-50/50 flex-wrap gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <span>{photos.length} scene{photos.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-gray-600 font-medium flex-wrap">
+                  {/* Sort scenes */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-gray-500 font-medium">sort scenes</span>
+                    <select
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        if (val === "asc" || val === "desc") {
+                          await sortPhotosByName(val);
+                          e.target.value = "";
+                        }
+                      }}
+                      defaultValue=""
+                      className="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white text-gray-700 focus:outline-none focus:border-[#0277bd] font-semibold cursor-pointer shadow-sm transition-all duration-300 hover:border-gray-400"
+                    >
+                      <option value="" disabled>Choose...</option>
+                      <option value="asc">Name (A-Z) â†‘</option>
+                      <option value="desc">Name (Z-A) â†“</option>
+                    </select>
+                  </div>
+                  {/* Show scene names */}
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={customShowSceneNames}
+                      onChange={(e) => setCustomShowSceneNames(e.target.checked)}
+                      className="rounded border-gray-300 text-[#0277bd] focus:ring-[#0277bd]"
+                    />
+                    show scene names
+                  </label>
+                </div>
+              </div>
+
+              {/* Upload progress */}
+              {uploads.length > 0 && (
+                <div className="p-4 bg-blue-50 border-b border-blue-100 space-y-2">
+                  {uploads.map((u) => (
+                    <div key={u.id} className="text-xs text-left">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="truncate text-blue-900 font-medium max-w-[70%]">{u.name}</span>
+                        <span className="text-blue-700 font-bold">
+                          {u.status === "queued" && "Queued"}
+                          {u.status === "uploading" && `Uploading (${u.pct}%)`}
+                          {u.status === "saving" && "Saving..."}
+                          {u.status === "failed" && "Failed"}
+                        </span>
+                      </div>
+                      {u.status !== "failed" && (
+                        <div className="h-1.5 rounded bg-blue-200 overflow-hidden">
+                          <div
+                            className="h-full bg-[#0277bd] transition-all duration-300"
+                            style={{ width: `${u.pct}%` }}
+                          />
+                        </div>
+                      )}
+                      {u.status === "failed" && (
+                        <p className="text-[10px] text-red-500 font-semibold truncate mt-0.5">{u.error}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Photos grid */}
+              <div className="flex-1 p-6">
+                {photos.length === 0 ? (
+                  <EmptyState
+                    icon={ImageIcon}
+                    title="Drop your 360Â° photos here"
+                    description="Accepts .jpg / .jpeg, max 50MB each."
+                    action={
+                      <Button
+                        onClick={() => fileInput.current?.click()}
+                        className="bg-[#0277bd] hover:bg-[#0266a1]"
+                      >
+                        <UploadIcon className="h-4 w-4 mr-2" /> Select Photos
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {photos.map((p, idx) => (
+                      <div
+                        key={p.id}
+                        className="group"
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, p.id)}
+                        onDragOver={(e) => handleDragOver(e, p.id)}
+                        onDrop={(e) => handleDrop(e, p.id)}
+                      >
+                        <div
+                          onClick={() => setViewerIndex(idx)}
+                          className={`relative aspect-square rounded-xl border bg-gray-100 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg ${dragOverPhotoId === p.id ? "ring-2 ring-[#0277bd] ring-offset-2" : ""}`}
+                        >
+                          <img
+                            src={p.file_url}
+                            loading="lazy"
+                            alt={p.filename ?? "Photo"}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                          <div className="absolute top-2 left-2 rounded bg-black/70 text-white px-2 py-0.5 text-[11px] font-bold">
+                            {idx}
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deletePhoto(p); }}
+                            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* Download & Blur */}
+                          <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDownloadPhoto(p); }}
+                              className="h-7 w-7 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-all shadow-md active:scale-95"
+                              title="Download scene"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingPhoto(p); }}
+                              className="h-7 w-7 rounded-full bg-[#0277bd]/85 hover:bg-[#0277bd] text-white flex items-center justify-center transition-all shadow-md active:scale-95"
+                              title="Blur"
+                            >
+                              <Droplets className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          {customShowSceneNames && (
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
+                              <span className="text-[10px] text-white/90 truncate block">{p.filename}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add More */}
+                    <button
+                      onClick={() => fileInput.current?.click()}
+                      className="aspect-square rounded-xl border-2 border-dashed border-[#8bc34a] bg-[#8bc34a]/5 hover:bg-[#8bc34a]/10 flex flex-col items-center justify-center transition-colors text-[#7cb342]"
+                    >
+                      <Plus className="h-8 w-8 mb-2" />
+                      <span className="text-xs font-bold uppercase tracking-wider">Add More</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          multiple
+          accept=".jpg,.jpeg"
+          onChange={(e) => onPickFiles(e.target.files)}
+        />
+
+        {viewerIndex !== null && (
+          <SceneViewerModal
+            photos={photos}
+            startIndex={viewerIndex}
+            onClose={() => setViewerIndex(null)}
+          />
+        )}
+
+        {editingPhoto && (
+          <BlurEditorModal
+            photo={editingPhoto}
+            onClose={() => setEditingPhoto(null)}
+            onSave={handleSaveBlurredPhoto}
+          />
+        )}
+      </AppShell>
+    );
+  }
+
+  // â”€â”€â”€ STANDARD (GMAPS) TOUR RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <AppShell
       title={tour?.name ?? "Tour"}
-      breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: tour?.name ?? "Loading…" }]}
+      breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: tour?.name ?? "Loadingâ€¦" }]}
     >
       <SEO
         title="Upload Photos"
@@ -686,7 +898,7 @@ function TourDetail() {
                           const val = e.target.value;
                           if (val === "asc" || val === "desc") {
                             await sortPhotosByName(val);
-                            e.target.value = ""; // Reset dropdown to placeholder
+                            e.target.value = "";
                           }
                         }}
                         defaultValue=""
@@ -695,8 +907,8 @@ function TourDetail() {
                         <option value="" disabled>
                           Choose...
                         </option>
-                        <option value="asc">Name (A-Z) ↑</option>
-                        <option value="desc">Name (Z-A) ↓</option>
+                        <option value="asc">Name (A-Z) â†‘</option>
+                        <option value="desc">Name (Z-A) â†“</option>
                       </select>
                     </div>
                     <label className="flex items-center gap-1.5 cursor-pointer">
@@ -754,7 +966,7 @@ function TourDetail() {
                   {visiblePhotos.length === 0 ? (
                     <EmptyState
                       icon={ImageIcon}
-                      title="Drop your 360° photos here"
+                      title="Drop your 360Â° photos here"
                       description="Accepts .jpg / .jpeg, max 75MB each."
                       action={
                         <Button
