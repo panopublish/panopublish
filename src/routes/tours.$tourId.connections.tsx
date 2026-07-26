@@ -63,9 +63,27 @@ export const Route = createFileRoute("/tours/$tourId/connections")({
       { title: "Build Connections — PanoPublish" },
       { name: "robots", content: "noindex, nofollow" },
     ],
+    // Load 360° viewer libs only on the connections route, not globally
+    links: [
+      {
+        rel: "stylesheet",
+        href: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css",
+      },
+    ],
+    scripts: [
+      {
+        src: "https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js",
+        defer: true,
+      },
+      {
+        src: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js",
+        defer: true,
+      },
+    ],
   }),
   component: ConnectionsPage,
 });
+
 
 const MAPS_KEY = getEnv("VITE_GOOGLE_MAPS_API_KEY");
 

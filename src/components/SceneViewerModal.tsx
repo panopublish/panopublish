@@ -184,6 +184,8 @@ export function SceneViewerModal({
           <img
             src={photo.file_url}
             alt={photo.filename ?? ""}
+            width={2048}
+            height={1024}
             className="max-h-full max-w-full object-contain"
           />
         )}
@@ -201,7 +203,7 @@ export function SceneViewerModal({
 
         {tab === "raw" && (
           <div className="relative max-h-full max-w-full">
-            <img src={photo.file_url} alt="" className="max-h-[80vh] max-w-full object-contain" />
+            <img src={photo.file_url} alt="" width={2048} height={1024} className="max-h-[80vh] max-w-full object-contain" />
             <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-foreground/80 text-background p-3 text-xs space-y-1">
               <div>
                 <span className="opacity-70">Filename:</span> {photo.filename ?? "—"}

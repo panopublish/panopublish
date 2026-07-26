@@ -1,8 +1,8 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import exifr from "exifr";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/lib/auth";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense, lazy } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,10 @@ import {
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { TourStepsNav } from "@/components/TourStepsNav";
-import { BlurEditorModal } from "@/components/BlurEditorModal";
+// Lazy-load BlurEditorModal — heavy canvas component, only needed when user clicks Blur
+const BlurEditorModal = lazy(() =>
+  import("@/components/BlurEditorModal").then((m) => ({ default: m.BlurEditorModal }))
+);
 
 import { SEO } from "@/components/SEO";
 
@@ -627,6 +630,8 @@ function TourDetail() {
                             src={p.file_url}
                             loading="lazy"
                             alt={p.filename ?? "Photo"}
+                            width={400}
+                            height={400}
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
@@ -700,11 +705,13 @@ function TourDetail() {
         )}
 
         {editingPhoto && (
-          <BlurEditorModal
-            photo={editingPhoto}
-            onClose={() => setEditingPhoto(null)}
-            onSave={handleSaveBlurredPhoto}
-          />
+          <Suspense fallback={null}>
+            <BlurEditorModal
+              photo={editingPhoto}
+              onClose={() => setEditingPhoto(null)}
+              onSave={handleSaveBlurredPhoto}
+            />
+          </Suspense>
         )}
       </AppShell>
     );
@@ -996,6 +1003,8 @@ function TourDetail() {
                               src={p.file_url}
                               loading="lazy"
                               alt={p.filename ?? "Photo"}
+                              width={400}
+                              height={400}
                               className="w-full h-full object-cover"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
@@ -1083,11 +1092,13 @@ function TourDetail() {
       )}
 
       {editingPhoto && (
-        <BlurEditorModal
-          photo={editingPhoto}
-          onClose={() => setEditingPhoto(null)}
-          onSave={handleSaveBlurredPhoto}
-        />
+        <Suspense fallback={null}>
+          <BlurEditorModal
+            photo={editingPhoto}
+            onClose={() => setEditingPhoto(null)}
+            onSave={handleSaveBlurredPhoto}
+          />
+        </Suspense>
       )}
 
       <Dialog

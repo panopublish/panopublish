@@ -156,7 +156,34 @@ export default {
 
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+
+      // Inject Cache-Control headers for static assets
+      const pathname = url.pathname;
+      if (normalized.status === 200 || normalized.status === 304) {
+        const headers = new Headers(normalized.headers);
+
+        if (pathname.startsWith("/assets/")) {
+          // Vite fingerprinted assets (hashed filename) — safe to cache for 1 year immutably
+          headers.set("cache-control", "public, max-age=31536000, immutable");
+        } else if (
+          /\.(png|jpg|jpeg|webp|avif|svg|ico|gif|woff2|woff|ttf|otf)$/.test(pathname)
+        ) {
+          // Public static images and fonts — 24h cache + stale-while-revalidate
+          headers.set("cache-control", "public, max-age=86400, stale-while-revalidate=604800");
+        } else if (/\.(js|css|mjs)$/.test(pathname) && !pathname.startsWith("/assets/")) {
+          // Non-fingerprinted JS/CSS — short cache + revalidate
+          headers.set("cache-control", "public, max-age=3600, stale-while-revalidate=86400");
+        }
+
+        return new Response(normalized.body, {
+          status: normalized.status,
+          statusText: normalized.statusText,
+          headers,
+        });
+      }
+
+      return normalized;
     } catch (error) {
       console.error(error);
       return brandedErrorResponse();

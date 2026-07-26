@@ -155,13 +155,14 @@ function SeoPage() {
             </div>
 
             {page.image && (
-              <div className="mt-10 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl max-h-[400px] w-full relative">
+              <div className="mt-10 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl w-full relative aspect-[16/9] max-h-[400px]">
                 <img
                   src={page.image}
                   alt={`${page.heading} — ${page.primaryKeyword}`}
                   width={800}
                   height={450}
                   loading="eager"
+                  fetchPriority="high"
                   className="w-full h-full object-cover object-center"
                 />
               </div>

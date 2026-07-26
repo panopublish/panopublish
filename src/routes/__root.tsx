@@ -121,21 +121,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "shortcut icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "stylesheet", href: appCss },
-      {
-        rel: "stylesheet",
-        href: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css",
-      },
-      // Performance hints
+      // Performance hints — Pannellum/Marzipano CDN moved to tour-specific routes only
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "preconnect", href: "https://cdn.jsdelivr.net" },
       { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
       { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
-      { rel: "dns-prefetch", href: "https://cdn.jsdelivr.net" },
-    ],
-    scripts: [
-      { src: "https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js", defer: true },
-      { src: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js", defer: true },
     ],
   }),
   shellComponent: RootShell,
@@ -163,7 +153,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
-        {/* Google tag (gtag.js) */}
+        {/* Google Analytics — async so it never blocks rendering */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-LQ2MM2T7DK" />
         <script
           dangerouslySetInnerHTML={{
@@ -175,18 +165,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
             `,
           }}
         />
-        {/* Microsoft Clarity */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(c,l,a,r,i,t,y){
-                  c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-              })(window, document, "clarity", "script", "xpxuhvf616");
-            `,
-          }}
-        />
+        {/* Microsoft Clarity is injected after hydration via RootComponent useEffect — see below */}
         <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: envScript }} />
       </head>
       <body>
@@ -199,9 +178,24 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
+import { useEffect } from "react";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Inject Microsoft Clarity after hydration — non-blocking, does not affect LCP/FID
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = "https://www.clarity.ms/tag/xpxuhvf616";
+    document.head.appendChild(s);
+    (window as any).clarity =
+      (window as any).clarity ||
+      function (...args: unknown[]) {
+        ((window as any).clarity.q = (window as any).clarity.q || []).push(args);
+      };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

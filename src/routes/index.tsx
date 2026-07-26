@@ -193,6 +193,14 @@ export const Route = createFileRoute("/")({
       },
       { property: "og:type", content: "website" },
     ],
+    links: [
+      // Preload the demo/LCP image so browser discovers it during SSR head parsing
+      {
+        rel: "preload",
+        as: "image",
+        href: "/robot_beach_upload.png",
+      },
+    ],
     scripts: [
       {
         type: "application/ld+json",
@@ -356,8 +364,11 @@ function Landing() {
               <img
                 src="/robot_beach_upload.png"
                 alt="PanoPublish Interactive Map Dashboard interface showing 360 degree photos and camera settings"
+                width={1280}
+                height={720}
                 className="absolute inset-0 w-full h-full object-cover opacity-30 select-none pointer-events-none"
-                loading="lazy"
+                loading="eager"
+                fetchPriority="high"
                 decoding="async"
               />
               <div className="relative z-10 text-center p-6 max-w-md">
