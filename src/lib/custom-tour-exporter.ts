@@ -485,9 +485,13 @@ const JS_SOURCE = `(function() {
       waWidget.style.left = (pos.indexOf('left') !== -1) ? '20px' : 'auto';
 
       var waLink = document.getElementById('whatsapp-link');
-      var url = 'https://wa.me/' + wa.number.replace(/[^0-9]/g, '');
+      var cleanNum = wa.number.replace(/[^0-9]/g, '');
+      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      var url = isMobile
+        ? 'https://wa.me/' + cleanNum
+        : 'https://web.whatsapp.com/send?phone=' + cleanNum;
       if (wa.message) {
-        url += '?text=' + encodeURIComponent(wa.message);
+        url += (isMobile ? '?text=' : '&text=') + encodeURIComponent(wa.message);
       }
       waLink.href = url;
     }

@@ -14,5 +14,12 @@ export const formatDateIN = (d: string | Date) => {
 };
 
 export const SUPPORT_PHONE = "+916394611967"; // replace with real number
-export const waLink = (msg: string) =>
-  `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(msg)}`;
+export const waLink = (msg: string) => {
+  const cleanPhone = SUPPORT_PHONE.replace(/[^0-9]/g, "");
+  const isMobile =
+    typeof navigator !== "undefined" &&
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  return isMobile
+    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`
+    : `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(msg)}`;
+};
