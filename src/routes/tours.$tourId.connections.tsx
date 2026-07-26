@@ -44,6 +44,8 @@ import {
   Edit3,
   Palette,
   LogOut,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePanoramaMap } from "@/hooks/usePanoramaMap";
@@ -96,6 +98,7 @@ declare global {
   interface Window {
     google?: any;
     pannellum?: { viewer: (el: string | HTMLElement, cfg: unknown) => { destroy: () => void } };
+    PanoViewer?: any;
     Marzipano?: any;
   }
 }
@@ -286,6 +289,7 @@ function ConnectionsPage() {
   const viewerRef = useRef<any>(null);
   const marzSceneRef = useRef<any>(null);
   const marzViewRef = useRef<any>(null);
+  const customScenesCacheRef = useRef<Record<string, { scene: any; view: any }>>({});
   const overlayPanoRef = useRef<HTMLDivElement>(null);
   const overlayViewerRef = useRef<any>(null);
   const overlayPanoContainerRef = useRef<HTMLDivElement | null>(null);
@@ -608,101 +612,110 @@ function ConnectionsPage() {
     [mapMode, active, photos],
   );
 
-  // 360 Panorama Main Viewer (Marzipano for Custom Tours, StreetView for GSV)
+  // Preload custom tour images in background for instant scene switching
+  useEffect(() => {
+    if (tour?.type === "custom" && photos.length > 0) {
+      photos.forEach((p) => {
+        if (p.file_url) {
+          const img = new Image();
+          img.src = p.file_url;
+        }
+      });
+    }
+  }, [tour?.type, photos]);
+
+  // 360 Panorama Main Viewer (Custom Tour Engine & StreetView)
   useEffect(() => {
     if (!active || !panoRef.current) return;
 
     if (tour?.type === "custom") {
       let cancelled = false;
 
-      const initMarzipano = () => {
-        if (cancelled || !panoRef.current || !window.Marzipano) return;
+      const initCustomViewer = () => {
+        const PanoEngine = window.PanoViewer || window.Marzipano;
+        if (cancelled || !panoRef.current || !PanoEngine) return;
         try {
-          if (viewerRef.current && typeof viewerRef.current.destroy === "function") {
-            try {
-              viewerRef.current.destroy();
-            } catch {}
+          const panoElement = panoRef.current;
+
+          // Re-use existing viewer if already created
+          let viewer = viewerRef.current;
+          if (!viewer || typeof viewer.createScene !== "function") {
+            panoElement.innerHTML = ""; // Clear canvas container
+            viewer = new PanoEngine.Viewer(panoElement, {
+              controls: { mouseViewMode: "drag" },
+              stage: { progressive: true },
+            });
+            viewerRef.current = viewer;
+            customScenesCacheRef.current = {};
           }
 
-          const panoElement = panoRef.current;
-          panoElement.innerHTML = ""; // Clear canvas container
+          let cached = customScenesCacheRef.current[active.id];
+          if (!cached) {
+            const source = PanoEngine.ImageUrlSource.fromString(active.file_url);
+            const geometry = new PanoEngine.EquirectGeometry([{ width: 4000 }]);
+            const limitor = PanoEngine.RectilinearView.limit.traditional(
+              2048,
+              (100 * Math.PI) / 180,
+            );
 
-          const viewerOpts = {
-            controls: {
-              mouseViewMode: "drag",
-            },
-          };
+            const view = new PanoEngine.RectilinearView(
+              { yaw: 0, pitch: 0, fov: Math.PI / 2 },
+              limitor,
+            );
 
-          const viewer = new window.Marzipano.Viewer(panoElement, viewerOpts);
-          viewerRef.current = viewer;
+            const scene = viewer.createScene({
+              source: source,
+              geometry: geometry,
+              view: view,
+            });
 
-          const source = window.Marzipano.ImageUrlSource.fromString(active.file_url);
-          const geometry = new window.Marzipano.EquirectGeometry([{ width: 4000 }]);
-          const limitor = window.Marzipano.RectilinearView.limit.traditional(
-            2048,
-            (100 * Math.PI) / 180,
-          );
+            cached = { scene, view };
+            customScenesCacheRef.current[active.id] = cached;
 
-          const view = new window.Marzipano.RectilinearView(
-            { yaw: 0, pitch: 0, fov: Math.PI / 2 },
-            limitor,
-          );
+            const syncPov = () => {
+              if (view) {
+                try {
+                  const yRad = view.yaw() || 0;
+                  const pRad = view.pitch() || 0;
+                  const fovRad = view.fov() || Math.PI / 2;
 
-          const marzScene = viewer.createScene({
-            source: source,
-            geometry: geometry,
-            view: view,
-          });
+                  const yDeg = Math.round(((yRad * 180) / Math.PI + 360) % 360);
+                  const pDeg = Math.round((pRad * 180) / Math.PI);
+                  const zoom = (Math.PI / 2) / fovRad;
 
-          marzSceneRef.current = marzScene;
-          marzViewRef.current = view;
+                  setCurrentHeading(yDeg);
+                  setCurrentPov({ heading: yDeg, pitch: pDeg, zoom });
+                } catch {}
+              }
+            };
 
-          marzScene.switchTo();
+            view.addEventListener("change", syncPov);
+          }
 
-          const syncPov = () => {
-            if (view) {
-              try {
-                const yRad = view.yaw() || 0;
-                const pRad = view.pitch() || 0;
-                const fovRad = view.fov() || Math.PI / 2;
+          marzSceneRef.current = cached.scene;
+          marzViewRef.current = cached.view;
 
-                const yDeg = Math.round(((yRad * 180 / Math.PI) + 360) % 360);
-                const pDeg = Math.round((pRad * 180) / Math.PI);
-                const zoom = (Math.PI / 2) / fovRad;
-
-                setCurrentHeading(yDeg);
-                setCurrentPov({ heading: yDeg, pitch: pDeg, zoom });
-              } catch {}
-            }
-          };
-
-          view.addEventListener("change", syncPov);
-          syncPov();
+          cached.scene.switchTo({ transitionDuration: 300 });
         } catch (err) {
-          console.error("Marzipano init error", err);
+          console.error("360 viewer init error", err);
         }
       };
 
-      if (window.Marzipano) {
-        initMarzipano();
+      const PanoEngine = window.PanoViewer || window.Marzipano;
+      if (PanoEngine) {
+        initCustomViewer();
       } else {
         const interval = setInterval(() => {
-          if (window.Marzipano) {
+          if (window.PanoViewer || window.Marzipano) {
             clearInterval(interval);
-            initMarzipano();
+            initCustomViewer();
           }
-        }, 150);
+        }, 100);
         return () => clearInterval(interval);
       }
 
       return () => {
         cancelled = true;
-        if (viewerRef.current && typeof viewerRef.current.destroy === "function") {
-          try {
-            viewerRef.current.destroy();
-          } catch {}
-          viewerRef.current = null;
-        }
       };
     } else {
       if (!mapsReady || !window.google?.maps) return;
@@ -1176,7 +1189,7 @@ function ConnectionsPage() {
           );
         }
       } catch (err) {
-        console.warn("Marzipano drag coords calc error", err);
+        console.warn("Drag coords calc error", err);
       }
     } else if (viewerRef.current && typeof viewerRef.current.mouseEventToCoords === "function") {
       try {
@@ -2138,15 +2151,15 @@ function ConnectionsPage() {
                           transform: "translate(-50%, -50%)",
                         }}
                       >
-                        {/* Tooltip badge at top */}
-                        <div className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md border border-white/20 shadow-xl opacity-90 whitespace-nowrap mb-1">
+                        {/* Tooltip badge floating cleanly above hotspot */}
+                        <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md border border-white/20 shadow-2xl whitespace-nowrap z-30 pointer-events-none">
                           {labelText}
                         </div>
 
                         {/* Hotspot Outer Container with Quick Action Control Ring */}
                         <div className="relative flex items-center justify-center">
                           {/* Quick Action Floating Controls around the hotspot (Screenshot 2 style) */}
-                          <div className="absolute inset-0 -m-5 pointer-events-none">
+                          <div className="absolute inset-0 pointer-events-none">
                             {/* 1. Move to Target Scene (Top Right) */}
                             <button
                               type="button"
@@ -2155,20 +2168,20 @@ function ConnectionsPage() {
                                 const targetIdx = photos.findIndex((p) => p.id === c.to_photo_id);
                                 if (targetIdx !== -1) setActiveIdx(targetIdx);
                               }}
-                              className="absolute -top-2 -right-2 h-7 w-7 rounded-full bg-slate-900/90 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer"
+                              className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
                               title="Move to target scene"
                             >
-                              <LogOut className="h-3.5 w-3.5" />
+                              <ExternalLink className="h-3.5 w-3.5" />
                             </button>
 
-                            {/* 2. Reset Position (Middle Left) */}
+                            {/* 2. Reset Position (Top Left) */}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 resetHotspotPosition(c.id);
                               }}
-                              className="absolute top-3 -left-6 h-7 w-7 rounded-full bg-slate-900/90 hover:bg-sky-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer"
+                              className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-amber-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
                               title="Reset position to view center"
                             >
                               <RotateCcw className="h-3.5 w-3.5" />
@@ -2181,7 +2194,7 @@ function ConnectionsPage() {
                                 e.stopPropagation();
                                 handleDeleteCustomHotspot(c.id);
                               }}
-                              className="absolute -bottom-2 -left-2 h-7 w-7 rounded-full bg-slate-900/90 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer"
+                              className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
                               title="Delete hotspot"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -2195,15 +2208,15 @@ function ConnectionsPage() {
                                 setEditingIconPopoverId(null);
                                 setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
                               }}
-                              className={`absolute -bottom-6 left-3 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer ${
-                                isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/90 hover:bg-sky-600"
+                              className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/95 hover:bg-sky-600"
                               }`}
                               title="Edit target scene"
                             >
                               <Edit3 className="h-3.5 w-3.5" />
                             </button>
 
-                            {/* 5. Change Icon Type (Top Left) */}
+                            {/* 5. Change Icon Type (Bottom Center) */}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2211,12 +2224,12 @@ function ConnectionsPage() {
                                 setEditingTargetPopoverId(null);
                                 setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
                               }}
-                              className={`absolute -top-6 left-3 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-110 pointer-events-auto cursor-pointer ${
-                                isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/90 hover:bg-purple-600"
+                              className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
                               }`}
-                              title="Change icon type"
+                              title="Change icon style"
                             >
-                              <Palette className="h-3.5 w-3.5" />
+                              <Sparkles className="h-3.5 w-3.5" />
                             </button>
                           </div>
 

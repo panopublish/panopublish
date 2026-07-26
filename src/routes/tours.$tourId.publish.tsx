@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
 import { syncStreetViewConnections } from "@/lib/streetview";
-import { exportMarzipanoTour, generateLivePreviewUrl } from "@/lib/marzipano-exporter";
+import { exportCustomTour, generateLivePreviewUrl } from "@/lib/custom-tour-exporter";
 
 const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
 
@@ -1094,7 +1094,7 @@ function PublishPage() {
     try {
       setExportProgress({ message: "Preparing tour files...", pct: 5 });
       
-      const blob = await exportMarzipanoTour(
+      const blob = await exportCustomTour(
         {
           tour: { id: tourId, name: tour.name, custom_settings: tour.custom_settings },
           photos: photos.map(p => ({

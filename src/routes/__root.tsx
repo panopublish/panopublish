@@ -155,6 +155,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       VITE_GOOGLE_CLIENT_ID: ${JSON.stringify(globalThis.process?.env?.VITE_GOOGLE_CLIENT_ID)},
       VITE_RAZORPAY_KEY_ID: ${JSON.stringify(globalThis.process?.env?.VITE_RAZORPAY_KEY_ID)}
     };
+    Object.defineProperty(window, 'PanoViewer', { get: function() { return window.Marzipano; }, configurable: true });
   `
     : "";
 

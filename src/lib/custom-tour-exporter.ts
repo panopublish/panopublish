@@ -76,7 +76,7 @@ const HTML_SOURCE = `<!DOCTYPE html>
     <span>Powered by <a href="https://panopublish.com" target="_blank">PanoPublish</a></span>
   </div>
 
-  <script src="marzipano.js"></script>
+  <script src="pano-viewer.js"></script>
   <script src="data.js"></script>
   <script src="index.js"></script>
 </body>
@@ -311,12 +311,22 @@ html, body {
 const JS_SOURCE = `(function() {
   'use strict';
 
-  var Marzipano = window.Marzipano;
+  var PanoEngine = window.PanoViewer || window.Marzipano;
   var APP_DATA = window.APP_DATA;
 
-  if (!APP_DATA) {
-    console.error("No tour data found.");
+  if (!APP_DATA || !PanoEngine) {
+    console.error("No tour data or engine found.");
     return;
+  }
+
+  // Preload scene images for instant smooth transitions
+  if (Array.isArray(APP_DATA.scenes)) {
+    APP_DATA.scenes.forEach(function(s) {
+      if (s.image) {
+        var img = new Image();
+        img.src = s.image;
+      }
+    });
   }
 
   // Set Theme Color
@@ -328,14 +338,17 @@ const JS_SOURCE = `(function() {
   var viewerOpts = {
     controls: {
       mouseViewMode: APP_DATA.settings.mouseViewMode || 'drag'
+    },
+    stage: {
+      progressive: true
     }
   };
-  var viewer = new Marzipano.Viewer(panoElement, viewerOpts);
+  var viewer = new PanoEngine.Viewer(panoElement, viewerOpts);
 
   // Auto-rotate settings
   var autorotate = null;
   if (APP_DATA.settings.autorotateEnabled) {
-    autorotate = Marzipano.autorotate({
+    autorotate = PanoEngine.autorotate({
       yawSpeed: APP_DATA.settings.autorotateSpeed || 0.01,
       targetPitch: 0,
       targetFov: Math.PI/2
@@ -345,14 +358,14 @@ const JS_SOURCE = `(function() {
 
   // Create Scenes
   var scenes = {};
-  var Equirect = Marzipano.EquirectGeometry || Marzipano.EquirectangularGeometry;
+  var Equirect = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
   APP_DATA.scenes.forEach(function(sceneData) {
-    var source = Marzipano.ImageUrlSource.fromString(sceneData.image);
+    var source = PanoEngine.ImageUrlSource.fromString(sceneData.image);
     var geometry = new Equirect([{ width: 4000 }]);
     
     // Limits
-    var limitor = Marzipano.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
-    var view = new Marzipano.RectilinearView(sceneData.initialViewParameters, limitor);
+    var limitor = PanoEngine.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
+    var view = new PanoEngine.RectilinearView(sceneData.initialViewParameters, limitor);
     
     var scene = viewer.createScene({
       source: source,
@@ -400,7 +413,7 @@ const JS_SOURCE = `(function() {
     });
   });
 
-  // Switch Scene
+  // Switch Scene with smooth transition
   function switchScene(id) {
     var sceneObj = scenes[id];
     if (!sceneObj) return;
@@ -410,7 +423,7 @@ const JS_SOURCE = `(function() {
     }
     
     sceneObj.scene.switchTo({
-      transitionDuration: 1000
+      transitionDuration: 400
     });
 
     if (autorotate) {
@@ -504,7 +517,7 @@ const JS_SOURCE = `(function() {
 
 })();`;
 
-export async function exportMarzipanoTour(
+export async function exportCustomTour(
   params: ExportTourParams,
   onProgress?: (msg: string, pct: number) => void
 ): Promise<Blob> {
@@ -538,17 +551,16 @@ export async function exportMarzipanoTour(
   const whatsappMessage = whatsapp.message || "";
   const whatsappPosition = whatsapp.position || "bottom-right";
 
-  onProgress?.("Downloading Marzipano viewer library...", 10);
+  onProgress?.("Downloading custom 360 viewer engine...", 10);
   
-  // 1. Fetch Marzipano Library from jsDelivr
-  let marzipanoJs = "";
+  // 1. Fetch Viewer Library from jsDelivr
+  let viewerJs = "";
   try {
     const res = await fetch("https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js");
     if (!res.ok) throw new Error("Status " + res.status);
-    marzipanoJs = await res.text();
+    viewerJs = await res.text();
   } catch (err) {
-    console.warn("Failed to fetch Marzipano from CDN, falling back to dynamic import script tag", err);
-    // fallback script loader in HTML if CDN fetch fails
+    console.warn("Failed to fetch viewer library from CDN, using fallback loader", err);
   }
 
   // 2. Fetch Logo if customized
@@ -658,11 +670,10 @@ export async function exportMarzipanoTour(
   zip.file("index.js", JS_SOURCE);
   zip.file("data.js", dataJsContent);
   
-  if (marzipanoJs) {
-    zip.file("marzipano.js", marzipanoJs);
+  if (viewerJs) {
+    zip.file("pano-viewer.js", viewerJs);
   } else {
-    // If JS fetch failed, index.html will use direct CDN script in marzipano.js placeholder
-    zip.file("marzipano.js", `/* Marzipano library load failed during export. Loading from CDN */\n` +
+    zip.file("pano-viewer.js", `/* Viewer engine loader fallback */\n` +
       `document.write('<script src="https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js"></script>');`);
   }
 
