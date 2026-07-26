@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { TourStepsNav } from "@/components/TourStepsNav";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -291,6 +292,8 @@ function ConnectionsPage() {
   const viewerRef = useRef<any>(null);
   const marzSceneRef = useRef<any>(null);
   const marzViewRef = useRef<any>(null);
+  const marzHotspotsRef = useRef<Record<string, { el: HTMLDivElement; hotspot: any }>>({});
+  const [portalContainers, setPortalContainers] = useState<Array<{ id: string; el: HTMLDivElement; conn: Conn }>>([]);
   const customScenesCacheRef = useRef<Record<string, { scene: any; view: any }>>({});
   const overlayPanoRef = useRef<HTMLDivElement>(null);
   const overlayViewerRef = useRef<any>(null);
@@ -870,6 +873,156 @@ function ConnectionsPage() {
       }
     }
   }, [active?.id, active?.file_url, mapsReady, tour?.type]);
+
+  // Native Marzipano 3D Hotspots Sync (Zero lag, Zero 3D drift during 360 image rotation)
+  useEffect(() => {
+    if (tour?.type !== "custom" || !active || !marzSceneRef.current) {
+      setPortalContainers([]);
+      return;
+    }
+
+    const scene = marzSceneRef.current;
+    const container = scene.hotspotContainer();
+    if (!container) return;
+
+    const activeConns = conns.filter((c) => c.from_photo_id === active.id);
+    const activeConnIds = new Set(activeConns.map((c) => c.id));
+
+    // Destroy hotspots that no longer belong to active scene
+    Object.keys(marzHotspotsRef.current).forEach((id) => {
+      if (!activeConnIds.has(id)) {
+        try {
+          container.destroyHotspot(marzHotspotsRef.current[id].hotspot);
+        } catch {}
+        delete marzHotspotsRef.current[id];
+      }
+    });
+
+    const newPortals: Array<{ id: string; el: HTMLDivElement; conn: Conn }> = [];
+
+    activeConns.forEach((c) => {
+      let meta: any = {};
+      try {
+        if (c.metadata) meta = JSON.parse(c.metadata);
+      } catch {}
+
+      const targetYawDeg = (c.heading - (active.heading || 0) + 360) % 360;
+      const yawRad = (targetYawDeg * Math.PI) / 180;
+      const pitchDeg = meta.pitch ?? c.pitch ?? -10;
+      const pitchRad = (pitchDeg * Math.PI) / 180;
+
+      let existing = marzHotspotsRef.current[c.id];
+      if (!existing) {
+        const el = document.createElement("div");
+        el.className = "custom-marzipano-hotspot";
+        el.style.position = "absolute";
+        el.style.transform = "translate(-50%, -50%)";
+        el.style.pointerEvents = "auto";
+        el.style.userSelect = "none";
+        el.style.zIndex = "20";
+
+        const hotspot = container.createHotspot(el, { yaw: yawRad, pitch: pitchRad });
+        existing = { el, hotspot };
+        marzHotspotsRef.current[c.id] = existing;
+      } else {
+        existing.hotspot.setPosition({ yaw: yawRad, pitch: pitchRad });
+      }
+
+      newPortals.push({ id: c.id, el: existing.el, conn: c });
+    });
+
+    setPortalContainers(newPortals);
+  }, [active?.id, active?.heading, conns, photos, tour?.type]);
+
+  const handleStartMarzipanoDrag = (e: React.PointerEvent, connId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const viewer = viewerRef.current;
+    const view = marzViewRef.current;
+    const panoEl = panoRef.current;
+    if (!viewer || !view || !panoEl) return;
+
+    if (typeof viewer.controls === "function" && viewer.controls()) {
+      viewer.controls().disable();
+    }
+    setDraggingHotspotId(connId);
+
+    const conn = conns.find((c) => c.id === connId);
+    let meta: any = {};
+    try {
+      if (conn?.metadata) meta = JSON.parse(conn.metadata);
+    } catch {}
+
+    const targetYawDeg = ((conn?.heading ?? 0) - (active?.heading || 0) + 360) % 360;
+    let latestYawRad = (targetYawDeg * Math.PI) / 180;
+    let latestPitchRad = ((meta.pitch ?? conn?.pitch ?? -10) * Math.PI) / 180;
+
+    const onPointerMove = (moveEvt: MouseEvent | TouchEvent) => {
+      const clientX = "touches" in moveEvt ? moveEvt.touches[0].clientX : moveEvt.clientX;
+      const clientY = "touches" in moveEvt ? moveEvt.touches[0].clientY : moveEvt.clientY;
+
+      const rect = panoEl.getBoundingClientRect();
+      const coords = view.screenToCoordinates({
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+      });
+
+      if (coords) {
+        latestYawRad = coords.yaw;
+        latestPitchRad = coords.pitch;
+
+        const entry = marzHotspotsRef.current[connId];
+        if (entry?.hotspot) {
+          entry.hotspot.setPosition({ yaw: coords.yaw, pitch: coords.pitch });
+        }
+      }
+    };
+
+    const onPointerUp = async () => {
+      window.removeEventListener("mousemove", onPointerMove);
+      window.removeEventListener("mouseup", onPointerUp);
+      window.removeEventListener("touchmove", onPointerMove);
+      window.removeEventListener("touchend", onPointerUp);
+
+      if (typeof viewer.controls === "function" && viewer.controls()) {
+        viewer.controls().enable();
+      }
+      setDraggingHotspotId(null);
+
+      const relYawDeg = (latestYawRad * 180) / Math.PI;
+      const absHeading = Math.round((relYawDeg + (active?.heading || 0) + 360) % 360);
+      const finalPitch = Math.round((latestPitchRad * 180) / Math.PI);
+
+      meta.pitch = finalPitch;
+      const metaJson = JSON.stringify(meta);
+
+      setConns((prev) =>
+        prev.map((c) =>
+          c.id === connId
+            ? { ...c, heading: absHeading, pitch: finalPitch, metadata: metaJson }
+            : c,
+        ),
+      );
+
+      try {
+        const { error } = await supabase
+          .from("connections")
+          .update({ heading: absHeading, metadata: metaJson } as any)
+          .eq("id", connId);
+        if (error) throw error;
+        toast.success("Hotspot position saved!", { duration: 1500 });
+        await markConnectionsUnsynced();
+      } catch (err: any) {
+        toast.error("Failed to save position: " + err.message);
+      }
+    };
+
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+    window.addEventListener("touchmove", onPointerMove);
+    window.addEventListener("touchend", onPointerUp);
+  };
 
   // Synchronize 3D chevron links dynamically when coordinates or headings update (e.g. during dragging)
   useEffect(() => {
@@ -2148,244 +2301,221 @@ function ConnectionsPage() {
 
               {/* Connected Hotspots overlay on 360 viewer */}
               {active &&
-                conns
-                  .filter((c) => c.from_photo_id === active.id)
-                  .map((c) => {
-                    const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
-                    let meta: any = {};
-                    try {
-                      if (c.metadata) meta = JSON.parse(c.metadata);
-                    } catch {}
+                tour?.type === "custom" &&
+                portalContainers.map(({ id, el, conn: c }) => {
+                  const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
+                  let meta: any = {};
+                  try {
+                    if (c.metadata) meta = JSON.parse(c.metadata);
+                  } catch {}
 
-                    const containerW = panoRef.current?.clientWidth || 800;
-                    const containerH = panoRef.current?.clientHeight || 600;
+                  const iconType = meta.icon_type || "arrow";
+                  const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
+                  const isTargetPopoverOpen = editingTargetPopoverId === c.id;
+                  const isIconPopoverOpen = editingIconPopoverId === c.id;
+                  const isDragging = draggingHotspotId === c.id;
 
-                    const coords = getHotspotScreenCoords(
-                      c.heading,
-                      meta.pitch ?? c.pitch ?? -10,
-                      currentPov,
-                      active?.heading || 0,
-                      containerW,
-                      containerH,
-                    );
-
-                    if (!coords.visible) return null;
-
-                    const iconType = meta.icon_type || "arrow";
-                    const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
-                    const isTargetPopoverOpen = editingTargetPopoverId === c.id;
-                    const isIconPopoverOpen = editingIconPopoverId === c.id;
-                    const isDragging = draggingHotspotId === c.id;
-
-                    return (
-                      <div
-                        key={c.id}
-                        className="absolute pointer-events-auto z-20 flex flex-col items-center select-none"
-                        style={{
-                          left: `${coords.x}px`,
-                          top: `${coords.y}px`,
-                          transform: "translate(-50%, -50%)",
-                        }}
-                      >
-                        {/* Tooltip badge floating cleanly above hotspot */}
-                        <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md border border-white/20 shadow-2xl whitespace-nowrap z-30 pointer-events-none">
-                          {labelText}
-                        </div>
-
-                        {/* Hotspot Outer Container with Quick Action Control Ring */}
-                        <div className="relative flex items-center justify-center">
-                          {/* Quick Action Floating Controls around the hotspot (Screenshot 2 style) */}
-                          <div className="absolute inset-0 pointer-events-none">
-                            {/* 1. Move to Target Scene (Top Right) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const targetIdx = photos.findIndex((p) => p.id === c.to_photo_id);
-                                if (targetIdx !== -1) setActiveIdx(targetIdx);
-                              }}
-                              className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
-                              title="Move to target scene"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* 2. Reset Position (Top Left) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                resetHotspotPosition(c.id);
-                              }}
-                              className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-amber-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
-                              title="Reset position to view center"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* 3. Delete Hotspot (Bottom Left) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteCustomHotspot(c.id);
-                              }}
-                              className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
-                              title="Delete hotspot"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* 4. Edit Target Scene (Bottom Right) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingIconPopoverId(null);
-                                setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
-                              }}
-                              className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
-                                isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/95 hover:bg-sky-600"
-                              }`}
-                              title="Edit target scene"
-                            >
-                              <Edit3 className="h-3.5 w-3.5" />
-                            </button>
-
-                            {/* 5. Change Icon Type (Bottom Center) */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTargetPopoverId(null);
-                                setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
-                              }}
-                              className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
-                                isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
-                              }`}
-                              title="Change icon style"
-                            >
-                              <Sparkles className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-
-                          {/* Main Center Hotspot Circle (Draggable Handle) */}
-                          <div
-                            onPointerDown={(e) => handlePointerDownHotspot(e, c.id)}
-                            className={`w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-2xl transition-transform cursor-grab active:cursor-grabbing ${
-                              isDragging ? "scale-125 bg-sky-400 ring-4 ring-sky-300/50" : "hover:scale-110"
-                            }`}
-                            title="Click & drag cursor to move hotspot"
-                          >
-                            {iconType === "door" && <span className="text-xl">🚪</span>}
-                            {iconType === "arrow" && <ArrowUp className="h-6 w-6" />}
-                            {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
-                            {iconType === "chevron" && <span className="text-xl">⏫</span>}
-                            {iconType === "info" && <Info className="h-6 w-6" />}
-                            {iconType === "help" && <HelpCircle className="h-6 w-6" />}
-                            {iconType === "cart" && <span className="text-xl">🛒</span>}
-                            {iconType === "pin" && <MapPin className="h-6 w-6" />}
-                            {iconType === "camera" && <Camera className="h-6 w-6" />}
-                            {iconType === "eye" && <Eye className="h-6 w-6" />}
-                          </div>
-                        </div>
-
-                        {/* Screenshot-2 "Select target scene" Popover Box */}
-                        {isTargetPopoverOpen && (
-                          <div
-                            className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-64 z-50 pointer-events-auto"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                              <span className="text-xs font-bold text-slate-200">Select target scene</span>
-                              <button
-                                type="button"
-                                onClick={() => setEditingTargetPopoverId(null)}
-                                className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-
-                            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                              {photos
-                                .filter((p) => p.id !== active.id)
-                                .map((p, idx) => {
-                                  const isSelected = c.to_photo_id === p.id;
-                                  return (
-                                    <button
-                                      key={p.id}
-                                      type="button"
-                                      onClick={async () => {
-                                        await updateHotspotTarget(c.id, p.id);
-                                        setEditingTargetPopoverId(null);
-                                      }}
-                                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
-                                        isSelected
-                                          ? "bg-[#0277bd] text-white font-bold"
-                                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                                      }`}
-                                    >
-                                      <span className="truncate">{p.filename || `Scene ${idx}`}</span>
-                                      {isSelected && <span className="text-[10px] text-sky-200">✓</span>}
-                                    </button>
-                                  );
-                                })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Inline "Change Icon Type" Popover Box */}
-                        {isIconPopoverOpen && (
-                          <div
-                            className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-2.5 w-56 z-50 pointer-events-auto"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
-                              <span className="text-xs font-bold text-slate-200">Change Icon</span>
-                              <button
-                                type="button"
-                                onClick={() => setEditingIconPopoverId(null)}
-                                className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {[
-                                { id: "arrow", icon: "⬆️", label: "Forward" },
-                                { id: "door", icon: "🚪", label: "Door" },
-                                { id: "double-arrow", icon: "⇡", label: "Double" },
-                                { id: "chevron", icon: "⏫", label: "Chevron" },
-                                { id: "info", icon: "ℹ️", label: "Info" },
-                                { id: "help", icon: "❓", label: "Help" },
-                                { id: "cart", icon: "🛒", label: "Cart" },
-                                { id: "pin", icon: "📍", label: "Pin" },
-                              ].map((item) => (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={async () => {
-                                    await updateHotspotIcon(c, item.id);
-                                    setEditingIconPopoverId(null);
-                                  }}
-                                  className={`p-1.5 rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all ${
-                                    iconType === item.id
-                                      ? "bg-[#0277bd] text-white"
-                                      : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                  }`}
-                                >
-                                  <span className="text-base">{item.icon}</span>
-                                  <span className="text-[8px] truncate">{item.label}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                  return createPortal(
+                    <div key={c.id} className="flex flex-col items-center select-none">
+                      {/* Tooltip badge floating cleanly above hotspot */}
+                      <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md border border-white/20 shadow-2xl whitespace-nowrap z-30 pointer-events-none">
+                        {labelText}
                       </div>
-                    );
-                  })}
+
+                      {/* Hotspot Outer Container with Quick Action Control Ring */}
+                      <div className="relative flex items-center justify-center">
+                        {/* Quick Action Floating Controls around the hotspot */}
+                        <div className="absolute inset-0 pointer-events-none">
+                          {/* 1. Move to Target Scene (Top Right) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetIdx = photos.findIndex((p) => p.id === c.to_photo_id);
+                              if (targetIdx !== -1) setActiveIdx(targetIdx);
+                            }}
+                            className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                            title="Move to target scene"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* 2. Reset Position (Top Left) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              resetHotspotPosition(c.id);
+                            }}
+                            className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-amber-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                            title="Reset position to view center"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* 3. Delete Hotspot (Bottom Left) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCustomHotspot(c.id);
+                            }}
+                            className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                            title="Delete hotspot"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* 4. Edit Target Scene (Bottom Right) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingIconPopoverId(null);
+                              setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
+                            }}
+                            className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                              isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/95 hover:bg-sky-600"
+                            }`}
+                            title="Edit target scene"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+
+                          {/* 5. Change Icon Type (Bottom Center) */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTargetPopoverId(null);
+                              setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
+                            }}
+                            className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                              isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
+                            }`}
+                            title="Change icon style"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Main Center Hotspot Circle (Draggable Handle) */}
+                        <div
+                          onPointerDown={(e) => handleStartMarzipanoDrag(e, c.id)}
+                          className={`w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-2xl transition-transform cursor-grab active:cursor-grabbing ${
+                            isDragging ? "scale-125 bg-sky-400 ring-4 ring-sky-300/50" : "hover:scale-110"
+                          }`}
+                          title="Click & drag cursor to move hotspot"
+                        >
+                          {iconType === "door" && <span className="text-xl">🚪</span>}
+                          {iconType === "arrow" && <ArrowUp className="h-6 w-6" />}
+                          {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
+                          {iconType === "chevron" && <span className="text-xl">⏫</span>}
+                          {iconType === "info" && <Info className="h-6 w-6" />}
+                          {iconType === "help" && <HelpCircle className="h-6 w-6" />}
+                          {iconType === "cart" && <span className="text-xl">🛒</span>}
+                          {iconType === "pin" && <MapPin className="h-6 w-6" />}
+                          {iconType === "camera" && <Camera className="h-6 w-6" />}
+                          {iconType === "eye" && <Eye className="h-6 w-6" />}
+                        </div>
+                      </div>
+
+                      {/* Popover Boxes */}
+                      {isTargetPopoverOpen && (
+                        <div
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-64 z-50 pointer-events-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                            <span className="text-xs font-bold text-slate-200">Select target scene</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingTargetPopoverId(null)}
+                              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                            {photos
+                              .filter((p) => p.id !== active.id)
+                              .map((p, idx) => {
+                                const isSelected = c.to_photo_id === p.id;
+                                return (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={async () => {
+                                      await updateHotspotTarget(c.id, p.id);
+                                      setEditingTargetPopoverId(null);
+                                    }}
+                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
+                                      isSelected
+                                        ? "bg-[#0277bd] text-white font-bold"
+                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                                    }`}
+                                  >
+                                    <span className="truncate">{p.filename || `Scene ${idx}`}</span>
+                                    {isSelected && <span className="text-[10px] text-sky-200">✓</span>}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {isIconPopoverOpen && (
+                        <div
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-2.5 w-56 z-50 pointer-events-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
+                            <span className="text-xs font-bold text-slate-200">Change Icon</span>
+                            <button
+                              type="button"
+                              onClick={() => setEditingIconPopoverId(null)}
+                              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { id: "arrow", icon: "⬆️", label: "Forward" },
+                              { id: "door", icon: "🚪", label: "Door" },
+                              { id: "double-arrow", icon: "⇡", label: "Double" },
+                              { id: "chevron", icon: "⏫", label: "Chevron" },
+                              { id: "info", icon: "ℹ️", label: "Info" },
+                              { id: "help", icon: "❓", label: "Help" },
+                              { id: "cart", icon: "🛒", label: "Cart" },
+                              { id: "pin", icon: "📍", label: "Pin" },
+                            ].map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={async () => {
+                                  await updateHotspotIcon(c, item.id);
+                                  setEditingIconPopoverId(null);
+                                }}
+                                className={`p-1.5 rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all ${
+                                  iconType === item.id
+                                    ? "bg-[#0277bd] text-white"
+                                    : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                                }`}
+                              >
+                                <span className="text-base">{item.icon}</span>
+                                <span className="text-[8px] truncate">{item.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>,
+                    el,
+                  );
+                })}
             </div>
 
             {/* Bottom Panel: Hotspots configured for this active scene */}
