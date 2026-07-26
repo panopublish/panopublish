@@ -340,6 +340,11 @@ function ConnectionsPage() {
           supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index"),
         ]);
       setTour(t as any);
+      if (typeof window !== "undefined" && t?.type) {
+        try {
+          sessionStorage.setItem(`tour_type_${tourId}`, t.type);
+        } catch (_) {}
+      }
 
       const tourLat = t?.latitude || 23.02463;
       const tourLng = t?.longitude || 72.56436;

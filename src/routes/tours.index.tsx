@@ -55,6 +55,15 @@ function ToursPage() {
 
       const tList = (tourData as any[]) ?? [];
       setTours(tList);
+      if (typeof window !== "undefined") {
+        tList.forEach((t) => {
+          if (t.id && t.type) {
+            try {
+              sessionStorage.setItem(`tour_type_${t.id}`, t.type);
+            } catch (_) {}
+          }
+        });
+      }
 
       if (tList.length > 0) {
         const ids = tList.map((t) => t.id);

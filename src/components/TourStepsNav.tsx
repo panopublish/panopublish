@@ -37,7 +37,20 @@ export function TourStepsNav({
   const [showHelp, setShowHelp] = useState(false);
   const navigate = useNavigate();
 
-  const tabs = tourType === "custom"
+  if (typeof window !== "undefined" && tourId && tourType) {
+    try {
+      sessionStorage.setItem(`tour_type_${tourId}`, tourType);
+    } catch (_) {}
+  }
+
+  const cachedType =
+    typeof window !== "undefined" && tourId
+      ? sessionStorage.getItem(`tour_type_${tourId}`)
+      : null;
+
+  const effectiveTourType = tourType || cachedType || undefined;
+
+  const tabs = effectiveTourType === "custom"
     ? [
         { id: "upload", label: "Upload photos", icon: Upload, to: `/tours/${tourId}` },
         {
@@ -99,7 +112,7 @@ export function TourStepsNav({
           >
             <Save className="h-5 w-5" />
           </button>
-          {tourType !== "custom" && (
+          {effectiveTourType !== "custom" && (
             <button
               onClick={() => {
                 if (onNadir) {
@@ -114,7 +127,7 @@ export function TourStepsNav({
               <Compass className="h-5 w-5" />
             </button>
           )}
-          {tourType !== "custom" && (
+          {effectiveTourType !== "custom" && (
             <button
               onClick={() => {
                 if (onShare) {
@@ -147,7 +160,7 @@ export function TourStepsNav({
         </div>
 
         {/* Info Bar - Google Maps/Constellation help (only for gmaps tours) */}
-        {tourType !== "custom" && (
+        {effectiveTourType !== "custom" && (
           <div className="w-full max-w-4xl bg-[#e3f2fd] text-[#0277bd] text-sm py-2 px-4 mt-4 rounded-md flex justify-center items-center gap-2">
             <span>We've updated constellations.</span>
             <button
