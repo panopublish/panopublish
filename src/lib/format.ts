@@ -16,5 +16,5 @@ export const formatDateIN = (d: string | Date) => {
 export const SUPPORT_PHONE = "+916394611967"; // replace with real number
 export const waLink = (msg: string) => {
   const cleanPhone = SUPPORT_PHONE.replace(/[^0-9]/g, "");
-  return `https://wa.me/${cleanPhone}${msg ? `?text=${encodeURIComponent(msg)}` : ""}`;
+  return `https://api.whatsapp.com/send?phone=${cleanPhone}${msg ? `&text=${encodeURIComponent(msg)}` : ""}`;
 };

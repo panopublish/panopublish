@@ -488,7 +488,7 @@ const JS_SOURCE = `(function() {
       var cleanNum = wa.number.replace(/[^0-9]/g, '');
       var msgText = wa.message ? encodeURIComponent(wa.message) : '';
 
-      var targetUrl = 'https://wa.me/' + cleanNum + (msgText ? '?text=' + msgText : '');
+      var targetUrl = 'https://api.whatsapp.com/send?phone=' + cleanNum + (msgText ? '&text=' + msgText : '');
       waLink.href = targetUrl;
       waLink.setAttribute('target', '_blank');
 
