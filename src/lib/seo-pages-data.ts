@@ -1,4 +1,5 @@
 import { getBlogSections, getBlogImage } from "./blog-content-generator";
+import { cluster1VirtualTourSoftwarePages } from "./cluster1-virtual-tour-software-data";
 
 export interface SeoPageData {
   slug: string;
@@ -4574,10 +4575,13 @@ export const seoPages: Record<string, SeoPageData> = {
   }
 };
 
-// Dynamically generate deep, rich and reader-friendly blog content for all blogs
+// Merge Cluster 1 articles into seoPages
+Object.assign(seoPages, cluster1VirtualTourSoftwarePages);
+
+// Dynamically generate deep, rich and reader-friendly blog content for all blogs if sections not already set
 Object.keys(seoPages).forEach((key) => {
   const page = seoPages[key];
-  if (page.type === "blog") {
+  if (page.type === "blog" && (!page.sections || page.sections.length === 0)) {
     const competitorName = page.comparisonTable?.competitorName;
     page.sections = getBlogSections(
       page.slug,

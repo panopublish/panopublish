@@ -3,7 +3,8 @@ const path = require('path');
 
 function getPublicRoutes() {
   const seoPagesFilePath = path.join(__dirname, 'src/lib/seo-pages-data.ts');
-  const content = fs.readFileSync(seoPagesFilePath, 'utf8');
+  const cluster1FilePath = path.join(__dirname, 'src/lib/cluster1-virtual-tour-software-data.ts');
+  const content = fs.readFileSync(seoPagesFilePath, 'utf8') + '\n' + (fs.existsSync(cluster1FilePath) ? fs.readFileSync(cluster1FilePath, 'utf8') : '');
 
   // Match slug and type from seo-pages-data.ts (supports TS objects and JSON formatting)
   const regex = /"?slug"?:?\s*["']([^"']+)["'][\s\S]*?"?type"?:?\s*["']([^"']+)["']/g;
