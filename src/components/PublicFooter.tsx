@@ -126,6 +126,21 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
+                <Link to="/case-studies" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                  Case Studies
+                </Link>
+              </li>
+              <li>
+                <Link to="/faq" className="text-muted-foreground hover:text-primary transition-colors">
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <a href="/authors/prashant-kumar" className="text-muted-foreground hover:text-primary transition-colors">
+                  Meet the Author
+                </a>
+              </li>
+              <li>
                 <Link to="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
                   Pricing Plans
                 </Link>

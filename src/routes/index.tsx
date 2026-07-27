@@ -21,6 +21,8 @@ import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
+import { TestimonialsGrid } from "@/components/TestimonialsGrid";
+import { getFeaturedTestimonials } from "@/lib/testimonials-data";
 
 const landingSchemas = [
   {
@@ -621,60 +623,13 @@ function Landing() {
         {/* Testimonials */}
         <section className="bg-muted/30 py-20 border-y">
           <div className="container mx-auto px-4 max-w-6xl">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight font-serif">
-                What photographers are saying about PanoPublish
-              </h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                Helping professionals and local businesses succeed across India.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                {
-                  quote:
-                    "I publish 8–10 hotel virtual tours a month for hospitality clients in Goa. PanoPublish's direct publishing cut my upload time and metadata alignment in half. The support is top-notch.",
-                  author: "Rahul M.",
-                  role: "360° Commercial Photographer",
-                  location: "Goa, India",
-                },
-                {
-                  quote:
-                    "Finally, a platform built for India with INR pricing, tax invoice generation for input credit, and real support on WhatsApp. My agency has migrated all client tours here.",
-                  author: "Priya S.",
-                  role: "Co-Founder, BlueMedia Agency",
-                  location: "Bengaluru, India",
-                },
-                {
-                  quote:
-                    "The multi-floor island configuration makes showroom tours exceptionally organized. Being able to easily add nadir brand logos directly before sync is a game-changer.",
-                  author: "Anil K.",
-                  role: "Real Estate Media Specialist",
-                  location: "New Delhi, India",
-                },
-              ].map((t, idx) => (
-                <div
-                  key={idx}
-                  className="bg-card rounded-xl border p-6 shadow-sm flex flex-col justify-between"
-                >
-                  <p className="text-sm leading-relaxed italic text-foreground/90 font-medium font-sans">
-                    “{t.quote}”
-                  </p>
-                  <div className="mt-6 flex items-center gap-3 border-t pt-4">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                      {t.author[0]}
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm text-foreground">{t.author}</div>
-                      <div className="text-[11px] text-muted-foreground leading-tight">
-                        {t.role} • {t.location}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <TestimonialsGrid
+              testimonials={getFeaturedTestimonials()}
+              heading="What Our Clients Say"
+              subheading="Real results from businesses across Gujarat who published 360° virtual tours with PanoPublish."
+              showSchema={true}
+              cols={3}
+            />
           </div>
         </section>
 

@@ -4,10 +4,9 @@ import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { Button } from "@/components/ui/button";
+import { AuthorByline } from "@/components/AuthorByline";
 import {
-  Calendar,
   Clock,
-  User,
   ArrowLeft,
   BookOpen,
   ArrowRight,
@@ -73,8 +72,8 @@ function BlogPost() {
       "dateModified": page.date ?? "2026-01-01",
       "author": {
         "@type": "Person",
-        "name": page.author ?? "PanoPublish Team",
-        "url": "https://panopublish.com/blog",
+        "name": page.author ?? "Prashant Kumar",
+        "url": "https://panopublish.com/authors/prashant-kumar",
       },
       "publisher": {
         "@type": "Organization",
@@ -144,17 +143,21 @@ function BlogPost() {
               <span className="text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-3 py-1 rounded-full">
                 {page.category}
               </span>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <User className="h-3.5 w-3.5" /> {page.author}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" /> {page.date}
-                </span>
-                <span className="flex items-center gap-1">
+              {page.readTime && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" /> {page.readTime}
                 </span>
-              </div>
+              )}
+            </div>
+
+            {/* Author byline with dates */}
+            <div className="pt-1">
+              <AuthorByline
+                authorSlug="prashant-kumar"
+                authorName={page.author ?? "Prashant Kumar"}
+                authorTitle="360° Virtual Tour Specialist & Founder, PanoPublish"
+                datePublished={page.date}
+              />
             </div>
 
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight font-serif text-foreground leading-tight">

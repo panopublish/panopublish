@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Check, HelpCircle, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
+import { Check, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
+import { FAQBlock } from "@/components/FAQBlock";
+import { faqsByCategory } from "@/lib/faq-data";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -243,18 +245,18 @@ function PricingPage() {
               <h3 className="font-bold text-lg font-serif text-foreground mb-4">
                 Pricing Frequently Asked Questions
               </h3>
-              <div className="grid gap-4">
-                {faqs.map((faq, i) => (
-                  <div key={i} className="bg-slate-50 p-4 rounded-xl space-y-1">
-                    <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
-                      <HelpCircle className="h-4 w-4 text-primary shrink-0" />
-                      {faq.question}
-                    </h4>
-                    <p className="text-xs text-muted-foreground pl-6 leading-relaxed">
-                      {faq.answer}
-                    </p>
-                  </div>
-                ))}
+              <FAQBlock
+                faqs={[
+                  ...faqsByCategory("pricing"),
+                  ...faqsByCategory("billing"),
+                ]}
+                schemaId="pricing-page"
+                className="space-y-3"
+              />
+              <div className="text-center pt-4">
+                <Link to="/faq" className="text-xs text-primary font-semibold hover:underline">
+                  View all FAQs →
+                </Link>
               </div>
             </div>
           </section>

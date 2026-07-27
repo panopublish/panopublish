@@ -207,3 +207,91 @@ CREATE TABLE IF NOT EXISTS pending_users (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- ─── Content / SEO Tables ─────────────────────────────────────────────────
+
+-- Authors (content creators / team bios)
+CREATE TABLE IF NOT EXISTS authors (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  title TEXT,
+  bio TEXT,
+  photo_url TEXT,
+  credentials TEXT,
+  linkedin_url TEXT,
+  years_experience INTEGER,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_authors_slug ON authors(slug);
+
+-- Seed: real author record
+INSERT OR IGNORE INTO authors (id, slug, name, title, bio, credentials, years_experience, created_at)
+VALUES (
+  'auth-01-prashant',
+  'prashant-kumar',
+  'Prashant Kumar',
+  '360° Virtual Tour Specialist & Founder, PanoPublish',
+  'Prashant Kumar is the founder of PanoPublish and a Google Street View certified specialist with 4 years of hands-on experience helping hotels, restaurants, gyms, schools, and real estate firms across Gujarat publish immersive 360° virtual tours on Google Maps. He has published over 500 panoramic photo spheres for clients across Ahmedabad, Rajkot, Surat, Bhavnagar, and Junagadh. Prashant combines technical expertise in panoramic photography workflows with deep knowledge of Google Street View API, EXIF GPS metadata, and nadir branding to deliver turn-key virtual tour publishing for Indian businesses.',
+  'Google Street View Trusted Photographer | 360° Panoramic Photography | Google Maps Publishing',
+  4,
+  datetime('now')
+);
+
+-- Case Studies
+CREATE TABLE IF NOT EXISTS case_studies (
+  id TEXT PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  client_name TEXT NOT NULL,
+  client_type TEXT NOT NULL,
+  city TEXT,
+  challenge TEXT,
+  solution TEXT,
+  results TEXT DEFAULT '{}',
+  photo_urls TEXT DEFAULT '[]',
+  tour_embed_url TEXT,
+  testimonial_quote TEXT,
+  published_at TEXT,
+  author_id TEXT REFERENCES authors(id) ON DELETE SET NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_case_studies_slug ON case_studies(slug);
+CREATE INDEX IF NOT EXISTS idx_case_studies_client_type ON case_studies(client_type);
+
+-- Testimonials
+CREATE TABLE IF NOT EXISTS testimonials (
+  id TEXT PRIMARY KEY,
+  client_name TEXT NOT NULL,
+  client_company TEXT,
+  client_photo_url TEXT,
+  quote TEXT NOT NULL,
+  rating INTEGER NOT NULL DEFAULT 5 CHECK(rating BETWEEN 1 AND 5),
+  source TEXT DEFAULT 'whatsapp',
+  city TEXT,
+  service_used TEXT,
+  is_featured INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_testimonials_is_featured ON testimonials(is_featured);
+
+-- FAQs (categorized, for hub page + reusable blocks)
+CREATE TABLE IF NOT EXISTS faqs (
+  id TEXT PRIMARY KEY,
+  category TEXT NOT NULL,
+  question TEXT NOT NULL,
+  answer TEXT NOT NULL,
+  display_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_faqs_category ON faqs(category);
+
+-- WhatsApp Proof Screenshots (admin managed)
+CREATE TABLE IF NOT EXISTS whatsapp_proofs (
+  id TEXT PRIMARY KEY,
+  image_url TEXT NOT NULL,
+  caption TEXT,
+  client_name TEXT,
+  blurred INTEGER NOT NULL DEFAULT 1,
+  display_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+

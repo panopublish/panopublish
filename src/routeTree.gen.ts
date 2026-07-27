@@ -17,6 +17,7 @@ import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FaqRouteImport } from './routes/faq'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ClientsRouteImport } from './routes/clients'
@@ -24,9 +25,13 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ToursIndexRouteImport } from './routes/tours.index'
+import { Route as CaseStudiesIndexRouteImport } from './routes/case-studies.index'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ToursNewRouteImport } from './routes/tours.new'
+import { Route as CaseStudiesSlugRouteImport } from './routes/case-studies.$slug'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as AuthorsSlugRouteImport } from './routes/authors.$slug'
+import { Route as AdminTestimonialsRouteImport } from './routes/admin.testimonials'
 import { Route as ToursTourIdIndexRouteImport } from './routes/tours.$tourId.index'
 import { Route as ToursTourIdPublishRouteImport } from './routes/tours.$tourId.publish'
 import { Route as ToursTourIdLocationRouteImport } from './routes/tours.$tourId.location'
@@ -74,6 +79,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FaqRoute = FaqRouteImport.update({
+  id: '/faq',
+  path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -109,6 +119,11 @@ const ToursIndexRoute = ToursIndexRouteImport.update({
   path: '/tours/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CaseStudiesIndexRoute = CaseStudiesIndexRouteImport.update({
+  id: '/case-studies/',
+  path: '/case-studies/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
   id: '/blog/',
   path: '/blog/',
@@ -119,10 +134,25 @@ const ToursNewRoute = ToursNewRouteImport.update({
   path: '/tours/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CaseStudiesSlugRoute = CaseStudiesSlugRouteImport.update({
+  id: '/case-studies/$slug',
+  path: '/case-studies/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthorsSlugRoute = AuthorsSlugRouteImport.update({
+  id: '/authors/$slug',
+  path: '/authors/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminTestimonialsRoute = AdminTestimonialsRouteImport.update({
+  id: '/testimonials',
+  path: '/testimonials',
+  getParentRoute: () => AdminRoute,
 } as any)
 const ToursTourIdIndexRoute = ToursTourIdIndexRouteImport.update({
   id: '/tours/$tourId/',
@@ -158,10 +188,11 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/clients': typeof ClientsRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -170,9 +201,13 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/authors/$slug': typeof AuthorsSlugRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/case-studies/$slug': typeof CaseStudiesSlugRoute
   '/tours/new': typeof ToursNewRoute
   '/blog/': typeof BlogIndexRoute
+  '/case-studies/': typeof CaseStudiesIndexRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
@@ -184,10 +219,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/clients': typeof ClientsRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -196,9 +232,13 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/authors/$slug': typeof AuthorsSlugRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/case-studies/$slug': typeof CaseStudiesSlugRoute
   '/tours/new': typeof ToursNewRoute
   '/blog': typeof BlogIndexRoute
+  '/case-studies': typeof CaseStudiesIndexRoute
   '/tours': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
@@ -211,10 +251,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$slug': typeof SlugRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/clients': typeof ClientsRoute
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
+  '/faq': typeof FaqRoute
   '/login': typeof LoginRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -223,9 +264,13 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/admin/testimonials': typeof AdminTestimonialsRoute
+  '/authors/$slug': typeof AuthorsSlugRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/case-studies/$slug': typeof CaseStudiesSlugRoute
   '/tours/new': typeof ToursNewRoute
   '/blog/': typeof BlogIndexRoute
+  '/case-studies/': typeof CaseStudiesIndexRoute
   '/tours/': typeof ToursIndexRoute
   '/auth/google/callback': typeof AuthGoogleCallbackRoute
   '/tours/$tourId/analytics': typeof ToursTourIdAnalyticsRoute
@@ -243,6 +288,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/contact'
     | '/dashboard'
+    | '/faq'
     | '/login'
     | '/pricing'
     | '/privacy'
@@ -251,9 +297,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/terms'
+    | '/admin/testimonials'
+    | '/authors/$slug'
     | '/blog/$slug'
+    | '/case-studies/$slug'
     | '/tours/new'
     | '/blog/'
+    | '/case-studies/'
     | '/tours/'
     | '/auth/google/callback'
     | '/tours/$tourId/analytics'
@@ -269,6 +319,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/contact'
     | '/dashboard'
+    | '/faq'
     | '/login'
     | '/pricing'
     | '/privacy'
@@ -277,9 +328,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/terms'
+    | '/admin/testimonials'
+    | '/authors/$slug'
     | '/blog/$slug'
+    | '/case-studies/$slug'
     | '/tours/new'
     | '/blog'
+    | '/case-studies'
     | '/tours'
     | '/auth/google/callback'
     | '/tours/$tourId/analytics'
@@ -295,6 +350,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/contact'
     | '/dashboard'
+    | '/faq'
     | '/login'
     | '/pricing'
     | '/privacy'
@@ -303,9 +359,13 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/terms'
+    | '/admin/testimonials'
+    | '/authors/$slug'
     | '/blog/$slug'
+    | '/case-studies/$slug'
     | '/tours/new'
     | '/blog/'
+    | '/case-studies/'
     | '/tours/'
     | '/auth/google/callback'
     | '/tours/$tourId/analytics'
@@ -318,10 +378,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SlugRoute: typeof SlugRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   ClientsRoute: typeof ClientsRoute
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
+  FaqRoute: typeof FaqRoute
   LoginRoute: typeof LoginRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -330,9 +391,12 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  AuthorsSlugRoute: typeof AuthorsSlugRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  CaseStudiesSlugRoute: typeof CaseStudiesSlugRoute
   ToursNewRoute: typeof ToursNewRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  CaseStudiesIndexRoute: typeof CaseStudiesIndexRoute
   ToursIndexRoute: typeof ToursIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
   ToursTourIdAnalyticsRoute: typeof ToursTourIdAnalyticsRoute
@@ -400,6 +464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faq': {
+      id: '/faq'
+      path: '/faq'
+      fullPath: '/faq'
+      preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -449,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/case-studies/': {
+      id: '/case-studies/'
+      path: '/case-studies'
+      fullPath: '/case-studies/'
+      preLoaderRoute: typeof CaseStudiesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/': {
       id: '/blog/'
       path: '/blog'
@@ -463,12 +541,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ToursNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/case-studies/$slug': {
+      id: '/case-studies/$slug'
+      path: '/case-studies/$slug'
+      fullPath: '/case-studies/$slug'
+      preLoaderRoute: typeof CaseStudiesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/blog/$slug': {
       id: '/blog/$slug'
       path: '/blog/$slug'
       fullPath: '/blog/$slug'
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/authors/$slug': {
+      id: '/authors/$slug'
+      path: '/authors/$slug'
+      fullPath: '/authors/$slug'
+      preLoaderRoute: typeof AuthorsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/testimonials': {
+      id: '/admin/testimonials'
+      path: '/testimonials'
+      fullPath: '/admin/testimonials'
+      preLoaderRoute: typeof AdminTestimonialsRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/tours/$tourId/': {
       id: '/tours/$tourId/'
@@ -515,13 +614,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminRouteChildren {
+  AdminTestimonialsRoute: typeof AdminTestimonialsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminTestimonialsRoute: AdminTestimonialsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SlugRoute: SlugRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   ClientsRoute: ClientsRoute,
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
+  FaqRoute: FaqRoute,
   LoginRoute: LoginRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
@@ -530,9 +640,12 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  AuthorsSlugRoute: AuthorsSlugRoute,
   BlogSlugRoute: BlogSlugRoute,
+  CaseStudiesSlugRoute: CaseStudiesSlugRoute,
   ToursNewRoute: ToursNewRoute,
   BlogIndexRoute: BlogIndexRoute,
+  CaseStudiesIndexRoute: CaseStudiesIndexRoute,
   ToursIndexRoute: ToursIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
   ToursTourIdAnalyticsRoute: ToursTourIdAnalyticsRoute,

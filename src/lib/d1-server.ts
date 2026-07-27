@@ -137,6 +137,14 @@ export const runD1Query = createServerFn({ method: "POST" })
         } else if (table === "connections" || table === "users") {
           // connections are scoped via tour_id (no user_id column)
           // users table is for auth only, no user_id column
+        } else if (
+          table === "testimonials" ||
+          table === "case_studies" ||
+          table === "authors" ||
+          table === "faqs" ||
+          table === "whatsapp_proofs"
+        ) {
+          // Public content tables — no user_id scoping needed, skip
         } else {
           if (userId) {
             clauses.push(`${table}.user_id = ?`);
