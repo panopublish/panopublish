@@ -4666,16 +4666,21 @@ Object.assign(seoPages, cluster4_IndustrySolutionsPages);
 // Dynamically generate deep, rich and reader-friendly blog content for all blogs if sections not already set
 Object.keys(seoPages).forEach((key) => {
   const page = seoPages[key];
-  if (page.type === "blog" && (!page.sections || page.sections.length === 0)) {
-    const competitorName = page.comparisonTable?.competitorName;
-    page.sections = getBlogSections(
-      page.slug,
-      page.heading,
-      page.primaryKeyword,
-      page.category,
-      competitorName
-    );
-    page.image = getBlogImage(page.slug, page.primaryKeyword);
+  if (page.type === "blog") {
+    if (!page.sections || page.sections.length === 0) {
+      const competitorName = page.comparisonTable?.competitorName;
+      page.sections = getBlogSections(
+        page.slug,
+        page.heading,
+        page.primaryKeyword,
+        page.category,
+        competitorName
+      );
+    }
+    // Override default generic robot image with topic-specific relevant WebP image
+    if (!page.image || page.image.includes("robot_beach")) {
+      page.image = getBlogImage(page.slug, page.primaryKeyword || page.heading);
+    }
   }
 });
 

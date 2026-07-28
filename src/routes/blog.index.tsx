@@ -5,7 +5,9 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Calendar, Clock, User, ArrowRight, BookOpen, MapPin } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar, Clock, User, ArrowRight, BookOpen, MapPin, Search } from "lucide-react";
+import { useState, useMemo } from "react";
 
 export const Route = createFileRoute("/blog/")({
   head: () => ({
@@ -21,17 +23,71 @@ export const Route = createFileRoute("/blog/")({
   component: BlogIndex,
 });
 
+const CATEGORIES = [
+  "All",
+  "Google Street View",
+  "360° Photography",
+  "Virtual Tour Software",
+  "Industry Solutions",
+  "Business & Marketing",
+];
+
+function parseBlogDate(dateStr?: string): number {
+  if (!dateStr) return 0;
+  const timestamp = Date.parse(dateStr);
+  return isNaN(timestamp) ? 0 : timestamp;
+}
+
+function matchesCategory(blogCategory: string | undefined, blogTitle: string, selectedCategory: string): boolean {
+  if (selectedCategory === "All") return true;
+  const cat = (blogCategory || "").toLowerCase();
+  const title = blogTitle.toLowerCase();
+
+  switch (selectedCategory) {
+    case "Google Street View":
+      return cat.includes("street view") || cat.includes("google") || title.includes("street view") || title.includes("google maps");
+    case "360° Photography":
+      return cat.includes("photography") || cat.includes("camera") || cat.includes("gear") || title.includes("photography") || title.includes("stitching") || title.includes("camera");
+    case "Virtual Tour Software":
+      return cat.includes("software") || cat.includes("virtual tour") || cat.includes("platform") || title.includes("software") || title.includes("builder");
+    case "Industry Solutions":
+      return cat.includes("industry") || cat.includes("solutions") || title.includes("real estate") || title.includes("hotel") || title.includes("school") || title.includes("restaurant");
+    case "Business & Marketing":
+      return cat.includes("business") || cat.includes("agency") || cat.includes("pricing") || title.includes("business") || title.includes("client") || title.includes("monetiz");
+    default:
+      return true;
+  }
+}
+
 function BlogIndex() {
-  // Extract all blogs from database
-  const blogs = Object.values(seoPages).filter((page) => page.type === "blog");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Pick one blog as a featured article (e.g. how to publish)
-  const featuredBlog = blogs.find(
-    (b) => b.slug === "how-to-publish-360-photos-to-google-street-view"
-  ) || blogs[0];
+  // Extract all blogs from database and sort by date (Recently published first)
+  const allBlogsSorted = useMemo(() => {
+    const rawBlogs = Object.values(seoPages).filter((page) => page.type === "blog");
+    return rawBlogs.sort((a, b) => parseBlogDate(b.date) - parseBlogDate(a.date));
+  }, []);
 
-  // Rest are normal list items
-  const regularBlogs = blogs.filter((b) => b.slug !== featuredBlog?.slug);
+  // Pick one blog as a featured article (e.g. how to publish or most recent)
+  const featuredBlog = useMemo(() => {
+    return (
+      allBlogsSorted.find((b) => b.slug === "how-to-publish-360-photos-to-google-street-view") ||
+      allBlogsSorted[0]
+    );
+  }, [allBlogsSorted]);
+
+  // Filter regular blogs by selected category and search query
+  const filteredBlogs = useMemo(() => {
+    return allBlogsSorted.filter((b) => {
+      const matchesCat = matchesCategory(b.category, b.heading, selectedCategory);
+      const matchesSearch =
+        searchQuery.trim() === "" ||
+        b.heading.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.introText.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCat && matchesSearch;
+    });
+  }, [allBlogsSorted, selectedCategory, searchQuery]);
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
@@ -64,10 +120,10 @@ function BlogIndex() {
       </section>
 
       {/* BLOG CONTENT LIST */}
-      <main className="flex-1 py-16 md:py-24 bg-slate-50/50">
-        <div className="container mx-auto px-4 max-w-5xl space-y-16">
+      <main className="flex-1 py-12 md:py-20 bg-slate-50/50">
+        <div className="container mx-auto px-4 max-w-5xl space-y-12">
           {/* Featured Blog */}
-          {featuredBlog && (
+          {featuredBlog && selectedCategory === "All" && searchQuery === "" && (
             <div className="group rounded-3xl border bg-white overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 grid md:grid-cols-2">
               <div className="flex items-center justify-center min-h-[250px] relative overflow-hidden bg-slate-100 w-full">
                 {featuredBlog.image ? (
@@ -93,7 +149,9 @@ function BlogIndex() {
                     <span className="text-xs text-muted-foreground">{featuredBlog.category}</span>
                   </div>
                   <h2 className="text-xl md:text-2xl font-bold font-serif text-foreground group-hover:text-primary transition-colors">
-                    <Link to="/blog/$slug" params={{ slug: featuredBlog.slug }}>{featuredBlog.heading}</Link>
+                    <Link to="/blog/$slug" params={{ slug: featuredBlog.slug }}>
+                      {featuredBlog.heading}
+                    </Link>
                   </h2>
                   <p className="text-muted-foreground text-xs md:text-sm leading-relaxed line-clamp-3">
                     {featuredBlog.introText}
@@ -122,64 +180,120 @@ function BlogIndex() {
             </div>
           )}
 
-          {/* Grid of other articles */}
-          <div className="space-y-8">
-            <h3 className="text-lg md:text-xl font-bold font-serif text-foreground border-b pb-3">
-              All Articles
-            </h3>
+          {/* SEARCH & CATEGORY FILTER TABS */}
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
+              {/* Category Pills */}
+              <div className="flex flex-wrap items-center gap-2">
+                {CATEGORIES.map((cat) => {
+                  const isActive = selectedCategory === cat;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "bg-white border text-muted-foreground hover:text-foreground hover:bg-slate-100"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {regularBlogs.map((blog) => (
-                <Card
-                  key={blog.slug}
-                  className="group hover:shadow-md hover:translate-y-[-2px] transition-all duration-300 flex flex-col justify-between bg-white border"
-                >
-                  <CardHeader className="p-0">
-                    <div className="h-40 border-b relative overflow-hidden bg-slate-50 flex items-center justify-center">
-                      {blog.image ? (
-                        <img
-                          src={blog.image}
-                          alt={blog.heading}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <>
-                          <div className="absolute inset-0 bg-slate-50" />
-                          <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:12px_12px] opacity-10" />
-                          <BookOpen className="h-12 w-12 text-slate-300 group-hover:scale-105 transition-transform duration-300 z-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                        </>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-5 flex-1 space-y-3">
-                    <span className="text-[10px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                      {blog.category}
-                    </span>
-                    <h4 className="font-bold text-sm md:text-base text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                      <Link to="/blog/$slug" params={{ slug: blog.slug }}>{blog.heading}</Link>
-                    </h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                      {blog.introText}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="p-5 pt-0 border-t flex flex-col items-start gap-4">
-                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground pt-3 w-full justify-between">
-                      <span className="flex items-center gap-0.5">
-                        <Calendar className="h-3 w-3" /> {blog.date}
-                      </span>
-                      <span className="flex items-center gap-0.5">
-                        <Clock className="h-3 w-3" /> {blog.readTime}
-                      </span>
-                    </div>
-                    <Link to="/blog/$slug" params={{ slug: blog.slug }} className="w-full">
-                      <Button variant="ghost" size="sm" className="w-full text-xs font-bold justify-between group-hover:text-primary p-0">
-                        Read Guide <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </Button>
-                    </Link>
-                  </CardFooter>
-                </Card>
-              ))}
+              {/* Search Box */}
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search articles..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-xs rounded-full bg-white border"
+                />
+              </div>
             </div>
+
+            {/* Articles Header */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg md:text-xl font-bold font-serif text-foreground">
+                {selectedCategory === "All" ? "All Articles (Recently Published First)" : `${selectedCategory} Articles`}
+              </h3>
+              <span className="text-xs text-muted-foreground font-medium">
+                Showing {filteredBlogs.length} articles
+              </span>
+            </div>
+
+            {/* Grid of articles */}
+            {filteredBlogs.length === 0 ? (
+              <div className="text-center py-16 bg-white rounded-2xl border space-y-3">
+                <p className="text-muted-foreground text-sm font-medium">No articles found matching your criteria.</p>
+                <Button variant="outline" size="sm" onClick={() => { setSelectedCategory("All"); setSearchQuery(""); }}>
+                  Clear Filters
+                </Button>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredBlogs.map((blog) => (
+                  <Card
+                    key={blog.slug}
+                    className="group hover:shadow-md hover:translate-y-[-2px] transition-all duration-300 flex flex-col justify-between bg-white border"
+                  >
+                    <CardHeader className="p-0">
+                      <div className="h-44 border-b relative overflow-hidden bg-slate-50 flex items-center justify-center">
+                        {blog.image ? (
+                          <img
+                            src={blog.image}
+                            alt={blog.heading}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 bg-slate-50" />
+                            <div className="absolute inset-0 bg-[radial-gradient(var(--primary-glow)_1px,transparent_1px)] [background-size:12px_12px] opacity-10" />
+                            <BookOpen className="h-12 w-12 text-slate-300 group-hover:scale-105 transition-transform duration-300 z-10 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          </>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-5 flex-1 space-y-3">
+                      <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                        {blog.category}
+                      </span>
+                      <h4 className="font-bold text-sm md:text-base text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
+                        <Link to="/blog/$slug" params={{ slug: blog.slug }}>
+                          {blog.heading}
+                        </Link>
+                      </h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                        {blog.introText}
+                      </p>
+                    </CardContent>
+                    <CardFooter className="p-5 pt-0 border-t flex flex-col items-start gap-4">
+                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground pt-3 w-full justify-between">
+                        <span className="flex items-center gap-0.5">
+                          <Calendar className="h-3 w-3" /> {blog.date}
+                        </span>
+                        <span className="flex items-center gap-0.5">
+                          <Clock className="h-3 w-3" /> {blog.readTime}
+                        </span>
+                      </div>
+                      <Link to="/blog/$slug" params={{ slug: blog.slug }} className="w-full">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-xs font-bold justify-between group-hover:text-primary p-0"
+                        >
+                          Read Guide <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                        </Button>
+                      </Link>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             {/* City Coverage Index (Local SEO Links) */}
             <div className="border-t pt-16 space-y-6">
