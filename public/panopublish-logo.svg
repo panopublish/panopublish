@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 70" width="360" height="70">
+  <defs>
+    <linearGradient id="pano-logo-icon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#38BDF8" />
+      <stop offset="100%" stopColor="#1D4ED8" />
+    </linearGradient>
+  </defs>
+  <!-- Icon Box -->
+  <rect x="5" y="7" width="56" height="56" rx="14" fill="url(#pano-logo-icon-grad)" />
+  <text x="33" y="48" fontFamily="Georgia, serif" fontWeight="bold" fontSize="30" fill="white" textAnchor="middle">P°</text>
+  
+  <!-- Brand Text -->
+  <text x="78" y="49" fontFamily="Georgia, serif" fontWeight="bold" fontSize="38">
+    <tspan fill="#0F172A">Pano</tspan><tspan fill="#38BDF8">Publish</tspan>
+  </text>
+</svg>

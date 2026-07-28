@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { getOrganizationSchema } from "@/lib/organization-schema";
 
 interface SEOProps {
   title: string;
@@ -43,7 +44,13 @@ export function SEO({
       ? schema
       : [schema]
     : [];
-  const allSchemas = [...schemaArray, breadcrumbSchema].filter(Boolean);
+
+  const hasTopLevelOrgSchema = schemaArray.some(
+    (s) => Boolean(s && typeof s === "object" && "@type" in s && (s as Record<string, unknown>)["@type"] === "Organization")
+  );
+  const orgSchema = hasTopLevelOrgSchema ? null : getOrganizationSchema();
+
+  const allSchemas = [orgSchema, ...schemaArray, breadcrumbSchema].filter(Boolean);
 
   return (
     <Helmet>

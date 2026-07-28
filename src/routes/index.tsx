@@ -152,27 +152,6 @@ const landingSchemas = [
       },
     ],
   },
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "PanoPublish",
-    url: "https://panopublish.com",
-    logo: "https://panopublish.com/favicon.png",
-    contactPoint: {
-      "@type": "ContactPoint",
-      contactType: "customer support",
-      availableLanguage: ["English", "Hindi"],
-      contactOption: "TollFree",
-      areaServed: "IN",
-      hoursAvailable: {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        opens: "10:00",
-        closes: "19:00",
-      },
-    },
-    sameAs: ["https://panopublish.com"],
-  },
 ];
 
 export const Route = createFileRoute("/")({
