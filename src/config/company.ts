@@ -8,6 +8,7 @@ export const COMPANY_CONFIG = {
     "https://www.instagram.com/panopublish",
     "https://x.com/panopublish",
     "https://www.youtube.com/@panopublish",
+    "https://www.facebook.com/panopublish/",
   ],
   knowsAbout: [
     "Virtual Tours",
