@@ -78,6 +78,52 @@ export default {
       }
 
       const url = new URL(request.url);
+      const host = url.hostname;
+
+      // Handle app subdomain specific routing/redirection
+      if (host === "app.panopublish.com") {
+        // Serve a strict robots.txt for the app subdomain
+        if (url.pathname === "/robots.txt") {
+          return new Response("User-agent: *\nDisallow: /", {
+            headers: { "content-type": "text/plain; charset=utf-8" },
+          });
+        }
+
+        // List of routes that are allowed on the app subdomain
+        const appPrefixes = [
+          "/dashboard",
+          "/admin",
+          "/login",
+          "/signup",
+          "/reset-password",
+          "/settings",
+          "/billing",
+          "/auth",
+          "/api",
+          "/tours",
+          "/clients",
+          "/assets",
+        ];
+
+        const isAppRoute = appPrefixes.some(
+          (prefix) => url.pathname === prefix || url.pathname.startsWith(prefix + "/")
+        );
+
+        if (!isAppRoute) {
+          // If accessing the root '/' of the app subdomain, redirect to login
+          if (url.pathname === "/") {
+            return new Response(null, {
+              status: 302,
+              headers: { Location: `${url.origin}/login` },
+            });
+          }
+          // Redirect all other public pages (blog, pricing, contact, etc.) to the main domain
+          return new Response(null, {
+            status: 301,
+            headers: { Location: `https://panopublish.com${url.pathname}${url.search}` },
+          });
+        }
+      }
 
       // Intercept file downloads from R2
       if (url.pathname.startsWith("/api/files/")) {

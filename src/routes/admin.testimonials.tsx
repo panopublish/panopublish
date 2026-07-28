@@ -89,11 +89,13 @@ function AdminTestimonials() {
     setLoading(true);
     try {
       const res = await runD1Query({
-        token: session.access_token,
-        table: "testimonials",
-        action: "select",
-        orderCol: "created_at",
-        orderAsc: false,
+        data: {
+          token: session.access_token,
+          table: "testimonials",
+          action: "select",
+          orderCol: "created_at",
+          orderAsc: false,
+        },
       });
       if (res.data) setTestimonials(res.data as TestimonialRow[]);
     } catch (err) {
@@ -117,20 +119,22 @@ function AdminTestimonials() {
     setSubmitting(true);
     try {
       const res = await runD1Query({
-        token: session.access_token,
-        table: "testimonials",
-        action: "insert",
         data: {
-          id: crypto.randomUUID(),
-          client_name: form.client_name.trim(),
-          client_company: form.client_company.trim() || null,
-          quote: form.quote.trim(),
-          rating: Number(form.rating),
-          source: form.source,
-          city: form.city.trim() || null,
-          service_used: form.service_used.trim() || null,
-          is_featured: form.is_featured ? 1 : 0,
-          created_at: new Date().toISOString(),
+          token: session.access_token,
+          table: "testimonials",
+          action: "insert",
+          data: {
+            id: crypto.randomUUID(),
+            client_name: form.client_name.trim(),
+            client_company: form.client_company.trim() || null,
+            quote: form.quote.trim(),
+            rating: Number(form.rating),
+            source: form.source,
+            city: form.city.trim() || null,
+            service_used: form.service_used.trim() || null,
+            is_featured: form.is_featured ? 1 : 0,
+            created_at: new Date().toISOString(),
+          },
         },
       });
       if (res.error) throw new Error(res.error.message);
@@ -149,10 +153,12 @@ function AdminTestimonials() {
     if (!confirm("Delete this testimonial?")) return;
     try {
       await runD1Query({
-        token: session.access_token,
-        table: "testimonials",
-        action: "delete",
-        filters: [{ column: "id", type: "eq", value: id }],
+        data: {
+          token: session.access_token,
+          table: "testimonials",
+          action: "delete",
+          filters: [{ column: "id", type: "eq", value: id }],
+        },
       });
       toast.success("Deleted.");
       setTestimonials((prev) => prev.filter((t) => t.id !== id));
