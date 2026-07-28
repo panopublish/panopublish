@@ -2,8 +2,19 @@
 # PanoPublish - Robots Exclusion Protocol (robots.txt)
 # ==============================================================================
 
-# Default rules for all web crawlers (including Googlebot, Bingbot, GPTBot, PerplexityBot, ClaudeBot, etc.)
+# Explicitly Allow AI Search Engines & LLM Crawlers
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+User-agent: Google-Extended
+User-agent: Bingbot
+User-agent: Googlebot
+Allow: /
+
+# Default rules for all web crawlers
 User-agent: *
+Allow: /
 
 # Block Authenticated, Admin, and Private API Routes
 Disallow: /admin
@@ -22,5 +33,6 @@ Disallow: /billing/
 Disallow: /auth/
 Disallow: /reset-password
 
-# XML Sitemap Location
+# XML Sitemap & LLM Directives
 Sitemap: https://panopublish.com/sitemap.xml
+# LLMs text: https://panopublish.com/llms.txt

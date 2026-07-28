@@ -68,8 +68,8 @@ function BlogPost() {
       "@type": "BlogPosting",
       "headline": page.heading,
       "description": page.description,
-      "datePublished": page.date ?? "2026-01-01",
-      "dateModified": page.date ?? "2026-01-01",
+      "datePublished": page.datePublished ?? page.date ?? "2026-01-01",
+      "dateModified": page.dateModified ?? page.datePublished ?? page.date ?? "2026-01-01",
       "author": {
         "@type": "Person",
         "name": page.author ?? "Prashant Kumar",

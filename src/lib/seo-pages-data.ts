@@ -17,6 +17,8 @@ export interface SeoPageData {
   cityName?: string;
   author?: string;
   date?: string;
+  datePublished?: string;
+  dateModified?: string;
   readTime?: string;
   image?: string;
   comparisonTable?: {
