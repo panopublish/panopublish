@@ -191,16 +191,17 @@ function useGoogleMaps() {
       setReady(true);
       return;
     }
-    const existing = document.querySelector<HTMLScriptElement>("script[data-panopublish-gmaps]");
+    const existing = document.querySelector<HTMLScriptElement>("script[data-gmaps]");
     if (existing) {
       existing.addEventListener("load", () => setReady(true));
+      if (window.google?.maps) setReady(true);
       return;
     }
     const s = document.createElement("script");
     s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geometry`;
     s.async = true;
     s.defer = true;
-    s.dataset.panopublishGmaps = "1";
+    s.dataset.gmaps = "1";
     s.onload = () => setReady(true);
     document.head.appendChild(s);
   }, []);

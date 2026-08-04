@@ -150,42 +150,64 @@ function CreateTour() {
   }, [user]);
 
   useEffect(() => {
-    if (step === 3 && !(window as any).google) {
-      const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${getEnv("VITE_GOOGLE_MAPS_API_KEY")}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-      script.onload = initAutocomplete;
-    } else if (step === 3 && (window as any).google) {
-      initAutocomplete();
+    if (step === 3) {
+      (window as any).gm_authFailure = () => {
+        toast.error("Google Maps API Authentication Failed. Please verify Places API is enabled and HTTP Referrers permit panopublish.com in Google Cloud Console.");
+      };
+
+      const key = getEnv("VITE_GOOGLE_MAPS_API_KEY");
+      if (!key) {
+        toast.error("Google Maps API key is missing");
+        return;
+      }
+
+      if ((window as any).google?.maps?.places) {
+        initAutocomplete();
+      } else {
+        const existingScript = document.querySelector<HTMLScriptElement>("script[data-gmaps]");
+        if (existingScript) {
+          existingScript.addEventListener("load", initAutocomplete);
+        } else {
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          script.dataset.gmaps = "1";
+          script.onload = initAutocomplete;
+          document.head.appendChild(script);
+        }
+      }
     }
   }, [step]);
 
   const initAutocomplete = () => {
-    if (!inputRef.current || !(window as any).google) return;
-    const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, {
-      types: ["establishment", "geocode"],
-    });
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      if (!place.place_id) return;
-      setTourInput(place.name || inputRef.current?.value || "");
-
-      const extractedCid = extractCidFromUrl(place.url);
-      if (extractedCid) {
-        setCid(extractedCid);
-      }
-
-      setPlaceDetails({
-        address: place.formatted_address,
-        url: place.url,
-        place_id: place.place_id,
-        name: place.name,
-        lat: place.geometry?.location?.lat(),
-        lng: place.geometry?.location?.lng(),
+    if (!inputRef.current || !(window as any).google?.maps?.places) return;
+    try {
+      const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, {
+        types: ["establishment", "geocode"],
       });
-    });
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (!place.place_id) return;
+        setTourInput(place.name || inputRef.current?.value || "");
+
+        const extractedCid = extractCidFromUrl(place.url);
+        if (extractedCid) {
+          setCid(extractedCid);
+        }
+
+        setPlaceDetails({
+          address: place.formatted_address,
+          url: place.url,
+          place_id: place.place_id,
+          name: place.name,
+          lat: place.geometry?.location?.lat(),
+          lng: place.geometry?.location?.lng(),
+        });
+      });
+    } catch (e) {
+      console.error("Error initializing Google Places Autocomplete:", e);
+    }
   };
 
   const filtered = clients.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));

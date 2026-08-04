@@ -100,11 +100,21 @@ export function usePanoramaMap(
       overlayRef.current?.draw();
     });
 
-    // Handle map resize observer for canvas matching
+    // Handle map resize observer for canvas matching & map resize trigger
     const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current && window.google?.maps?.event) {
+        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+      }
       overlayRef.current?.draw();
     });
     resizeObserver.observe(mapRef.current);
+
+    // Initial resize trigger after DOM layout settles
+    setTimeout(() => {
+      if (mapInstanceRef.current && window.google?.maps?.event) {
+        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+      }
+    }, 150);
 
     setMapReady(true);
 
@@ -116,6 +126,34 @@ export function usePanoramaMap(
       mapInstanceRef.current = null;
     };
   }, [mapRef, options.mapsReady]); // Re-run when mapsReady becomes true
+
+  // Pan to center when centerLat or centerLng updates
+  useEffect(() => {
+    if (mapInstanceRef.current && options.centerLat != null && options.centerLng != null) {
+      mapInstanceRef.current.panTo({ lat: options.centerLat, lng: options.centerLng });
+      if (window.google?.maps?.event) {
+        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+      }
+    }
+  }, [options.centerLat, options.centerLng]);
+
+  // Initial fitBounds when nodes load
+  const initialFitDoneRef = useRef(false);
+  useEffect(() => {
+    if (mapInstanceRef.current && options.nodes.length > 0 && !initialFitDoneRef.current) {
+      initialFitDoneRef.current = true;
+      try {
+        const bounds = new window.google.maps.LatLngBounds();
+        options.nodes.forEach((n) => bounds.extend({ lat: n.lat, lng: n.lng }));
+        mapInstanceRef.current.fitBounds(bounds, 60);
+        if (window.google?.maps?.event) {
+          window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+        }
+      } catch (e) {
+        console.error("fitBounds error:", e);
+      }
+    }
+  }, [options.nodes]);
 
   // Update overlay when nodes/connections/active change
   useEffect(() => {
