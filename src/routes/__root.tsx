@@ -134,16 +134,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+import { getEnv } from "@/lib/env";
+
 function RootShell({ children }: { children: React.ReactNode }) {
   const isServer = import.meta.env.SSR;
   const envScript = isServer
     ? `
     window.ENV = {
-      VITE_SUPABASE_URL: ${JSON.stringify(globalThis.process?.env?.VITE_SUPABASE_URL || globalThis.process?.env?.SUPABASE_URL)},
-      VITE_SUPABASE_PUBLISHABLE_KEY: ${JSON.stringify(globalThis.process?.env?.VITE_SUPABASE_PUBLISHABLE_KEY || globalThis.process?.env?.SUPABASE_PUBLISHABLE_KEY)},
-      VITE_GOOGLE_MAPS_API_KEY: ${JSON.stringify(globalThis.process?.env?.VITE_GOOGLE_MAPS_API_KEY)},
-      VITE_GOOGLE_CLIENT_ID: ${JSON.stringify(globalThis.process?.env?.VITE_GOOGLE_CLIENT_ID)},
-      VITE_RAZORPAY_KEY_ID: ${JSON.stringify(globalThis.process?.env?.VITE_RAZORPAY_KEY_ID)}
+      VITE_SUPABASE_URL: ${JSON.stringify(getEnv("VITE_SUPABASE_URL") || getEnv("SUPABASE_URL"))},
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${JSON.stringify(getEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || getEnv("SUPABASE_PUBLISHABLE_KEY"))},
+      VITE_GOOGLE_MAPS_API_KEY: ${JSON.stringify(getEnv("VITE_GOOGLE_MAPS_API_KEY"))},
+      VITE_GOOGLE_CLIENT_ID: ${JSON.stringify(getEnv("VITE_GOOGLE_CLIENT_ID"))},
+      VITE_RAZORPAY_KEY_ID: ${JSON.stringify(getEnv("VITE_RAZORPAY_KEY_ID"))}
     };
     Object.defineProperty(window, 'PanoViewer', { get: function() { return window.Marzipano; }, configurable: true });
   `
