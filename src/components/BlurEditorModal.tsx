@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Hand, Droplets, Eraser, Save, AlertTriangle, Loader2, Sparkles } from "lucide-react";
+import { X, Hand, Droplets, Eraser, Save, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Photo = {
@@ -12,18 +12,14 @@ type Photo = {
 
 type EditMode = "pan" | "blur" | "erase";
 
-// High-performance binary metadata injector to copy EXIF/XMP GPano headers from original image to blurred canvas image
-async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blob> {
+// High-performance binary metadata injector to copy EXIF/XMP GPano headers from original image bytes
+function copyJpegMetadataFromBytes(originalBuffer: ArrayBuffer, newBuffer: ArrayBuffer): Blob {
   try {
-    // 1. Fetch original image array buffer
-    const originalRes = await fetch(originalUrl);
-    const originalBuffer = await originalRes.arrayBuffer();
     const originalBytes = new Uint8Array(originalBuffer);
 
-    // 2. Parse original JPEG APP segments
+    // 1. Parse original JPEG APP segments
     if (originalBytes[0] !== 0xff || originalBytes[1] !== 0xd8) {
-      console.warn("Original image is not a valid JPEG. Skipping metadata injection.");
-      return newBlob;
+      return new Blob([newBuffer], { type: "image/jpeg" });
     }
 
     const appSegments: Uint8Array[] = [];
@@ -31,18 +27,14 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
     while (pos < originalBytes.length) {
       if (originalBytes[pos] === 0xff) {
         const marker = originalBytes[pos + 1];
-
-        // APP segments are 0xFFE0 to 0xFFEF
         if (marker >= 0xe0 && marker <= 0xef) {
           const length = (originalBytes[pos + 2] << 8) + originalBytes[pos + 3];
           const segment = originalBytes.slice(pos, pos + 2 + length);
           appSegments.push(segment);
           pos += 2 + length;
         } else if (marker === 0xd9 || marker === 0xda) {
-          // End of headers
           break;
         } else {
-          // Other segment, skip it
           const length = (originalBytes[pos + 2] << 8) + originalBytes[pos + 3];
           pos += 2 + length;
         }
@@ -51,16 +43,12 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
       }
     }
 
-    // 3. Parse new JPEG array buffer (from canvas)
-    const newBuffer = await newBlob.arrayBuffer();
+    // 2. Parse new JPEG array buffer (from canvas)
     const newBytes = new Uint8Array(newBuffer);
-
     if (newBytes[0] !== 0xff || newBytes[1] !== 0xd8) {
-      console.warn("New canvas image is not a valid JPEG. Skipping metadata injection.");
-      return newBlob;
+      return new Blob([newBuffer], { type: "image/jpeg" });
     }
 
-    // Find the first segment in the new JPEG that is NOT an APP segment
     let newPos = 2;
     let imageStartPos = 2;
     while (newPos < newBytes.length) {
@@ -70,7 +58,6 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
           const length = (newBytes[newPos + 2] << 8) + newBytes[newPos + 3];
           newPos += 2 + length;
         } else {
-          // Found first non-APP segment (e.g., DQT 0xFFDB, SOF 0xFFC0, etc.)
           imageStartPos = newPos;
           break;
         }
@@ -79,30 +66,25 @@ async function copyJpegMetadata(originalUrl: string, newBlob: Blob): Promise<Blo
       }
     }
 
-    // 4. Reconstruct the JPEG binary
+    // 3. Reconstruct JPEG with headers preserved
     const headerSize = appSegments.reduce((sum, seg) => sum + seg.length, 0);
     const finalSize = 2 + headerSize + (newBytes.length - imageStartPos);
     const finalBytes = new Uint8Array(finalSize);
 
-    // Write SOI
     finalBytes[0] = 0xff;
     finalBytes[1] = 0xd8;
 
-    // Write original APP segments
     let writePos = 2;
     for (const segment of appSegments) {
       finalBytes.set(segment, writePos);
       writePos += segment.length;
     }
-
-    // Write the remaining image data from the new canvas JPEG
     finalBytes.set(newBytes.subarray(imageStartPos), writePos);
 
-    // Return the new Blob with preserved metadata!
     return new Blob([finalBytes], { type: "image/jpeg" });
   } catch (err) {
     console.error("Error copy-pasting JPEG metadata:", err);
-    return newBlob; // Fallback
+    return new Blob([newBuffer], { type: "image/jpeg" });
   }
 }
 
@@ -124,24 +106,32 @@ export function BlurEditorModal({
   const [mode, setMode] = useState<EditMode>("pan");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [brushSize, setBrushSize] = useState(15); // Screen pixels radius
+  const [brushSize, setBrushSize] = useState(15);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
-  const [blurStrength, setBlurStrength] = useState(10); // Default to 10px
+  const [blurStrength, setBlurStrength] = useState(10);
 
-  // Heading and Pitch readout states
   const [heading, setHeading] = useState(0);
   const [pitch, setPitch] = useState(0);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const panoRef = useRef<HTMLDivElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewerRef = useRef<any>(null);
 
-  // Equirectangular Canvas references for backing editor state
+  // In-memory original buffer & full-res image
+  const originalBufferRef = useRef<ArrayBuffer | null>(null);
   const originalImageRef = useRef<HTMLImageElement | null>(null);
+  const currentObjectUrlRef = useRef<string | null>(null);
+
+  // Working resolution editing canvases (Max width 2048 for 60 FPS editing performance)
   const displayCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const blurredImageRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Drawing state
+  const isDrawingRef = useRef(false);
+  const strokePointsRef = useRef<{ pitch: number; yaw: number }[]>([]);
+  const lastScreenPosRef = useRef<{ x: number; y: number } | null>(null);
+  const sliderTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const applyBlurStrength = (strength: number) => {
     const img = originalImageRef.current;
@@ -151,79 +141,110 @@ export function BlurEditorModal({
     if (blurredCtx) {
       blurredCtx.clearRect(0, 0, blurredCanvas.width, blurredCanvas.height);
       blurredCtx.filter = `blur(${strength}px)`;
-      blurredCtx.drawImage(img, 0, 0);
+      blurredCtx.drawImage(img, 0, 0, blurredCanvas.width, blurredCanvas.height);
       blurredCtx.filter = "none";
     }
   };
 
   const handleBlurStrengthChange = (strength: number) => {
     setBlurStrength(strength);
-    applyBlurStrength(strength);
-    rebuildDisplayCanvas();
-    reloadPannellumTexture();
+    if (sliderTimerRef.current) clearTimeout(sliderTimerRef.current);
+    sliderTimerRef.current = setTimeout(() => {
+      applyBlurStrength(strength);
+      rebuildDisplayCanvas();
+      reloadPannellumTexture();
+    }, 50);
   };
 
-  // Drawing state
-  const isDrawingRef = useRef(false);
-  const strokePointsRef = useRef<{ pitch: number; yaw: number }[]>([]);
-  const lastScreenPosRef = useRef<{ x: number; y: number } | null>(null);
-
-  // Load and prepare canvases
+  // Pre-fetch original image buffer in memory
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = photo.file_url;
-    img.onload = () => {
-      if (cancelled) return;
-      originalImageRef.current = img;
+    async function loadResources() {
+      try {
+        const res = await fetch(photo.file_url);
+        const buffer = await res.arrayBuffer();
+        if (cancelled) return;
 
-      // 1. Display Canvas (updates Pannellum texture)
-      const displayCanvas = document.createElement("canvas");
-      displayCanvas.width = img.width;
-      displayCanvas.height = img.height;
-      const displayCtx = displayCanvas.getContext("2d");
-      if (displayCtx) {
-        displayCtx.drawImage(img, 0, 0);
+        originalBufferRef.current = buffer;
+
+        const blob = new Blob([buffer]);
+        const imgUrl = URL.createObjectURL(blob);
+        const img = new Image();
+        img.src = imgUrl;
+
+        img.onload = () => {
+          if (cancelled) {
+            URL.revokeObjectURL(imgUrl);
+            return;
+          }
+          originalImageRef.current = img;
+
+          // Compute editing resolution (Max 2048 width for ultra-smooth rendering)
+          const maxDim = 2048;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          }
+
+          // 1. Working Display Canvas
+          const displayCanvas = document.createElement("canvas");
+          displayCanvas.width = w;
+          displayCanvas.height = h;
+          const displayCtx = displayCanvas.getContext("2d");
+          if (displayCtx) {
+            displayCtx.drawImage(img, 0, 0, w, h);
+          }
+          displayCanvasRef.current = displayCanvas;
+
+          // 2. Working Blurred Reference
+          const blurredCanvas = document.createElement("canvas");
+          blurredCanvas.width = w;
+          blurredCanvas.height = h;
+          const blurredCtx = blurredCanvas.getContext("2d");
+          if (blurredCtx) {
+            blurredCtx.filter = `blur(${blurStrength}px)`;
+            blurredCtx.drawImage(img, 0, 0, w, h);
+            blurredCtx.filter = "none";
+          }
+          blurredImageRef.current = blurredCanvas;
+
+          // 3. Mask Canvas
+          const maskCanvas = document.createElement("canvas");
+          maskCanvas.width = w;
+          maskCanvas.height = h;
+          const maskCtx = maskCanvas.getContext("2d");
+          if (maskCtx) {
+            maskCtx.clearRect(0, 0, w, h);
+          }
+          maskCanvasRef.current = maskCanvas;
+
+          // 4. Initialize 360 viewer with Blob URL
+          initPannellum(imgUrl);
+        };
+
+        img.onerror = () => {
+          if (cancelled) return;
+          toast.error("Failed to load panoramic image for editing.");
+          setLoading(false);
+        };
+      } catch (e) {
+        if (cancelled) return;
+        toast.error("Network error loading image.");
+        setLoading(false);
       }
-      displayCanvasRef.current = displayCanvas;
+    }
 
-      // 2. Blurred reference image
-      const blurredCanvas = document.createElement("canvas");
-      blurredCanvas.width = img.width;
-      blurredCanvas.height = img.height;
-      const blurredCtx = blurredCanvas.getContext("2d");
-      if (blurredCtx) {
-        // Modern canvas blur filter (initial default 10px)
-        blurredCtx.filter = "blur(10px)";
-        blurredCtx.drawImage(img, 0, 0);
-      }
-      blurredImageRef.current = blurredCanvas;
-
-      // 3. Mask Canvas
-      const maskCanvas = document.createElement("canvas");
-      maskCanvas.width = img.width;
-      maskCanvas.height = img.height;
-      const maskCtx = maskCanvas.getContext("2d");
-      if (maskCtx) {
-        maskCtx.clearRect(0, 0, img.width, img.height);
-      }
-      maskCanvasRef.current = maskCanvas;
-
-      // 4. Initialize 360 viewer
-      initPannellum(photo.file_url);
-    };
-
-    img.onerror = () => {
-      if (cancelled) return;
-      toast.error("Failed to load panoramic image for editing.");
-      setLoading(false);
-    };
+    loadResources();
 
     return () => {
       cancelled = true;
+      if (currentObjectUrlRef.current) {
+        URL.revokeObjectURL(currentObjectUrlRef.current);
+      }
       if (viewerRef.current) {
         try {
           viewerRef.current.destroy();
@@ -254,7 +275,6 @@ export function BlurEditorModal({
       viewerRef.current.on("animatefinished", updateDirectionReadouts);
       viewerRef.current.on("zoomchange", updateDirectionReadouts);
 
-      // Update reading parameters continuously
       const t = setInterval(() => {
         if (viewerRef.current) {
           try {
@@ -262,7 +282,7 @@ export function BlurEditorModal({
             setPitch(viewerRef.current.getPitch());
           } catch {}
         }
-      }, 200);
+      }, 250);
 
       setLoading(false);
       return () => clearInterval(t);
@@ -280,34 +300,48 @@ export function BlurEditorModal({
     } catch {}
   };
 
-  // Re-load config in Pannellum with updated canvas data URL while keeping viewport
+  // Instant blob-based texture update while maintaining camera POV
   const reloadPannellumTexture = () => {
     if (!viewerRef.current || !displayCanvasRef.current || !panoRef.current || !window.pannellum)
       return;
-    try {
-      const dataUrl = displayCanvasRef.current.toDataURL("image/jpeg", 0.9);
-      const yaw = viewerRef.current.getYaw();
-      const pitch = viewerRef.current.getPitch();
-      const hfov = viewerRef.current.getHfov();
 
-      viewerRef.current.destroy();
+    displayCanvasRef.current.toBlob(
+      (blob) => {
+        if (!blob || !viewerRef.current || !panoRef.current || !window.pannellum) return;
 
-      viewerRef.current = window.pannellum.viewer(panoRef.current, {
-        type: "equirectangular",
-        panorama: dataUrl,
-        autoLoad: true,
-        showControls: false,
-        mouseZoom: true,
-        yaw: yaw,
-        pitch: pitch,
-        hfov: hfov,
-      });
-    } catch (err) {
-      console.warn("Failed to reload Pannellum panorama texture", err);
-    }
+        const newObjectUrl = URL.createObjectURL(blob);
+        const yaw = viewerRef.current.getYaw();
+        const pitch = viewerRef.current.getPitch();
+        const hfov = viewerRef.current.getHfov();
+
+        // Revoke old object URL to prevent memory leaks
+        if (currentObjectUrlRef.current) {
+          URL.revokeObjectURL(currentObjectUrlRef.current);
+        }
+        currentObjectUrlRef.current = newObjectUrl;
+
+        try {
+          viewerRef.current.destroy();
+          viewerRef.current = window.pannellum.viewer(panoRef.current, {
+            type: "equirectangular",
+            panorama: newObjectUrl,
+            autoLoad: true,
+            showControls: false,
+            mouseZoom: true,
+            yaw: yaw,
+            pitch: pitch,
+            hfov: hfov,
+          });
+        } catch (err) {
+          console.warn("Failed to update panorama texture", err);
+        }
+      },
+      "image/jpeg",
+      0.85,
+    );
   };
 
-  // Draw continuous lines on display canvas using mask composition
+  // Composite working blurred canvas masked onto display canvas
   const rebuildDisplayCanvas = () => {
     const displayCanvas = displayCanvasRef.current;
     const maskCanvas = maskCanvasRef.current;
@@ -319,11 +353,9 @@ export function BlurEditorModal({
     const ctx = displayCanvas.getContext("2d");
     if (!ctx) return;
 
-    // 1. Draw base original image
     ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
-    ctx.drawImage(originalImg, 0, 0);
+    ctx.drawImage(originalImg, 0, 0, displayCanvas.width, displayCanvas.height);
 
-    // 2. Composite blurred reference masked by maskCanvas
     const tempCanvas = document.createElement("canvas");
     tempCanvas.width = displayCanvas.width;
     tempCanvas.height = displayCanvas.height;
@@ -338,7 +370,7 @@ export function BlurEditorModal({
     }
   };
 
-  // Screen mouse events handlers
+  // Real-time overlay canvas interactions
   const handleOverlayMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (mode === "pan" || !viewerRef.current || !overlayCanvasRef.current) return;
 
@@ -352,7 +384,6 @@ export function BlurEditorModal({
     lastScreenPosRef.current = { x: localX, y: localY };
     setMousePos({ x: localX, y: localY });
 
-    // Record starting coordinates
     const coords = viewerRef.current.mouseEventToCoords(e.nativeEvent);
     if (coords) {
       strokePointsRef.current.push({ pitch: coords[0], yaw: coords[1] });
@@ -368,14 +399,12 @@ export function BlurEditorModal({
     const localX = e.clientX - rect.left;
     const localY = e.clientY - rect.top;
 
-    // Always update mouse position to position the brush circle ring dynamically
     setMousePos({ x: localX, y: localY });
 
     if (!isDrawingRef.current) return;
 
     const lastPos = lastScreenPosRef.current || { x: localX, y: localY };
 
-    // Record yaw/pitch coordinate
     const coords = viewerRef.current.mouseEventToCoords(e.nativeEvent);
     if (coords) {
       strokePointsRef.current.push({ pitch: coords[0], yaw: coords[1] });
@@ -386,7 +415,6 @@ export function BlurEditorModal({
   };
 
   const handleOverlayMouseUpOrLeave = () => {
-    // Clear cursor ring if mouse leaves/up
     setMousePos(null);
 
     if (!isDrawingRef.current) return;
@@ -396,14 +424,12 @@ export function BlurEditorModal({
     if (mode === "blur" || mode === "erase") {
       const maskCanvas = maskCanvasRef.current;
       if (maskCanvas) {
-        // Bake the stroke coordinates to the 2D equirectangular mask canvas
         bakeStrokeToCanvas(maskCanvas, mode);
         rebuildDisplayCanvas();
         reloadPannellumTexture();
       }
     }
 
-    // Clear overlay canvas
     clearScreenOverlay();
   };
 
@@ -413,11 +439,7 @@ export function BlurEditorModal({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    if (mode === "blur") {
-      ctx.strokeStyle = "rgba(2, 119, 189, 0.4)";
-    } else {
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)"; // Erase
-    }
+    ctx.strokeStyle = mode === "blur" ? "rgba(2, 119, 189, 0.4)" : "rgba(255, 255, 255, 0.8)";
     ctx.lineWidth = brushSize * 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -436,7 +458,6 @@ export function BlurEditorModal({
     }
   };
 
-  // Convert all gathered stroke coordinates to equirectangular pixel drawings on a target canvas
   const bakeStrokeToCanvas = (targetCanvas: HTMLCanvasElement, strokeMode: "blur" | "erase") => {
     const points = strokePointsRef.current;
     if (points.length === 0 || !viewerRef.current) return;
@@ -447,11 +468,8 @@ export function BlurEditorModal({
     const W = targetCanvas.width;
     const H = targetCanvas.height;
 
-    // Scale brush size relative to image size vs container width
     const containerWidth = viewerRef.current.getContainer().clientWidth || 1000;
     const hfov = viewerRef.current.getHfov() || 100;
-
-    // Physical mapping of brush size
     const equirectangularBrushSize = (brushSize / containerWidth) * (hfov / 360) * W;
 
     ctx.lineWidth = equirectangularBrushSize * 2;
@@ -467,17 +485,14 @@ export function BlurEditorModal({
     }
 
     ctx.beginPath();
-
     const startPx = mapSphereToEquirectangular(points[0].pitch, points[0].yaw, W, H);
     ctx.moveTo(startPx.x, startPx.y);
 
     for (let i = 1; i < points.length; i++) {
       const px = mapSphereToEquirectangular(points[i].pitch, points[i].yaw, W, H);
-
-      // Handle equirectangular seams wrapping horizontally
       const prevPx = mapSphereToEquirectangular(points[i - 1].pitch, points[i - 1].yaw, W, H);
+
       if (Math.abs(px.x - prevPx.x) > W * 0.8) {
-        // Seam boundary hit! Break path and restart
         ctx.stroke();
         ctx.beginPath();
         ctx.moveTo(px.x, px.y);
@@ -487,11 +502,10 @@ export function BlurEditorModal({
     }
 
     ctx.stroke();
-    ctx.globalCompositeOperation = "source-over"; // Reset composite
+    ctx.globalCompositeOperation = "source-over";
   };
 
   const mapSphereToEquirectangular = (pitch: number, yaw: number, W: number, H: number) => {
-    // Normalise yaw to [-180, 180]
     let normYaw = yaw;
     while (normYaw < -180) normYaw += 360;
     while (normYaw > 180) normYaw -= 360;
@@ -502,10 +516,8 @@ export function BlurEditorModal({
     return { x, y };
   };
 
-  // Adjust canvas size to match overlay DOM exactly during resize
   useEffect(() => {
     if (loading) return;
-
     const resize = () => {
       const canvas = overlayCanvasRef.current;
       const pano = panoRef.current;
@@ -516,52 +528,110 @@ export function BlurEditorModal({
     };
 
     window.addEventListener("resize", resize);
-    // Initial size
-    setTimeout(resize, 300);
+    setTimeout(resize, 200);
 
     return () => window.removeEventListener("resize", resize);
   }, [loading]);
 
-  const handleSave = () => {
-    const displayCanvas = displayCanvasRef.current;
-    if (!displayCanvas) return;
+  // Full-resolution high-quality export on Save
+  const handleSave = async () => {
+    const originalImg = originalImageRef.current;
+    const maskCanvas = maskCanvasRef.current;
+    const originalBuffer = originalBufferRef.current;
+
+    if (!originalImg || !maskCanvas || !originalBuffer) {
+      return toast.error("Image resources not ready.");
+    }
 
     setSaving(true);
-    displayCanvas.toBlob(
-      async (blob) => {
-        if (blob) {
+
+    try {
+      const fullW = originalImg.width;
+      const fullH = originalImg.height;
+
+      // 1. Create full-resolution blurred image
+      const fullBlurredCanvas = document.createElement("canvas");
+      fullBlurredCanvas.width = fullW;
+      fullBlurredCanvas.height = fullH;
+      const fullBlurredCtx = fullBlurredCanvas.getContext("2d");
+      if (!fullBlurredCtx) throw new Error("Could not get canvas context");
+
+      // Scale blur radius proportionally for full resolution
+      const scaleFactor = fullW / maskCanvas.width;
+      const fullBlurRadius = blurStrength * scaleFactor;
+
+      fullBlurredCtx.filter = `blur(${fullBlurRadius}px)`;
+      fullBlurredCtx.drawImage(originalImg, 0, 0, fullW, fullH);
+      fullBlurredCtx.filter = "none";
+
+      // 2. Create full-resolution mask canvas
+      const fullMaskCanvas = document.createElement("canvas");
+      fullMaskCanvas.width = fullW;
+      fullMaskCanvas.height = fullH;
+      const fullMaskCtx = fullMaskCanvas.getContext("2d");
+      if (fullMaskCtx) {
+        fullMaskCtx.drawImage(maskCanvas, 0, 0, fullW, fullH);
+      }
+
+      // 3. Composite full-resolution final image
+      const fullFinalCanvas = document.createElement("canvas");
+      fullFinalCanvas.width = fullW;
+      fullFinalCanvas.height = fullH;
+      const fullFinalCtx = fullFinalCanvas.getContext("2d");
+      if (!fullFinalCtx) throw new Error("Could not get final canvas context");
+
+      fullFinalCtx.drawImage(originalImg, 0, 0, fullW, fullH);
+
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = fullW;
+      tempCanvas.height = fullH;
+      const tempCtx = tempCanvas.getContext("2d");
+      if (tempCtx) {
+        tempCtx.drawImage(fullBlurredCanvas, 0, 0);
+        tempCtx.globalCompositeOperation = "destination-in";
+        tempCtx.drawImage(fullMaskCanvas, 0, 0);
+        tempCtx.globalCompositeOperation = "source-over";
+
+        fullFinalCtx.drawImage(tempCanvas, 0, 0);
+      }
+
+      // 4. Export JPEG Blob
+      fullFinalCanvas.toBlob(
+        async (newBlob) => {
+          if (!newBlob) {
+            toast.error("Failed to generate image file.");
+            setSaving(false);
+            return;
+          }
           try {
-            // Inject original EXIF/XMP metadata headers so Google Street View publishing does not fail
-            const metadataPreservedBlob = await copyJpegMetadata(photo.file_url, blob);
-            await onSave(metadataPreservedBlob);
+            const newArrayBuffer = await newBlob.arrayBuffer();
+
+            // In-memory JPEG metadata injection (0 network calls!)
+            const finalMetadataBlob = copyJpegMetadataFromBytes(originalBuffer, newArrayBuffer);
+            await onSave(finalMetadataBlob);
           } catch (err: any) {
             toast.error("Error saving image: " + err.message);
             setSaving(false);
           }
-        } else {
-          toast.error("Failed to generate image file.");
-          setSaving(false);
-        }
-      },
-      "image/jpeg",
-      0.95,
-    );
+        },
+        "image/jpeg",
+        0.95,
+      );
+    } catch (err: any) {
+      toast.error("Error preparing image export: " + err.message);
+      setSaving(false);
+    }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
-      {/* Visual upload loading indicator state as requested */}
+      {/* Uploading & Processing Indicator */}
       {saving && (
         <div className="absolute inset-0 z-55 flex items-center justify-center bg-white/95 backdrop-blur-xs select-none">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl flex flex-col items-center justify-center border text-center border-slate-100 animate-fade-in">
-            {/* Miniature preview placeholder with pulse bar */}
             <div className="relative w-24 h-12 bg-slate-100 rounded-lg overflow-hidden border flex items-center justify-center mb-6">
               {photo.file_url ? (
-                <img
-                  src={photo.file_url}
-                  alt=""
-                  className="w-full h-full object-cover opacity-60"
-                />
+                <img src={photo.file_url} alt="" className="w-full h-full object-cover opacity-60" />
               ) : (
                 <div className="w-full h-full bg-slate-200" />
               )}
@@ -573,11 +643,8 @@ export function BlurEditorModal({
             <h3 className="text-xl font-black text-slate-800 tracking-tight leading-snug mb-2">
               Sit back and relax for a moment.
             </h3>
-            <p className="text-sm font-semibold text-slate-500 mb-6">
-              Your image is uploading now!
-            </p>
+            <p className="text-sm font-semibold text-slate-500 mb-6">Your image is uploading now!</p>
 
-            {/* Generated illustration embedded static */}
             <div className="w-full max-w-[280px] aspect-[4/3] rounded-2xl overflow-hidden relative flex items-center justify-center bg-slate-50 border border-slate-100 shadow-inner">
               <img
                 src="/robot_beach_upload.png"
@@ -596,14 +663,11 @@ export function BlurEditorModal({
       <div className="bg-[#0277bd] text-white w-full max-w-4xl rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex flex-col h-[85vh] relative animate-scale-up">
         {/* TOP BAR */}
         <div className="px-4 py-3 bg-[#01579b]/80 border-b border-white/10 flex items-center justify-between flex-shrink-0 z-10">
-          {/* Tool selector buttons */}
           <div className="flex items-center gap-2 bg-[#002f56]/40 p-1 rounded-xl">
             <button
               onClick={() => setMode("pan")}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                mode === "pan"
-                  ? "bg-white text-[#01579b] shadow"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
+                mode === "pan" ? "bg-white text-[#01579b] shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Hand className="h-4 w-4" /> Pan
@@ -611,9 +675,7 @@ export function BlurEditorModal({
             <button
               onClick={() => setMode("blur")}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                mode === "blur"
-                  ? "bg-white text-[#01579b] shadow"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
+                mode === "blur" ? "bg-white text-[#01579b] shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Droplets className="h-4 w-4" /> Blur
@@ -621,26 +683,25 @@ export function BlurEditorModal({
             <button
               onClick={() => setMode("erase")}
               className={`px-3 py-1.5 text-xs font-black uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                mode === "erase"
-                  ? "bg-white text-[#01579b] shadow"
-                  : "text-white/80 hover:bg-white/10 hover:text-white"
+                mode === "erase" ? "bg-white text-[#01579b] shadow" : "text-white/80 hover:bg-white/10 hover:text-white"
               }`}
             >
               <Eraser className="h-4 w-4" /> Erase
             </button>
           </div>
 
-          {/* Action buttons */}
           <div className="flex items-center gap-2">
             <button
               onClick={handleSave}
-              className="bg-[#8bc34a] hover:bg-[#7cb342] text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl flex items-center gap-1 shadow cursor-pointer active:scale-97 transition-all"
+              disabled={saving || loading}
+              className="bg-[#8bc34a] hover:bg-[#7cb342] disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl flex items-center gap-1 shadow cursor-pointer active:scale-97 transition-all"
             >
               <Save className="h-4 w-4" /> Save
             </button>
             <button
               onClick={onClose}
-              className="bg-red-500 hover:bg-red-600 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl flex items-center gap-1 shadow cursor-pointer active:scale-97 transition-all"
+              disabled={saving}
+              className="bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider px-4 py-2 rounded-xl flex items-center gap-1 shadow cursor-pointer active:scale-97 transition-all"
             >
               <X className="h-4 w-4" /> Cancel
             </button>
@@ -651,7 +712,6 @@ export function BlurEditorModal({
         <div className="flex-1 min-h-0 relative bg-slate-950 flex items-center justify-center overflow-hidden">
           <div ref={panoRef} className="absolute inset-0 w-full h-full" />
 
-          {/* Transparent Canvas overlays for real-time brush rendering */}
           {mode !== "pan" && (
             <canvas
               ref={overlayCanvasRef}
@@ -663,7 +723,6 @@ export function BlurEditorModal({
             />
           )}
 
-          {/* Dynamic Brush Size Outline Cursor Ring */}
           {mode !== "pan" && mousePos && !loading && (
             <div
               style={{
@@ -682,7 +741,6 @@ export function BlurEditorModal({
             />
           )}
 
-          {/* Canvas loading state */}
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 gap-3 z-30">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
@@ -690,11 +748,10 @@ export function BlurEditorModal({
             </div>
           )}
 
-          {/* Informational overlay for drawing */}
           {mode !== "pan" && !loading && (
             <div className="absolute top-4 left-4 bg-black/75 backdrop-blur-xs text-white text-[10px] font-bold px-3 py-1.5 rounded-lg border border-white/10 z-20 flex items-center gap-2 select-none pointer-events-none uppercase tracking-wide">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
-              {`Draw on panorama to apply ${mode === "blur" ? "blur" : "erase"}. Release mouse to bake texture.`}
+              {`Draw on panorama to apply ${mode === "blur" ? "blur" : "erase"}. Release mouse to update texture.`}
             </div>
           )}
         </div>
@@ -716,7 +773,6 @@ export function BlurEditorModal({
             </div>
           </div>
 
-          {/* Blur Strength controller */}
           {mode === "blur" && (
             <div className="flex items-center gap-2.5 font-bold mr-4">
               <span>Blur Strength:</span>
@@ -734,7 +790,6 @@ export function BlurEditorModal({
             </div>
           )}
 
-          {/* Brush size controller */}
           {mode !== "pan" && (
             <div className="flex items-center gap-2.5 font-bold">
               <span>Brush Size:</span>
@@ -752,9 +807,7 @@ export function BlurEditorModal({
             </div>
           )}
 
-          <div className="text-white/60 font-medium font-mono text-[10px] hidden sm:block">
-            {photo.filename}
-          </div>
+          <div className="text-white/60 font-medium font-mono text-[10px] hidden sm:block">{photo.filename}</div>
         </div>
       </div>
     </div>
