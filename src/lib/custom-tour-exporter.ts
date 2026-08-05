@@ -62,6 +62,13 @@ const HTML_SOURCE = `<!DOCTYPE html>
     <button id="zoom-out" class="control-btn" title="Zoom Out">−</button>
   </div>
 
+  <!-- Background Music Player & Toggle -->
+  <audio id="bg-music" loop style="display:none;"></audio>
+  <button id="music-toggle" class="control-btn" title="Toggle Background Music" style="display:none;">
+    <svg id="music-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    <svg id="music-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:none;"><path d="M4.27 3L3 4.27l9 9v.28c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V14.27l7.73 7.73L21 20.73 4.27 3zM14 7h4V3h-6v5.18l2 2V7z"/></svg>
+  </button>
+
   <!-- WhatsApp Floating Widget -->
   <div id="whatsapp-widget" style="display:none;">
     <a id="whatsapp-link" href="#" target="_blank">
@@ -161,6 +168,13 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+#music-toggle {
+  position: absolute;
+  right: 16px;
+  top: 112px;
+  z-index: 100;
 }
 
 .control-btn {
@@ -531,6 +545,61 @@ const JS_SOURCE = `(function() {
     if (APP_DATA.settings.showWatermark) {
       document.getElementById('watermark').style.display = 'block';
     }
+
+    // Background Music Player
+    var music = APP_DATA.music;
+    if (music && music.enabled && music.url) {
+      var audioEl = document.getElementById('bg-music');
+      var musicBtn = document.getElementById('music-toggle');
+      var iconOn = document.getElementById('music-icon-on');
+      var iconOff = document.getElementById('music-icon-off');
+
+      if (audioEl && musicBtn) {
+        audioEl.src = music.url;
+        audioEl.volume = (music.volume != null ? music.volume : 50) / 100;
+        musicBtn.style.display = 'flex';
+
+        var isPlaying = false;
+
+        function playAudio() {
+          audioEl.play().then(function() {
+            isPlaying = true;
+            if (iconOn) iconOn.style.display = 'block';
+            if (iconOff) iconOff.style.display = 'none';
+          }).catch(function() {
+            isPlaying = false;
+            if (iconOn) iconOn.style.display = 'none';
+            if (iconOff) iconOff.style.display = 'block';
+          });
+        }
+
+        function pauseAudio() {
+          audioEl.pause();
+          isPlaying = false;
+          if (iconOn) iconOn.style.display = 'none';
+          if (iconOff) iconOff.style.display = 'block';
+        }
+
+        musicBtn.addEventListener('click', function() {
+          if (isPlaying) {
+            pauseAudio();
+          } else {
+            playAudio();
+          }
+        });
+
+        if (music.autoplay !== false) {
+          playAudio();
+          var onFirstClick = function() {
+            if (!isPlaying) {
+              playAudio();
+            }
+            document.removeEventListener('click', onFirstClick);
+          };
+          document.addEventListener('click', onFirstClick);
+        }
+      }
+    }
   }
 
   // Helper to return the SVG HTML based on selected icon name
@@ -585,6 +654,13 @@ export async function exportCustomTour(
   const whatsappNumber = whatsapp.phone_number || "";
   const whatsappMessage = whatsapp.message || "";
   const whatsappPosition = whatsapp.position || "bottom-right";
+
+  const music = settings.music || {};
+  const musicEnabled = !!music.enabled;
+  const musicUrl = music.track_url || "";
+  const musicTitle = music.track_name || "";
+  const musicVolume = music.volume ?? 50;
+  const musicAutoplay = music.autoplay !== false;
 
   onProgress?.("Downloading custom 360 viewer engine...", 10);
   
@@ -699,6 +775,13 @@ export async function exportCustomTour(
       message: whatsappMessage,
       position: whatsappPosition
     },
+    music: {
+      enabled: musicEnabled,
+      url: musicUrl,
+      title: musicTitle,
+      volume: musicVolume,
+      autoplay: musicAutoplay
+    },
     scenes
   };
 
@@ -752,6 +835,13 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
   const whatsappNumber = whatsapp.phone_number || "";
   const whatsappMessage = whatsapp.message || "";
   const whatsappPosition = whatsapp.position || "bottom-right";
+
+  const music = settings.music || {};
+  const musicEnabled = !!music.enabled;
+  const musicUrl = music.track_url || "";
+  const musicTitle = music.track_name || "";
+  const musicVolume = music.volume ?? 50;
+  const musicAutoplay = music.autoplay !== false;
 
   const scenes = photos.map((photo, i) => {
     const sceneConns = connections.filter((c) => c.from_photo_id === photo.id);
@@ -819,6 +909,13 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
       message: whatsappMessage,
       position: whatsappPosition
     },
+    music: {
+      enabled: musicEnabled,
+      url: musicUrl,
+      title: musicTitle,
+      volume: musicVolume,
+      autoplay: musicAutoplay
+    },
     scenes
   };
 
@@ -863,6 +960,11 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
     <button id="zoom-in" class="control-btn" title="Zoom In">+</button>
     <button id="zoom-out" class="control-btn" title="Zoom Out">−</button>
   </div>
+  <audio id="bg-music" loop style="display:none;"></audio>
+  <button id="music-toggle" class="control-btn" title="Toggle Background Music" style="display:none;">
+    <svg id="music-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+    <svg id="music-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:none;"><path d="M4.27 3L3 4.27l9 9v.28c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V14.27l7.73 7.73L21 20.73 4.27 3zM14 7h4V3h-6v5.18l2 2V7z"/></svg>
+  </button>
   <div id="whatsapp-widget" style="display:none;">
     <a id="whatsapp-link" href="#" target="_blank">
       <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor">

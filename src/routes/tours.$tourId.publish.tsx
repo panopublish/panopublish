@@ -29,6 +29,10 @@ import {
   Download,
   Eye,
   Image as ImageIcon,
+  Music,
+  Volume2,
+  Play,
+  Pause,
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
@@ -37,6 +41,39 @@ import { syncStreetViewConnections } from "@/lib/streetview";
 import { exportCustomTour, generateLivePreviewUrl } from "@/lib/custom-tour-exporter";
 
 const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
+
+const MUSIC_PRESETS = [
+  {
+    id: "calm-ambient",
+    title: "Calm Ambient Lounge",
+    genre: "Ambient soundscape",
+    url: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3",
+  },
+  {
+    id: "soft-piano",
+    title: "Soft Gentle Piano",
+    genre: "Acoustic piano melody",
+    url: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3",
+  },
+  {
+    id: "acoustic-breeze",
+    title: "Soothing Acoustic Breeze",
+    genre: "Light acoustic guitar",
+    url: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3",
+  },
+  {
+    id: "meditative-sanctuary",
+    title: "Meditative Sanctuary",
+    genre: "Deep zen relaxation",
+    url: "https://cdn.pixabay.com/download/audio/2021/09/06/audio_8fa38e9c40.mp3",
+  },
+  {
+    id: "zen-corporate",
+    title: "Zen Corporate Flow",
+    genre: "Modern lounge ambient",
+    url: "https://cdn.pixabay.com/download/audio/2022/10/14/audio_9939f792cb.mp3",
+  },
+];
 
 /**
  * Loads an image from a URL and returns an HTMLImageElement.
@@ -465,6 +502,14 @@ function PublishPage() {
   const [waMessage, setWaMessage] = useState("");
   const [waPosition, setWaPosition] = useState("bottom-right");
 
+  // Music settings states
+  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [musicUrl, setMusicUrl] = useState(MUSIC_PRESETS[0].url);
+  const [musicTitle, setMusicTitle] = useState(MUSIC_PRESETS[0].title);
+  const [musicVolume, setMusicVolume] = useState(50);
+  const [musicAutoplay, setMusicAutoplay] = useState(true);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+
   const [savingSettings, setSavingSettings] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ message: string; pct: number } | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -529,6 +574,12 @@ function PublishPage() {
           setWaNumber(cs.whatsapp?.phone_number || "");
           setWaMessage(cs.whatsapp?.message || "");
           setWaPosition(cs.whatsapp?.position || "bottom-right");
+
+          setMusicEnabled(!!cs.music?.enabled);
+          setMusicUrl(cs.music?.track_url || MUSIC_PRESETS[0].url);
+          setMusicTitle(cs.music?.track_name || MUSIC_PRESETS[0].title);
+          setMusicVolume(cs.music?.volume ?? 50);
+          setMusicAutoplay(cs.music?.autoplay !== false);
         } catch (e) {
           console.error("Failed to parse custom settings", e);
         }
@@ -1063,6 +1114,13 @@ function PublishPage() {
         phone_number: waNumber,
         message: waMessage,
         position: waPosition
+      },
+      music: {
+        enabled: musicEnabled,
+        track_url: musicUrl,
+        track_name: musicTitle,
+        volume: musicVolume,
+        autoplay: musicAutoplay
       }
     });
 
@@ -1158,6 +1216,13 @@ function PublishPage() {
           phone_number: waNumber,
           message: waMessage,
           position: waPosition
+        },
+        music: {
+          enabled: musicEnabled,
+          track_url: musicUrl,
+          track_name: musicTitle,
+          volume: musicVolume,
+          autoplay: musicAutoplay
         }
       })
     };
@@ -1194,7 +1259,12 @@ function PublishPage() {
     waEnabled,
     waNumber,
     waMessage,
-    waPosition
+    waPosition,
+    musicEnabled,
+    musicUrl,
+    musicTitle,
+    musicVolume,
+    musicAutoplay
   ]);
 
   return (
@@ -1447,6 +1517,173 @@ function PublishPage() {
                       <option value="top-right">Top Right</option>
                       <option value="top-left">Top Left</option>
                     </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Background Music Panel */}
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-1.5">
+                  <Music className="h-4 w-4 text-[#0277bd]" />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Background Music</h4>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Checkbox
+                    id="music-enabled-check"
+                    checked={musicEnabled}
+                    onCheckedChange={(v) => {
+                      setMusicEnabled(!!v);
+                      if (!v && isPreviewPlaying) setIsPreviewPlaying(false);
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <label htmlFor="music-enabled-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                    Enable Background Music
+                  </label>
+                </div>
+              </div>
+
+              {musicEnabled && (
+                <div className="space-y-4 pl-6 animate-in slide-in-from-top-2 duration-200">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 block">Select Soothing Music Track</label>
+                    <div className="grid grid-cols-1 gap-2">
+                      {MUSIC_PRESETS.map((preset) => {
+                        const isSelected = musicUrl === preset.url;
+                        return (
+                          <div
+                            key={preset.id}
+                            onClick={() => {
+                              setMusicUrl(preset.url);
+                              setMusicTitle(preset.title);
+                            }}
+                            className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
+                              isSelected
+                                ? "bg-sky-50/80 border-[#0277bd] text-[#0277bd] shadow-xs"
+                                : "bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100/80"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                isSelected ? "border-[#0277bd] bg-[#0277bd]" : "border-slate-300"
+                              }`}>
+                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900 text-xs">{preset.title}</div>
+                                <div className="text-[10px] text-slate-400 font-normal">{preset.genre} • Copyright-free</div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Custom Music Track Option */}
+                      <div
+                        onClick={() => {
+                          if (!MUSIC_PRESETS.some(p => p.url === musicUrl)) return;
+                          setMusicUrl("");
+                          setMusicTitle("Custom Audio Track");
+                        }}
+                        className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
+                          !MUSIC_PRESETS.some(p => p.url === musicUrl)
+                            ? "bg-sky-50/80 border-[#0277bd] text-[#0277bd] shadow-xs"
+                            : "bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100/80"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                            !MUSIC_PRESETS.some(p => p.url === musicUrl) ? "border-[#0277bd] bg-[#0277bd]" : "border-slate-300"
+                          }`}>
+                            {!MUSIC_PRESETS.some(p => p.url === musicUrl) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                          <div>
+                            <div className="font-bold text-slate-900 text-xs">Custom Audio URL</div>
+                            <div className="text-[10px] text-slate-400 font-normal">Use direct MP3 link from external host</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!MUSIC_PRESETS.some(p => p.url === musicUrl) && (
+                    <div className="space-y-1 animate-in fade-in duration-200">
+                      <label className="text-xs font-bold text-slate-700 block">Direct MP3 Audio URL</label>
+                      <Input
+                        className="text-xs font-mono"
+                        placeholder="https://example.com/soothing-music.mp3"
+                        value={musicUrl}
+                        onChange={(e) => {
+                          setMusicUrl(e.target.value);
+                          setMusicTitle("Custom Audio Track");
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Audio Player Preview */}
+                  <div className="bg-slate-900 text-white rounded-xl p-3.5 space-y-3 shadow-sm border border-slate-800">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          onClick={() => {
+                            if (!musicUrl) {
+                              toast.error("Please select or enter an audio track first.");
+                              return;
+                            }
+                            setIsPreviewPlaying(!isPreviewPlaying);
+                          }}
+                          className="h-8 w-8 rounded-lg bg-[#0277bd] hover:bg-[#0266a1] text-white shrink-0 cursor-pointer border-0"
+                        >
+                          {isPreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+                        </Button>
+                        <div className="truncate">
+                          <div className="text-xs font-bold text-white truncate">{musicTitle || "No Track Selected"}</div>
+                          <div className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
+                            {isPreviewPlaying ? "Playing Preview..." : "Click to Preview Track"}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Volume2 className="h-4 w-4 text-slate-400" />
+                        <span className="text-xs font-mono text-slate-300 font-bold">{musicVolume}%</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase">
+                        <span>Volume</span>
+                        <span>{musicVolume}%</span>
+                      </div>
+                      <Slider
+                        value={[musicVolume]}
+                        onValueChange={(val) => setMusicVolume(val[0])}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="cursor-pointer [&_[role=slider]]:bg-white [&_[role=slider]]:h-3 [&_[role=slider]]:w-3"
+                      />
+                    </div>
+
+                    {isPreviewPlaying && musicUrl && (
+                      <audio
+                        src={musicUrl}
+                        autoPlay
+                        loop
+                        onPlay={() => setIsPreviewPlaying(true)}
+                        onPause={() => setIsPreviewPlaying(false)}
+                        onEnded={() => setIsPreviewPlaying(false)}
+                        ref={(el) => {
+                          if (el) el.volume = musicVolume / 100;
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               )}
