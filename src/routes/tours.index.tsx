@@ -80,9 +80,10 @@ function ToursPage() {
         setPhotos(loadedPhotos);
         setConnections(connRes.data ?? []);
 
-        // Self-healing check: Sync tour status based on photos
+        // Self-healing check: Sync tour status based on photos (Google Street View tours only)
         let hasChanges = false;
         for (const t of tList) {
+          if (t.type === "custom") continue; // Skip custom tours
           const tPhotos = loadedPhotos.filter((p: any) => p.tour_id === t.id);
           if (tPhotos.length > 0) {
             const allSubmitted = tPhotos.every(

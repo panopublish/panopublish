@@ -120,6 +120,7 @@ function Dashboard() {
 
       // Self-healing check: Sync tour status based on photos
       for (const tour of tours) {
+        if (tour.type === "custom") continue; // Skip custom tours
         const tPhotos = photos.filter((p: any) => p.tour_id === tour.id);
         if (tPhotos.length > 0) {
           const allSubmitted = tPhotos.every(

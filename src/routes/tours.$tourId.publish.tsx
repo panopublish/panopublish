@@ -599,8 +599,8 @@ function PublishPage() {
     });
     setPhotos(loadedPhotos);
 
-    // Self-healing check: Sync tour status based on photos
-    if (t && loadedPhotos.length > 0) {
+    // Self-healing check: Sync tour status based on photos (Google Street View tours only)
+    if (t && t.type !== "custom" && loadedPhotos.length > 0) {
       const allSubmitted = loadedPhotos.every(
         (p: any) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
       );
@@ -1183,7 +1183,17 @@ function PublishPage() {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
-      toast.success("Virtual tour exported successfully!");
+      // Mark custom tour as published in database and update local state
+      const { error: pubErr } = await supabase
+        .from("tours")
+        .update({ status: "published", has_been_published: true } as any)
+        .eq("id", tourId);
+      
+      if (!pubErr) {
+        setTour((prev: any) => (prev ? { ...prev, status: "published", has_been_published: true } : null));
+      }
+
+      toast.success("Tour published! Standalone ZIP package downloaded successfully.");
       setExportProgress(null);
     } catch (err: any) {
       console.error(err);
