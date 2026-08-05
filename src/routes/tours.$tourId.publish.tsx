@@ -510,6 +510,10 @@ function PublishPage() {
   const [musicAutoplay, setMusicAutoplay] = useState(true);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
 
+  // Nadir Logo state
+  const [nadirLogoUrl, setNadirLogoUrl] = useState("");
+  const [uploadingNadirLogo, setUploadingNadirLogo] = useState(false);
+
   const [savingSettings, setSavingSettings] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ message: string; pct: number } | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -554,6 +558,7 @@ function PublishPage() {
       setNadirType(fetchedNadirType);
       setSize(t.nadir_size || localStorage.getItem(`tour-size-${tourId}`) || "13%");
       setPos(t.nadir_pos || localStorage.getItem(`tour-pos-${tourId}`) || "btm");
+      setNadirLogoUrl(t.nadir_logo_url || "");
 
       // Load custom settings if tour is type 'custom'
       if (t.custom_settings) {
@@ -757,10 +762,9 @@ function PublishPage() {
   };
 
   const handleLogoRemove = async () => {
-    if (!window.confirm("Are you sure you want to remove the nadir logo?")) return;
+    if (!window.confirm("Are you sure you want to remove the brand logo?")) return;
 
     try {
-      // Update tours table
       const { error: dbErr } = await supabase
         .from("tours")
         .update({
@@ -769,11 +773,63 @@ function PublishPage() {
         .eq("id", tourId);
       if (dbErr) throw dbErr;
 
-      // Update local tour state
+      setLogoUrl("");
       setTour((prev: any) => ({ ...prev, nadir_logo_url: null }));
-      toast.success("Nadir logo removed!");
+      toast.success("Brand logo removed successfully!");
     } catch (err: any) {
       toast.error("Failed to remove logo: " + err.message);
+    }
+  };
+
+  const handleNadirLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingNadirLogo(true);
+    try {
+      const path = `${user?.id}/${tourId}/custom-nadir-logo-${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, {
+        contentType: file.type || "image/png",
+      });
+      if (upErr) throw upErr;
+
+      const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(path);
+      const uploadedUrl = pub.publicUrl;
+
+      // Update tours table
+      const { error: dbErr } = await supabase
+        .from("tours")
+        .update({
+          nadir_logo_url: uploadedUrl,
+        } as any)
+        .eq("id", tourId);
+      if (dbErr) throw dbErr;
+
+      setNadirLogoUrl(uploadedUrl);
+      setTour((prev: any) => ({ ...prev, nadir_logo_url: uploadedUrl }));
+      toast.success("Nadir logo uploaded successfully!");
+    } catch (err: any) {
+      toast.error("Failed to upload nadir logo: " + err.message);
+    } finally {
+      setUploadingNadirLogo(false);
+    }
+  };
+
+  const handleNadirLogoRemove = async () => {
+    try {
+      const { error: dbErr } = await supabase
+        .from("tours")
+        .update({
+          nadir_logo_url: null,
+        } as any)
+        .eq("id", tourId);
+      if (dbErr) throw dbErr;
+
+      setNadirLogoUrl("");
+      setTour((prev: any) => ({ ...prev, nadir_logo_url: null }));
+      toast.success("Nadir logo removed.");
+    } catch (err: any) {
+      toast.error("Failed to remove nadir logo: " + err.message);
     }
   };
 
@@ -1178,7 +1234,7 @@ function PublishPage() {
           nadirType,
           nadirSize: size,
           nadirPos: pos,
-          logoUrl,
+          logoUrl: nadirLogoUrl || logoUrl,
           processNadirFn: processNadirClientSide
         },
         (msg, pct) => {
@@ -1550,10 +1606,52 @@ function PublishPage() {
                       </div>
                     </div>
 
-                    {nadirType === "Tour level" && !logoUrl && (
-                      <p className="text-[11px] text-amber-600 font-semibold bg-amber-50 p-2 rounded-lg border border-amber-200">
-                        ⚠️ Upload a Brand Logo above to display as the Tour Level Nadir patch!
-                      </p>
+                    {nadirType === "Tour level" && (
+                      <div className="space-y-2 pt-2 border-t border-slate-100 animate-in fade-in duration-200">
+                        <label className="text-xs font-bold text-slate-700 block">Nadir Patch Logo</label>
+                        <div className="flex gap-3 items-center bg-slate-50 p-2.5 rounded-xl border">
+                          <div className="w-12 h-12 rounded-lg border bg-white flex items-center justify-center overflow-hidden shrink-0">
+                            {nadirLogoUrl || logoUrl ? (
+                              <img src={nadirLogoUrl || logoUrl} alt="Nadir Logo" className="w-full h-full object-contain" />
+                            ) : (
+                              <ImageIcon className="h-4 w-4 text-slate-300" />
+                            )}
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <div className="text-[11px] font-semibold text-slate-600">
+                              {nadirLogoUrl ? "Custom Nadir Logo uploaded" : logoUrl ? "Using Brand Logo" : "No logo uploaded"}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={uploadingNadirLogo}
+                                className="relative cursor-pointer text-xs h-7 px-2.5"
+                              >
+                                {uploadingNadirLogo ? "Uploading..." : "Upload Nadir Logo"}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleNadirLogoUpload}
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                />
+                              </Button>
+                              {nadirLogoUrl && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleNadirLogoRemove}
+                                  className="text-red-500 hover:text-red-650 border-red-200 hover:bg-red-50 h-7 px-2.5"
+                                >
+                                  Remove
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
