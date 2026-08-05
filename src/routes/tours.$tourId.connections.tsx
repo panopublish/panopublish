@@ -184,26 +184,40 @@ function getHotspotScreenCoords(
 }
 
 function useGoogleMaps() {
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => typeof window !== "undefined" && !!window.google?.maps);
+
   useEffect(() => {
     if (!MAPS_KEY) return;
     if (window.google?.maps) {
       setReady(true);
       return;
     }
-    const existing = document.querySelector<HTMLScriptElement>("script[data-gmaps]");
+
+    const interval = setInterval(() => {
+      if (window.google?.maps) {
+        setReady(true);
+        clearInterval(interval);
+      }
+    }, 100);
+
+    const existing = document.querySelector<HTMLScriptElement>("script[src*='maps.googleapis.com']");
     if (existing) {
-      existing.addEventListener("load", () => setReady(true));
-      if (window.google?.maps) setReady(true);
-      return;
+      existing.addEventListener("load", () => {
+        if (window.google?.maps) setReady(true);
+      });
+      return () => clearInterval(interval);
     }
     const s = document.createElement("script");
     s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geometry`;
     s.async = true;
     s.defer = true;
     s.dataset.gmaps = "1";
-    s.onload = () => setReady(true);
+    s.onload = () => {
+      if (window.google?.maps) setReady(true);
+    };
     document.head.appendChild(s);
+
+    return () => clearInterval(interval);
   }, []);
   return ready;
 }

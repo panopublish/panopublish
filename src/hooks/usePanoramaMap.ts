@@ -50,82 +50,103 @@ export function usePanoramaMap(
 
   // Initialize Google Map
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current || !window.google?.maps) return;
+    let resizeObserver: ResizeObserver | null = null;
 
-    const lat = options.centerLat ?? 20.5937;
-    const lng = options.centerLng ?? 78.9629;
+    const initMap = () => {
+      if (mapInstanceRef.current || !mapRef.current || !window.google?.maps) return false;
 
-    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-      center: { lat, lng },
-      zoom: 19,
-      mapTypeId: "roadmap",
-      disableDefaultUI: true,
-      gestureHandling: "greedy",
-    });
+      const lat = options.centerLat ?? 20.5937;
+      const lng = options.centerLng ?? 78.9629;
 
-    // Clear connection selection when clicking on empty map area
-    window.google.maps.event.addListener(mapInstanceRef.current, "click", () => {
-      onConnectionSelectRef.current?.(null, null);
-    });
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        center: { lat, lng },
+        zoom: 19,
+        mapTypeId: "roadmap",
+        disableDefaultUI: true,
+        gestureHandling: "greedy",
+      });
 
-    // Initialize overlay
-    overlayRef.current = createPanoramaOverlayManager({
-      nodes: options.nodes,
-      connections: options.connections,
-      activeNodeId: options.activeNodeId,
-      selectedConnection: options.selectedConnection,
-      onNodeClick: (id) => {
-        // Clear connection selection when a node is clicked
+      // Clear connection selection when clicking on empty map area
+      window.google.maps.event.addListener(mapInstanceRef.current, "click", () => {
         onConnectionSelectRef.current?.(null, null);
-        onNodeSelectRef.current(id);
-      },
-      onNodeDrag: (id, lat, lng) => {
-        onNodeMoveRef.current(id, lat, lng);
-      },
-      onRotateActiveNode: (heading) => {
-        onNodeRotateRef.current?.(heading);
-      },
-      onQuickConnect: (fromId, toId) => {
-        onQuickConnectRef.current?.(fromId, toId);
-      },
-      onConnectionSelect: (fromId, toId) => {
-        onConnectionSelectRef.current?.(fromId, toId);
-      },
-    });
+      });
 
-    overlayRef.current.setMap(mapInstanceRef.current);
+      // Initialize overlay
+      overlayRef.current = createPanoramaOverlayManager({
+        nodes: options.nodes,
+        connections: options.connections,
+        activeNodeId: options.activeNodeId,
+        selectedConnection: options.selectedConnection,
+        onNodeClick: (id) => {
+          // Clear connection selection when a node is clicked
+          onConnectionSelectRef.current?.(null, null);
+          onNodeSelectRef.current(id);
+        },
+        onNodeDrag: (id, lat, lng) => {
+          onNodeMoveRef.current(id, lat, lng);
+        },
+        onRotateActiveNode: (heading) => {
+          onNodeRotateRef.current?.(heading);
+        },
+        onQuickConnect: (fromId, toId) => {
+          onQuickConnectRef.current?.(fromId, toId);
+        },
+        onConnectionSelect: (fromId, toId) => {
+          onConnectionSelectRef.current?.(fromId, toId);
+        },
+      });
 
-    // Trigger redraws on bounds change
-    window.google.maps.event.addListener(mapInstanceRef.current, "bounds_changed", () => {
-      overlayRef.current?.draw();
-    });
+      overlayRef.current.setMap(mapInstanceRef.current);
 
-    // Handle map resize observer for canvas matching & map resize trigger
-    const resizeObserver = new ResizeObserver(() => {
-      if (mapInstanceRef.current && window.google?.maps?.event) {
-        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
-      }
-      overlayRef.current?.draw();
-    });
-    resizeObserver.observe(mapRef.current);
+      // Trigger redraws on bounds change
+      window.google.maps.event.addListener(mapInstanceRef.current, "bounds_changed", () => {
+        overlayRef.current?.draw();
+      });
 
-    // Initial resize trigger after DOM layout settles
-    setTimeout(() => {
-      if (mapInstanceRef.current && window.google?.maps?.event) {
-        window.google.maps.event.trigger(mapInstanceRef.current, "resize");
-      }
-    }, 150);
+      // Handle map resize observer for canvas matching & map resize trigger
+      resizeObserver = new ResizeObserver(() => {
+        if (mapInstanceRef.current && window.google?.maps?.event) {
+          window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+        }
+        overlayRef.current?.draw();
+      });
+      resizeObserver.observe(mapRef.current);
 
-    setMapReady(true);
+      // Initial resize trigger after DOM layout settles
+      setTimeout(() => {
+        if (mapInstanceRef.current && window.google?.maps?.event) {
+          window.google.maps.event.trigger(mapInstanceRef.current, "resize");
+        }
+      }, 150);
+
+      setMapReady(true);
+      return true;
+    };
+
+    if (!initMap()) {
+      const interval = setInterval(() => {
+        if (initMap()) {
+          clearInterval(interval);
+        }
+      }, 100);
+      return () => {
+        clearInterval(interval);
+        if (resizeObserver) resizeObserver.disconnect();
+        if (overlayRef.current) {
+          overlayRef.current.setMap(null);
+        }
+        mapInstanceRef.current = null;
+      };
+    }
 
     return () => {
-      resizeObserver.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
       if (overlayRef.current) {
         overlayRef.current.setMap(null);
       }
       mapInstanceRef.current = null;
     };
-  }, [mapRef, options.mapsReady]); // Re-run when mapsReady becomes true
+  }, [options.mapsReady]); // Re-run when mapsReady becomes true
 
   // Pan to center when centerLat or centerLng updates
   useEffect(() => {
