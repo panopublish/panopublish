@@ -1121,8 +1121,15 @@ function PublishPage() {
         track_name: musicTitle,
         volume: musicVolume,
         autoplay: musicAutoplay
+      },
+      nadir: {
+        type: nadirType,
+        size: size,
+        pos: pos
       }
     });
+
+    await saveNadirSettings(nadirType, size, pos);
 
     const { error } = await supabase
       .from("tours")
@@ -1167,7 +1174,12 @@ function PublishPage() {
             to_photo_id: c.to_photo_id,
             heading: c.heading ?? null,
             metadata: c.metadata ?? null
-          }))
+          })),
+          nadirType,
+          nadirSize: size,
+          nadirPos: pos,
+          logoUrl,
+          processNadirFn: processNadirClientSide
         },
         (msg, pct) => {
           setExportProgress({ message: msg, pct });
@@ -1470,6 +1482,79 @@ function PublishPage() {
                         Show Watermark
                       </label>
                     </div>
+                  </div>
+
+                  {/* Nadir Configuration Section */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 block">Nadir Patch / Blur</label>
+                      <span className="text-[10px] text-slate-400 font-semibold">Cover tripod or place logo patch</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      {/* Nadir Type */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 block uppercase">Type</label>
+                        <select
+                          value={nadirType}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setNadirType(val);
+                            saveNadirSettings(val, size, pos);
+                          }}
+                          className="text-xs border rounded-lg w-full h-8 px-2 bg-background font-medium outline-none cursor-pointer"
+                        >
+                          <option value="None">None</option>
+                          <option value="Stretch Blur">Stretch Blur</option>
+                          <option value="Tour level">Tour Level Logo</option>
+                        </select>
+                      </div>
+
+                      {/* Nadir Position */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 block uppercase">Position</label>
+                        <select
+                          value={pos}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPos(val);
+                            saveNadirSettings(nadirType, size, val);
+                          }}
+                          className="text-xs border rounded-lg w-full h-8 px-2 bg-background font-medium outline-none cursor-pointer"
+                          disabled={nadirType === "None"}
+                        >
+                          <option value="btm">Bottom (Nadir)</option>
+                          <option value="top">Top (Zenith)</option>
+                        </select>
+                      </div>
+
+                      {/* Nadir Size */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 block uppercase">Patch Size</label>
+                        <select
+                          value={size}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSize(val);
+                            saveNadirSettings(nadirType, val, pos);
+                          }}
+                          className="text-xs border rounded-lg w-full h-8 px-2 bg-background font-medium outline-none cursor-pointer"
+                          disabled={nadirType === "None"}
+                        >
+                          <option value="10%">10% (Small)</option>
+                          <option value="13%">13% (Medium)</option>
+                          <option value="15%">15% (Standard)</option>
+                          <option value="18%">18% (Large)</option>
+                          <option value="20%">20% (Extra Large)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {nadirType === "Tour level" && !logoUrl && (
+                      <p className="text-[11px] text-amber-600 font-semibold bg-amber-50 p-2 rounded-lg border border-amber-200">
+                        ⚠️ Upload a Brand Logo above to display as the Tour Level Nadir patch!
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

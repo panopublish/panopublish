@@ -20,6 +20,17 @@ export interface ExportTourParams {
     heading: number | null;
     metadata?: string | null;
   }>;
+  logoUrl?: string;
+  nadirType?: string;
+  nadirSize?: string;
+  nadirPos?: string;
+  processNadirFn?: (
+    photoUrl: string,
+    nadirType: string,
+    nadirSize: string,
+    nadirPos: string,
+    logoUrl?: string | null,
+  ) => Promise<Blob>;
 }
 
 // Inline SVGs matching getSvgForIcon
@@ -701,10 +712,30 @@ export async function exportCustomTour(
     onProgress?.(`Downloading scene ${i + 1} of ${totalPhotos}: ${photo.filename || photo.id}`, stepPct);
 
     try {
-      const imgRes = await fetch(photo.file_url);
-      if (!imgRes.ok) throw new Error("Status " + imgRes.status);
-      const imgBlob = await imgRes.blob();
-      
+      let imgBlob: Blob;
+      const effectiveNadirType = params.nadirType || settings.nadir?.type || "None";
+      const effectiveNadirSize = params.nadirSize || settings.nadir?.size || "13%";
+      const effectiveNadirPos = params.nadirPos || settings.nadir?.pos || "btm";
+
+      if (
+        effectiveNadirType &&
+        effectiveNadirType.toLowerCase().trim() !== "none" &&
+        params.processNadirFn
+      ) {
+        onProgress?.(`Applying ${effectiveNadirType} Nadir to scene ${i + 1} of ${totalPhotos}...`, stepPct);
+        imgBlob = await params.processNadirFn(
+          photo.file_url,
+          effectiveNadirType,
+          effectiveNadirSize,
+          effectiveNadirPos,
+          logoUrl
+        );
+      } else {
+        const imgRes = await fetch(photo.file_url);
+        if (!imgRes.ok) throw new Error("Status " + imgRes.status);
+        imgBlob = await imgRes.blob();
+      }
+
       const fileName = `images/${photo.id}.jpg`;
       zip.file(fileName, imgBlob);
 
