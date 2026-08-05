@@ -408,7 +408,36 @@ const JS_SOURCE = `(function() {
 
       // Click event
       container.addEventListener('click', function() {
-        switchScene(hotspotData.target);
+        if (hotspotData.icon === 'info' && hotspotData.infoContent) {
+          // Show info popup instead of navigating
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
+          overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) document.body.removeChild(overlay);
+          });
+          var panel = document.createElement('div');
+          panel.style.cssText = 'background:rgba(15,23,42,0.95);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:16px;padding:24px;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
+          var header = document.createElement('div');
+          header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
+          var title = document.createElement('div');
+          title.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;';
+          title.innerHTML = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#38bdf8;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>' + (hotspotData.label || 'Information');
+          var closeBtn = document.createElement('button');
+          closeBtn.innerHTML = '&times;';
+          closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;';
+          closeBtn.onclick = function() { document.body.removeChild(overlay); };
+          header.appendChild(title);
+          header.appendChild(closeBtn);
+          var body = document.createElement('p');
+          body.style.cssText = 'font-size:13px;line-height:1.6;color:#cbd5e1;white-space:pre-wrap;';
+          body.innerText = hotspotData.infoContent;
+          panel.appendChild(header);
+          panel.appendChild(body);
+          overlay.appendChild(panel);
+          document.body.appendChild(overlay);
+        } else {
+          switchScene(hotspotData.target);
+        }
       });
     });
   });
@@ -613,15 +642,22 @@ export async function exportCustomTour(
           }
         } catch {}
 
-        // Convert heading in degrees to yaw in radians
-        const yaw = ((c.heading || 0) * Math.PI) / 180;
+        // Convert absolute geographic heading → scene-relative yaw in radians
+        const photoHeading = photo.heading || 0;
+        const sceneRelativeYawDeg = ((c.heading || 0) - photoHeading + 360) % 360;
+        const yaw = (sceneRelativeYawDeg * Math.PI) / 180;
+
+        // Pitch from metadata
+        const pitchDeg = meta.pitch ?? 0;
+        const pitch = (pitchDeg * Math.PI) / 180;
         
         return {
           yaw,
-          pitch: 0, // simple flat horizontal connections
+          pitch,
           target: c.to_photo_id,
           icon: meta.icon_type || "arrow",
-          label: meta.label || ""
+          label: meta.label || "",
+          infoContent: meta.info_content || ""
         };
       });
 
@@ -726,12 +762,26 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
           meta = JSON.parse(c.metadata);
         }
       } catch {}
+
+      // Convert absolute geographic heading → scene-relative yaw in radians
+      // photo.heading is the north-correction offset stored when "Set Initial View" is used.
+      // The Marzipano viewer always starts at yaw=0 = the direction photo.heading points.
+      // So the scene-relative yaw = (c.heading - photo.heading + 360) % 360, then → radians.
+      const photoHeading = photo.heading || 0;
+      const sceneRelativeYawDeg = ((c.heading || 0) - photoHeading + 360) % 360;
+      const yaw = (sceneRelativeYawDeg * Math.PI) / 180;
+
+      // Pitch from metadata — the builder stores this in degrees (negative = below horizon)
+      const pitchDeg = meta.pitch ?? 0;
+      const pitch = (pitchDeg * Math.PI) / 180;
+
       return {
-        yaw: ((c.heading || 0) * Math.PI) / 180,
-        pitch: 0,
+        yaw,
+        pitch,
         target: c.to_photo_id,
         icon: meta.icon_type || "arrow",
-        label: meta.label || ""
+        label: meta.label || "",
+        infoContent: meta.info_content || ""
       };
     });
 
