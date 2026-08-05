@@ -143,11 +143,15 @@ function TourDetail() {
   // Custom tour simple settings (no island)
   const [customShowSceneNames, setCustomShowSceneNames] = useState(true);
 
-  const isCustomTour = tour?.type === "custom";
+  const cachedType =
+    typeof window !== "undefined" && tourId
+      ? sessionStorage.getItem(`tour_type_${tourId}`)
+      : null;
+  const isCustomTour = (tour?.type || cachedType) === "custom";
 
-  const load = async () => {
+  const load = async (showLoading = true) => {
     if (!user) return;
-    setIsLoading(true);
+    if (showLoading) setIsLoading(true);
     try {
       const { data: t } = await supabase
         .from("tours")
@@ -398,7 +402,7 @@ function TourDetail() {
 
     setUploads((prev) => prev.filter((item) => item.id !== uploadId));
     toast.success(`${file.name} uploaded`);
-    load();
+    load(false);
   };
 
   const deletePhoto = async (p: Photo) => {
@@ -411,7 +415,7 @@ function TourDetail() {
       const { error } = await supabase.from("photos").delete().eq("id", p.id);
       if (error) throw error;
       toast.success("Photo deleted");
-      load();
+      load(false);
     } catch (err: any) {
       toast.error("Failed to delete scene: " + err.message);
     }
@@ -465,7 +469,7 @@ function TourDetail() {
     }
 
     setEditingPhoto(null);
-    load();
+    load(false);
   };
 
   const sortPhotosByName = async (direction: "asc" | "desc") => {
@@ -506,12 +510,33 @@ function TourDetail() {
     } catch (err: any) {
       console.error("Error sorting photos:", err);
       toast.error(`Failed to save sort order: ${err.message}`, { id: tid });
-      load();
+      load(false);
     }
   };
 
+  if (isLoading && !tour && !cachedType) {
+    return (
+      <AppShell
+        title="Loading Tour..."
+        breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Loading..." }]}
+      >
+        <SEO
+          title="Upload Photos"
+          description="Upload your 360 photos for your virtual tour."
+          noIndex={true}
+        />
+        <div className="bg-[#f2f4f8] min-h-[calc(100vh-64px)] flex items-center justify-center">
+          <div className="text-center p-8">
+            <div className="w-8 h-8 border-4 border-[#0277bd] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-sm font-medium text-gray-600">Loading tour data...</p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   // â”€â”€â”€ CUSTOM TOUR RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  if (!isLoading && isCustomTour) {
+  if (isCustomTour) {
     return (
       <AppShell
         title={tour?.name ?? "Tour"}

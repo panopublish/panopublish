@@ -300,7 +300,9 @@ function ConnectionsPage() {
   const [customHotspotTargetId, setCustomHotspotTargetId] = useState<string>("");
   const [customHotspotIcon, setCustomHotspotIcon] = useState<string>("arrow");
   const [customHotspotLabel, setCustomHotspotLabel] = useState<string>("");
+  const [customHotspotInfoContent, setCustomHotspotInfoContent] = useState<string>("");
   const [editingCustomHotspotId, setEditingCustomHotspotId] = useState<string | null>(null);
+  const [previewInfoContent, setPreviewInfoContent] = useState<string | null>(null);
 
   // Interactive Hotspot Popovers & Dragging State
   const [draggingHotspotId, setDraggingHotspotId] = useState<string | null>(null);
@@ -1497,12 +1499,14 @@ function ConnectionsPage() {
     } catch {}
     setCustomHotspotIcon(meta.icon_type || "arrow");
     setCustomHotspotLabel(meta.label || "");
+    setCustomHotspotInfoContent(meta.info_content || "");
     setAddCustomHotspotOpen(true);
   };
 
   const handleSaveCustomHotspot = async () => {
     if (!active) return;
-    if (!customHotspotTargetId) {
+    // Info hotspots don't need a target scene — they show content inline
+    if (customHotspotIcon !== "info" && !customHotspotTargetId) {
       toast.error("Please select a target scene to link.");
       return;
     }
@@ -1510,6 +1514,7 @@ function ConnectionsPage() {
     const metaJson = JSON.stringify({
       icon_type: customHotspotIcon,
       label: customHotspotLabel.trim(),
+      ...(customHotspotIcon === "info" && { info_content: customHotspotInfoContent.trim() }),
     });
 
     try {
@@ -1517,8 +1522,7 @@ function ConnectionsPage() {
         const { error } = await supabase
           .from("connections")
           .update({
-            to_photo_id: customHotspotTargetId,
-            heading: currentHeading,
+            to_photo_id: customHotspotIcon === "info" ? (customHotspotTargetId || active.id) : customHotspotTargetId,
             metadata: metaJson,
           } as any)
           .eq("id", editingCustomHotspotId);
@@ -1528,7 +1532,7 @@ function ConnectionsPage() {
         const { error } = await supabase.from("connections").insert({
           tour_id: tourId,
           from_photo_id: active.id,
-          to_photo_id: customHotspotTargetId,
+          to_photo_id: customHotspotIcon === "info" ? active.id : customHotspotTargetId,
           heading: currentHeading,
           spacing: "3m",
           metadata: metaJson,
@@ -1540,6 +1544,7 @@ function ConnectionsPage() {
       await markConnectionsUnsynced();
       setAddCustomHotspotOpen(false);
       setEditingCustomHotspotId(null);
+      setCustomHotspotInfoContent("");
       load();
     } catch (err: any) {
       toast.error("Failed to save hotspot: " + err.message);
@@ -1603,14 +1608,53 @@ function ConnectionsPage() {
 
   const handleSaveInitialView = async () => {
     if (!active) return;
+    // currentHeading is the viewer's yaw in scene-space (relative to photo.heading=0).
+    // The new absolute photo heading that makes the current view "straight ahead" is:
+    const newPhotoHeading = currentHeading;
+    const oldPhotoHeading = active.heading ?? 0;
+    const delta = ((newPhotoHeading - oldPhotoHeading) + 360) % 360;
+
     try {
-      const { error } = await supabase
+      // 1. Save the new photo heading
+      const { error: photoErr } = await supabase
         .from("photos")
-        .update({ heading: currentHeading } as any)
+        .update({ heading: newPhotoHeading } as any)
         .eq("id", active.id);
-      if (error) throw error;
-      toast.success("Initial view direction saved!");
-      load();
+      if (photoErr) throw photoErr;
+
+      // 2. Compensate all outbound connection headings by the same delta so
+      //    hotspot world-space positions stay exactly where the user placed them.
+      //    newConnHeading = (oldConnHeading + delta) % 360
+      const outboundConns = conns.filter((c) => c.from_photo_id === active.id);
+      if (outboundConns.length > 0 && delta !== 0) {
+        const updates = outboundConns.map((c) => ({
+          id: c.id,
+          heading: Number((((c.heading + delta) % 360 + 360) % 360).toFixed(2)),
+        }));
+
+        // Update local state immediately for smooth UI
+        setConns((prev) =>
+          prev.map((c) => {
+            const u = updates.find((x) => x.id === c.id);
+            return u ? { ...c, heading: u.heading } : c;
+          }),
+        );
+
+        // Persist to DB
+        await Promise.all(
+          updates.map((u) =>
+            supabase.from("connections").update({ heading: u.heading } as any).eq("id", u.id),
+          ),
+        );
+      }
+
+      // 3. Update local photo heading for immediate reactive rendering
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === active.id ? { ...p, heading: newPhotoHeading } : p)),
+      );
+
+      toast.success("Initial view saved — hotspot positions preserved!");
+      await markConnectionsUnsynced();
     } catch (err: any) {
       toast.error("Failed to save initial view: " + err.message);
     }
@@ -2153,35 +2197,103 @@ function ConnectionsPage() {
             />
           </div>
 
-          {/* Connected hotspots */}
-          {active &&
-            activeConns
+          {/* Connected hotspots — 3D projected to match builder positions exactly */}
+          {active && (() => {
+            const containerW = panoRef.current?.clientWidth || 0;
+            const containerH = panoRef.current?.clientHeight || 0;
+            return activeConns
               .filter((c) => c.from_photo_id === active.id)
               .map((c) => {
-                const hotspotPixelHeading = (c.heading - (active?.heading || 0) + 360) % 360;
-                const offset = ((hotspotPixelHeading - currentHeading + 540) % 360) - 180;
-                if (Math.abs(offset) > 60) return null;
+                let meta: any = {};
+                try { if (c.metadata) meta = JSON.parse(c.metadata); } catch {}
+                const iconType = meta.icon_type || "arrow";
+                const pitchDeg = meta.pitch ?? c.pitch ?? -10;
+                const { x, y, visible } = getHotspotScreenCoords(
+                  c.heading,
+                  pitchDeg,
+                  currentPov,
+                  active.heading || 0,
+                  containerW,
+                  containerH,
+                );
+                if (!visible) return null;
+                const labelText = meta.label || photos.find((p) => p.id === c.to_photo_id)?.filename || "";
 
                 return (
                   <div
                     key={c.id}
-                    className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center overflow-hidden"
-                    style={{ transform: `translate(${offset * 5}px, 0)` }}
+                    className="absolute z-20 pointer-events-auto select-none"
+                    style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
                   >
-                    <div className="h-full w-0.5 bg-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.8)] absolute" />
-                    <div
-                      className="relative z-10 w-24 h-12 perspective-[100px] flex flex-col gap-1 items-center justify-center cursor-pointer pointer-events-auto hover:scale-110 transition-transform"
+                    <button
+                      className={`flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-95 ${
+                        iconType === "info" ? "cursor-help" : "cursor-pointer"
+                      }`}
                       onClick={() => {
-                        const idx = photos.findIndex((p) => p.id === c.to_photo_id);
-                        if (idx !== -1) setActiveIdx(idx);
+                        if (iconType === "info") {
+                          setPreviewInfoContent(meta.info_content || "No information provided.");
+                        } else {
+                          const idx = photos.findIndex((p) => p.id === c.to_photo_id);
+                          if (idx !== -1) setActiveIdx(idx);
+                        }
                       }}
+                      title={labelText || (iconType === "info" ? "Click for information" : "Go to scene")}
                     >
-                      <div className="w-16 h-16 border-t-[10px] border-l-[10px] border-white origin-center rotate-45 transform skew-x-12 translate-y-6 shadow-xl opacity-90" />
-                      <div className="w-16 h-16 border-t-[10px] border-l-[10px] border-white origin-center rotate-45 transform skew-x-12 -translate-y-2 shadow-xl opacity-90" />
-                    </div>
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 border-white shadow-2xl transition-colors ${
+                        iconType === "info"
+                          ? "bg-sky-600 hover:bg-sky-500"
+                          : "bg-[#0277bd] hover:bg-[#0288d1]"
+                      }`}>
+                        {iconType === "door" && <span className="text-xl">🚪</span>}
+                        {iconType === "arrow" && <ArrowUp className="h-6 w-6 text-white" />}
+                        {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
+                        {iconType === "chevron" && <span className="text-xl">⏫</span>}
+                        {iconType === "info" && <Info className="h-6 w-6 text-white" />}
+                        {iconType === "help" && <HelpCircle className="h-6 w-6 text-white" />}
+                        {iconType === "cart" && <span className="text-xl">🛒</span>}
+                        {iconType === "pin" && <MapPin className="h-6 w-6 text-white" />}
+                        {iconType === "camera" && <Camera className="h-6 w-6 text-white" />}
+                        {iconType === "eye" && <Eye className="h-6 w-6 text-white" />}
+                      </div>
+                      {labelText && (
+                        <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10 shadow whitespace-nowrap max-w-[140px] truncate">
+                          {labelText}
+                        </span>
+                      )}
+                    </button>
                   </div>
                 );
-              })}
+              });
+          })()}
+
+          {/* Info hotspot content popup */}
+          {previewInfoContent !== null && (
+            <div
+              className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              onClick={() => setPreviewInfoContent(null)}
+            >
+              <div
+                className="bg-slate-900/95 border border-white/20 text-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-sky-600 flex items-center justify-center shrink-0">
+                      <Info className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm font-bold text-white">Information</span>
+                  </div>
+                  <button
+                    onClick={() => setPreviewInfoContent(null)}
+                    className="text-white/50 hover:text-white transition-colors p-1 rounded"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">{previewInfoContent}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Floating Close Button */}
@@ -2280,13 +2392,17 @@ function ConnectionsPage() {
                         : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-xs"
                     }`}
                   >
-                    <div className="w-16 h-12 rounded-lg bg-slate-100 overflow-hidden relative shrink-0 border border-slate-200">
+                    <div className="w-16 h-12 rounded-lg bg-slate-200 overflow-hidden relative shrink-0 border border-slate-200">
+                      <div className="absolute inset-0 bg-slate-200 animate-pulse" />
                       <img
                         src={p.file_url}
                         alt=""
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform relative z-10"
+                        onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
                       />
-                      <span className="absolute top-0.5 left-0.5 bg-slate-900/90 text-white text-[9px] font-mono font-bold px-1 rounded shadow">
+                      <span className="absolute top-0.5 left-0.5 bg-slate-900/90 text-white text-[9px] font-mono font-bold px-1 rounded shadow z-20">
                         {String(idx).padStart(2, "0")}
                       </span>
                     </div>
@@ -2890,11 +3006,15 @@ function ConnectionsPage() {
                                   : "border-slate-200 hover:border-slate-300 shadow-xs hover:shadow-sm"
                               }`}
                             >
-                              <div className="aspect-[16/9] relative bg-slate-100 w-full overflow-hidden">
+                              <div className="aspect-[16/9] relative bg-slate-200 w-full overflow-hidden">
+                                <div className="absolute inset-0 bg-slate-200 animate-pulse" />
                                 <img
                                   src={p.file_url}
                                   alt=""
-                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 relative z-10"
+                                  onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
                                 />
 
                                 {/* Left side node index identifier */}
@@ -3276,10 +3396,14 @@ function ConnectionsPage() {
                                     }
                                   }}
                                 >
+                                  <div className="absolute inset-0 bg-slate-200 animate-pulse" />
                                   <img
                                     src={p.file_url}
                                     alt=""
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 relative z-10"
+                                    onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
                                   />
 
                                   <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50">
@@ -3349,23 +3473,44 @@ function ConnectionsPage() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Target Scene Selector */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">Target Scene to Link</label>
-              <select
-                value={customHotspotTargetId}
-                onChange={(e) => setCustomHotspotTargetId(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 text-xs font-semibold outline-none cursor-pointer focus:border-[#0277bd]"
-              >
-                {photos
-                  .filter((p) => active && p.id !== active.id)
-                  .map((p, idx) => (
-                    <option key={p.id} value={p.id}>
-                      {p.filename || `Scene ${idx}`}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            {/* Target Scene Selector — hidden for info icon type */}
+            {customHotspotIcon !== "info" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 block">Target Scene to Link</label>
+                <select
+                  value={customHotspotTargetId}
+                  onChange={(e) => setCustomHotspotTargetId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 text-xs font-semibold outline-none cursor-pointer focus:border-[#0277bd]"
+                >
+                  {photos
+                    .filter((p) => active && p.id !== active.id)
+                    .map((p, idx) => (
+                      <option key={p.id} value={p.id}>
+                        {p.filename || `Scene ${idx}`}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
+            {/* Info Content — only visible when info icon is selected */}
+            {customHotspotIcon === "info" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 block flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 text-sky-400" /> Information Content
+                </label>
+                <p className="text-[10px] text-slate-400">
+                  This text will appear in a popup when the user clicks the info hotspot — no scene navigation occurs.
+                </p>
+                <textarea
+                  value={customHotspotInfoContent}
+                  onChange={(e) => setCustomHotspotInfoContent(e.target.value)}
+                  placeholder="e.g. This room features original hardwood floors and 12-foot ceilings..."
+                  rows={4}
+                  className="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 text-xs font-medium outline-none resize-none focus:border-[#0277bd] focus:ring-1 focus:ring-[#0277bd] placeholder:text-slate-600"
+                />
+              </div>
+            )}
 
             {/* Icon Picker */}
             <div className="space-y-1.5">
@@ -3405,11 +3550,13 @@ function ConnectionsPage() {
 
             {/* Tooltip Label */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-300 block">Hover Label / Tooltip (Optional)</label>
+              <label className="text-xs font-bold text-slate-300 block">
+                {customHotspotIcon === "info" ? "Hotspot Title / Tooltip (Optional)" : "Hover Label / Tooltip (Optional)"}
+              </label>
               <Input
                 value={customHotspotLabel}
                 onChange={(e) => setCustomHotspotLabel(e.target.value)}
-                placeholder="e.g. Enter Living Room"
+                placeholder={customHotspotIcon === "info" ? "e.g. About This Room" : "e.g. Enter Living Room"}
                 className="bg-slate-950 border-slate-800 text-white text-xs h-10 focus-visible:ring-[#0277bd]"
               />
             </div>
