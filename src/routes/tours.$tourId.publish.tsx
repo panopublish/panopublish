@@ -1305,454 +1305,457 @@ function PublishPage() {
       />
 
       {tour?.type === "custom" ? (
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[4fr_6fr] gap-6 items-start animate-in fade-in duration-200">
-          {/* Settings Column */}
-          <div className="rounded-xl border bg-card p-6 space-y-6 shadow-sm">
-            <h3 className="text-lg font-bold border-b pb-3 text-slate-800">Virtual Tour Settings</h3>
+        <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-200">
+          {/* Top Quick Actions Header Bar */}
+          <div className="rounded-xl border bg-card p-4 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-800">Virtual Tour Settings</h3>
+              <p className="text-xs text-slate-500 font-medium">Configure branding, viewer controls, background music, and export options.</p>
+            </div>
 
-            {/* Branding Panel */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Branding & Logo</h4>
-              <div className="space-y-3">
-                <div className="flex gap-4 items-center">
-                  <div className="w-16 h-16 rounded-xl border bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
-                    ) : (
-                      <ImageIcon className="h-6 w-6 text-slate-300" />
-                    )}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Brand Logo</label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={uploadingLogo}
-                        className="relative cursor-pointer text-xs h-8"
-                      >
-                        {uploadingLogo ? "Uploading..." : "Upload Logo"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleCustomLogoUpload}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                      </Button>
-                      {logoUrl && (
+            <div className="flex items-center gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-300 hover:bg-slate-50 text-slate-700 font-bold cursor-pointer h-9 text-xs flex items-center gap-1.5 rounded-lg"
+                onClick={() => setShowPreviewModal(true)}
+                disabled={photos.length === 0}
+              >
+                <Eye className="h-4 w-4 text-slate-500" /> Preview Tour
+              </Button>
+
+              <Button
+                size="sm"
+                className="bg-[#0277bd] hover:bg-[#0266a1] text-white font-bold cursor-pointer h-9 text-xs flex items-center gap-1.5 rounded-lg border-0 shadow-xs"
+                onClick={handleExportTour}
+                disabled={!!exportProgress}
+              >
+                <Download className="h-4 w-4" /> Export Tour (ZIP)
+              </Button>
+
+              <Button
+                size="sm"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold cursor-pointer h-9 text-xs flex items-center gap-1.5 rounded-lg border-0 shadow-xs"
+                onClick={() => handleSaveCustomSettings(true)}
+                disabled={savingSettings}
+              >
+                <Check className="h-4 w-4" /> {savingSettings ? "Saving..." : "Save Settings"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Export Progress Bar Overlay */}
+          {exportProgress && (
+            <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3.5 animate-in fade-in duration-300">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                  Exporting Standalone Tour Package...
+                </span>
+                <span className="text-xs font-black text-blue-600">{exportProgress.pct}%</span>
+              </div>
+              <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden mb-1.5">
+                <div
+                  className="h-full bg-[#0277bd] transition-all duration-300 ease-out"
+                  style={{ width: `${exportProgress.pct}%` }}
+                />
+              </div>
+              <div className="text-xs text-slate-600 font-semibold truncate">{exportProgress.message}</div>
+            </div>
+          )}
+
+          {/* Balanced 2-Column Settings Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* LEFT COLUMN: Branding & Background Music */}
+            <div className="space-y-6">
+              {/* Branding & Logo Card */}
+              <div className="rounded-xl border bg-card p-5 space-y-4 shadow-sm">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 border-b pb-2">Branding & Logo</h4>
+                <div className="space-y-3">
+                  <div className="flex gap-4 items-center">
+                    <div className="w-14 h-14 rounded-xl border bg-slate-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-slate-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Brand Logo</label>
+                      <div className="flex gap-2">
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={handleCustomLogoRemove}
-                          className="text-red-500 hover:text-red-650 border-red-200 hover:bg-red-50 h-8"
+                          disabled={uploadingLogo}
+                          className="relative cursor-pointer text-xs h-7.5"
                         >
-                          Remove
+                          {uploadingLogo ? "Uploading..." : "Upload Logo"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCustomLogoUpload}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
                         </Button>
-                      )}
+                        {logoUrl && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCustomLogoRemove}
+                            className="text-red-500 hover:text-red-650 border-red-200 hover:bg-red-50 h-7.5"
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Brand / Company Name</label>
-                  <Input
-                    className="text-xs"
-                    placeholder="e.g. Acme Properties"
-                    value={brandingName}
-                    onChange={(e) => setBrandingName(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Brand Redirect Link</label>
-                  <Input
-                    className="text-xs"
-                    placeholder="e.g. https://acme.com"
-                    value={brandingLink}
-                    onChange={(e) => setBrandingLink(e.target.value)}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Theme Color</label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={themeColor}
-                        onChange={(e) => setThemeColor(e.target.value)}
-                        className="w-8 h-8 rounded border cursor-pointer border-slate-200 p-0"
+                    <label className="text-xs font-bold text-slate-700 block">Brand / Company Name</label>
+                    <Input
+                      className="text-xs h-9"
+                      placeholder="e.g. Acme Properties"
+                      value={brandingName}
+                      onChange={(e) => setBrandingName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-700 block">Brand Redirect Link</label>
+                    <Input
+                      className="text-xs h-9"
+                      placeholder="e.g. https://acme.com"
+                      value={brandingLink}
+                      onChange={(e) => setBrandingLink(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 pt-1">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Theme Color</label>
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          value={themeColor}
+                          onChange={(e) => setThemeColor(e.target.value)}
+                          className="w-8 h-8 rounded border cursor-pointer border-slate-200 p-0 shrink-0"
+                        />
+                        <Input
+                          className="text-xs font-mono h-8"
+                          value={themeColor}
+                          onChange={(e) => setThemeColor(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-5">
+                      <Checkbox
+                        id="watermark-check"
+                        checked={showWatermark}
+                        onCheckedChange={(v) => setShowWatermark(!!v)}
+                        className="cursor-pointer"
                       />
-                      <Input
-                        className="text-xs font-mono h-8"
-                        value={themeColor}
-                        onChange={(e) => setThemeColor(e.target.value)}
-                      />
+                      <label htmlFor="watermark-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                        Show Watermark
+                      </label>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 pt-6">
+                </div>
+              </div>
+
+              {/* Background Music Card */}
+              <div className="rounded-xl border bg-card p-5 space-y-4 shadow-sm">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Music className="h-4 w-4 text-[#0277bd]" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Background Music</h4>
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <Checkbox
-                      id="watermark-check"
-                      checked={showWatermark}
-                      onCheckedChange={(v) => setShowWatermark(!!v)}
+                      id="music-enabled-check"
+                      checked={musicEnabled}
+                      onCheckedChange={(v) => {
+                        setMusicEnabled(!!v);
+                        if (!v && isPreviewPlaying) setIsPreviewPlaying(false);
+                      }}
                       className="cursor-pointer"
                     />
-                    <label htmlFor="watermark-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
-                      Show Watermark
+                    <label htmlFor="music-enabled-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Enable Music
                     </label>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Navigation & Controls Panel */}
-            <div className="space-y-4 pt-4 border-t">
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Controls & Rotation</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="zoom-btn-check"
-                    checked={zoomButtons}
-                    onCheckedChange={(v) => setZoomButtons(!!v)}
-                    className="cursor-pointer"
-                  />
-                  <label htmlFor="zoom-btn-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
-                    Zoom Button Controls
-                  </label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="scroll-zoom-check"
-                    checked={scrollZoom}
-                    onCheckedChange={(v) => setScrollZoom(!!v)}
-                    className="cursor-pointer"
-                  />
-                  <label htmlFor="scroll-zoom-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
-                    Enable Scroll Zoom
-                  </label>
-                </div>
-              </div>
+                {musicEnabled && (
+                  <div className="space-y-4 pt-1 animate-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-700 block">Select Soothing Track</label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {MUSIC_PRESETS.map((preset) => {
+                          const isSelected = musicUrl === preset.url;
+                          return (
+                            <div
+                              key={preset.id}
+                              onClick={() => {
+                                setMusicUrl(preset.url);
+                                setMusicTitle(preset.title);
+                              }}
+                              className={`p-2 rounded-lg border text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
+                                isSelected
+                                  ? "bg-sky-50/80 border-[#0277bd] text-[#0277bd] shadow-xs"
+                                  : "bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100/80"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                                  isSelected ? "border-[#0277bd] bg-[#0277bd]" : "border-slate-300"
+                                }`}>
+                                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                </div>
+                                <div>
+                                  <div className="font-bold text-slate-900 text-xs">{preset.title}</div>
+                                  <div className="text-[10px] text-slate-400 font-normal">{preset.genre} • Copyright-free</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="autorotate-check"
-                    checked={autorotate}
-                    onCheckedChange={(v) => setAutorotate(!!v)}
-                    className="cursor-pointer"
-                  />
-                  <label htmlFor="autorotate-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
-                    Enable Auto-rotation
-                  </label>
-                </div>
-                {autorotate && (
-                  <div className="space-y-1.5 pl-6 animate-in slide-in-from-top-2 duration-200">
-                    <label className="text-[10px] uppercase font-bold text-slate-500 block">Rotation Speed (step duration)</label>
-                    <div className="flex items-center gap-3">
-                      <Slider
-                        value={[autorotateSpeed]}
-                        onValueChange={(val) => setAutorotateSpeed(val[0])}
-                        min={1}
-                        max={30}
-                        step={1}
-                        className="flex-1 cursor-pointer"
-                      />
-                      <span className="text-xs font-mono bg-slate-50 px-2 py-1 rounded border font-bold">
-                        {autorotateSpeed} ms
-                      </span>
+                        {/* Custom Track Option */}
+                        <div
+                          onClick={() => {
+                            if (!MUSIC_PRESETS.some(p => p.url === musicUrl)) return;
+                            setMusicUrl("");
+                            setMusicTitle("Custom Audio Track");
+                          }}
+                          className={`p-2 rounded-lg border text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
+                            !MUSIC_PRESETS.some(p => p.url === musicUrl)
+                              ? "bg-sky-50/80 border-[#0277bd] text-[#0277bd] shadow-xs"
+                              : "bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100/80"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                              !MUSIC_PRESETS.some(p => p.url === musicUrl) ? "border-[#0277bd] bg-[#0277bd]" : "border-slate-300"
+                            }`}>
+                              {!MUSIC_PRESETS.some(p => p.url === musicUrl) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900 text-xs">Custom Audio URL</div>
+                              <div className="text-[10px] text-slate-400 font-normal">Use direct MP3 link</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {!MUSIC_PRESETS.some(p => p.url === musicUrl) && (
+                      <div className="space-y-1 animate-in fade-in duration-200">
+                        <label className="text-xs font-bold text-slate-700 block">Direct MP3 Audio URL</label>
+                        <Input
+                          className="text-xs font-mono h-9"
+                          placeholder="https://example.com/soothing-music.mp3"
+                          value={musicUrl}
+                          onChange={(e) => {
+                            setMusicUrl(e.target.value);
+                            setMusicTitle("Custom Audio Track");
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Audio Player Preview */}
+                    <div className="bg-slate-900 text-white rounded-xl p-3 space-y-2.5 shadow-sm border border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 truncate pr-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            onClick={() => {
+                              if (!musicUrl) {
+                                toast.error("Please select or enter an audio track first.");
+                                return;
+                              }
+                              setIsPreviewPlaying(!isPreviewPlaying);
+                            }}
+                            className="h-7.5 w-7.5 rounded-lg bg-[#0277bd] hover:bg-[#0266a1] text-white shrink-0 cursor-pointer border-0"
+                          >
+                            {isPreviewPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
+                          </Button>
+                          <div className="truncate">
+                            <div className="text-xs font-bold text-white truncate">{musicTitle || "No Track Selected"}</div>
+                            <div className="text-[9px] text-slate-400 uppercase font-mono tracking-wider">
+                              {isPreviewPlaying ? "Playing Preview..." : "Click to Preview Track"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Volume2 className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="text-xs font-mono text-slate-300 font-bold">{musicVolume}%</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Slider
+                          value={[musicVolume]}
+                          onValueChange={(val) => setMusicVolume(val[0])}
+                          min={0}
+                          max={100}
+                          step={1}
+                          className="cursor-pointer [&_[role=slider]]:bg-white [&_[role=slider]]:h-3 [&_[role=slider]]:w-3"
+                        />
+                      </div>
+
+                      {isPreviewPlaying && musicUrl && (
+                        <audio
+                          src={musicUrl}
+                          autoPlay
+                          loop
+                          onPlay={() => setIsPreviewPlaying(true)}
+                          onPause={() => setIsPreviewPlaying(false)}
+                          onEnded={() => setIsPreviewPlaying(false)}
+                          ref={(el) => {
+                            if (el) el.volume = musicVolume / 100;
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* WhatsApp Widget Panel */}
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">WhatsApp Widget</h4>
-                <div className="flex items-center gap-1.5">
-                  <Checkbox
-                    id="wa-enabled-check"
-                    checked={waEnabled}
-                    onCheckedChange={(v) => setWaEnabled(!!v)}
-                    className="cursor-pointer"
-                  />
-                  <label htmlFor="wa-enabled-check" className="text-xs font-bold text-slate-605 cursor-pointer select-none">
-                    Enable Widget
-                  </label>
-                </div>
-              </div>
-
-              {waEnabled && (
-                <div className="space-y-3 pl-6 animate-in slide-in-from-top-2 duration-200">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Phone Number (with Country Code)</label>
-                    <Input
-                      className="text-xs"
-                      placeholder="e.g. 919999999999"
-                      value={waNumber}
-                      onChange={(e) => setWaNumber(e.target.value)}
+            {/* RIGHT COLUMN: Controls & Rotation + WhatsApp Widget */}
+            <div className="space-y-6">
+              {/* Controls & Rotation Card */}
+              <div className="rounded-xl border bg-card p-5 space-y-4 shadow-sm">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 border-b pb-2">Controls & Rotation</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="zoom-btn-check"
+                      checked={zoomButtons}
+                      onCheckedChange={(v) => setZoomButtons(!!v)}
+                      className="cursor-pointer"
                     />
+                    <label htmlFor="zoom-btn-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Zoom Buttons
+                    </label>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Prefilled Text Message</label>
-                    <Input
-                      className="text-xs"
-                      placeholder="Hi, I am interested in this property tour!"
-                      value={waMessage}
-                      onChange={(e) => setWaMessage(e.target.value)}
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="scroll-zoom-check"
+                      checked={scrollZoom}
+                      onCheckedChange={(v) => setScrollZoom(!!v)}
+                      className="cursor-pointer"
                     />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700 block">Button Position</label>
-                    <select
-                      value={waPosition}
-                      onChange={(e) => setWaPosition(e.target.value)}
-                      className="text-xs border rounded w-full p-2 bg-background font-medium outline-none cursor-pointer"
-                    >
-                      <option value="bottom-right">Bottom Right</option>
-                      <option value="bottom-left">Bottom Left</option>
-                      <option value="top-right">Top Right</option>
-                      <option value="top-left">Top Left</option>
-                    </select>
+                    <label htmlFor="scroll-zoom-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Enable Scroll Zoom
+                    </label>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Background Music Panel */}
-            <div className="space-y-4 pt-4 border-t">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1.5">
-                  <Music className="h-4 w-4 text-[#0277bd]" />
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Background Music</h4>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Checkbox
-                    id="music-enabled-check"
-                    checked={musicEnabled}
-                    onCheckedChange={(v) => {
-                      setMusicEnabled(!!v);
-                      if (!v && isPreviewPlaying) setIsPreviewPlaying(false);
-                    }}
-                    className="cursor-pointer"
-                  />
-                  <label htmlFor="music-enabled-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
-                    Enable Background Music
-                  </label>
-                </div>
-              </div>
-
-              {musicEnabled && (
-                <div className="space-y-4 pl-6 animate-in slide-in-from-top-2 duration-200">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 block">Select Soothing Music Track</label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {MUSIC_PRESETS.map((preset) => {
-                        const isSelected = musicUrl === preset.url;
-                        return (
-                          <div
-                            key={preset.id}
-                            onClick={() => {
-                              setMusicUrl(preset.url);
-                              setMusicTitle(preset.title);
-                            }}
-                            className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
-                              isSelected
-                                ? "bg-sky-50/80 border-[#0277bd] text-[#0277bd] shadow-xs"
-                                : "bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100/80"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                                isSelected ? "border-[#0277bd] bg-[#0277bd]" : "border-slate-300"
-                              }`}>
-                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                              </div>
-                              <div>
-                                <div className="font-bold text-slate-900 text-xs">{preset.title}</div>
-                                <div className="text-[10px] text-slate-400 font-normal">{preset.genre} • Copyright-free</div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      {/* Custom Music Track Option */}
-                      <div
-                        onClick={() => {
-                          if (!MUSIC_PRESETS.some(p => p.url === musicUrl)) return;
-                          setMusicUrl("");
-                          setMusicTitle("Custom Audio Track");
-                        }}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between cursor-pointer transition-all ${
-                          !MUSIC_PRESETS.some(p => p.url === musicUrl)
-                            ? "bg-sky-50/80 border-[#0277bd] text-[#0277bd] shadow-xs"
-                            : "bg-slate-50/50 border-slate-200 text-slate-700 hover:bg-slate-100/80"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                            !MUSIC_PRESETS.some(p => p.url === musicUrl) ? "border-[#0277bd] bg-[#0277bd]" : "border-slate-300"
-                          }`}>
-                            {!MUSIC_PRESETS.some(p => p.url === musicUrl) && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 text-xs">Custom Audio URL</div>
-                            <div className="text-[10px] text-slate-400 font-normal">Use direct MP3 link from external host</div>
-                          </div>
-                        </div>
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="autorotate-check"
+                      checked={autorotate}
+                      onCheckedChange={(v) => setAutorotate(!!v)}
+                      className="cursor-pointer"
+                    />
+                    <label htmlFor="autorotate-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Enable Auto-rotation
+                    </label>
+                  </div>
+                  {autorotate && (
+                    <div className="space-y-1.5 pl-6 animate-in slide-in-from-top-2 duration-200">
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block">Rotation Speed (step duration)</label>
+                      <div className="flex items-center gap-3">
+                        <Slider
+                          value={[autorotateSpeed]}
+                          onValueChange={(val) => setAutorotateSpeed(val[0])}
+                          min={1}
+                          max={30}
+                          step={1}
+                          className="flex-1 cursor-pointer"
+                        />
+                        <span className="text-xs font-mono bg-slate-50 px-2 py-1 rounded border font-bold">
+                          {autorotateSpeed} ms
+                        </span>
                       </div>
-                    </div>
-                  </div>
-
-                  {!MUSIC_PRESETS.some(p => p.url === musicUrl) && (
-                    <div className="space-y-1 animate-in fade-in duration-200">
-                      <label className="text-xs font-bold text-slate-700 block">Direct MP3 Audio URL</label>
-                      <Input
-                        className="text-xs font-mono"
-                        placeholder="https://example.com/soothing-music.mp3"
-                        value={musicUrl}
-                        onChange={(e) => {
-                          setMusicUrl(e.target.value);
-                          setMusicTitle("Custom Audio Track");
-                        }}
-                      />
                     </div>
                   )}
+                </div>
+              </div>
 
-                  {/* Audio Player Preview */}
-                  <div className="bg-slate-900 text-white rounded-xl p-3.5 space-y-3 shadow-sm border border-slate-800">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 truncate pr-2">
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="icon"
-                          onClick={() => {
-                            if (!musicUrl) {
-                              toast.error("Please select or enter an audio track first.");
-                              return;
-                            }
-                            setIsPreviewPlaying(!isPreviewPlaying);
-                          }}
-                          className="h-8 w-8 rounded-lg bg-[#0277bd] hover:bg-[#0266a1] text-white shrink-0 cursor-pointer border-0"
-                        >
-                          {isPreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-                        </Button>
-                        <div className="truncate">
-                          <div className="text-xs font-bold text-white truncate">{musicTitle || "No Track Selected"}</div>
-                          <div className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
-                            {isPreviewPlaying ? "Playing Preview..." : "Click to Preview Track"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Volume2 className="h-4 w-4 text-slate-400" />
-                        <span className="text-xs font-mono text-slate-300 font-bold">{musicVolume}%</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] text-slate-400 font-bold uppercase">
-                        <span>Volume</span>
-                        <span>{musicVolume}%</span>
-                      </div>
-                      <Slider
-                        value={[musicVolume]}
-                        onValueChange={(val) => setMusicVolume(val[0])}
-                        min={0}
-                        max={100}
-                        step={1}
-                        className="cursor-pointer [&_[role=slider]]:bg-white [&_[role=slider]]:h-3 [&_[role=slider]]:w-3"
-                      />
-                    </div>
-
-                    {isPreviewPlaying && musicUrl && (
-                      <audio
-                        src={musicUrl}
-                        autoPlay
-                        loop
-                        onPlay={() => setIsPreviewPlaying(true)}
-                        onPause={() => setIsPreviewPlaying(false)}
-                        onEnded={() => setIsPreviewPlaying(false)}
-                        ref={(el) => {
-                          if (el) el.volume = musicVolume / 100;
-                        }}
-                      />
-                    )}
+              {/* WhatsApp Widget Card */}
+              <div className="rounded-xl border bg-card p-5 space-y-4 shadow-sm">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">WhatsApp Widget</h4>
+                  <div className="flex items-center gap-1.5">
+                    <Checkbox
+                      id="wa-enabled-check"
+                      checked={waEnabled}
+                      onCheckedChange={(v) => setWaEnabled(!!v)}
+                      className="cursor-pointer"
+                    />
+                    <label htmlFor="wa-enabled-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Enable Widget
+                    </label>
                   </div>
                 </div>
-              )}
-            </div>
 
+                {waEnabled && (
+                  <div className="space-y-3 pt-1 animate-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Phone Number (with Country Code)</label>
+                      <Input
+                        className="text-xs h-9"
+                        placeholder="e.g. 919999999999"
+                        value={waNumber}
+                        onChange={(e) => setWaNumber(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Prefilled Text Message</label>
+                      <Input
+                        className="text-xs h-9"
+                        placeholder="Hi, I am interested in this property tour!"
+                        value={waMessage}
+                        onChange={(e) => setWaMessage(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-700 block">Button Position</label>
+                      <select
+                        value={waPosition}
+                        onChange={(e) => setWaPosition(e.target.value)}
+                        className="text-xs border rounded-lg w-full h-9 px-2 bg-background font-medium outline-none cursor-pointer"
+                      >
+                        <option value="bottom-right">Bottom Right</option>
+                        <option value="bottom-left">Bottom Left</option>
+                        <option value="top-right">Top Right</option>
+                        <option value="top-left">Top Left</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Save Action */}
+          <div className="flex items-center justify-end border-t pt-4">
             <Button
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold cursor-pointer h-11 rounded-xl shadow-md uppercase tracking-wider border-0"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold cursor-pointer h-10 rounded-xl px-6 text-xs uppercase tracking-wider border-0 shadow-sm flex items-center gap-1.5"
               onClick={() => handleSaveCustomSettings(true)}
               disabled={savingSettings}
             >
-              {savingSettings ? "Saving Settings..." : "Save Tour Settings"}
+              <Check className="h-4 w-4" /> {savingSettings ? "Saving..." : "Save All Settings"}
             </Button>
-          </div>
-
-          {/* Export & Actions Column */}
-          <div className="space-y-6">
-            {/* Download Card */}
-            <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-slate-800 border-b pb-3">Download Tour Package</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Export your custom virtual tour as a fully autonomous, offline-capable package. Extract the downloaded ZIP file and upload the contents to your web server or hosting platform to display the tour on your website.
-              </p>
-
-              {exportProgress && (
-                <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 animate-in fade-in duration-300">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                      Processing Assets
-                    </span>
-                    <span className="text-xs font-black text-blue-600">
-                      {exportProgress.pct}%
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#0277bd] to-blue-400 transition-all duration-300 ease-out"
-                      style={{ width: `${exportProgress.pct}%` }}
-                    />
-                  </div>
-                  <div className="text-xs text-slate-600 font-semibold truncate">
-                    {exportProgress.message}
-                  </div>
-                </div>
-              )}
-
-              <Button
-                className="w-full bg-[#0277bd] hover:bg-[#0266a1] text-white font-black cursor-pointer h-12 rounded-xl text-sm shadow-md uppercase tracking-wider flex items-center justify-center gap-2 border-0"
-                onClick={handleExportTour}
-                disabled={!!exportProgress}
-              >
-                <Download className="h-5 w-5" /> Export Standalone Tour (ZIP)
-              </Button>
-            </div>
-
-            {/* Live Interactive Preview Card */}
-            <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-              <h3 className="text-lg font-bold text-slate-800 border-b pb-3">Interactive Live Preview</h3>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Test the tour player interactions, branding colors, WhatsApp widgets, and linked scene transitions in real time before exporting.
-              </p>
-              <Button
-                variant="outline"
-                className="w-full border-slate-300 hover:bg-slate-50 text-slate-700 font-black cursor-pointer h-11 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2"
-                onClick={() => setShowPreviewModal(true)}
-                disabled={photos.length === 0}
-              >
-                <Eye className="h-4.5 w-4.5" /> Launch Live Preview
-              </Button>
-            </div>
           </div>
         </div>
       ) : (
