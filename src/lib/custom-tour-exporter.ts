@@ -749,10 +749,7 @@ export async function exportCustomTour(
           }
         } catch {}
 
-        // Convert absolute geographic heading → scene-relative yaw in radians
-        const photoHeading = photo.heading || 0;
-        const sceneRelativeYawDeg = ((c.heading || 0) - photoHeading + 360) % 360;
-        const yaw = (sceneRelativeYawDeg * Math.PI) / 180;
+        const yaw = ((c.heading || 0) * Math.PI) / 180;
 
         // Pitch from metadata
         const pitchDeg = meta.pitch ?? 0;
@@ -773,7 +770,7 @@ export async function exportCustomTour(
         name: photo.filename || `Scene ${i}`,
         image: fileName,
         initialViewParameters: {
-          yaw: 0,
+          yaw: ((photo.heading || 0) * Math.PI) / 180,
           pitch: 0,
           fov: Math.PI / 2
         },
@@ -884,13 +881,7 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
         }
       } catch {}
 
-      // Convert absolute geographic heading → scene-relative yaw in radians
-      // photo.heading is the north-correction offset stored when "Set Initial View" is used.
-      // The Marzipano viewer always starts at yaw=0 = the direction photo.heading points.
-      // So the scene-relative yaw = (c.heading - photo.heading + 360) % 360, then → radians.
-      const photoHeading = photo.heading || 0;
-      const sceneRelativeYawDeg = ((c.heading || 0) - photoHeading + 360) % 360;
-      const yaw = (sceneRelativeYawDeg * Math.PI) / 180;
+      const yaw = ((c.heading || 0) * Math.PI) / 180;
 
       // Pitch from metadata — the builder stores this in degrees (negative = below horizon)
       const pitchDeg = meta.pitch ?? 0;
@@ -911,7 +902,7 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
       name: photo.filename || `Scene ${i}`,
       image: photo.file_url, // For preview, load directly from R2 URL!
       initialViewParameters: {
-        yaw: 0,
+        yaw: ((photo.heading || 0) * Math.PI) / 180,
         pitch: 0,
         fov: Math.PI / 2
       },

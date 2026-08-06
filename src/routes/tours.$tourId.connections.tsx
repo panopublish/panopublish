@@ -714,8 +714,9 @@ function ConnectionsPage() {
               (100 * Math.PI) / 180,
             );
 
+            const initialYawRad = ((active.heading || 0) * Math.PI) / 180;
             const view = new PanoEngine.RectilinearView(
-              { yaw: 0, pitch: 0, fov: Math.PI / 2 },
+              { yaw: initialYawRad, pitch: 0, fov: Math.PI / 2 },
               limitor,
             );
 
@@ -751,6 +752,8 @@ function ConnectionsPage() {
           marzSceneRef.current = cached.scene;
           marzViewRef.current = cached.view;
 
+          cached.view.setYaw(((active.heading || 0) * Math.PI) / 180);
+          cached.view.setPitch(0);
           cached.scene.switchTo({ transitionDuration: 300 });
         } catch (err) {
           console.error("360 viewer init error", err);
@@ -947,7 +950,7 @@ function ConnectionsPage() {
         if (c.metadata) meta = JSON.parse(c.metadata);
       } catch {}
 
-      const targetYawDeg = (c.heading - (active.heading || 0) + 360) % 360;
+      const targetYawDeg = (c.heading + 360) % 360;
       const yawRad = (targetYawDeg * Math.PI) / 180;
       const pitchDeg = meta.pitch ?? c.pitch ?? -10;
       const pitchRad = (pitchDeg * Math.PI) / 180;
@@ -1012,7 +1015,7 @@ function ConnectionsPage() {
       if (conn?.metadata) meta = JSON.parse(conn.metadata);
     } catch {}
 
-    const targetYawDeg = ((conn?.heading ?? 0) - (active?.heading || 0) + 360) % 360;
+    const targetYawDeg = ((conn?.heading ?? 0) + 360) % 360;
     let latestYawRad = (targetYawDeg * Math.PI) / 180;
     let latestPitchRad = ((meta.pitch ?? conn?.pitch ?? -10) * Math.PI) / 180;
 
@@ -1085,9 +1088,7 @@ function ConnectionsPage() {
       draggingHotspotIdRef.current = null;
 
       const relYawDeg = (latestYawRad * 180) / Math.PI;
-      const absHeading = Number(
-        (((relYawDeg + (active?.heading || 0)) % 360 + 360) % 360).toFixed(2),
-      );
+      const absHeading = Number((((relYawDeg % 360) + 360) % 360).toFixed(2));
       const finalPitch = Number(((latestPitchRad * 180) / Math.PI).toFixed(2));
 
       meta.pitch = finalPitch;
@@ -1622,52 +1623,23 @@ function ConnectionsPage() {
 
   const handleSaveInitialView = async () => {
     if (!active) return;
-    // currentHeading is the viewer's yaw in scene-space (relative to photo.heading=0).
-    // The new absolute photo heading that makes the current view "straight ahead" is:
+    // currentHeading is the 360 viewer's current camera yaw angle in degrees (0..360)
     const newPhotoHeading = currentHeading;
-    const oldPhotoHeading = active.heading ?? 0;
-    const delta = ((newPhotoHeading - oldPhotoHeading) + 360) % 360;
 
     try {
-      // 1. Save the new photo heading
+      // 1. Save the new photo heading (initial view yaw angle) in Supabase
       const { error: photoErr } = await supabase
         .from("photos")
         .update({ heading: newPhotoHeading } as any)
         .eq("id", active.id);
       if (photoErr) throw photoErr;
 
-      // 2. Compensate all outbound connection headings by the same delta so
-      //    hotspot world-space positions stay exactly where the user placed them.
-      //    newConnHeading = (oldConnHeading + delta) % 360
-      const outboundConns = conns.filter((c) => c.from_photo_id === active.id);
-      if (outboundConns.length > 0 && delta !== 0) {
-        const updates = outboundConns.map((c) => ({
-          id: c.id,
-          heading: Number((((c.heading + delta) % 360 + 360) % 360).toFixed(2)),
-        }));
-
-        // Update local state immediately for smooth UI
-        setConns((prev) =>
-          prev.map((c) => {
-            const u = updates.find((x) => x.id === c.id);
-            return u ? { ...c, heading: u.heading } : c;
-          }),
-        );
-
-        // Persist to DB
-        await Promise.all(
-          updates.map((u) =>
-            supabase.from("connections").update({ heading: u.heading } as any).eq("id", u.id),
-          ),
-        );
-      }
-
-      // 3. Update local photo heading for immediate reactive rendering
+      // 2. Update local photo heading state for immediate reactive rendering
       setPhotos((prev) =>
         prev.map((p) => (p.id === active.id ? { ...p, heading: newPhotoHeading } : p)),
       );
 
-      toast.success("Initial view saved — hotspot positions preserved!");
+      toast.success("Initial view saved for this scene!");
       await markConnectionsUnsynced();
     } catch (err: any) {
       toast.error("Failed to save initial view: " + err.message);
