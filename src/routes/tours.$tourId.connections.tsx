@@ -707,8 +707,24 @@ function ConnectionsPage() {
 
           let cached = customScenesCacheRef.current[active.id];
           if (!cached) {
-            const source = PanoEngine.ImageUrlSource.fromString(active.file_url);
-            const geometry = new PanoEngine.EquirectGeometry([{ width: 4000 }]);
+            let maxTexSize = 4096;
+            try {
+              const testCanvas = document.createElement("canvas");
+              const testGl =
+                testCanvas.getContext("webgl") ||
+                testCanvas.getContext("experimental-webgl");
+              if (testGl) {
+                maxTexSize = (testGl as WebGLRenderingContext).getParameter(
+                  (testGl as WebGLRenderingContext).MAX_TEXTURE_SIZE,
+                ) || 4096;
+              }
+            } catch {}
+            const targetGeomWidth = Math.min(4000, maxTexSize);
+
+            const source = PanoEngine.ImageUrlSource.fromString(active.file_url, {
+              crossOrigin: "anonymous",
+            });
+            const geometry = new PanoEngine.EquirectGeometry([{ width: targetGeomWidth }]);
             const limitor = PanoEngine.RectilinearView.limit.traditional(
               2048,
               (100 * Math.PI) / 180,

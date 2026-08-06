@@ -109,15 +109,18 @@ const CSS_SOURCE = `* {
 html, body {
   width: 100%;
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: #000;
+  -webkit-text-size-adjust: 100%;
 }
 
 #pano {
   width: 100%;
   height: 100%;
-  position: absolute;
+  height: 100dvh;
+  position: fixed;
   top: 0;
   left: 0;
 }
@@ -381,12 +384,23 @@ const JS_SOURCE = `(function() {
     viewer.startMovement(autorotate);
   }
 
+  // Detect WebGL MAX_TEXTURE_SIZE on mobile GPUs to prevent blank canvas
+  var maxTextureSize = 4096;
+  try {
+    var testCanvas = document.createElement('canvas');
+    var testGl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+    if (testGl) {
+      maxTextureSize = testGl.getParameter(testGl.MAX_TEXTURE_SIZE) || 4096;
+    }
+  } catch(e) {}
+  var targetGeomWidth = Math.min(4000, maxTextureSize);
+
   // Create Scenes
   var scenes = {};
   var Equirect = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
   APP_DATA.scenes.forEach(function(sceneData) {
-    var source = PanoEngine.ImageUrlSource.fromString(sceneData.image);
-    var geometry = new Equirect([{ width: 4000 }]);
+    var source = PanoEngine.ImageUrlSource.fromString(sceneData.image, { crossOrigin: 'anonymous' });
+    var geometry = new Equirect([{ width: targetGeomWidth }]);
     
     // Limits
     var limitor = PanoEngine.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
