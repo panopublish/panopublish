@@ -140,7 +140,7 @@ function BlogPost() {
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="space-y-4">
             <Link
-              to="/blog"
+              to="/blog/"
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-glow transition-colors"
             >
               <ArrowLeft className="h-3.5 w-3.5" /> Back to all articles
@@ -287,7 +287,7 @@ function BlogPost() {
                   Join professional photographers and digital marketing agencies across India. Add nadir logos, auto-link panoramas, and publish to Google Street View starting at ₹499/month.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-2">
-                  <Link to="/signup">
+                  <Link to="/signup/">
                     <Button size="sm" className="bg-primary hover:bg-primary/95 text-white font-bold px-5">
                       Start 7-Day Free Trial
                     </Button>
@@ -311,7 +311,7 @@ function BlogPost() {
                   {related.map((rel) => (
                     <Link
                       key={rel.slug}
-                      to="/blog/$slug"
+                      to="/blog/$slug/"
                       params={{ slug: rel.slug }}
                       className="group block border rounded-2xl p-4 hover:border-primary/40 hover:bg-slate-50/60 transition-all space-y-2"
                     >

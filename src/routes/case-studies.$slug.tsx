@@ -123,7 +123,7 @@ function CaseStudyDetail() {
       <section className="bg-slate-50 border-b py-10 md:py-14">
         <div className="container mx-auto px-4 max-w-4xl space-y-4">
           <Link
-            to="/case-studies"
+            to="/case-studies/"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> Back to all case studies
@@ -301,7 +301,7 @@ function CaseStudyDetail() {
                 Related Service
               </p>
               <Link
-                to="/$slug"
+                to="/$slug/"
                 params={{ slug: cs.related_service_slug }}
                 className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
               >
@@ -314,7 +314,7 @@ function CaseStudyDetail() {
                 Service Area
               </p>
               <Link
-                to="/$slug"
+                to="/$slug/"
                 params={{ slug: cs.related_city_slug }}
                 className="text-sm font-semibold text-primary hover:underline flex items-center gap-1"
               >
@@ -337,7 +337,7 @@ function CaseStudyDetail() {
               {related.map((rel) => (
                 <Link
                   key={rel.slug}
-                  to="/case-studies/$slug"
+                  to="/case-studies/$slug/"
                   params={{ slug: rel.slug }}
                   className="group block border rounded-2xl p-4 bg-white hover:border-primary/40 hover:shadow-sm transition-all space-y-2"
                 >
@@ -368,12 +368,12 @@ function CaseStudyDetail() {
             hours.
           </p>
           <div className="flex flex-wrap gap-3 justify-center pt-2">
-            <Link to="/signup">
+            <Link to="/signup/">
               <Button className="font-bold px-6">
                 Start Free Trial <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
-            <Link to="/contact">
+            <Link to="/contact/">
               <Button
                 variant="ghost"
                 className="text-white hover:bg-white/10 font-semibold"
