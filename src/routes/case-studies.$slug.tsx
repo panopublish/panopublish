@@ -58,11 +58,11 @@ const resultIcon: Record<string, React.ReactNode> = {
 function CaseStudyDetail() {
   const { cs, author, related } = Route.useLoaderData();
 
-  const canonicalUrl = `https://panopublish.com/case-studies/${cs.slug}`;
+  const canonicalUrl = `https://panopublish.com/case-studies/${cs.slug}/`;
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: "Case Studies", url: "https://panopublish.com/case-studies" },
+    { name: "Case Studies", url: "https://panopublish.com/case-studies/" },
     { name: cs.client_name, url: canonicalUrl },
   ];
 

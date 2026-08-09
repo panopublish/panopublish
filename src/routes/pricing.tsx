@@ -8,6 +8,16 @@ import { FAQBlock } from "@/components/FAQBlock";
 import { faqsByCategory } from "@/lib/faq-data";
 
 export const Route = createFileRoute("/pricing")({
+  head: () => ({
+    meta: [
+      { title: "PanoPublish Pricing — Free Trial & INR Monthly Plans" },
+      {
+        name: "description",
+        content:
+          "Transparent PanoPublish pricing starting at ₹499/mo. 7-day free trial, zero per-publish fees, direct Google Maps API publishing, and UPI payment support.",
+      },
+    ],
+  }),
   component: PricingPage,
 });
 
@@ -94,9 +104,10 @@ function PricingPage() {
       <SEO
         title="PanoPublish Pricing — Free Trial & INR Monthly Plans"
         description="Transparent PanoPublish pricing starting at ₹499/mo. 7-day free trial, zero per-publish fees, direct Google Maps API publishing, and UPI payment support."
+        canonical="https://panopublish.com/pricing/"
         breadcrumbs={[
           { name: "Home", url: "https://panopublish.com/" },
-          { name: "Pricing", url: "https://panopublish.com/pricing" },
+          { name: "Pricing", url: "https://panopublish.com/pricing/" },
         ]}
       />
       <script

@@ -48,8 +48,8 @@ function BlogPost() {
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: "Blog", url: "https://panopublish.com/blog" },
-    { name: page.heading, url: `https://panopublish.com/blog/${page.slug}` },
+    { name: "Blog", url: "https://panopublish.com/blog/" },
+    { name: page.heading, url: `https://panopublish.com/blog/${page.slug}/` },
   ];
 
   // Build all JSON-LD schemas for this article
@@ -127,6 +127,7 @@ function BlogPost() {
       <SEO
         title={page.title}
         description={page.description}
+        canonical={`https://panopublish.com/blog/${page.slug}/`}
         breadcrumbs={breadcrumbs}
         ogType="article"
         ogImage={page.image ? `https://panopublish.com${page.image}` : undefined}

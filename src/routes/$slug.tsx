@@ -51,7 +51,7 @@ function SeoPage() {
   // Generate breadcrumbs for SEO
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: page.heading, url: `https://panopublish.com/${page.slug}` },
+    { name: page.heading, url: `https://panopublish.com/${page.slug}/` },
   ];
 
   // Helper to generate dynamic schema
@@ -155,6 +155,7 @@ function SeoPage() {
       <SEO
         title={page.title}
         description={page.description}
+        canonical={`https://panopublish.com/${page.slug}/`}
         breadcrumbs={breadcrumbs}
         ogImage={page.image ? `https://panopublish.com${page.image}` : undefined}
         schema={getFullSchema()}

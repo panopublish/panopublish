@@ -52,10 +52,10 @@ function ContactUs() {
       <SEO
         title="Contact PanoPublish: WhatsApp, Email & Enterprise Support"
         description="Contact PanoPublish for virtual tour support, custom enterprise pricing, or API integration help. Reach us via WhatsApp, email, or our contact form — we reply within 24 hours (IST)."
-        canonical="https://panopublish.com/contact"
+        canonical="https://panopublish.com/contact/"
         breadcrumbs={[
           { name: "Home", url: "https://panopublish.com/" },
-          { name: "Contact", url: "https://panopublish.com/contact" },
+          { name: "Contact", url: "https://panopublish.com/contact/" },
         ]}
       />
       <PublicHeader />

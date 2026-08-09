@@ -39,6 +39,17 @@ export const Route = createFileRoute("/authors/$slug")({
 
     return { author, authoredBlogPosts, authoredCaseStudies };
   },
+  head: ({ loaderData }) => ({
+    meta: loaderData?.author
+      ? [
+          { title: `${loaderData.author.name} — ${loaderData.author.title}` },
+          {
+            name: "description",
+            content: `${loaderData.author.name} is a ${loaderData.author.title} at PanoPublish with ${loaderData.author.years_experience} years of experience in Google Street View publishing and 360° virtual tours.`,
+          },
+        ]
+      : [],
+  }),
   component: AuthorProfile,
 });
 
@@ -46,11 +57,11 @@ function AuthorProfile() {
   const { author, authoredBlogPosts, authoredCaseStudies } =
     Route.useLoaderData();
 
-  const canonicalUrl = `https://panopublish.com/authors/${author.slug}`;
+  const canonicalUrl = `https://panopublish.com/authors/${author.slug}/`;
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: "Authors", url: "https://panopublish.com/authors" },
+    { name: "Authors", url: "https://panopublish.com/authors/" },
     { name: author.name, url: canonicalUrl },
   ];
 
@@ -82,7 +93,7 @@ function AuthorProfile() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title={`${author.name} — ${author.title} | PanoPublish`}
+        title={`${author.name} — ${author.title}`}
         description={`${author.name} is a ${author.title} at PanoPublish with ${author.years_experience} years of experience in Google Street View publishing and 360° virtual tours.`}
         canonical={canonicalUrl}
         ogType="profile"

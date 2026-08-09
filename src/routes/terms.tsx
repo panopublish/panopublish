@@ -26,9 +26,10 @@ function TermsConditions() {
       <SEO
         title="Terms & Conditions"
         description="Review the terms of service and usage conditions for the PanoPublish virtual tour publishing SaaS platform in India."
+        canonical="https://panopublish.com/terms/"
         breadcrumbs={[
           { name: "Home", url: "https://panopublish.com/" },
-          { name: "Terms of Service", url: "https://panopublish.com/terms" },
+          { name: "Terms of Service", url: "https://panopublish.com/terms/" },
         ]}
       />
       <PublicHeader />

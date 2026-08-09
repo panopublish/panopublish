@@ -33,10 +33,11 @@ async function prerender() {
 
       // Determine output file path in dist/client
       let targetFile;
-      if (routePath === '/') {
+      if (routePath === '/' || routePath === '') {
         targetFile = path.join(__dirname, 'dist/client/index.html');
       } else {
-        const dir = path.join(__dirname, 'dist/client', routePath.replace(/^\//, ''));
+        const cleanDir = routePath.replace(/^\//, '').replace(/\/$/, '');
+        const dir = path.join(__dirname, 'dist/client', cleanDir);
         fs.mkdirSync(dir, { recursive: true });
         targetFile = path.join(dir, 'index.html');
       }

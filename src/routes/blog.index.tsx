@@ -91,14 +91,15 @@ function BlogIndex() {
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: "Blog", url: "https://panopublish.com/blog" },
+    { name: "Blog", url: "https://panopublish.com/blog/" },
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="360° Virtual Tour & Google Street View Blog — PanoPublish"
-        description="Learn how to shoot, edit, brand, and publish 360-degree panoramas to Google Maps. Tutorials, guides, and hardware reviews for Indian photographers."
+        title="360 Virtual Tour & Google Street View Blog India 2026 — PanoPublish"
+        description="Expert guides, camera reviews, and publishing tutorials for 360 virtual tours and Google Street View in India. Learn pricing, EXIF setup, and local SEO."
+        canonical="https://panopublish.com/blog/"
         breadcrumbs={breadcrumbs}
       />
       <PublicHeader />

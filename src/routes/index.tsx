@@ -281,6 +281,7 @@ function Landing() {
       <SEO
         title="PanoPublish — Google Street View Publishing for Indian Businesses"
         description="Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!"
+        canonical="https://panopublish.com/"
         schema={landingSchemas}
       />
       <PublicHeader />

@@ -45,7 +45,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
 function FAQPage() {
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: "FAQ", url: "https://panopublish.com/faq" },
+    { name: "FAQ", url: "https://panopublish.com/faq/" },
   ];
 
   // Full FAQPage schema for the hub page (all questions)
@@ -67,7 +67,7 @@ function FAQPage() {
       <SEO
         title="FAQ — Google Street View & 360° Virtual Tour Publishing | PanoPublish"
         description="Answers to common questions about PanoPublish — pricing, Street View publishing, 360° photo requirements, billing, and support."
-        canonical="https://panopublish.com/faq"
+        canonical="https://panopublish.com/faq/"
         schema={[faqPageSchema]}
         breadcrumbs={breadcrumbs}
       />

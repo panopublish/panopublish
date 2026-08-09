@@ -12,6 +12,21 @@ interface SEOProps {
   breadcrumbs?: Array<{ name: string; url: string }>;
 }
 
+export function formatCanonicalUrl(url?: string): string {
+  if (!url) return "https://panopublish.com/";
+  let clean = url.trim().split("?")[0].split("#")[0];
+  if (!clean.startsWith("http")) {
+    clean = `https://panopublish.com${clean.startsWith("/") ? "" : "/"}${clean}`;
+  }
+  if (clean === "https://panopublish.com") {
+    return "https://panopublish.com/";
+  }
+  if (!clean.endsWith("/") && !clean.match(/\.[a-z0-9]+$/i)) {
+    clean += "/";
+  }
+  return clean;
+}
+
 export function SEO({
   title,
   description,
@@ -23,7 +38,7 @@ export function SEO({
   breadcrumbs,
 }: SEOProps) {
   const fullTitle = title.includes("PanoPublish") ? title : `${title} | PanoPublish`;
-  const canonicalUrl = canonical ?? "https://panopublish.com";
+  const canonicalUrl = formatCanonicalUrl(canonical);
 
   const breadcrumbSchema = breadcrumbs
     ? {
@@ -55,8 +70,6 @@ export function SEO({
   return (
     <Helmet>
       {/* Primary */}
-      <title>{fullTitle}</title>
-      <meta name="description" content={description} />
       <link rel="canonical" href={canonicalUrl} />
       {noIndex && <meta name="robots" content="noindex, nofollow" />}
       {!noIndex && <meta name="robots" content="index, follow" />}

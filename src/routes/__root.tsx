@@ -73,12 +73,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "PanoPublish — Google Street View Publishing for Indian Businesses" },
-      {
-        name: "description",
-        content:
-          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
-      },
       { name: "author", content: "PanoPublish" },
       { name: "application-name", content: "PanoPublish" },
       { name: "theme-color", content: "#0F172A" },
@@ -87,33 +81,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "default" },
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "robots", content: "index, follow" },
-      {
-        property: "og:title",
-        content: "PanoPublish — Google Street View Publishing for Indian Businesses",
-      },
-      {
-        property: "og:description",
-        content:
-          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
-      },
-      { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "PanoPublish" },
-      { property: "og:url", content: "https://panopublish.com" },
-      { property: "og:image", content: "https://panopublish.com/og-image.webp" },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@PanoPublish" },
-      {
-        name: "twitter:title",
-        content: "PanoPublish — Google Street View Publishing for Indian Businesses",
-      },
-      {
-        name: "twitter:description",
-        content:
-          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
-      },
-      { name: "twitter:image", content: "https://panopublish.com/og-image.webp" },
       { name: "google-site-verification", content: "google8601514a32a20709" },
     ],
     links: [

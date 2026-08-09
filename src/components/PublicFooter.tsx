@@ -5,35 +5,35 @@ import { waLink } from "@/lib/format";
 
 export function PublicFooter() {
   const serviceLinks = [
-    { name: "Google Street View Publishing", url: "/google-street-view-publishing" },
-    { name: "360° Virtual Tour Platform", url: "/360-virtual-tour-publishing-platform" },
-    { name: "Real Estate Virtual Tour Software", url: "/real-estate-virtual-tour-software" },
-    { name: "Custom Nadir Branding", url: "/nadir-branding-street-view" },
-    { name: "Multi-Client Workspace", url: "/virtual-tour-client-management-software" },
-    { name: "Street View for Hotels", url: "/google-street-view-for-hotels-india" },
-    { name: "Street View for Real Estate", url: "/virtual-tour-real-estate-india" },
-    { name: "360 Photo Connection Builder", url: "/360-photo-connection-builder-online" },
+    { name: "Google Street View Publishing", url: "/google-street-view-publishing/" },
+    { name: "360° Virtual Tour Platform", url: "/360-virtual-tour-publishing-platform/" },
+    { name: "Real Estate Virtual Tour Software", url: "/real-estate-virtual-tour-software/" },
+    { name: "Custom Nadir Branding", url: "/nadir-branding-street-view/" },
+    { name: "Multi-Client Workspace", url: "/virtual-tour-client-management-software/" },
+    { name: "Street View for Hotels", url: "/google-street-view-for-hotels-india/" },
+    { name: "Street View for Real Estate", url: "/virtual-tour-real-estate-india/" },
+    { name: "360 Photo Connection Builder", url: "/360-photo-connection-builder-online/" },
   ];
 
   const comparisonLinks = [
-    { name: "PanoPublish vs CloudPano", url: "/cloudpano-alternative" },
-    { name: "PanoPublish vs Matterport", url: "/matterport-alternative" },
-    { name: "PanoPublish vs TourBuilder", url: "/tourbuilder-alternative-india" },
-    { name: "PanoPublish vs GoThru", url: "/gothru-alternative" },
-    { name: "PanoPublish vs Panoee", url: "/panoee-alternative" },
+    { name: "PanoPublish vs CloudPano", url: "/cloudpano-alternative/" },
+    { name: "PanoPublish vs Matterport", url: "/matterport-alternative/" },
+    { name: "PanoPublish vs TourBuilder", url: "/tourbuilder-alternative-india/" },
+    { name: "PanoPublish vs GoThru", url: "/gothru-alternative/" },
+    { name: "PanoPublish vs Panoee", url: "/panoee-alternative/" },
   ];
 
   const cityLinks = [
-    { name: "Mumbai Local SEO", url: "/google-street-view-publishing-mumbai" },
-    { name: "Delhi 360 Tours", url: "/360-virtual-tour-software-delhi" },
-    { name: "Bangalore Tour Publishing", url: "/street-view-tour-publishing-bangalore" },
-    { name: "Ahmedabad 360 Publishing", url: "/360-tour-publishing-ahmedabad" },
-    { name: "Hyderabad Google Maps Tours", url: "/google-maps-360-tour-hyderabad" },
-    { name: "Chennai Virtual Tour Software", url: "/virtual-tour-publishing-software-chennai" },
-    { name: "Pune Photographer Software", url: "/street-view-photographer-software-pune" },
-    { name: "Jaipur 360 Photography", url: "/360-photography-publishing-jaipur" },
-    { name: "Kolkata Street View Tours", url: "/google-street-view-tour-kolkata" },
-    { name: "Surat Virtual Tour Software", url: "/virtual-tour-software-surat" },
+    { name: "Mumbai Local SEO", url: "/google-street-view-publishing-mumbai/" },
+    { name: "Delhi 360 Tours", url: "/360-virtual-tour-software-delhi/" },
+    { name: "Bangalore Tour Publishing", url: "/street-view-tour-publishing-bangalore/" },
+    { name: "Ahmedabad 360 Publishing", url: "/360-tour-publishing-ahmedabad/" },
+    { name: "Hyderabad Google Maps Tours", url: "/google-maps-360-tour-hyderabad/" },
+    { name: "Chennai Virtual Tour Software", url: "/virtual-tour-publishing-software-chennai/" },
+    { name: "Pune Photographer Software", url: "/street-view-photographer-software-pune/" },
+    { name: "Jaipur 360 Photography", url: "/360-photography-publishing-jaipur/" },
+    { name: "Kolkata Street View Tours", url: "/google-street-view-tour-kolkata/" },
+    { name: "Surat Virtual Tour Software", url: "/virtual-tour-software-surat/" },
   ];
 
   return (
@@ -170,47 +170,47 @@ export function PublicFooter() {
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link to="/blog" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                <Link to="/blog/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
                   Blog Articles
                 </Link>
               </li>
               <li>
-                <Link to="/case-studies" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                <Link to="/case-studies/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
                   Case Studies
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/faq/" className="text-muted-foreground hover:text-primary transition-colors">
                   FAQ
                 </Link>
               </li>
               <li>
-                <a href="/authors/prashant-kumar" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/authors/prashant-kumar/" className="text-muted-foreground hover:text-primary transition-colors">
                   Meet the Author
                 </a>
               </li>
               <li>
-                <Link to="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/pricing/" className="text-muted-foreground hover:text-primary transition-colors">
                   Pricing Plans
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/contact/" className="text-muted-foreground hover:text-primary transition-colors">
                   Contact Us
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/privacy/" className="text-muted-foreground hover:text-primary transition-colors">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/terms/" className="text-muted-foreground hover:text-primary transition-colors">
                   Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link to="/refund" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/refund/" className="text-muted-foreground hover:text-primary transition-colors">
                   Refund & Cancellation
                 </Link>
               </li>

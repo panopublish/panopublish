@@ -55,7 +55,7 @@ function CaseStudiesIndex() {
 
   const breadcrumbs = [
     { name: "Home", url: "https://panopublish.com/" },
-    { name: "Case Studies", url: "https://panopublish.com/case-studies" },
+    { name: "Case Studies", url: "https://panopublish.com/case-studies/" },
   ];
 
   const collectionSchema = {
@@ -64,13 +64,13 @@ function CaseStudiesIndex() {
     name: "PanoPublish Virtual Tour Case Studies",
     description:
       "Real results from Indian businesses that used PanoPublish to publish Google Street View virtual tours.",
-    url: "https://panopublish.com/case-studies",
+    url: "https://panopublish.com/case-studies/",
     numberOfItems: caseStudies.length,
     itemListElement: caseStudies.map((cs, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      url: `https://panopublish.com/case-studies/${cs.slug}`,
-      name: cs.client_name,
+      name: cs.title,
+      url: `https://panopublish.com/case-studies/${cs.slug}/`,
     })),
   };
 
@@ -79,7 +79,7 @@ function CaseStudiesIndex() {
       <SEO
         title="Virtual Tour Case Studies — Real Results for Indian Businesses | PanoPublish"
         description="See how hotels, restaurants, gyms, schools, and offices across Gujarat used PanoPublish to grow their Google Maps presence and drive customers."
-        canonical="https://panopublish.com/case-studies"
+        canonical="https://panopublish.com/case-studies/"
         schema={[collectionSchema]}
         breadcrumbs={breadcrumbs}
       />

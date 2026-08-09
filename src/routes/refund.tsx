@@ -25,9 +25,10 @@ function RefundPolicy() {
       <SEO
         title="Refund & Cancellation Policy"
         description="Review PanoPublish's Refund & Cancellation Policy. Learn about our 7-day free trial, cancellation steps, and refund request conditions."
+        canonical="https://panopublish.com/refund/"
         breadcrumbs={[
           { name: "Home", url: "https://panopublish.com/" },
-          { name: "Refund Policy", url: "https://panopublish.com/refund" },
+          { name: "Refund Policy", url: "https://panopublish.com/refund/" },
         ]}
       />
       <PublicHeader />

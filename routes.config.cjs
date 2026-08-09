@@ -38,7 +38,7 @@ function getPublicRoutes() {
   // Add Authors routes from authors-data.ts
   if (fs.existsSync(authorsFilePath)) {
     const authorsContent = fs.readFileSync(authorsFilePath, 'utf8');
-    const authorSlugRegex = /"slug":\s*["']([^"']+)["']/g;
+    const authorSlugRegex = /"?slug"?:?\s*["']([^"']+)["']/g;
     let authorMatch;
     while ((authorMatch = authorSlugRegex.exec(authorsContent)) !== null) {
       dynamicPages.push({

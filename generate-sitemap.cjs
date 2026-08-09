@@ -11,7 +11,8 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
 xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
 allRouteObjects.forEach((route) => {
-  const url = `${baseUrl}${route.path === '/' ? '' : route.path}`;
+  const cleanPath = route.path === '/' ? '/' : (route.path.endsWith('/') ? route.path : `${route.path}/`);
+  const url = `${baseUrl}${cleanPath}`;
   const priority = route.priority || '0.7';
   const changefreq = route.changefreq || 'weekly';
 
