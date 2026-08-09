@@ -79,7 +79,7 @@ function CaseStudyDetail() {
       ? {
           "@type": "Person",
           name: author.name,
-          url: `https://panopublish.com/authors/${author.slug}`,
+          url: `https://panopublish.com/authors/${author.slug}/`,
         }
       : { "@type": "Organization", name: "PanoPublish" },
     publisher: {

@@ -79,7 +79,7 @@ function BlogPost() {
       "author": {
         "@type": "Person",
         "name": page.author ?? "Prashant Kumar",
-        "url": "https://panopublish.com/authors/prashant-kumar",
+        "url": "https://panopublish.com/authors/prashant-kumar/",
       },
       "publisher": {
         "@type": "Organization",

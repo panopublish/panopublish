@@ -225,7 +225,7 @@ PanoPublish is optimized following **Google Search Central (2026)** standards, S
 - **`SoftwareApplication`**: Defines SaaS category (`MultimediaApplication`), OS compatibility, and INR pricing.
 - **`Organization` / `LocalBusiness`**: Declares company entity, logo, website, and target market (India).
 - **`FAQPage`**: Injected on `/faq` and key service pages for expandable Google search accordions.
-- **`Article` & `Person`**: Injected on `/blog/*` articles pointing to author profile `/authors/prashant-kumar`.
+- **`Article` & `Person`**: Injected on `/blog/*` articles pointing to author profile `/authors/prashant-kumar/`.
 - **`BreadcrumbList`**: Injected across all deep routes to render navigation paths in search engine result pages.
 
 ### 6. Content Topic Clusters & Internal Link Graph (`internal_linking_strategy.md`)
@@ -238,7 +238,7 @@ PanoPublish is optimized following **Google Search Central (2026)** standards, S
 - **Crawl Depth Limit**: 100% of public routes are reachable within **2 clicks** from the homepage. Zero orphan pages.
 
 ### 7. EEAT (Experience, Expertise, Authoritativeness, Trustworthiness) Signals
-- **Author Bylines**: Every blog post features an author byline linking to `/authors/prashant-kumar` (Certified Google Street View Specialist with 500+ published photo spheres).
+- **Author Bylines**: Every blog post features an author byline linking to `/authors/prashant-kumar/` (Certified Google Street View Specialist with 500+ published photo spheres).
 - **First-Party Empirical Insights**: Photography guides reference real equipment parameters (Ricoh Theta Z1 RAW bracketing, PTGui control points, 1.5m tripod height).
 - **Transparent Pricing**: Detailed comparison pages demonstrating flat INR costs vs Matterport $14.99 per export fees.
 

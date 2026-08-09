@@ -46,7 +46,7 @@ export function AuthorByline({
   size = "md",
 }: AuthorBylineProps) {
   const isSmall = size === "sm";
-  const authorHref = `/authors/${authorSlug}`;
+  const authorHref = `/authors/${authorSlug}/`;
 
   return (
     <div className={`flex items-center ${isSmall ? "gap-2.5" : "gap-3"}`}>

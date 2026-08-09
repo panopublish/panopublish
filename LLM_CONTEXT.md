@@ -176,7 +176,7 @@ The website features 4 structured topic clusters (defined in `src/lib/` data sto
   - Pune, Chennai, Kolkata, Jaipur, Surat.
 
 ### 4. Author Bylines & EEAT Compliance
-- **Author**: Prashant Kumar (`/authors/prashant-kumar`)
+- **Author**: Prashant Kumar (`/authors/prashant-kumar/`)
 - **Experience**: 4+ years of hands-on 360 panoramic photography & Google Street View publishing. Certified Google Street View Trusted Photographer based in Gujarat, India (500+ published photo spheres).
 - **EEAT Signal**: Every blog article contains an author byline linking to the author bio page with verified credentials, establishing high Search Quality Evaluator scores.
 
