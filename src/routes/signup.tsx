@@ -25,11 +25,11 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Sign Up — PanoPublish" },
+      { title: "Start Free 7-Day Trial — PanoPublish Virtual Tour Software" },
       {
         name: "description",
         content:
-          "Create your PanoPublish account to start managing virtual tours, connections, nadir settings, and client profiles.",
+          "Create your free PanoPublish account. Start publishing 360 virtual tours to Google Maps in minutes — no credit card needed. Flat ₹499/mo INR billing, UPI payments accepted.",
       },
     ],
   }),

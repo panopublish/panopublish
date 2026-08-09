@@ -30,6 +30,12 @@ export const Route = createFileRoute("/blog/$slug")({
     return { page, related };
   },
   head: ({ loaderData }) => ({
+    meta: loaderData?.page
+      ? [
+          { title: loaderData.page.title },
+          { name: "description", content: loaderData.page.description },
+        ]
+      : [],
     links: loaderData?.page?.image
       ? [{ rel: "preload" as const, as: "image", href: `https://panopublish.com${loaderData.page.image}` }]
       : [],

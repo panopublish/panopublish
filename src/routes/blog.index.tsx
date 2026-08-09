@@ -12,11 +12,11 @@ import { useState, useMemo } from "react";
 export const Route = createFileRoute("/blog/")({
   head: () => ({
     meta: [
-      { title: "360° Virtual Tour & Google Street View Blog — PanoPublish" },
+      { title: "360° Virtual Tour & Google Street View Blog India — PanoPublish" },
       {
         name: "description",
         content:
-          "Learn how to shoot, edit, brand, and publish 360-degree panoramas to Google Maps. Tutorials, guides, and hardware reviews for Indian photographers and agencies.",
+          "Learn how to shoot, edit, brand, and publish 360-degree panoramas to Google Maps. Tutorials, guides, camera reviews, and agency pricing for Indian photographers.",
       },
     ],
   }),

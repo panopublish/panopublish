@@ -33,6 +33,14 @@ export const Route = createFileRoute("/$slug")({
     }
     return page;
   },
+  head: ({ loaderData }) => ({
+    meta: loaderData
+      ? [
+          { title: loaderData.title },
+          { name: "description", content: loaderData.description },
+        ]
+      : [],
+  }),
   component: SeoPage,
 });
 
@@ -49,6 +57,23 @@ function SeoPage() {
   // Helper to generate dynamic schema
   const getPageSchema = () => {
     if (page.type === "service") {
+      return {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": page.heading,
+        "operatingSystem": "Web",
+        "applicationCategory": "BusinessApplication",
+        "applicationSubCategory": "Virtual Tour Software",
+        "description": page.description,
+        "inLanguage": "en-IN",
+        "offers": {
+          "@type": "Offer",
+          "price": "499.00",
+          "priceCurrency": "INR",
+          "billingIncrement": "P1M"
+        }
+      };
+    } else if (page.type === "comparison") {
       return {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",

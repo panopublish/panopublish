@@ -1121,8 +1121,8 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
   "virtual-tour-software-museums-art-galleries": {
     "slug": "virtual-tour-software-museums-art-galleries",
     "type": "blog",
-    "title": "Virtual Tour Software for Museums & Art Galleries: Digitizing Heritage & Art Collections",
-    "description": "Discover virtual tour software for museums, art galleries, and cultural heritage sites. Gigapixel zoom detail, historical info hotspots, and audio tours.",
+    "title": "Virtual Tour Software for Museums & Art Galleries 2026: INR Pricing, Gigapixel Zoom",
+    "description": "Virtual tour software for museums, art galleries, and heritage sites in India. Gigapixel zoom, audio narration hotspots, Google Maps publishing, flat ₹499/mo INR billing. Explore cultural institutions.",
     "primaryKeyword": "virtual tour software museums galleries",
     "category": "Virtual Tour Software",
     "heading": "Virtual Tour Software for Museums & Art Galleries: Digital Preservation",

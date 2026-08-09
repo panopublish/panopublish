@@ -119,8 +119,8 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
   "insta360-x5-virtual-tour-photography-guide": {
     "slug": "insta360-x5-virtual-tour-photography-guide",
     "type": "blog",
-    "title": "Insta360 X5 Virtual Tour Guide: 8K Resolution & Commercial Workflows",
-    "description": "Master the Insta360 X5 for virtual tours and Google Street View. Learn 8K 360 video extraction, 72MP HDR photo bracketing, and PanoPublish cloud sync.",
+    "title": "Insta360 X5 Virtual Tour Photography Guide 2026: 8K, India Price & PanoPublish Workflow",
+    "description": "Master the Insta360 X5 for virtual tours in India (2026): 8K 360 video, 72MP HDR photo mode, FlowState stabilization, India price (₹60k–70k), and full PanoPublish Google Maps workflow.",
     "primaryKeyword": "insta360 x5 virtual tour",
     "category": "360 Photography",
     "heading": "Insta360 X5 Virtual Tour Guide: 8K Resolution & High-Speed Mapping",
@@ -1110,8 +1110,8 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
   "360-photography-vs-traditional-real-estate-photos": {
     "slug": "360-photography-vs-traditional-real-estate-photos",
     "type": "blog",
-    "title": "360 Photography vs Traditional Real Estate Photos: Why Clients Pay Premium Rates",
-    "description": "Compare 360 photography vs traditional 2D real estate photos. Evaluate buyer engagement, MLS views, shoot speed, and why clients pay 3x higher rates.",
+    "title": "360 Photography vs Traditional Real Estate Photos India 2026: 3x Higher Rates & NRI Buyers",
+    "description": "Compare 360 photography vs traditional 2D real estate photos in India. Earn ₹12k–₹35k/shoot vs ₹3k–₹6k, close NRI buyers remotely, and get 35% more Google Maps clicks. See the ROI.",
     "primaryKeyword": "360 photography vs traditional photos",
     "category": "360 Photography",
     "heading": "360 Photography vs. Traditional Real Estate Photos: ROI Comparison",
