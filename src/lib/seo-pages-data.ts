@@ -407,7 +407,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Panoee Alternative for Photographers & Agencies",
     "subheading": "Avoid USD billing surcharges and enjoy automated Google Maps publishing with Indian support.",
     "introText": "Looking for a reliable Panoee alternative? Discover how PanoPublish provides automated 360 photo connections, custom nadir logo disk branding, and direct Google Maps Street View publishing starting at ₹499/month.",
-    "image": "/blog_panoee_alternative.png",
+    "image": "/blog_panoee_alternative.webp",
     "comparisonTable": {
       "competitorName": "Panoee",
       "headers": [

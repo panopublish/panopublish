@@ -24,9 +24,9 @@ function getPublicRoutes() {
   while ((match = regex.exec(content)) !== null) {
     const slug = match[1];
     const type = match[2];
-    let routePath = `/${slug}`;
+    let routePath = `/${slug}/`;
     if (type === 'blog') {
-      routePath = `/blog/${slug}`;
+      routePath = `/blog/${slug}/`;
     }
     dynamicPages.push({
       slug,
@@ -44,7 +44,7 @@ function getPublicRoutes() {
       dynamicPages.push({
         slug: authorMatch[1],
         type: 'author',
-        path: `/authors/${authorMatch[1]}`
+        path: `/authors/${authorMatch[1]}/`
       });
     }
   }
@@ -58,23 +58,23 @@ function getPublicRoutes() {
       dynamicPages.push({
         slug: csMatch[1],
         type: 'case-study',
-        path: `/case-studies/${csMatch[1]}`
+        path: `/case-studies/${csMatch[1]}/`
       });
     }
   }
 
   const staticPublicRoutes = [
     { path: '/', priority: '1.0', changefreq: 'daily' },
-    { path: '/blog', priority: '0.9', changefreq: 'daily' },
-    { path: '/pricing', priority: '0.8', changefreq: 'weekly' },
-    { path: '/faq', priority: '0.8', changefreq: 'weekly' },
-    { path: '/case-studies', priority: '0.8', changefreq: 'weekly' },
-    { path: '/contact', priority: '0.7', changefreq: 'monthly' },
-    { path: '/signup', priority: '0.6', changefreq: 'monthly' },
-    { path: '/login', priority: '0.5', changefreq: 'monthly' },
-    { path: '/terms', priority: '0.3', changefreq: 'monthly' },
-    { path: '/privacy', priority: '0.3', changefreq: 'monthly' },
-    { path: '/refund', priority: '0.3', changefreq: 'monthly' }
+    { path: '/blog/', priority: '0.9', changefreq: 'daily' },
+    { path: '/pricing/', priority: '0.8', changefreq: 'weekly' },
+    { path: '/faq/', priority: '0.8', changefreq: 'weekly' },
+    { path: '/case-studies/', priority: '0.8', changefreq: 'weekly' },
+    { path: '/contact/', priority: '0.7', changefreq: 'monthly' },
+    { path: '/signup/', priority: '0.6', changefreq: 'monthly' },
+    { path: '/login/', priority: '0.5', changefreq: 'monthly' },
+    { path: '/terms/', priority: '0.3', changefreq: 'monthly' },
+    { path: '/privacy/', priority: '0.3', changefreq: 'monthly' },
+    { path: '/refund/', priority: '0.3', changefreq: 'monthly' }
   ];
 
   const dynamicRoutes = dynamicPages.map(page => {

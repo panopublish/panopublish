@@ -647,7 +647,7 @@ export function BlurEditorModal({
 
             <div className="w-full max-w-[280px] aspect-[4/3] rounded-2xl overflow-hidden relative flex items-center justify-center bg-slate-50 border border-slate-100 shadow-inner">
               <img
-                src="/robot_beach_upload.png"
+                src="/robot_beach_upload.webp"
                 alt="Robot Relaxing on Beach illustration"
                 className="w-full h-full object-contain"
               />

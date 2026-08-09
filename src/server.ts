@@ -222,6 +222,13 @@ export default {
           headers.set("cache-control", "public, max-age=3600, stale-while-revalidate=86400");
         }
 
+        // Safe Security Headers
+        headers.set("x-content-type-options", "nosniff");
+        headers.set("x-frame-options", "SAMEORIGIN");
+        headers.set("referrer-policy", "strict-origin-when-cross-origin");
+        headers.set("permissions-policy", "camera=(self), microphone=(), geolocation=(self)");
+        headers.set("strict-transport-security", "max-age=31536000; includeSubDomains; preload");
+
         return new Response(normalized.body, {
           status: normalized.status,
           statusText: normalized.statusText,

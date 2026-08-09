@@ -42,9 +42,9 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 border-b pb-12">
           {/* Brand block */}
           <div className="lg:col-span-2 space-y-4">
-            <Link to="/">
+            <a href="/">
               <Logo logoClassName="text-primary h-8 w-8" className="text-xl font-bold" />
-            </Link>
+            </a>
             <p className="text-sm text-muted-foreground max-w-sm">
               India's dedicated Google Street View and 360° virtual tour publishing platform. Built for photographers, agencies, hotels, and real estate professionals.
             </p>
@@ -123,9 +123,9 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               {serviceLinks.map((link) => (
                 <li key={link.url}>
-                  <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a href={link.url} className="text-muted-foreground hover:text-primary transition-colors">
                     {link.name}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -139,9 +139,9 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               {comparisonLinks.map((link) => (
                 <li key={link.url}>
-                  <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a href={link.url} className="text-muted-foreground hover:text-primary transition-colors">
                     {link.name}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -155,9 +155,9 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               {cityLinks.map((link) => (
                 <li key={link.url}>
-                  <Link to={link.url} className="text-muted-foreground hover:text-primary transition-colors">
+                  <a href={link.url} className="text-muted-foreground hover:text-primary transition-colors">
                     {link.name}
-                  </Link>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -170,19 +170,19 @@ export function PublicFooter() {
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link to="/blog/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                <a href="/blog/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
                   Blog Articles
-                </Link>
+                </a>
               </li>
               <li>
-                <Link to="/case-studies/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                <a href="/case-studies/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
                   Case Studies
-                </Link>
+                </a>
               </li>
               <li>
-                <Link to="/faq/" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/faq/" className="text-muted-foreground hover:text-primary transition-colors">
                   FAQ
-                </Link>
+                </a>
               </li>
               <li>
                 <a href="/authors/prashant-kumar/" className="text-muted-foreground hover:text-primary transition-colors">
@@ -190,29 +190,29 @@ export function PublicFooter() {
                 </a>
               </li>
               <li>
-                <Link to="/pricing/" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/pricing/" className="text-muted-foreground hover:text-primary transition-colors">
                   Pricing Plans
-                </Link>
+                </a>
               </li>
               <li>
-                <Link to="/contact/" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/contact/" className="text-muted-foreground hover:text-primary transition-colors">
                   Contact Us
-                </Link>
+                </a>
               </li>
               <li>
-                <Link to="/privacy/" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/privacy/" className="text-muted-foreground hover:text-primary transition-colors">
                   Privacy Policy
-                </Link>
+                </a>
               </li>
               <li>
-                <Link to="/terms/" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/terms/" className="text-muted-foreground hover:text-primary transition-colors">
                   Terms & Conditions
-                </Link>
+                </a>
               </li>
               <li>
-                <Link to="/refund/" className="text-muted-foreground hover:text-primary transition-colors">
+                <a href="/refund/" className="text-muted-foreground hover:text-primary transition-colors">
                   Refund & Cancellation
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
