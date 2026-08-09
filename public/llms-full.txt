@@ -1,0 +1,78 @@
+# PanoPublish — Comprehensive System Architecture, Product Context & SEO Documentation
+
+> **Document Type**: Full Technical & Product Context for LLMs (Large Language Models) and Generative Search Engines  
+> **Canonical Domain**: https://panopublish.com  
+> **Primary Audience**: 360° Photographers, Digital Marketing Agencies, Commercial Real Estate Brokers, Hospitality Businesses in India  
+
+---
+
+## 1. Product Context & Core Functionality
+
+### What is PanoPublish?
+PanoPublish is an Indian SaaS platform designed specifically for creating, editing, branding, and publishing 360° panoramic virtual tours directly to **Google Maps & Google Street View** and custom web embeds.
+
+### Primary Problem Solved
+- **High Forex Fees & USD Pricing**: Global virtual tour platforms (Matterport, CloudPano, GoThru) bill in US Dollars (USD), forcing Indian photographers and agencies to pay credit card international transaction surcharges (3.5%+) and unpredictable exchange rates. PanoPublish provides flat INR pricing (₹499/mo Starter, ₹1,499/mo Pro Agency, ₹3,999/mo Enterprise) with native Razorpay UPI payments.
+- **Expensive Per-Export Fees**: Matterport charges $14.99 per Google Street View export. PanoPublish includes unlimited Street View publishing.
+- **Manual Tripod Removal**: PanoPublish features an automated Nadir logo editor that overlays circular custom branding disks to obscure tripods without requiring Photoshop.
+- **Google Maps Blue-Line Connections**: Photographers can set compass headings, spatial node connections, and publish multi-photo blue-line walk-throughs to Google Maps via the official Google Street View Publish API.
+
+---
+
+## 2. Technical Architecture & Build Configuration
+
+### Tech Stack Details
+- **Frontend Framework**: React 19 + TypeScript
+- **Router**: TanStack Router (`@tanstack/react-router`) with file-based routing in `src/routes/`
+- **State & Data Management**: TanStack Query (`@tanstack/react-query`)
+- **SSR / SSG**: TanStack Start (`@tanstack/react-start`) + Vite build (`@lovable.dev/vite-tanstack-config`)
+- **Hosting Runtime**: Cloudflare Workers Edge Runtime (`nodejs_compat`)
+- **Databases**:
+  - **Cloudflare D1**: SQLite edge database storing profiles, clients, tours, islands/floors, photo metadata, connections, subscriptions, and SEO tables.
+  - **Supabase**: Postgres database, User Authentication, and Row-Level Security (RLS).
+- **Storage**: Cloudflare R2 (`panopublish-photos`) for zero-egress equirectangular panorama storage.
+- **Image & 360 Engines**: Marzipano & Pannellum (WebGL panorama renderers), Jimp (image composition), JSZip (client zip generator), Exifr (EXIF GPS & heading metadata reader).
+- **Payment Gateway**: Razorpay (UPI, NetBanking, Cards).
+
+### Pre-rendering & Build Scripts
+- `generate-sitemap.cjs`: Pre-build script that compiles `public/sitemap.xml` covering 183+ static routes with custom priority indices.
+- `prerender-routes.cjs`: Post-build script that executes SSR requests against `dist/server/index.js` for all public pages, producing fully hydrated static HTML files in `dist/client/` for maximum search engine crawlability.
+
+---
+
+## 3. Current SEO Strategy & Implementation
+
+### 1. 100% Static HTML Prerendering (SSG/SSR Hybrid)
+Every public route (homepage, pricing, service hubs, city pages, comparison landing pages, blog articles) is pre-rendered into static HTML (`dist/client/`). Search bots (Googlebot, Bingbot, GPTBot, PerplexityBot) load full content DOM instantly without client-side rendering delays.
+
+### 2. Rich Schema.org / JSON-LD Structured Data
+- `SoftwareApplication`: Injected on landing pages with SaaS details, pricing in INR, and feature list.
+- `Organization` & `LocalBusiness`: Declares company identity, logo, social links, and geographic targeting (India).
+- `FAQPage`: Injected on FAQ and service pages for interactive Google Search snippet accordions.
+- `Article` & `Person`: Injected on `/blog/*` and `/authors/*` to establish Google EEAT credentials for author Prashant Kumar (Google Street View Trusted Photographer).
+- `BreadcrumbList`: Injected across all child routes for visual search result taxonomies.
+
+### 3. Programmatic Content & Topic Clusters
+The platform includes 4 dedicated topic clusters (defined in `src/lib/`):
+- **Cluster 1: Virtual Tour Software** (25 guides on 360 tour software, Nadir branding, WebGL viewable tours, alternatives to Matterport/CloudPano/GoThru).
+- **Cluster 2: Google Street View** (25 guides on Google Maps publishing, blue-line connections, Street View trusted program).
+- **Cluster 3: 360 Photography** (25 guides on 360 cameras like Ricoh Theta Z1, Insta360 X4, GoPro MAX, and PTGui stitching workflows).
+- **Cluster 4: Industry Solutions** (25 vertical landing pages for Hotels, Real Estate, Corporate Offices, Universities, Restaurants, Gyms).
+- **Regional City Hubs**: 10 targeted Indian city pages (Mumbai, Delhi, Bangalore, Ahmedabad, Hyderabad, Pune, Chennai, Kolkata, Jaipur, Surat).
+
+### 4. Search Engine & LLM Crawlability
+- `robots.txt`: Grants full crawling access to search engines and AI agents (`GPTBot`, `PerplexityBot`, `ClaudeBot`, `Google-Extended`).
+- `sitemap.xml`: Updated dynamically on every compilation.
+- `llms.txt` & `llms-full.txt`: Standardized AI context guides for LLM ingestion.
+
+---
+
+## 4. Key Links & References
+- **Homepage**: https://panopublish.com
+- **Pricing**: https://panopublish.com/pricing
+- **Google Street View Publishing**: https://panopublish.com/google-street-view-publishing
+- **Virtual Tour Software**: https://panopublish.com/360-virtual-tour-publishing-platform
+- **FAQ Hub**: https://panopublish.com/faq
+- **Blog**: https://panopublish.com/blog
+- **Case Studies**: https://panopublish.com/case-studies
+- **Sitemap**: https://panopublish.com/sitemap.xml

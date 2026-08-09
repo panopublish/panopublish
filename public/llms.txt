@@ -2,6 +2,9 @@
 
 > PanoPublish (https://panopublish.com/) is India's dedicated Google Street View and 360° virtual tour publishing platform. Built specifically for 360° photographers, digital marketing agencies, commercial real estate brokers, and hospitality businesses across India, PanoPublish automates EXIF GPS metadata tagging, tripod nadir logo disk removal, and direct Google Maps blue-line tour connections. It offers flat Indian Rupee (INR) subscription plans starting at ₹499/month with Razorpay UPI payment integration, eliminating USD foreign exchange surcharges and international credit card fees.
 
+- Full LLM Context & Architecture: https://panopublish.com/llms-full.txt
+- Official Sitemap: https://panopublish.com/sitemap.xml
+
 ## Core Pages & Documentation
 
 - [Home](https://panopublish.com/): Official overview of PanoPublish Google Maps virtual tour publishing.
