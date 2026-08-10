@@ -205,7 +205,7 @@ function AuthorProfile() {
               {authoredCaseStudies.map((cs) => (
                 <Link
                   key={cs.slug}
-                  to="/case-studies/$slug"
+                  to="/case-studies/$slug/"
                   params={{ slug: cs.slug }}
                   className="group block border rounded-2xl p-5 bg-white hover:border-primary/40 hover:shadow-md transition-all space-y-2"
                 >
@@ -244,7 +244,7 @@ function AuthorProfile() {
               {authoredBlogPosts.map((post) => (
                 <Link
                   key={post.slug}
-                  to="/blog/$slug"
+                  to="/blog/$slug/"
                   params={{ slug: post.slug }}
                   className="group block border rounded-2xl p-4 hover:border-primary/40 hover:bg-slate-50/60 transition-all space-y-2"
                 >
@@ -288,10 +288,10 @@ function AuthorProfile() {
             Start your free trial today — no credit card required.
           </p>
           <div className="flex flex-wrap gap-3 justify-center pt-2">
-            <Link to="/signup">
+            <Link to="/signup/">
               <Button className="font-bold px-6">Start Free Trial</Button>
             </Link>
-            <Link to="/contact">
+            <Link to="/contact/">
               <Button
                 variant="ghost"
                 className="text-white hover:bg-white/10 font-semibold"

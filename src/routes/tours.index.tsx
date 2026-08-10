@@ -205,7 +205,7 @@ function ToursPage() {
               Tours Found ({sortedTours.length})
             </span>
           </div>
-          <Link to="/tours/new">
+          <Link to="/tours/new/">
             <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold gap-1 shadow">
               <Plus className="h-4 w-4" /> Create Tour
             </Button>
@@ -292,7 +292,7 @@ function ToursPage() {
                   {/* Tour Meta and Buttons */}
                   <div className="flex-1 min-w-0 pr-2 text-center sm:text-left">
                     <h3 className="font-bold text-[#0277bd] text-sm truncate hover:underline">
-                      <Link to="/tours/$tourId" params={{ tourId: t.id }}>
+                      <Link to="/tours/$tourId/" params={{ tourId: t.id }}>
                         {t.name}
                       </Link>
                     </h3>
@@ -305,7 +305,7 @@ function ToursPage() {
 
                     {/* Buttons Row */}
                     <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-3">
-                      <Link to="/tours/$tourId" params={{ tourId: t.id }}>
+                      <Link to="/tours/$tourId/" params={{ tourId: t.id }}>
                         <Button className="bg-[#f05a28] hover:bg-[#d94e1f] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
                           <Pencil className="h-3.5 w-3.5" /> Edit
                         </Button>

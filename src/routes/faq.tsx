@@ -154,7 +154,7 @@ function FAQPage() {
                     <MessageCircle className="h-4 w-4" /> Chat on WhatsApp
                   </Button>
                 </a>
-                <Link to="/contact">
+                <Link to="/contact/">
                   <Button
                     variant="ghost"
                     className="text-white hover:bg-white/10 font-semibold"

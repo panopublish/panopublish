@@ -159,7 +159,7 @@ function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link to="/signup">
+                <Link to="/signup/">
                   <Button
                     variant={plan.popular ? "default" : "outline"}
                     className={`w-full font-bold ${plan.popular ? "shadow-lg shadow-primary/20" : ""}`}
@@ -214,7 +214,7 @@ function PricingPage() {
                 <ul className="space-y-2.5 text-xs md:text-sm">
                   <li>
                     <Link
-                      to="/$slug"
+                      to="/$slug/"
                       params={{ slug: "google-street-view-publishing" }}
                       className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
                     >
@@ -223,7 +223,7 @@ function PricingPage() {
                   </li>
                   <li>
                     <Link
-                      to="/$slug"
+                      to="/$slug/"
                       params={{ slug: "cloudpano-alternative" }}
                       className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
                     >
@@ -232,7 +232,7 @@ function PricingPage() {
                   </li>
                   <li>
                     <Link
-                      to="/$slug"
+                      to="/$slug/"
                       params={{ slug: "matterport-alternative" }}
                       className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
                     >
@@ -241,7 +241,7 @@ function PricingPage() {
                   </li>
                   <li>
                     <Link
-                      to="/$slug"
+                      to="/$slug/"
                       params={{ slug: "real-estate-virtual-tour-software" }}
                       className="text-primary hover:underline inline-flex items-center gap-1 font-medium"
                     >
@@ -265,7 +265,7 @@ function PricingPage() {
                 className="space-y-3"
               />
               <div className="text-center pt-4">
-                <Link to="/faq" className="text-xs text-primary font-semibold hover:underline">
+                <Link to="/faq/" className="text-xs text-primary font-semibold hover:underline">
                   View all FAQs →
                 </Link>
               </div>

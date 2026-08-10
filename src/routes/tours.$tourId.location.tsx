@@ -134,7 +134,7 @@ function LocationPage() {
       return;
     }
     toast.success("Location saved");
-    navigate({ to: "/tours/$tourId", params: { tourId } });
+    navigate({ to: "/tours/$tourId/", params: { tourId } });
   };
 
   const mapsUrl = placeId
@@ -152,8 +152,8 @@ function LocationPage() {
     <AppShell
       title={title || "Choose Location"}
       breadcrumbs={[
-        { label: "Tours", to: "/tours" },
-        { label: title || "Tour", to: `/tours/${tourId}` },
+        { label: "Tours", to: "/tours/" },
+        { label: title || "Tour", to: `/tours/${tourId}/` },
         { label: "Choose Location" },
       ]}
     >
@@ -268,7 +268,7 @@ function LocationPage() {
         <div className="flex justify-end gap-2 pt-2">
           <Button
             variant="outline"
-            onClick={() => navigate({ to: "/tours/$tourId", params: { tourId } })}
+            onClick={() => navigate({ to: "/tours/$tourId/", params: { tourId } })}
           >
             Cancel
           </Button>

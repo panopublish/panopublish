@@ -118,7 +118,7 @@ export function TourStepsNav({
                 if (onNadir) {
                   onNadir();
                 } else {
-                  navigate({ to: "/tours/$tourId/publish", params: { tourId } });
+                  navigate({ to: "/tours/$tourId/publish/", params: { tourId } });
                 }
               }}
               className="hover:text-gray-200 transition-colors cursor-pointer"
@@ -149,7 +149,7 @@ export function TourStepsNav({
               if (onExit) {
                 onExit();
               } else {
-                navigate({ to: "/tours" });
+                navigate({ to: "/tours/" });
               }
             }}
             className="hover:text-gray-200 transition-colors cursor-pointer"

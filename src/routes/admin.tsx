@@ -144,10 +144,10 @@ function AdminDashboard() {
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
-        navigate({ to: "/login" });
+        navigate({ to: "/login/" });
       } else if (user.email !== "vista360gtp@gmail.com" && user.email !== "er.prashantyadav37@gmail.com") {
         toast.error("Access denied. Admin access only.");
-        navigate({ to: "/dashboard" });
+        navigate({ to: "/dashboard/" });
       }
     }
   }, [user, authLoading, navigate]);
@@ -366,6 +366,15 @@ function AdminDashboard() {
   const totalViews = photos.reduce((sum, p) => sum + (p.view_count || 0), 0);
   const activeSubs = profiles.filter((p) => p.plan !== "trial").length;
 
+  // Helper to check if a tour is published
+  const isTourPublished = (t: any) => {
+    if (t.status === "published") return true;
+    const tPhotos = photos.filter((p) => p.tour_id === t.id);
+    return tPhotos.length > 0 && tPhotos.every((p) => p.streetview_status === "PUBLISHED");
+  };
+
+  const totalPublishedTours = tours.filter(isTourPublished).length;
+
   // Filtered Users List
   const filteredProfiles = profiles.filter((p) => {
     const matchesSearch =
@@ -382,7 +391,7 @@ function AdminDashboard() {
   return (
     <AppShell
       title="Admin Dashboard"
-      breadcrumbs={[{ label: "Dashboard", to: "/dashboard" }, { label: "Admin" }]}
+      breadcrumbs={[{ label: "Dashboard", to: "/dashboard/" }, { label: "Admin" }]}
     >
       <SEO
         title="Admin Console"
@@ -441,9 +450,10 @@ function AdminDashboard() {
             />
             <StatCard
               icon={Map}
-              label="Total Tours"
-              value={loading ? undefined : tours.length}
-              subtext="Street View Tours"
+              label="Published Tours"
+              value={loading ? undefined : `${totalPublishedTours} / ${tours.length}`}
+              subtext="Published / Total Tours"
+              accent="success"
             />
             <StatCard
               icon={Image}
@@ -550,14 +560,15 @@ function AdminDashboard() {
                           <tr>
                             <th className="p-4 pl-6">User details</th>
                             <th className="p-4">Plan / Limits</th>
-                            <th className="p-4">Tours Used</th>
+                            <th className="p-4">Tours Published</th>
                             <th className="p-4">Joined Date</th>
                             <th className="p-4 pr-6 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
                           {filteredProfiles.map((p) => {
-                            const userToursCount = tours.filter((t) => t.user_id === p.id).length;
+                            const userTours = tours.filter((t) => t.user_id === p.id);
+                            const userPublishedCount = userTours.filter(isTourPublished).length;
                             const isTrial = p.plan === "trial";
                             const planLabelClass =
                               p.plan === "agency"
@@ -599,12 +610,13 @@ function AdminDashboard() {
                                 </td>
 
                                 <td className="p-4">
-                                  <div className="font-bold text-slate-700">
-                                    {p.billing_cycle_tours_used} tour
-                                    {p.billing_cycle_tours_used === 1 ? "" : "s"}
+                                  <div className="font-black text-[#0277bd] text-sm flex items-center gap-1.5">
+                                    <span className="bg-blue-50 border border-blue-100 text-[#0277bd] px-2 py-0.5 rounded-md">
+                                      {userPublishedCount} published
+                                    </span>
                                   </div>
-                                  <div className="text-[10px] text-slate-400 mt-0.5 font-semibold">
-                                    Total in DB: {userToursCount}
+                                  <div className="text-[10px] text-slate-400 mt-1 font-semibold">
+                                    Total created: {userTours.length} | Cycle limit used: {p.billing_cycle_tours_used}
                                   </div>
                                 </td>
 

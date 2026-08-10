@@ -79,7 +79,7 @@ function AdminTestimonials() {
   // Auth guard
   useEffect(() => {
     if (!authLoading && (!user || !ADMIN_EMAILS.includes(user.email))) {
-      navigate({ to: "/login" });
+      navigate({ to: "/login/" });
     }
   }, [authLoading, user, navigate]);
 

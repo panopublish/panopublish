@@ -67,7 +67,7 @@ function ResetPassword() {
       }
 
       toast.success("Password updated successfully! Please sign in with your new password.");
-      navigate({ to: "/login" });
+      navigate({ to: "/login/" });
     } catch (err: any) {
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
@@ -103,7 +103,7 @@ function ResetPassword() {
           </p>
           <div className="mt-6">
             <Link
-              to="/login"
+              to="/login/"
               className="inline-flex items-center justify-center w-full h-11 bg-[#0277bd] hover:bg-[#0266a1] text-white rounded-xl font-bold transition-all shadow-md cursor-pointer"
             >
               Go to Login Page
@@ -210,7 +210,7 @@ function ResetPassword() {
 
           <div className="text-center pt-2">
             <Link
-              to="/login"
+              to="/login/"
               className="text-sm text-muted-foreground hover:text-foreground font-semibold"
             >
               Cancel

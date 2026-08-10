@@ -222,19 +222,19 @@ function Dashboard() {
       />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <Link to="/tours/new">
+          <Link to="/tours/new/">
             <Button>
               <Plus className="h-4 w-4 mr-1" /> Create Tour
             </Button>
           </Link>
-          <Link to="/tours">
+          <Link to="/tours/">
             <Button variant="outline">
               <Map className="h-4 w-4 mr-1" /> My Tours
             </Button>
           </Link>
         </div>
         {isAdmin && (
-          <Link to="/admin">
+          <Link to="/admin/">
             <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-md flex items-center gap-2 px-5">
               <Shield className="h-4 w-4" /> Admin Panel
             </Button>

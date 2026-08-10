@@ -39,7 +39,7 @@ export function AppShell({
   }, [user]);
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/login" });
+    if (!loading && !user) navigate({ to: "/login/" });
   }, [loading, user, navigate]);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export function AppShell({
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") {
         e.preventDefault();
-        navigate({ to: "/tours/new" });
+        navigate({ to: "/tours/new/" });
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
@@ -90,7 +90,7 @@ export function AppShell({
       <main className="flex-1 min-w-0">
         <header className="bg-background border-b">
           <div className="flex items-center gap-3 px-4 md:px-8 py-3">
-            <Link to="/dashboard" className="md:hidden">
+            <Link to="/dashboard/" className="md:hidden">
               <Logo logoClassName="h-7 w-7 text-primary" className="text-base font-bold" />
             </Link>
             <div className="flex-1 max-w-lg relative">
@@ -103,7 +103,7 @@ export function AppShell({
             </div>
             {trialDaysLeft !== null && (
               <Link
-                to="/settings"
+                to="/settings/"
                 className="hidden sm:inline-flex items-center rounded-full bg-warning/20 text-warning-foreground px-3 py-1 text-xs font-medium"
               >
                 Trial: {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left

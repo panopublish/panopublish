@@ -183,7 +183,7 @@ function SeoPage() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/signup">
+              <Link to="/signup/">
                 <Button size="lg" className="bg-primary hover:bg-primary/95 text-white font-bold px-8 shadow-lg shadow-primary/25 transition-all hover:translate-y-[-1px]">
                   Start Free 7-Day Trial
                 </Button>
@@ -397,7 +397,7 @@ function SeoPage() {
                     <Check className="h-4 w-4 text-primary shrink-0" /> Email Support
                   </li>
                 </ul>
-                <Link to="/signup">
+                <Link to="/signup/">
                   <Button variant="outline" className="w-full font-bold">Start Free Trial</Button>
                 </Link>
               </div>
@@ -432,7 +432,7 @@ function SeoPage() {
                     <Check className="h-4 w-4 text-primary shrink-0" /> Priority WhatsApp Support
                   </li>
                 </ul>
-                <Link to="/signup">
+                <Link to="/signup/">
                   <Button className="w-full font-bold shadow-lg shadow-primary/20">Start Free Trial</Button>
                 </Link>
               </div>
@@ -464,7 +464,7 @@ function SeoPage() {
                     <Check className="h-4 w-4 text-primary shrink-0" /> Dedicated Account Manager
                   </li>
                 </ul>
-                <Link to="/signup">
+                <Link to="/signup/">
                   <Button variant="outline" className="w-full font-bold">Start Free Trial</Button>
                 </Link>
               </div>
@@ -539,7 +539,7 @@ function SeoPage() {
                   .map((city) => (
                     <Link
                       key={city.slug}
-                      to="/$slug"
+                      to="/$slug/"
                       params={{ slug: city.slug }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border hover:border-primary/20 text-xs font-semibold text-muted-foreground hover:text-primary transition-all bg-slate-50/50"
                     >
@@ -561,7 +561,7 @@ function SeoPage() {
               Ready to claim your local market advantage? Try PanoPublish free for 7 days. No credit card required.
             </p>
             <div className="mt-8 flex justify-center">
-              <Link to="/signup">
+              <Link to="/signup/">
                 <Button
                   size="lg"
                   variant="secondary"

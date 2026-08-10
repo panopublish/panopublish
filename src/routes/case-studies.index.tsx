@@ -69,7 +69,7 @@ function CaseStudiesIndex() {
     itemListElement: caseStudies.map((cs, i) => ({
       "@type": "ListItem",
       position: i + 1,
-      name: cs.title,
+      name: cs.client_name,
       url: `https://panopublish.com/case-studies/${cs.slug}/`,
     })),
   };
@@ -136,7 +136,7 @@ function CaseStudiesIndex() {
               {filtered.map((cs) => (
                 <Link
                   key={cs.slug}
-                  to="/case-studies/$slug"
+                  to="/case-studies/$slug/"
                   params={{ slug: cs.slug }}
                   className="group block bg-white border rounded-2xl overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
                 >
@@ -205,12 +205,12 @@ function CaseStudiesIndex() {
               virtual tours to Google Maps.
             </p>
             <div className="flex flex-wrap gap-3 justify-center pt-2">
-              <Link to="/signup">
+              <Link to="/signup/">
                 <Button className="font-bold px-6">
                   Start Free Trial <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
-              <Link to="/pricing">
+              <Link to="/pricing/">
                 <Button variant="outline" className="font-semibold">
                   View Pricing
                 </Button>

@@ -340,7 +340,7 @@ function TourAnalytics() {
                 You do not have any published scenes for us to display analytics. Please publish
                 some scenes to Google first.
               </p>
-              <Link to="/tours/$tourId/publish" params={{ tourId }}>
+              <Link to="/tours/$tourId/publish/" params={{ tourId }}>
                 <Button className="bg-[#0277bd] text-white font-bold rounded-xl px-6 py-2.5 shadow-md hover:shadow-lg transition-all">
                   Go to Publish Page
                 </Button>

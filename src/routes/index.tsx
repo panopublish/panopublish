@@ -309,7 +309,7 @@ function Landing() {
               brand your nadir, and go live on Google Maps — starting at ₹499/month.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
-              <Link to="/signup">
+              <Link to="/signup/">
                 <Button
                   size="lg"
                   className="shadow-elegant h-12 px-8 font-semibold text-base transition-transform hover:scale-[1.03]"
@@ -380,7 +380,7 @@ function Landing() {
                 We provide prioritized processing and dedicated support for Indian creators.
               </p>
             </div>
-            <Link to="/signup">
+            <Link to="/signup/">
               <Button
                 variant="secondary"
                 className="font-semibold text-primary shadow-lg hover:bg-white/95"
@@ -574,7 +574,7 @@ function Landing() {
                     </div>
 
                     <div className="mt-8">
-                      <Link to="/signup" className="block">
+                      <Link to="/signup/" className="block">
                         <Button
                           className="w-full h-11 font-semibold"
                           variant={p.popular ? "default" : "outline"}
@@ -667,7 +667,7 @@ function Landing() {
               cancel anytime.
             </p>
             <div className="mt-8 flex justify-center">
-              <Link to="/signup">
+              <Link to="/signup/">
                 <Button
                   size="lg"
                   variant="secondary"

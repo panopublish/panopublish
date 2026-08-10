@@ -297,7 +297,7 @@ function CreateTour() {
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Tour created!");
-    navigate({ to: "/tours/$tourId", params: { tourId: data.id } });
+    navigate({ to: "/tours/$tourId/", params: { tourId: data.id } });
   };
 
   const renderStepNav = () => {
@@ -392,14 +392,14 @@ function CreateTour() {
             </div>
             <div className="flex flex-col gap-2 pt-2">
               <Link
-                to="/settings"
+                to="/settings/"
                 search={{ tab: "billing" } as any}
                 className="w-full bg-[#0277bd] hover:bg-[#0266a1] text-white py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-sm uppercase tracking-wider block"
               >
                 Upgrade Subscription
               </Link>
               <Link
-                to="/tours"
+                to="/tours/"
                 className="w-full bg-slate-50 hover:bg-slate-100 border text-slate-600 py-3 rounded-xl font-bold transition-all text-sm block"
               >
                 Go back to Tours

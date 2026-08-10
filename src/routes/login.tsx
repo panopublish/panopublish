@@ -61,7 +61,7 @@ function Login() {
   const [resendingCode, setResendingCode] = useState(false);
 
   useEffect(() => {
-    if (user) navigate({ to: "/dashboard" });
+    if (user) navigate({ to: "/dashboard/" });
   }, [user, navigate]);
 
   // Resend countdown timer
@@ -88,7 +88,7 @@ function Login() {
     if (res?.data?.session) {
       setSession(res.data.session);
       toast.success("Welcome back!");
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard/" });
     } else {
       toast.error("Sign in failed. Please try again.");
     }
@@ -198,7 +198,7 @@ function Login() {
               <h1 className="text-2xl font-semibold">Sign in to PanoPublish</h1>
               <p className="text-sm text-muted-foreground mt-1">
                 New here?{" "}
-                <Link to="/signup" className="text-primary font-medium hover:underline">Create an account</Link>
+                <Link to="/signup/" className="text-primary font-medium hover:underline">Create an account</Link>
               </p>
             </div>
 

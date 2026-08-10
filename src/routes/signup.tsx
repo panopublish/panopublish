@@ -65,7 +65,7 @@ function Signup() {
   const [resendCountdown, setResendCountdown] = useState(0);
 
   useEffect(() => {
-    if (user) navigate({ to: "/dashboard" });
+    if (user) navigate({ to: "/dashboard/" });
   }, [user, navigate]);
 
   // Check username uniqueness reactively
@@ -178,7 +178,7 @@ function Signup() {
     if (signupData?.session) {
       setSession(signupData.session);
       toast.success("Account created successfully! Welcome.");
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard/" });
     } else {
       toast.error("Signup failed");
     }
@@ -207,7 +207,7 @@ function Signup() {
     if (res?.data?.session) {
       setSession(res.data.session);
       toast.success("Email verified! Welcome to PanoPublish 🎉");
-      navigate({ to: "/dashboard" });
+      navigate({ to: "/dashboard/" });
     }
   };
 
@@ -533,7 +533,7 @@ function Signup() {
 
         <p className="text-sm text-center text-gray-500 font-medium">
           Already have an account?{" "}
-          <Link to="/login" className="text-[#0277bd] font-bold hover:underline">
+          <Link to="/login/" className="text-[#0277bd] font-bold hover:underline">
             Sign in
           </Link>
         </p>
