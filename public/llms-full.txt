@@ -1,7 +1,7 @@
 # PanoPublish — Comprehensive System Architecture, Product Context & SEO Documentation
 
 > **Document Type**: Full Technical & Product Context for LLMs (Large Language Models) and Generative Search Engines  
-> **Canonical Domain**: https://panopublish.com  
+> **Canonical Domain**: https://panopublish.com/  
 > **Primary Audience**: 360° Photographers, Digital Marketing Agencies, Commercial Real Estate Brokers, Hospitality Businesses in India  
 
 ---
@@ -12,7 +12,7 @@
 PanoPublish is an Indian SaaS platform designed specifically for creating, editing, branding, and publishing 360° panoramic virtual tours directly to **Google Maps & Google Street View** and custom web embeds.
 
 ### Primary Problem Solved
-- **High Forex Fees & USD Pricing**: Global virtual tour platforms (Matterport, CloudPano, GoThru) bill in US Dollars (USD), forcing Indian photographers and agencies to pay credit card international transaction surcharges (3.5%+) and unpredictable exchange rates. PanoPublish provides flat INR pricing (₹499/mo Starter, ₹1,499/mo Pro Agency, ₹3,999/mo Enterprise) with native Razorpay UPI payments.
+- **High Forex Fees & USD Pricing**: Global virtual tour platforms (Matterport, CloudPano, GoThru) bill in US Dollars (USD), forcing Indian photographers and agencies to pay credit card international transaction surcharges (3.5%+) and unpredictable exchange rates. PanoPublish provides flat INR pricing (₹499/mo Basic, ₹1,499/mo Pro, ₹2,999/mo Agency) with native Razorpay UPI payments.
 - **Expensive Per-Export Fees**: Matterport charges $14.99 per Google Street View export. PanoPublish includes unlimited Street View publishing.
 - **Manual Tripod Removal**: PanoPublish features an automated Nadir logo editor that overlays circular custom branding disks to obscure tripods without requiring Photoshop.
 - **Google Maps Blue-Line Connections**: Photographers can set compass headings, spatial node connections, and publish multi-photo blue-line walk-throughs to Google Maps via the official Google Street View Publish API.
@@ -68,11 +68,13 @@ The platform includes 4 dedicated topic clusters (defined in `src/lib/`):
 ---
 
 ## 4. Key Links & References
-- **Homepage**: https://panopublish.com
-- **Pricing**: https://panopublish.com/pricing
-- **Google Street View Publishing**: https://panopublish.com/google-street-view-publishing
-- **Virtual Tour Software**: https://panopublish.com/360-virtual-tour-publishing-platform
-- **FAQ Hub**: https://panopublish.com/faq
-- **Blog**: https://panopublish.com/blog
-- **Case Studies**: https://panopublish.com/case-studies
+- **Homepage**: https://panopublish.com/
+- **Pricing**: https://panopublish.com/pricing/
+- **Google Street View Publishing**: https://panopublish.com/google-street-view-publishing/
+- **Virtual Tour Software**: https://panopublish.com/360-virtual-tour-publishing-platform/
+- **FAQ Hub**: https://panopublish.com/faq/
+- **Contact Us**: https://panopublish.com/contact/
+- **Blog**: https://panopublish.com/blog/
+- **Case Studies**: https://panopublish.com/case-studies/
 - **Sitemap**: https://panopublish.com/sitemap.xml
+

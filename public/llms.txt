@@ -8,20 +8,21 @@
 ## Core Pages & Documentation
 
 - [Home](https://panopublish.com/): Official overview of PanoPublish Google Maps virtual tour publishing.
-- [Pricing](https://panopublish.com/pricing): Subscription plans starting at ₹499/month (Starter), ₹1,499/month (Pro Agency), and ₹3,999/month (Enterprise) with flat INR billing and UPI support.
-- [Google Street View Publishing](https://panopublish.com/google-street-view-publishing): Automated 360 photo uploads and blue-line path connections to Google Maps.
-- [360 Virtual Tour Software](https://panopublish.com/360-virtual-tour-publishing-platform): WebGL-powered 360 panorama editor with hotspots, level organization, and nadir branding.
-- [FAQ Hub](https://panopublish.com/faq): Complete guide to 360 cameras, EXIF metadata, Google Street View API, and billing.
-- [Case Studies Index](https://panopublish.com/case-studies): Real business case studies showcasing virtual tour performance for hotels, offices, gyms, schools, and restaurants in India.
-- [Blog Index](https://panopublish.com/blog): In-depth tutorials on 360 camera hardware (Ricoh Theta Z1, Insta360 X4), PTGui stitching, and local SEO optimization.
+- [Pricing](https://panopublish.com/pricing/): Subscription plans starting at ₹499/month (Basic), ₹1,499/month (Pro), and ₹2,999/month (Agency) with flat INR billing and UPI support.
+- [Google Street View Publishing](https://panopublish.com/google-street-view-publishing/): Automated 360 photo uploads and blue-line path connections to Google Maps.
+- [360 Virtual Tour Software](https://panopublish.com/360-virtual-tour-publishing-platform/): WebGL-powered 360 panorama editor with hotspots, level organization, and nadir branding.
+- [FAQ Hub](https://panopublish.com/faq/): Complete guide to 360 cameras, EXIF metadata, Google Street View API, and billing.
+- [Contact Us](https://panopublish.com/contact/): Contact PanoPublish for support, product questions, or custom requirements.
+- [Case Studies Index](https://panopublish.com/case-studies/): Real business case studies showcasing virtual tour performance for hotels, offices, gyms, schools, and restaurants in India.
+- [Blog Index](https://panopublish.com/blog/): In-depth tutorials on 360 camera hardware (Ricoh Theta Z1, Insta360 X4), PTGui stitching, and local SEO optimization.
 
 ## Competitor Comparison Guides
 
-- [PanoPublish vs Panoee](https://panopublish.com/panoee-alternative): Compare PanoPublish against Panoee for flat INR pricing and direct Google Maps sync.
-- [PanoPublish vs TourBuilder](https://panopublish.com/tourbuilder-alternative-india): Compare PanoPublish against TourBuilder for Indian local SEO and UPI payments.
-- [PanoPublish vs GoThru](https://panopublish.com/gothru-alternative): Compare PanoPublish against GoThru for simplified 360 node connection workflows.
-- [PanoPublish vs CloudPano](https://panopublish.com/cloudpano-alternative): Compare PanoPublish against CloudPano for zero USD forex surcharges.
-- [PanoPublish vs Matterport](https://panopublish.com/matterport-alternative): Compare PanoPublish against Matterport for unlimited Google Street View uploads without $14.99 per-tour export fees.
+- [PanoPublish vs Panoee](https://panopublish.com/panoee-alternative/): Compare PanoPublish against Panoee for flat INR pricing and direct Google Maps sync.
+- [PanoPublish vs TourBuilder](https://panopublish.com/tourbuilder-alternative-india/): Compare PanoPublish against TourBuilder for Indian local SEO and UPI payments.
+- [PanoPublish vs GoThru](https://panopublish.com/gothru-alternative/): Compare PanoPublish against GoThru for simplified 360 node connection workflows.
+- [PanoPublish vs CloudPano](https://panopublish.com/cloudpano-alternative/): Compare PanoPublish against CloudPano for zero USD forex surcharges.
+- [PanoPublish vs Matterport](https://panopublish.com/matterport-alternative/): Compare PanoPublish against Matterport for unlimited Google Street View uploads without $14.99 per-tour export fees.
 
 ## Key Facts & Frequently Asked Questions
 
@@ -29,7 +30,7 @@
 PanoPublish is a web-based software platform that enables 360° photographers and agencies to stitch, brand, and publish virtual tours directly to Google Maps and self-hosted websites.
 
 ### How much does PanoPublish cost?
-PanoPublish plans start at ₹499/month (Starter plan), ₹1,499/month (Pro Agency plan), and ₹3,999/month (Enterprise plan). All payments are processed in Indian Rupees (INR) via Razorpay, supporting UPI, NetBanking, and Indian debit/credit cards with zero foreign transaction fees.
+PanoPublish plans start at ₹499/month (Basic plan), ₹1,499/month (Pro plan), and ₹2,999/month (Agency plan). All payments are processed in Indian Rupees (INR) via Razorpay, supporting UPI, NetBanking, and Indian debit/credit cards with zero foreign transaction fees.
 
 ### How is PanoPublish different from Matterport, CloudPano, and Panoee?
 - **Zero Forex Fees**: Competitors charge in US Dollars (USD), incurring 3.5%+ bank forex markups. PanoPublish charges flat INR.
@@ -39,3 +40,4 @@ PanoPublish plans start at ₹499/month (Starter plan), ₹1,499/month (Pro Agen
 
 ### What camera hardware is supported?
 PanoPublish supports equirectangular 360° JPEG images captured by any 360 camera (Ricoh Theta Z1, Theta X, Insta360 X4, Insta360 X3, GoPro MAX) or stitched DSLR/mirrorless panorama setups (PTGui).
+
