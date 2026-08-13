@@ -454,10 +454,10 @@ const JS_SOURCE = `(function() {
     var source = createSmartSource(sceneData.image);
     var geometry = new EquirectGeom([{ width: targetGeomWidth }]);
     
-    // Limits: Allow deep zoom in (5 deg) and wide zoom out (120 deg) with maxResolution targetGeomWidth
+    // Limits: Standard baseline (2048) for normal default FOV (90 deg), wide zoom out (120 deg), and deep zoom in (10 deg)
     var maxFov = 120 * Math.PI / 180;
-    var minFov = 5 * Math.PI / 180;
-    var limitor = PanoEngine.RectilinearView.limit.traditional(targetGeomWidth, maxFov, minFov);
+    var minFov = 10 * Math.PI / 180;
+    var limitor = PanoEngine.RectilinearView.limit.traditional(2048, maxFov, minFov);
     var view = new PanoEngine.RectilinearView(sceneData.initialViewParameters, limitor);
     
     var scene = viewer.createScene({
@@ -612,8 +612,8 @@ const JS_SOURCE = `(function() {
         zoomInBtn.addEventListener('click', function() {
           var view = viewer.view();
           if (view) {
-            var minFovVal = 5 * Math.PI / 180;
-            var newFov = Math.max(minFovVal, view.fov() * 0.70);
+            var minFovVal = 10 * Math.PI / 180;
+            var newFov = Math.max(minFovVal, view.fov() * 0.75);
             view.setFov(newFov);
           }
         });
