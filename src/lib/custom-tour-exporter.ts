@@ -347,16 +347,6 @@ const JS_SOURCE = `(function() {
     return;
   }
 
-  // Preload scene images for instant smooth transitions
-  if (Array.isArray(APP_DATA.scenes)) {
-    APP_DATA.scenes.forEach(function(s) {
-      if (s.image) {
-        var img = new Image();
-        img.src = s.image;
-      }
-    });
-  }
-
   // Set Theme Color
   var themeColor = APP_DATA.settings.themeColor || "#0277bd";
   document.documentElement.style.setProperty('--theme-color', themeColor);
@@ -372,6 +362,22 @@ const JS_SOURCE = `(function() {
     }
   };
   var viewer = new PanoEngine.Viewer(panoElement, viewerOpts);
+
+  // Handle WebGL context lost & restored on mobile browsers
+  var currentSceneId = null;
+  var stageCanvas = panoElement ? panoElement.querySelector('canvas') : null;
+  if (stageCanvas) {
+    stageCanvas.addEventListener('webglcontextlost', function(e) {
+      e.preventDefault();
+      console.warn('WebGL context lost, waiting for recovery...');
+    }, false);
+    stageCanvas.addEventListener('webglcontextrestored', function() {
+      console.log('WebGL context restored');
+      if (currentSceneId && scenes[currentSceneId]) {
+        switchScene(currentSceneId);
+      }
+    }, false);
+  }
 
   // Auto-rotate settings
   var autorotate = null;
@@ -481,10 +487,29 @@ const JS_SOURCE = `(function() {
     });
   });
 
+  // Smart lazy-preloading: preload only adjacent connected scenes to prevent mobile VRAM exhaustion
+  var preloadedMap = {};
+  function preloadAdjacentScenes(sceneId) {
+    var sObj = scenes[sceneId];
+    if (!sObj || !sObj.data || !sObj.data.hotspots) return;
+    sObj.data.hotspots.forEach(function(h) {
+      if (h.target && !preloadedMap[h.target]) {
+        var targetScene = scenes[h.target];
+        if (targetScene && targetScene.data && targetScene.data.image) {
+          preloadedMap[h.target] = true;
+          var img = new Image();
+          img.src = targetScene.data.image;
+        }
+      }
+    });
+  }
+
   // Switch Scene with smooth transition
   function switchScene(id) {
     var sceneObj = scenes[id];
     if (!sceneObj) return;
+
+    currentSceneId = id;
 
     if (autorotate) {
       viewer.stopMovement();
@@ -497,6 +522,9 @@ const JS_SOURCE = `(function() {
     if (autorotate) {
       viewer.startMovement(autorotate);
     }
+
+    // Preload neighbor scenes on demand
+    preloadAdjacentScenes(id);
   }
 
   // Switch to the first scene initially
@@ -646,6 +674,48 @@ const JS_SOURCE = `(function() {
 
 })();`;
 
+/**
+ * Helper to downscale large 360 panorama blobs to mobile-safe WebGL texture dimensions (max 4096px width).
+ * Prevents mobile browser black screens / VRAM crashes when loading exported virtual tours with many scenes.
+ */
+async function optimizePanoramaBlob(blob: Blob, maxWidth = 4096): Promise<Blob> {
+  if (typeof window === "undefined") return blob;
+  try {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+    URL.revokeObjectURL(url);
+
+    if (img.width <= maxWidth) {
+      return blob; // Already within safe width limit
+    }
+
+    const scale = maxWidth / img.width;
+    const targetWidth = maxWidth;
+    const targetHeight = Math.round(img.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return blob;
+
+    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+    const resizedBlob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.88)
+    );
+    return resizedBlob || blob;
+  } catch (err) {
+    console.warn("Failed to optimize panorama blob, preserving original:", err);
+    return blob;
+  }
+}
+
 export async function exportCustomTour(
   params: ExportTourParams,
   onProgress?: (msg: string, pct: number) => void
@@ -749,6 +819,10 @@ export async function exportCustomTour(
         if (!imgRes.ok) throw new Error("Status " + imgRes.status);
         imgBlob = await imgRes.blob();
       }
+
+      // Optimize image blob for mobile WebGL compatibility (max 4096px width)
+      onProgress?.(`Optimizing scene ${i + 1} of ${totalPhotos} for mobile rendering...`, stepPct);
+      imgBlob = await optimizePanoramaBlob(imgBlob, 4096);
 
       const fileName = `images/${photo.id}.jpg`;
       zip.file(fileName, imgBlob);
