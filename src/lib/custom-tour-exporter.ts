@@ -558,13 +558,25 @@ const JS_SOURCE = `(function() {
       var minFovVal = 10 * Math.PI / 180;
       var maxFovVal = 120 * Math.PI / 180;
 
+      // Native Marzipano press-to-zoom controls (for continuous smooth zooming)
+      if (PanoEngine.ElementPressControlMethod && zoomInBtn && zoomOutBtn) {
+        try {
+          var controls = viewer.controls();
+          controls.registerMethod('zoomIn', new PanoEngine.ElementPressControlMethod(zoomInBtn, 'zoom', -0.8, 3));
+          controls.registerMethod('zoomOut', new PanoEngine.ElementPressControlMethod(zoomOutBtn, 'zoom', 0.8, 3));
+        } catch (e) {
+          console.warn('Could not register Marzipano press controls', e);
+        }
+      }
+
+      // Step-click zoom handlers
       if (zoomInBtn) {
         zoomInBtn.addEventListener('click', function(e) {
           e.preventDefault();
           var view = viewer.view();
-          if (view) {
+          if (view && typeof view.setFov === 'function') {
             var newFov = Math.max(minFovVal, view.fov() * 0.75);
-            view.setParameters({ fov: newFov });
+            view.setFov(newFov);
           }
         });
       }
@@ -573,9 +585,9 @@ const JS_SOURCE = `(function() {
         zoomOutBtn.addEventListener('click', function(e) {
           e.preventDefault();
           var view = viewer.view();
-          if (view) {
+          if (view && typeof view.setFov === 'function') {
             var newFov = Math.min(maxFovVal, view.fov() * 1.35);
-            view.setParameters({ fov: newFov });
+            view.setFov(newFov);
           }
         });
       }
@@ -585,11 +597,11 @@ const JS_SOURCE = `(function() {
         panoElement.addEventListener('wheel', function(e) {
           e.preventDefault();
           var view = viewer.view();
-          if (!view) return;
+          if (!view || typeof view.setFov !== 'function') return;
           var currentFov = view.fov();
-          var zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
+          var zoomFactor = e.deltaY > 0 ? 1.10 : 0.90;
           var newFov = Math.max(minFovVal, Math.min(maxFovVal, currentFov * zoomFactor));
-          view.setParameters({ fov: newFov });
+          view.setFov(newFov);
         }, { passive: false });
 
         // Mobile 2-Finger Pinch Zoom
@@ -602,7 +614,7 @@ const JS_SOURCE = `(function() {
             var dy = e.touches[0].clientY - e.touches[1].clientY;
             touchStartDist = Math.sqrt(dx * dx + dy * dy);
             var view = viewer.view();
-            if (view) initialTouchFov = view.fov();
+            if (view && typeof view.fov === 'function') initialTouchFov = view.fov();
           }
         }, { passive: true });
 
@@ -613,9 +625,9 @@ const JS_SOURCE = `(function() {
             var dist = Math.sqrt(dx * dx + dy * dy);
             var scale = touchStartDist / dist;
             var view = viewer.view();
-            if (view) {
+            if (view && typeof view.setFov === 'function') {
               var newFov = Math.max(minFovVal, Math.min(maxFovVal, initialTouchFov * scale));
-              view.setParameters({ fov: newFov });
+              view.setFov(newFov);
             }
           }
         }, { passive: true });
