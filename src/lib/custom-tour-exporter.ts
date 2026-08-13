@@ -547,7 +547,7 @@ const JS_SOURCE = `(function() {
       }
     }
 
-    // Zoom Controls (+ and - buttons)
+    // Zoom Controls (+ and - buttons, Mouse Wheel, 2-Finger Touch Pinch)
     if (APP_DATA.settings.zoomEnabled) {
       var zoomControls = document.getElementById('zoom-controls');
       if (zoomControls) zoomControls.style.display = 'flex';
@@ -555,26 +555,70 @@ const JS_SOURCE = `(function() {
       var zoomInBtn = document.getElementById('zoom-in');
       var zoomOutBtn = document.getElementById('zoom-out');
 
+      var minFovVal = 10 * Math.PI / 180;
+      var maxFovVal = 120 * Math.PI / 180;
+
       if (zoomInBtn) {
-        zoomInBtn.addEventListener('click', function() {
+        zoomInBtn.addEventListener('click', function(e) {
+          e.preventDefault();
           var view = viewer.view();
           if (view) {
-            var minFovVal = 10 * Math.PI / 180;
             var newFov = Math.max(minFovVal, view.fov() * 0.75);
-            view.setFov(newFov);
+            view.setParameters({ fov: newFov });
           }
         });
       }
 
       if (zoomOutBtn) {
-        zoomOutBtn.addEventListener('click', function() {
+        zoomOutBtn.addEventListener('click', function(e) {
+          e.preventDefault();
           var view = viewer.view();
           if (view) {
-            var maxFovVal = 120 * Math.PI / 180;
             var newFov = Math.min(maxFovVal, view.fov() * 1.35);
-            view.setFov(newFov);
+            view.setParameters({ fov: newFov });
           }
         });
+      }
+
+      // Mouse Wheel Zoom
+      if (panoElement) {
+        panoElement.addEventListener('wheel', function(e) {
+          e.preventDefault();
+          var view = viewer.view();
+          if (!view) return;
+          var currentFov = view.fov();
+          var zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
+          var newFov = Math.max(minFovVal, Math.min(maxFovVal, currentFov * zoomFactor));
+          view.setParameters({ fov: newFov });
+        }, { passive: false });
+
+        // Mobile 2-Finger Pinch Zoom
+        var touchStartDist = 0;
+        var initialTouchFov = 0;
+
+        panoElement.addEventListener('touchstart', function(e) {
+          if (e.touches.length === 2) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            touchStartDist = Math.sqrt(dx * dx + dy * dy);
+            var view = viewer.view();
+            if (view) initialTouchFov = view.fov();
+          }
+        }, { passive: true });
+
+        panoElement.addEventListener('touchmove', function(e) {
+          if (e.touches.length === 2 && touchStartDist > 0) {
+            var dx = e.touches[0].clientX - e.touches[1].clientX;
+            var dy = e.touches[0].clientY - e.touches[1].clientY;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            var scale = touchStartDist / dist;
+            var view = viewer.view();
+            if (view) {
+              var newFov = Math.max(minFovVal, Math.min(maxFovVal, initialTouchFov * scale));
+              view.setParameters({ fov: newFov });
+            }
+          }
+        }, { passive: true });
       }
     }
 
