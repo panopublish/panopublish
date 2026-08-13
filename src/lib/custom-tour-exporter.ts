@@ -703,6 +703,7 @@ async function optimizePanoramaBlob(blob: Blob, maxWidth = 4096): Promise<Blob> 
   if (typeof window === "undefined") return blob;
   try {
     const img = new Image();
+    img.crossOrigin = "anonymous"; // CRITICAL: Prevent canvas tainting during export!
     const url = URL.createObjectURL(blob);
     await new Promise((resolve, reject) => {
       img.onload = resolve;
@@ -735,110 +736,6 @@ async function optimizePanoramaBlob(blob: Blob, maxWidth = 4096): Promise<Blob> 
     console.warn("Failed to optimize panorama blob, preserving original:", err);
     return blob;
   }
-}
-
-interface CubeFaces {
-  f: Blob;
-  b: Blob;
-  u: Blob;
-  d: Blob;
-  l: Blob;
-  r: Blob;
-}
-
-/**
- * Converts an equirectangular 360 image blob into 6 mobile-safe cube faces (1024x1024).
- * This eliminates WebGL MAX_TEXTURE_SIZE crashes and fragment shader precision blackouts on mobile smartphones.
- */
-async function convertEquirectToCubeFaces(
-  equirectBlob: Blob,
-  faceSize = 1024
-): Promise<CubeFaces> {
-  const img = new Image();
-  const url = URL.createObjectURL(equirectBlob);
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = reject;
-    img.src = url;
-  });
-  URL.revokeObjectURL(url);
-
-  const eqCanvas = document.createElement("canvas");
-  eqCanvas.width = img.width;
-  eqCanvas.height = img.height;
-  const eqCtx = eqCanvas.getContext("2d");
-  if (!eqCtx) throw new Error("Could not get 2d context for equirect canvas");
-  eqCtx.drawImage(img, 0, 0);
-
-  const eqData = eqCtx.getImageData(0, 0, img.width, img.height);
-  const eqPixels = eqData.data;
-  const eqW = img.width;
-  const eqH = img.height;
-
-  const faceNames = ["f", "b", "u", "d", "l", "r"] as const;
-  const result: Partial<CubeFaces> = {};
-
-  for (const face of faceNames) {
-    const faceCanvas = document.createElement("canvas");
-    faceCanvas.width = faceSize;
-    faceCanvas.height = faceSize;
-    const faceCtx = faceCanvas.getContext("2d");
-    if (!faceCtx) continue;
-
-    const faceData = faceCtx.createImageData(faceSize, faceSize);
-    const facePixels = faceData.data;
-
-    for (let py = 0; py < faceSize; py++) {
-      for (let px = 0; px < faceSize; px++) {
-        const u = (2 * (px + 0.5)) / faceSize - 1;
-        const v = (2 * (py + 0.5)) / faceSize - 1;
-
-        let x = 0, y = 0, z = 0;
-
-        switch (face) {
-          case "r": x = 1; y = -v; z = -u; break;
-          case "l": x = -1; y = -v; z = u; break;
-          case "u": x = u; y = 1; z = v; break;
-          case "d": x = u; y = -1; z = -v; break;
-          case "f": x = u; y = -v; z = 1; break;
-          case "b": x = -u; y = -v; z = -1; break;
-        }
-
-        const theta = Math.atan2(x, z);
-        const hypot = Math.sqrt(x * x + z * z);
-        const phi = Math.atan2(y, hypot);
-
-        let uf = (theta + Math.PI) / (2 * Math.PI);
-        let vf = (Math.PI / 2 - phi) / Math.PI;
-
-        let ex = Math.floor(uf * eqW);
-        let ey = Math.floor(vf * eqH);
-        if (ex >= eqW) ex = eqW - 1;
-        if (ey >= eqH) ey = eqH - 1;
-        if (ex < 0) ex = 0;
-        if (ey < 0) ey = 0;
-
-        const eqIdx = (ey * eqW + ex) * 4;
-        const faceIdx = (py * faceSize + px) * 4;
-
-        facePixels[faceIdx] = eqPixels[eqIdx];
-        facePixels[faceIdx + 1] = eqPixels[eqIdx + 1];
-        facePixels[faceIdx + 2] = eqPixels[eqIdx + 2];
-        facePixels[faceIdx + 3] = 255;
-      }
-    }
-
-    faceCtx.putImageData(faceData, 0, 0);
-
-    const blob = await new Promise<Blob | null>((resolve) =>
-      faceCanvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
-    );
-    if (blob) {
-      result[face] = blob;
-    }
-  }
-
-  return result as CubeFaces;
 }
 
 export async function exportCustomTour(
@@ -949,28 +846,8 @@ export async function exportCustomTour(
       onProgress?.(`Optimizing scene ${i + 1} of ${totalPhotos} for mobile rendering...`, stepPct);
       imgBlob = await optimizePanoramaBlob(imgBlob, 4096);
 
-      // Convert panorama to 6 mobile-safe cube faces (1024x1024)
-      let cubeFaces: CubeFaces | null = null;
-      try {
-        onProgress?.(`Converting scene ${i + 1} of ${totalPhotos} to mobile cube tiles...`, stepPct);
-        cubeFaces = await convertEquirectToCubeFaces(imgBlob, 1024);
-      } catch (err) {
-        console.warn(`Failed to convert photo ${photo.id} to cube faces, falling back to equirectangular:`, err);
-      }
-
-      let facePattern: string | undefined;
-      let singleFileName: string | undefined;
-
-      if (cubeFaces && cubeFaces.f && cubeFaces.b && cubeFaces.u && cubeFaces.d && cubeFaces.l && cubeFaces.r) {
-        const faceNames = ["f", "b", "u", "d", "l", "r"] as const;
-        for (const face of faceNames) {
-          zip.file(`images/${photo.id}/${face}.jpg`, cubeFaces[face]);
-        }
-        facePattern = `images/${photo.id}/{f}.jpg`;
-      } else {
-        singleFileName = `images/${photo.id}.jpg`;
-        zip.file(singleFileName, imgBlob);
-      }
+      const fileName = `images/${photo.id}.jpg`;
+      zip.file(fileName, imgBlob);
 
       // Map hotspots/connections for this scene
       const sceneConns = connections.filter((c) => c.from_photo_id === photo.id);
@@ -999,7 +876,7 @@ export async function exportCustomTour(
       scenes.push({
         id: photo.id,
         name: photo.filename || `Scene ${i}`,
-        ...(facePattern ? { facePattern, tileSize: 1024 } : { image: singleFileName }),
+        image: fileName,
         initialViewParameters: {
           yaw: ((photo.heading || 0) * Math.PI) / 180,
           pitch: 0,
