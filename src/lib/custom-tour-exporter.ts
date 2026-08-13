@@ -390,21 +390,40 @@ const JS_SOURCE = `(function() {
     viewer.startMovement(autorotate);
   }
 
+  // Detect WebGL MAX_TEXTURE_SIZE on mobile GPUs to prevent blank canvas
+  var maxTextureSize = 4096;
+  try {
+    var testCanvas = document.createElement('canvas');
+    var testGl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+    if (testGl) {
+      maxTextureSize = testGl.getParameter(testGl.MAX_TEXTURE_SIZE) || 4096;
+    }
+  } catch(e) {}
+  var targetGeomWidth = Math.min(4000, maxTextureSize);
+
   // Create Scenes
   var scenes = {};
+  var CubeGeom = PanoEngine.CubeGeometry;
   var EquirectGeom = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
 
-  // View limits: minFov 10 deg (deep zoom in), maxFov 140 deg, baseline 2048 (matches tour editor baseline)
-  var maxFov = 140 * Math.PI / 180;
-  var minFov = 10 * Math.PI / 180;
-  var limitor = PanoEngine.RectilinearView.limit.traditional(2048, maxFov, minFov);
-
   APP_DATA.scenes.forEach(function(sceneData) {
-    var isAbsolute = (sceneData.image || '').indexOf('http://') === 0 || (sceneData.image || '').indexOf('https://') === 0;
-    var source = isAbsolute
-      ? PanoEngine.ImageUrlSource.fromString(sceneData.image, { crossOrigin: 'anonymous' })
-      : PanoEngine.ImageUrlSource.fromString(sceneData.image);
-    var geometry = new EquirectGeom([{ width: 4000 }]);
+    var source, geometry;
+
+    if (sceneData.facePattern) {
+      // Cube Geometry (100% Universal Mobile & Desktop Compatibility)
+      geometry = new CubeGeom([{ size: sceneData.tileSize || 1024 }]);
+      source = PanoEngine.ImageUrlSource.fromString(sceneData.facePattern);
+    } else {
+      // Fallback Equirectangular Geometry
+      geometry = new EquirectGeom([{ width: targetGeomWidth }]);
+      var isAbsolute = (sceneData.image || '').indexOf('http') === 0;
+      source = isAbsolute
+        ? PanoEngine.ImageUrlSource.fromString(sceneData.image, { crossOrigin: 'anonymous' })
+        : PanoEngine.ImageUrlSource.fromString(sceneData.image);
+    }
+    
+    // Limits
+    var limitor = PanoEngine.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
     var view = new PanoEngine.RectilinearView(sceneData.initialViewParameters, limitor);
     
     var scene = viewer.createScene({
@@ -490,10 +509,17 @@ const JS_SOURCE = `(function() {
     sObj.data.hotspots.forEach(function(h) {
       if (h.target && !preloadedMap[h.target]) {
         var targetScene = scenes[h.target];
-        if (targetScene && targetScene.data && targetScene.data.image) {
+        if (targetScene && targetScene.data) {
           preloadedMap[h.target] = true;
-          var img = new Image();
-          img.src = targetScene.data.image;
+          if (targetScene.data.facePattern) {
+            ['f', 'b', 'u', 'd', 'l', 'r'].forEach(function(fKey) {
+              var img = new Image();
+              img.src = targetScene.data.facePattern.replace('{f}', fKey);
+            });
+          } else if (targetScene.data.image) {
+            var img = new Image();
+            img.src = targetScene.data.image;
+          }
         }
       }
     });
@@ -547,91 +573,19 @@ const JS_SOURCE = `(function() {
       }
     }
 
-    // Zoom Controls (+ and - buttons, Mouse Wheel, 2-Finger Touch Pinch)
+    // Zoom Buttons
     if (APP_DATA.settings.zoomEnabled) {
       var zoomControls = document.getElementById('zoom-controls');
-      if (zoomControls) zoomControls.style.display = 'flex';
+      zoomControls.style.display = 'flex';
       
-      var zoomInBtn = document.getElementById('zoom-in');
-      var zoomOutBtn = document.getElementById('zoom-out');
-
-      var minFovVal = 10 * Math.PI / 180;
-      var maxFovVal = 140 * Math.PI / 180;
-
-      // Native Marzipano press-to-zoom controls (for continuous smooth zooming)
-      if (PanoEngine.ElementPressControlMethod && zoomInBtn && zoomOutBtn) {
-        try {
-          var controls = viewer.controls();
-          controls.registerMethod('zoomIn', new PanoEngine.ElementPressControlMethod(zoomInBtn, 'zoom', -0.8, 3));
-          controls.registerMethod('zoomOut', new PanoEngine.ElementPressControlMethod(zoomOutBtn, 'zoom', 0.8, 3));
-        } catch (e) {
-          console.warn('Could not register Marzipano press controls', e);
-        }
-      }
-
-      // Step-click zoom handlers
-      if (zoomInBtn) {
-        zoomInBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          var view = viewer.view();
-          if (view && typeof view.setFov === 'function') {
-            var newFov = Math.max(minFovVal, view.fov() * 0.75);
-            view.setFov(newFov);
-          }
-        });
-      }
-
-      if (zoomOutBtn) {
-        zoomOutBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          var view = viewer.view();
-          if (view && typeof view.setFov === 'function') {
-            var newFov = Math.min(maxFovVal, view.fov() * 1.35);
-            view.setFov(newFov);
-          }
-        });
-      }
-
-      // Mouse Wheel Zoom
-      if (panoElement) {
-        panoElement.addEventListener('wheel', function(e) {
-          e.preventDefault();
-          var view = viewer.view();
-          if (!view || typeof view.setFov !== 'function') return;
-          var currentFov = view.fov();
-          var zoomFactor = e.deltaY > 0 ? 1.10 : 0.90;
-          var newFov = Math.max(minFovVal, Math.min(maxFovVal, currentFov * zoomFactor));
-          view.setFov(newFov);
-        }, { passive: false });
-
-        // Mobile 2-Finger Pinch Zoom
-        var touchStartDist = 0;
-        var initialTouchFov = 0;
-
-        panoElement.addEventListener('touchstart', function(e) {
-          if (e.touches.length === 2) {
-            var dx = e.touches[0].clientX - e.touches[1].clientX;
-            var dy = e.touches[0].clientY - e.touches[1].clientY;
-            touchStartDist = Math.sqrt(dx * dx + dy * dy);
-            var view = viewer.view();
-            if (view && typeof view.fov === 'function') initialTouchFov = view.fov();
-          }
-        }, { passive: true });
-
-        panoElement.addEventListener('touchmove', function(e) {
-          if (e.touches.length === 2 && touchStartDist > 0) {
-            var dx = e.touches[0].clientX - e.touches[1].clientX;
-            var dy = e.touches[0].clientY - e.touches[1].clientY;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-            var scale = touchStartDist / dist;
-            var view = viewer.view();
-            if (view && typeof view.setFov === 'function') {
-              var newFov = Math.max(minFovVal, Math.min(maxFovVal, initialTouchFov * scale));
-              view.setFov(newFov);
-            }
-          }
-        }, { passive: true });
-      }
+      document.getElementById('zoom-in').addEventListener('click', function() {
+        var view = viewer.view();
+        if (view) view.setFov(view.fov() * 0.85);
+      });
+      document.getElementById('zoom-out').addEventListener('click', function() {
+        var view = viewer.view();
+        if (view) view.setFov(view.fov() * 1.15);
+      });
     }
 
     // WhatsApp Floating Button
@@ -742,10 +696,10 @@ const JS_SOURCE = `(function() {
 })();`;
 
 /**
- * Helper to preserve 100% pristine original 360 photo quality while capping at max 8192px width.
- * Keeps raw uploaded photo resolution intact for crystal-clear desktop/laptop viewing.
+ * Helper to downscale large 360 panorama blobs to mobile-safe WebGL texture dimensions (max 4096px width).
+ * Prevents mobile browser black screens / VRAM crashes when loading exported virtual tours with many scenes.
  */
-async function optimizePanoramaBlob(blob: Blob, maxWidth = 8192): Promise<Blob> {
+async function optimizePanoramaBlob(blob: Blob, maxWidth = 4096): Promise<Blob> {
   if (typeof window === "undefined") return blob;
   try {
     const img = new Image();
@@ -759,7 +713,7 @@ async function optimizePanoramaBlob(blob: Blob, maxWidth = 8192): Promise<Blob> 
     URL.revokeObjectURL(url);
 
     if (img.width <= maxWidth) {
-      return blob; // Preserve 100% untouched original photo blob!
+      return blob; // Already within safe width limit
     }
 
     const scale = maxWidth / img.width;
@@ -772,12 +726,10 @@ async function optimizePanoramaBlob(blob: Blob, maxWidth = 8192): Promise<Blob> 
     const ctx = canvas.getContext("2d");
     if (!ctx) return blob;
 
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
     ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
     const resizedBlob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.96)
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.88)
     );
     return resizedBlob || blob;
   } catch (err) {
@@ -890,9 +842,9 @@ export async function exportCustomTour(
         imgBlob = await imgRes.blob();
       }
 
-      // Preserving 100% pristine photo resolution for high-definition viewing
-      onProgress?.(`Processing high-definition scene ${i + 1} of ${totalPhotos}...`, stepPct);
-      imgBlob = await optimizePanoramaBlob(imgBlob, 8192);
+      // Optimize image blob for mobile WebGL compatibility (max 4096px width)
+      onProgress?.(`Optimizing scene ${i + 1} of ${totalPhotos} for mobile rendering...`, stepPct);
+      imgBlob = await optimizePanoramaBlob(imgBlob, 4096);
 
       const fileName = `images/${photo.id}.jpg`;
       zip.file(fileName, imgBlob);
