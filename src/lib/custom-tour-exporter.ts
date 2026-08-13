@@ -390,74 +390,21 @@ const JS_SOURCE = `(function() {
     viewer.startMovement(autorotate);
   }
 
-  // Detect WebGL MAX_TEXTURE_SIZE on mobile GPUs
-  var maxTextureSize = 4096;
-  var isMobile = /Android|iPhone|iPod|Mobile/i.test(navigator.userAgent);
-  try {
-    var testCanvas = document.createElement('canvas');
-    var testGl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
-    if (testGl) {
-      maxTextureSize = testGl.getParameter(testGl.MAX_TEXTURE_SIZE) || 4096;
-    }
-  } catch(e) {}
-
-  // High polygon mesh density for desktop (8000), capped for mobile (4096)
-  var targetGeomWidth = (!isMobile && maxTextureSize >= 8192) ? 8000 : Math.min(4096, maxTextureSize);
-
-  // Smart loader: Loads pristine 100% raw resolution on desktop, scales dynamically on mobile GPUs
-  function createSmartSource(imageUrl) {
-    var isAbsolute = (imageUrl || '').indexOf('http://') === 0 || (imageUrl || '').indexOf('https://') === 0;
-
-    // Desktop/Laptop: Load pristine 100% raw original image directly
-    if (!isMobile && maxTextureSize >= 8192) {
-      return isAbsolute
-        ? PanoEngine.ImageUrlSource.fromString(imageUrl, { crossOrigin: 'anonymous' })
-        : PanoEngine.ImageUrlSource.fromString(imageUrl);
-    }
-
-    // Mobile/Smartphones: Load and scale dynamically if image exceeds mobile GPU texture limit
-    return new PanoEngine.ImageUrlSource(function() {
-      return {
-        url: imageUrl,
-        loadImage: function(url, rect, done) {
-          var img = new Image();
-          if (isAbsolute) img.crossOrigin = 'anonymous';
-          img.onload = function() {
-            if (img.width > maxTextureSize) {
-              var canvas = document.createElement('canvas');
-              var scale = maxTextureSize / img.width;
-              canvas.width = maxTextureSize;
-              canvas.height = Math.round(img.height * scale);
-              var ctx = canvas.getContext('2d');
-              ctx.imageSmoothingEnabled = true;
-              ctx.imageSmoothingQuality = 'high';
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              done(null, canvas);
-            } else {
-              done(null, img);
-            }
-          };
-          img.onerror = function(err) {
-            done(err || new Error('Failed to load scene image'));
-          };
-          img.src = url;
-        }
-      };
-    });
-  }
-
   // Create Scenes
   var scenes = {};
   var EquirectGeom = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
 
+  // View limits: minFov 10 deg (deep zoom in), maxFov 120 deg (wide zoom out)
+  var maxFov = 120 * Math.PI / 180;
+  var minFov = 10 * Math.PI / 180;
+  var limitor = PanoEngine.RectilinearView.limit.traditional(4000, maxFov, minFov);
+
   APP_DATA.scenes.forEach(function(sceneData) {
-    var source = createSmartSource(sceneData.image);
-    var geometry = new EquirectGeom([{ width: targetGeomWidth }]);
-    
-    // Limits: Standard baseline (2048) for normal default FOV (90 deg), wide zoom out (120 deg), and deep zoom in (10 deg)
-    var maxFov = 120 * Math.PI / 180;
-    var minFov = 10 * Math.PI / 180;
-    var limitor = PanoEngine.RectilinearView.limit.traditional(2048, maxFov, minFov);
+    var isAbsolute = (sceneData.image || '').indexOf('http://') === 0 || (sceneData.image || '').indexOf('https://') === 0;
+    var source = isAbsolute
+      ? PanoEngine.ImageUrlSource.fromString(sceneData.image, { crossOrigin: 'anonymous' })
+      : PanoEngine.ImageUrlSource.fromString(sceneData.image);
+    var geometry = new EquirectGeom([{ width: 4000 }]);
     var view = new PanoEngine.RectilinearView(sceneData.initialViewParameters, limitor);
     
     var scene = viewer.createScene({
