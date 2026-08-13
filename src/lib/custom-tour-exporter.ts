@@ -454,8 +454,10 @@ const JS_SOURCE = `(function() {
     var source = createSmartSource(sceneData.image);
     var geometry = new EquirectGeom([{ width: targetGeomWidth }]);
     
-    // Limits
-    var limitor = PanoEngine.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
+    // Limits: Allow deep zoom in (5 deg) and wide zoom out (120 deg) with maxResolution targetGeomWidth
+    var maxFov = 120 * Math.PI / 180;
+    var minFov = 5 * Math.PI / 180;
+    var limitor = PanoEngine.RectilinearView.limit.traditional(targetGeomWidth, maxFov, minFov);
     var view = new PanoEngine.RectilinearView(sceneData.initialViewParameters, limitor);
     
     var scene = viewer.createScene({
@@ -541,17 +543,10 @@ const JS_SOURCE = `(function() {
     sObj.data.hotspots.forEach(function(h) {
       if (h.target && !preloadedMap[h.target]) {
         var targetScene = scenes[h.target];
-        if (targetScene && targetScene.data) {
+        if (targetScene && targetScene.data && targetScene.data.image) {
           preloadedMap[h.target] = true;
-          if (targetScene.data.facePattern) {
-            ['f', 'b', 'u', 'd', 'l', 'r'].forEach(function(fKey) {
-              var img = new Image();
-              img.src = targetScene.data.facePattern.replace('{f}', fKey);
-            });
-          } else if (targetScene.data.image) {
-            var img = new Image();
-            img.src = targetScene.data.image;
-          }
+          var img = new Image();
+          img.src = targetScene.data.image;
         }
       }
     });
@@ -605,19 +600,35 @@ const JS_SOURCE = `(function() {
       }
     }
 
-    // Zoom Buttons
+    // Zoom Controls (+ and - buttons)
     if (APP_DATA.settings.zoomEnabled) {
       var zoomControls = document.getElementById('zoom-controls');
-      zoomControls.style.display = 'flex';
+      if (zoomControls) zoomControls.style.display = 'flex';
       
-      document.getElementById('zoom-in').addEventListener('click', function() {
-        var view = viewer.view();
-        if (view) view.setFov(view.fov() * 0.85);
-      });
-      document.getElementById('zoom-out').addEventListener('click', function() {
-        var view = viewer.view();
-        if (view) view.setFov(view.fov() * 1.15);
-      });
+      var zoomInBtn = document.getElementById('zoom-in');
+      var zoomOutBtn = document.getElementById('zoom-out');
+
+      if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', function() {
+          var view = viewer.view();
+          if (view) {
+            var minFovVal = 5 * Math.PI / 180;
+            var newFov = Math.max(minFovVal, view.fov() * 0.70);
+            view.setFov(newFov);
+          }
+        });
+      }
+
+      if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', function() {
+          var view = viewer.view();
+          if (view) {
+            var maxFovVal = 120 * Math.PI / 180;
+            var newFov = Math.min(maxFovVal, view.fov() * 1.35);
+            view.setFov(newFov);
+          }
+        });
+      }
     }
 
     // WhatsApp Floating Button
