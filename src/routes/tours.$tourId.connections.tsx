@@ -727,7 +727,8 @@ function ConnectionsPage() {
             const geometry = new PanoEngine.EquirectGeometry([{ width: targetGeomWidth }]);
             const limitor = PanoEngine.RectilinearView.limit.traditional(
               2048,
-              (100 * Math.PI) / 180,
+              (140 * Math.PI) / 180,
+              (10 * Math.PI) / 180,
             );
 
             const initialYawRad = ((active.heading || 0) * Math.PI) / 180;

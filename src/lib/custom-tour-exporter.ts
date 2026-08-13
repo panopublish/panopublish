@@ -394,10 +394,10 @@ const JS_SOURCE = `(function() {
   var scenes = {};
   var EquirectGeom = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
 
-  // View limits: minFov 10 deg (deep zoom in), maxFov 140 deg (prevents widescreen FOV clamping on load), baseline 1024
+  // View limits: minFov 10 deg (deep zoom in), maxFov 140 deg, baseline 2048 (matches tour editor baseline)
   var maxFov = 140 * Math.PI / 180;
   var minFov = 10 * Math.PI / 180;
-  var limitor = PanoEngine.RectilinearView.limit.traditional(1024, maxFov, minFov);
+  var limitor = PanoEngine.RectilinearView.limit.traditional(2048, maxFov, minFov);
 
   APP_DATA.scenes.forEach(function(sceneData) {
     var isAbsolute = (sceneData.image || '').indexOf('http://') === 0 || (sceneData.image || '').indexOf('https://') === 0;
