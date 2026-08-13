@@ -403,10 +403,24 @@ const JS_SOURCE = `(function() {
 
   // Create Scenes
   var scenes = {};
-  var Equirect = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
+  var CubeGeom = PanoEngine.CubeGeometry;
+  var EquirectGeom = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
+
   APP_DATA.scenes.forEach(function(sceneData) {
-    var source = PanoEngine.ImageUrlSource.fromString(sceneData.image, { crossOrigin: 'anonymous' });
-    var geometry = new Equirect([{ width: targetGeomWidth }]);
+    var source, geometry;
+
+    if (sceneData.facePattern) {
+      // Cube Geometry (100% Universal Mobile & Desktop Compatibility)
+      geometry = new CubeGeom([{ size: sceneData.tileSize || 1024 }]);
+      source = PanoEngine.ImageUrlSource.fromString(sceneData.facePattern);
+    } else {
+      // Fallback Equirectangular Geometry
+      geometry = new EquirectGeom([{ width: targetGeomWidth }]);
+      var isAbsolute = (sceneData.image || '').indexOf('http') === 0;
+      source = isAbsolute
+        ? PanoEngine.ImageUrlSource.fromString(sceneData.image, { crossOrigin: 'anonymous' })
+        : PanoEngine.ImageUrlSource.fromString(sceneData.image);
+    }
     
     // Limits
     var limitor = PanoEngine.RectilinearView.limit.traditional(2048, 100*Math.PI/180);
@@ -495,10 +509,17 @@ const JS_SOURCE = `(function() {
     sObj.data.hotspots.forEach(function(h) {
       if (h.target && !preloadedMap[h.target]) {
         var targetScene = scenes[h.target];
-        if (targetScene && targetScene.data && targetScene.data.image) {
+        if (targetScene && targetScene.data) {
           preloadedMap[h.target] = true;
-          var img = new Image();
-          img.src = targetScene.data.image;
+          if (targetScene.data.facePattern) {
+            ['f', 'b', 'u', 'd', 'l', 'r'].forEach(function(fKey) {
+              var img = new Image();
+              img.src = targetScene.data.facePattern.replace('{f}', fKey);
+            });
+          } else if (targetScene.data.image) {
+            var img = new Image();
+            img.src = targetScene.data.image;
+          }
         }
       }
     });
@@ -716,6 +737,110 @@ async function optimizePanoramaBlob(blob: Blob, maxWidth = 4096): Promise<Blob> 
   }
 }
 
+interface CubeFaces {
+  f: Blob;
+  b: Blob;
+  u: Blob;
+  d: Blob;
+  l: Blob;
+  r: Blob;
+}
+
+/**
+ * Converts an equirectangular 360 image blob into 6 mobile-safe cube faces (1024x1024).
+ * This eliminates WebGL MAX_TEXTURE_SIZE crashes and fragment shader precision blackouts on mobile smartphones.
+ */
+async function convertEquirectToCubeFaces(
+  equirectBlob: Blob,
+  faceSize = 1024
+): Promise<CubeFaces> {
+  const img = new Image();
+  const url = URL.createObjectURL(equirectBlob);
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = url;
+  });
+  URL.revokeObjectURL(url);
+
+  const eqCanvas = document.createElement("canvas");
+  eqCanvas.width = img.width;
+  eqCanvas.height = img.height;
+  const eqCtx = eqCanvas.getContext("2d");
+  if (!eqCtx) throw new Error("Could not get 2d context for equirect canvas");
+  eqCtx.drawImage(img, 0, 0);
+
+  const eqData = eqCtx.getImageData(0, 0, img.width, img.height);
+  const eqPixels = eqData.data;
+  const eqW = img.width;
+  const eqH = img.height;
+
+  const faceNames = ["f", "b", "u", "d", "l", "r"] as const;
+  const result: Partial<CubeFaces> = {};
+
+  for (const face of faceNames) {
+    const faceCanvas = document.createElement("canvas");
+    faceCanvas.width = faceSize;
+    faceCanvas.height = faceSize;
+    const faceCtx = faceCanvas.getContext("2d");
+    if (!faceCtx) continue;
+
+    const faceData = faceCtx.createImageData(faceSize, faceSize);
+    const facePixels = faceData.data;
+
+    for (let py = 0; py < faceSize; py++) {
+      for (let px = 0; px < faceSize; px++) {
+        const u = (2 * (px + 0.5)) / faceSize - 1;
+        const v = (2 * (py + 0.5)) / faceSize - 1;
+
+        let x = 0, y = 0, z = 0;
+
+        switch (face) {
+          case "r": x = 1; y = -v; z = -u; break;
+          case "l": x = -1; y = -v; z = u; break;
+          case "u": x = u; y = 1; z = v; break;
+          case "d": x = u; y = -1; z = -v; break;
+          case "f": x = u; y = -v; z = 1; break;
+          case "b": x = -u; y = -v; z = -1; break;
+        }
+
+        const theta = Math.atan2(x, z);
+        const hypot = Math.sqrt(x * x + z * z);
+        const phi = Math.atan2(y, hypot);
+
+        let uf = (theta + Math.PI) / (2 * Math.PI);
+        let vf = (Math.PI / 2 - phi) / Math.PI;
+
+        let ex = Math.floor(uf * eqW);
+        let ey = Math.floor(vf * eqH);
+        if (ex >= eqW) ex = eqW - 1;
+        if (ey >= eqH) ey = eqH - 1;
+        if (ex < 0) ex = 0;
+        if (ey < 0) ey = 0;
+
+        const eqIdx = (ey * eqW + ex) * 4;
+        const faceIdx = (py * faceSize + px) * 4;
+
+        facePixels[faceIdx] = eqPixels[eqIdx];
+        facePixels[faceIdx + 1] = eqPixels[eqIdx + 1];
+        facePixels[faceIdx + 2] = eqPixels[eqIdx + 2];
+        facePixels[faceIdx + 3] = 255;
+      }
+    }
+
+    faceCtx.putImageData(faceData, 0, 0);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      faceCanvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
+    );
+    if (blob) {
+      result[face] = blob;
+    }
+  }
+
+  return result as CubeFaces;
+}
+
 export async function exportCustomTour(
   params: ExportTourParams,
   onProgress?: (msg: string, pct: number) => void
@@ -824,8 +949,28 @@ export async function exportCustomTour(
       onProgress?.(`Optimizing scene ${i + 1} of ${totalPhotos} for mobile rendering...`, stepPct);
       imgBlob = await optimizePanoramaBlob(imgBlob, 4096);
 
-      const fileName = `images/${photo.id}.jpg`;
-      zip.file(fileName, imgBlob);
+      // Convert panorama to 6 mobile-safe cube faces (1024x1024)
+      let cubeFaces: CubeFaces | null = null;
+      try {
+        onProgress?.(`Converting scene ${i + 1} of ${totalPhotos} to mobile cube tiles...`, stepPct);
+        cubeFaces = await convertEquirectToCubeFaces(imgBlob, 1024);
+      } catch (err) {
+        console.warn(`Failed to convert photo ${photo.id} to cube faces, falling back to equirectangular:`, err);
+      }
+
+      let facePattern: string | undefined;
+      let singleFileName: string | undefined;
+
+      if (cubeFaces && cubeFaces.f && cubeFaces.b && cubeFaces.u && cubeFaces.d && cubeFaces.l && cubeFaces.r) {
+        const faceNames = ["f", "b", "u", "d", "l", "r"] as const;
+        for (const face of faceNames) {
+          zip.file(`images/${photo.id}/${face}.jpg`, cubeFaces[face]);
+        }
+        facePattern = `images/${photo.id}/{f}.jpg`;
+      } else {
+        singleFileName = `images/${photo.id}.jpg`;
+        zip.file(singleFileName, imgBlob);
+      }
 
       // Map hotspots/connections for this scene
       const sceneConns = connections.filter((c) => c.from_photo_id === photo.id);
@@ -838,8 +983,6 @@ export async function exportCustomTour(
         } catch {}
 
         const yaw = ((c.heading || 0) * Math.PI) / 180;
-
-        // Pitch from metadata
         const pitchDeg = meta.pitch ?? 0;
         const pitch = (pitchDeg * Math.PI) / 180;
         
@@ -856,7 +999,7 @@ export async function exportCustomTour(
       scenes.push({
         id: photo.id,
         name: photo.filename || `Scene ${i}`,
-        image: fileName,
+        ...(facePattern ? { facePattern, tileSize: 1024 } : { image: singleFileName }),
         initialViewParameters: {
           yaw: ((photo.heading || 0) * Math.PI) / 180,
           pitch: 0,
