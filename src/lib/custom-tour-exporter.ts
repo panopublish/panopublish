@@ -390,6 +390,55 @@ const JS_SOURCE = `(function() {
     viewer.startMovement(autorotate);
   }
 
+  // Smart image loader: Preserves pristine 8K (8192px) quality for Desktop GPUs,
+  // while dynamically downscaling to 2D Canvas on Mobile GPUs to prevent WebGL black screens.
+  if (PanoEngine && PanoEngine.WebGlStage) {
+    var origLoadImage = PanoEngine.WebGlStage.prototype.loadImage;
+    PanoEngine.WebGlStage.prototype.loadImage = function(url, rect, done) {
+      var stage = this;
+      var img = new Image();
+      var isAbsolute = (url || '').indexOf('http://') === 0 || (url || '').indexOf('https://') === 0;
+      if (isAbsolute) img.crossOrigin = 'anonymous';
+
+      img.onload = function() {
+        var maxTex = 4096;
+        try {
+          if (stage && typeof stage.maxTextureSize === 'function') {
+            maxTex = stage.maxTextureSize() || 4096;
+          }
+        } catch(e) {}
+
+        if (img.width > maxTex) {
+          try {
+            var canvas = document.createElement('canvas');
+            var scale = maxTex / img.width;
+            canvas.width = maxTex;
+            canvas.height = Math.round(img.height * scale);
+            var ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = 'high';
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              done(null, new PanoEngine.StaticAsset(canvas));
+              return;
+            }
+          } catch(err) {
+            console.warn('Canvas downscaling failed on mobile:', err);
+          }
+        }
+        done(null, new PanoEngine.StaticAsset(img));
+      };
+      img.onerror = function(err) {
+        if (origLoadImage) {
+          origLoadImage.call(stage, url, rect, done);
+        } else {
+          done(err || new Error('Failed to load scene image: ' + url));
+        }
+      };
+      img.src = url;
+    };
+  }
+
   // Detect WebGL MAX_TEXTURE_SIZE on mobile GPUs
   var maxTextureSize = 4096;
   try {
@@ -400,7 +449,8 @@ const JS_SOURCE = `(function() {
     }
   } catch(e) {}
 
-  var targetGeomWidth = Math.min(4096, maxTextureSize);
+  // High polygon mesh density for desktop (8000), capped for mobile (4096)
+  var targetGeomWidth = (maxTextureSize >= 8192) ? 8000 : Math.min(4096, maxTextureSize);
 
   function createSmartSource(imageUrl) {
     var isAbsolute = (imageUrl || '').indexOf('http://') === 0 || (imageUrl || '').indexOf('https://') === 0;
@@ -691,10 +741,10 @@ const JS_SOURCE = `(function() {
 })();`;
 
 /**
- * Helper to optimize 360 photo quality capped at max 4096px width.
- * Ensures 100% mobile WebGL GPU compatibility across all smartphones, tablets, and desktop browsers.
+ * Helper to preserve 100% pristine original 360 photo quality while capping at max 8192px width.
+ * Keeps raw uploaded photo resolution intact for crystal-clear desktop/laptop viewing.
  */
-async function optimizePanoramaBlob(blob: Blob, maxWidth = 4096): Promise<Blob> {
+async function optimizePanoramaBlob(blob: Blob, maxWidth = 8192): Promise<Blob> {
   if (typeof window === "undefined") return blob;
   try {
     const img = new Image();
@@ -839,9 +889,9 @@ export async function exportCustomTour(
         imgBlob = await imgRes.blob();
       }
 
-      // Optimizing scene image for maximum mobile & desktop WebGL compatibility
-      onProgress?.(`Optimizing scene ${i + 1} of ${totalPhotos} for mobile rendering...`, stepPct);
-      imgBlob = await optimizePanoramaBlob(imgBlob, 4096);
+      // Preserving pristine 8K photo resolution for crystal-clear viewing
+      onProgress?.(`Processing high-definition scene ${i + 1} of ${totalPhotos}...`, stepPct);
+      imgBlob = await optimizePanoramaBlob(imgBlob, 8192);
 
       const fileName = `images/${photo.id}.jpg`;
       zip.file(fileName, imgBlob);
