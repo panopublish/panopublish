@@ -394,8 +394,8 @@ const JS_SOURCE = `(function() {
   var scenes = {};
   var EquirectGeom = PanoEngine.EquirectGeometry || PanoEngine.EquirectangularGeometry;
 
-  // View limits: minFov 10 deg (deep zoom in), maxFov 120 deg (wide zoom out), baseline 1024 (normal default FOV size)
-  var maxFov = 120 * Math.PI / 180;
+  // View limits: minFov 10 deg (deep zoom in), maxFov 140 deg (prevents widescreen FOV clamping on load), baseline 1024
+  var maxFov = 140 * Math.PI / 180;
   var minFov = 10 * Math.PI / 180;
   var limitor = PanoEngine.RectilinearView.limit.traditional(1024, maxFov, minFov);
 
@@ -556,7 +556,7 @@ const JS_SOURCE = `(function() {
       var zoomOutBtn = document.getElementById('zoom-out');
 
       var minFovVal = 10 * Math.PI / 180;
-      var maxFovVal = 120 * Math.PI / 180;
+      var maxFovVal = 140 * Math.PI / 180;
 
       // Native Marzipano press-to-zoom controls (for continuous smooth zooming)
       if (PanoEngine.ElementPressControlMethod && zoomInBtn && zoomOutBtn) {
