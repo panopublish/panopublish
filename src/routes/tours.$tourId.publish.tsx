@@ -492,6 +492,7 @@ function PublishPage() {
   const [showWatermark, setShowWatermark] = useState(true);
   const [logoUrl, setLogoUrl] = useState("");
 
+  const [fullscreenBtn, setFullscreenBtn] = useState(true);
   const [zoomButtons, setZoomButtons] = useState(true);
   const [scrollZoom, setScrollZoom] = useState(true);
   const [autorotate, setAutorotate] = useState(false);
@@ -570,6 +571,7 @@ function PublishPage() {
           setShowWatermark(cs.branding?.show_watermark !== false);
           setLogoUrl(cs.branding?.logo_url || "");
 
+          setFullscreenBtn(cs.controls?.fullscreen !== false);
           setZoomButtons(cs.controls?.zoom_in_out !== false);
           setScrollZoom(cs.controls?.scroll_zoom !== false);
           setAutorotate(!!cs.controls?.autorotate);
@@ -1160,6 +1162,7 @@ function PublishPage() {
         logo_url: logoUrl
       },
       controls: {
+        fullscreen: fullscreenBtn,
         zoom_in_out: zoomButtons,
         scroll_zoom: scrollZoom,
         autorotate: autorotate,
@@ -1284,6 +1287,7 @@ function PublishPage() {
           logo_url: logoUrl
         },
         controls: {
+          fullscreen: fullscreenBtn,
           zoom_in_out: zoomButtons,
           scroll_zoom: scrollZoom,
           autorotate: autorotate,
@@ -1330,6 +1334,7 @@ function PublishPage() {
     themeColor,
     showWatermark,
     logoUrl,
+    fullscreenBtn,
     zoomButtons,
     scrollZoom,
     autorotate,
@@ -1826,7 +1831,18 @@ function PublishPage() {
               {/* Controls & Rotation Card */}
               <div className="rounded-xl border bg-card p-5 space-y-4 shadow-sm">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-400 border-b pb-2">Controls & Rotation</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="fullscreen-btn-check"
+                      checked={fullscreenBtn}
+                      onCheckedChange={(v) => setFullscreenBtn(!!v)}
+                      className="cursor-pointer"
+                    />
+                    <label htmlFor="fullscreen-btn-check" className="text-xs font-bold text-slate-650 cursor-pointer select-none">
+                      Fullscreen Button
+                    </label>
+                  </div>
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id="zoom-btn-check"
@@ -2263,6 +2279,8 @@ function PublishPage() {
                 className="w-full h-full border-0 absolute inset-0"
                 title="Virtual Tour Player Preview"
                 sandbox="allow-scripts allow-popups allow-forms allow-same-origin"
+                allow="fullscreen"
+                allowFullScreen
               />
             </div>
           </DialogContent>

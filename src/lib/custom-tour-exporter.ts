@@ -67,18 +67,30 @@ const HTML_SOURCE = `<!DOCTYPE html>
     </a>
   </div>
 
-  <!-- Zoom Controls Overlay -->
-  <div id="zoom-controls" style="display:none;">
-    <button id="zoom-in" class="control-btn" title="Zoom In">+</button>
-    <button id="zoom-out" class="control-btn" title="Zoom Out">−</button>
+  <!-- Top-Right Controls (Fullscreen, Zoom, Music) -->
+  <div id="top-right-controls">
+    <button id="fullscreen-btn" class="control-btn" title="Toggle Fullscreen" style="display:none;">
+      <svg id="fullscreen-enter-icon" class="control-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+      </svg>
+      <svg id="fullscreen-exit-icon" class="control-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+      </svg>
+    </button>
+
+    <div id="zoom-controls" style="display:none;">
+      <button id="zoom-in" class="control-btn" title="Zoom In">+</button>
+      <button id="zoom-out" class="control-btn" title="Zoom Out">−</button>
+    </div>
+
+    <button id="music-toggle" class="control-btn" title="Toggle Background Music" style="display:none;">
+      <svg id="music-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      <svg id="music-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:none;"><path d="M4.27 3L3 4.27l9 9v.28c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V14.27l7.73 7.73L21 20.73 4.27 3zM14 7h4V3h-6v5.18l2 2V7z"/></svg>
+    </button>
   </div>
 
-  <!-- Background Music Player & Toggle -->
+  <!-- Background Music Player -->
   <audio id="bg-music" loop style="display:none;"></audio>
-  <button id="music-toggle" class="control-btn" title="Toggle Background Music" style="display:none;">
-    <svg id="music-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-    <svg id="music-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:none;"><path d="M4.27 3L3 4.27l9 9v.28c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V14.27l7.73 7.73L21 20.73 4.27 3zM14 7h4V3h-6v5.18l2 2V7z"/></svg>
-  </button>
 
   <!-- WhatsApp Floating Widget -->
   <div id="whatsapp-widget" style="display:none;">
@@ -173,8 +185,8 @@ html, body {
   object-fit: contain;
 }
 
-/* Zoom controls */
-#zoom-controls {
+/* Top Right Controls Overlay (Fullscreen, Zoom, Music) */
+#top-right-controls {
   position: absolute;
   right: 16px;
   top: 16px;
@@ -182,13 +194,18 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: center;
 }
 
-#music-toggle {
-  position: absolute;
-  right: 16px;
-  top: 112px;
-  z-index: 100;
+#zoom-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-svg {
+  width: 20px;
+  height: 20px;
 }
 
 .control-btn {
@@ -618,6 +635,67 @@ const JS_SOURCE = `(function() {
       }
     }
 
+    // Fullscreen Toggle Button
+    if (APP_DATA.settings.fullscreenEnabled !== false) {
+      var fsBtn = document.getElementById('fullscreen-btn');
+      var fsEnter = document.getElementById('fullscreen-enter-icon');
+      var fsExit = document.getElementById('fullscreen-exit-icon');
+
+      if (fsBtn) {
+        fsBtn.style.display = 'flex';
+
+        function isFullscreen() {
+          return !!(
+            document.fullscreenElement ||
+            document.webkitFullscreenElement ||
+            document.mozFullScreenElement ||
+            document.msFullscreenElement
+          );
+        }
+
+        function updateFsIcons() {
+          var active = isFullscreen();
+          if (fsEnter) fsEnter.style.display = active ? 'none' : 'block';
+          if (fsExit) fsExit.style.display = active ? 'block' : 'none';
+          fsBtn.setAttribute('title', active ? 'Exit Fullscreen' : 'Toggle Fullscreen');
+        }
+
+        fsBtn.addEventListener('click', function() {
+          try {
+            if (!isFullscreen()) {
+              var target = document.documentElement;
+              if (target.requestFullscreen) {
+                target.requestFullscreen().catch(function(e){ console.warn(e); });
+              } else if (target.webkitRequestFullscreen) {
+                target.webkitRequestFullscreen();
+              } else if (target.mozRequestFullScreen) {
+                target.mozRequestFullScreen();
+              } else if (target.msRequestFullscreen) {
+                target.msRequestFullscreen();
+              }
+            } else {
+              if (document.exitFullscreen) {
+                document.exitFullscreen().catch(function(e){ console.warn(e); });
+              } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+              } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+              } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+              }
+            }
+          } catch (err) {
+            console.warn('Fullscreen error:', err);
+          }
+        });
+
+        document.addEventListener('fullscreenchange', updateFsIcons);
+        document.addEventListener('webkitfullscreenchange', updateFsIcons);
+        document.addEventListener('mozfullscreenchange', updateFsIcons);
+        document.addEventListener('MSFullscreenChange', updateFsIcons);
+      }
+    }
+
     // Zoom Buttons
     if (APP_DATA.settings.zoomEnabled) {
       var zoomControls = document.getElementById('zoom-controls');
@@ -802,6 +880,7 @@ export async function exportCustomTour(
     console.error("Failed to parse custom settings", e);
   }
 
+  const fullscreenEnabled = settings.controls?.fullscreen !== false;
   const zoomEnabled = settings.controls?.zoom_in_out !== false;
   const scrollZoom = settings.controls?.scroll_zoom !== false;
   const autorotateEnabled = !!settings.controls?.autorotate;
@@ -940,6 +1019,7 @@ export async function exportCustomTour(
   const appData = {
     settings: {
       mouseViewMode: "drag",
+      fullscreenEnabled,
       autorotateEnabled,
       autorotateSpeed,
       zoomEnabled,
@@ -1003,6 +1083,7 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
     }
   } catch {}
 
+  const fullscreenEnabled = settings.controls?.fullscreen !== false;
   const zoomEnabled = settings.controls?.zoom_in_out !== false;
   const scrollZoom = settings.controls?.scroll_zoom !== false;
   const autorotateEnabled = !!settings.controls?.autorotate;
@@ -1068,6 +1149,7 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
   const appData = {
     settings: {
       mouseViewMode: "drag",
+      fullscreenEnabled,
       autorotateEnabled,
       autorotateSpeed,
       zoomEnabled,
@@ -1133,15 +1215,26 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
       <span id="branding-text"></span>
     </a>
   </div>
-  <div id="zoom-controls" style="display:none;">
-    <button id="zoom-in" class="control-btn" title="Zoom In">+</button>
-    <button id="zoom-out" class="control-btn" title="Zoom Out">−</button>
+  <!-- Top-Right Controls (Fullscreen, Zoom, Music) -->
+  <div id="top-right-controls">
+    <button id="fullscreen-btn" class="control-btn" title="Toggle Fullscreen" style="display:none;">
+      <svg id="fullscreen-enter-icon" class="control-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+      </svg>
+      <svg id="fullscreen-exit-icon" class="control-svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+        <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+      </svg>
+    </button>
+    <div id="zoom-controls" style="display:none;">
+      <button id="zoom-in" class="control-btn" title="Zoom In">+</button>
+      <button id="zoom-out" class="control-btn" title="Zoom Out">−</button>
+    </div>
+    <button id="music-toggle" class="control-btn" title="Toggle Background Music" style="display:none;">
+      <svg id="music-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+      <svg id="music-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:none;"><path d="M4.27 3L3 4.27l9 9v.28c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V14.27l7.73 7.73L21 20.73 4.27 3zM14 7h4V3h-6v5.18l2 2V7z"/></svg>
+    </button>
   </div>
   <audio id="bg-music" loop style="display:none;"></audio>
-  <button id="music-toggle" class="control-btn" title="Toggle Background Music" style="display:none;">
-    <svg id="music-icon-on" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-    <svg id="music-icon-off" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" style="display:none;"><path d="M4.27 3L3 4.27l9 9v.28c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V14.27l7.73 7.73L21 20.73 4.27 3zM14 7h4V3h-6v5.18l2 2V7z"/></svg>
-  </button>
   <div id="whatsapp-widget" style="display:none;">
     <a id="whatsapp-link" href="#" target="_blank">
       <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor">
