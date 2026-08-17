@@ -329,6 +329,8 @@ function ConnectionsPage() {
   const [editingTargetPopoverId, setEditingTargetPopoverId] = useState<string | null>(null);
   const [editingIconPopoverId, setEditingIconPopoverId] = useState<string | null>(null);
 
+  const headingBadgeRef = useRef<HTMLSpanElement>(null);
+  const compassNeedleRef = useRef<SVGSVGElement>(null);
   const panoRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<any>(null);
   const marzSceneRef = useRef<any>(null);
@@ -679,18 +681,6 @@ function ConnectionsPage() {
     [mapMode, active, photos],
   );
 
-  // Preload custom tour images in background for instant scene switching
-  useEffect(() => {
-    if (tour?.type === "custom" && photos.length > 0) {
-      photos.forEach((p) => {
-        if (p.file_url) {
-          const img = new Image();
-          img.src = p.file_url;
-        }
-      });
-    }
-  }, [tour?.type, photos]);
-
   const createGoogleMapsPanoProvider = useCallback(() => {
     return (panoId: string) => {
       const p =
@@ -764,6 +754,16 @@ function ConnectionsPage() {
 
           let cached = customScenesCacheRef.current[active.id];
           if (!cached) {
+            // Limit scene cache to prevent GPU memory exhaustion on large tours
+            const cacheKeys = Object.keys(customScenesCacheRef.current);
+            if (cacheKeys.length >= 6) {
+              const oldestKey = cacheKeys[0];
+              try {
+                viewer.destroyScene(customScenesCacheRef.current[oldestKey].scene);
+              } catch {}
+              delete customScenesCacheRef.current[oldestKey];
+            }
+
             let maxTexSize = 4096;
             try {
               const testCanvas = document.createElement("canvas");
@@ -802,8 +802,9 @@ function ConnectionsPage() {
             cached = { scene, view };
             customScenesCacheRef.current[active.id] = cached;
 
+            let syncRaf: number | null = null;
             const syncPov = () => {
-              if (view) {
+              if (view && !cancelled) {
                 try {
                   const yRad = view.yaw() || 0;
                   const pRad = view.pitch() || 0;
@@ -812,9 +813,23 @@ function ConnectionsPage() {
                   const yDeg = Math.round(((yRad * 180) / Math.PI + 360) % 360);
                   const pDeg = Math.round((pRad * 180) / Math.PI);
                   const zoom = (Math.PI / 2) / fovRad;
+                  lastHeadingRef.current = yDeg;
 
-                  setCurrentHeading(yDeg);
-                  setCurrentPov({ heading: yDeg, pitch: pDeg, zoom });
+                  if (headingBadgeRef.current) {
+                    headingBadgeRef.current.textContent = `H: ${yDeg}°`;
+                  }
+                  if (compassNeedleRef.current) {
+                    const geographicH = ((activeRef.current?.heading || 0) + yDeg) % 360;
+                    compassNeedleRef.current.style.transform = `rotate(${-geographicH}deg)`;
+                  }
+
+                  if (syncRaf === null) {
+                    syncRaf = requestAnimationFrame(() => {
+                      syncRaf = null;
+                      setCurrentHeading(yDeg);
+                      setCurrentPov({ heading: yDeg, pitch: pDeg, zoom });
+                    });
+                  }
                 } catch {}
               }
             };
@@ -871,17 +886,32 @@ function ConnectionsPage() {
 
         prevActiveIdRef.current = active.id;
 
+        let povRaf: number | null = null;
         viewerRef.current.addListener("pov_changed", () => {
           const pov = viewerRef.current.getPov();
           if (pov) {
             const headingVal = (pov.heading + 360) % 360;
-            setCurrentHeading(headingVal);
-            setCurrentPov({
-              heading: headingVal,
-              pitch: pov.pitch ?? 0,
-              zoom: pov.zoom ?? 1,
-            });
             lastHeadingRef.current = headingVal;
+
+            if (headingBadgeRef.current) {
+              headingBadgeRef.current.textContent = `H: ${Math.round(headingVal)}°`;
+            }
+            if (compassNeedleRef.current) {
+              const geographicH = ((activeRef.current?.heading || 0) + headingVal) % 360;
+              compassNeedleRef.current.style.transform = `rotate(${-geographicH}deg)`;
+            }
+
+            if (povRaf === null) {
+              povRaf = requestAnimationFrame(() => {
+                povRaf = null;
+                setCurrentHeading(headingVal);
+                setCurrentPov({
+                  heading: headingVal,
+                  pitch: pov.pitch ?? 0,
+                  zoom: pov.zoom ?? 1,
+                });
+              });
+            }
           }
         });
 
@@ -3133,7 +3163,7 @@ function ConnectionsPage() {
         {/* CENTER PANEL */}
         <div className="rounded-xl border bg-card overflow-hidden flex flex-col h-[700px]">
           <div className="bg-[#689f38] text-white px-3 py-1.5 text-xs flex items-center justify-between shadow z-10">
-            <span className="font-mono font-medium">H: {displayHeading}</span>
+            <span ref={headingBadgeRef} className="font-mono font-medium">H: {displayHeading}</span>
             <button
               onClick={setNorth}
               className="flex items-center gap-1 hover:bg-white/10 px-2 py-0.5 rounded font-bold tracking-wide"
@@ -3244,6 +3274,7 @@ function ConnectionsPage() {
 
             <div className="absolute bottom-4 right-4 h-16 w-16 rounded-full bg-black/70 border-2 border-white/50 flex items-center justify-center shadow-lg backdrop-blur">
               <Navigation
+                ref={compassNeedleRef}
                 className="h-8 w-8 text-red-500 fill-red-500 drop-shadow"
                 style={{ transform: `rotate(${-currentGeographicHeading}deg)` }}
               />
