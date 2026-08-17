@@ -68,26 +68,36 @@ export async function processNadirClientSide(
   nadirPos: string,
   logoUrl?: string | null,
 ): Promise<Blob> {
-  const res = await fetch(photoUrl);
-  if (!res.ok) throw new Error(`Failed to fetch photo from storage: status ${res.status}`);
-  const originalBuffer = await res.arrayBuffer();
-  const originalBytes = new Uint8Array(originalBuffer);
-
   const typeLower = nadirType ? nadirType.toLowerCase().trim() : "none";
   const posLower = nadirPos ? nadirPos.toLowerCase().trim() : "btm";
 
-  if (typeLower === "none" || !typeLower) {
-    return new Blob([originalBytes], { type: "image/jpeg" });
+  let originalBytes: Uint8Array | null = null;
+  let img: HTMLImageElement;
+
+  try {
+    const res = await fetch(photoUrl);
+    if (res.ok) {
+      const originalBuffer = await res.arrayBuffer();
+      originalBytes = new Uint8Array(originalBuffer);
+      if (typeLower === "none" || !typeLower) {
+        return new Blob([originalBytes], { type: "image/jpeg" });
+      }
+      const localBlob = new Blob([originalBytes], { type: "image/jpeg" });
+      const localUrl = URL.createObjectURL(localBlob);
+      try {
+        img = await loadImage(localUrl);
+      } finally {
+        URL.revokeObjectURL(localUrl);
+      }
+    } else {
+      img = await loadImage(photoUrl);
+    }
+  } catch {
+    img = await loadImage(photoUrl);
   }
 
-  const localBlob = new Blob([originalBytes], { type: "image/jpeg" });
-  const localUrl = URL.createObjectURL(localBlob);
-
-  let img: HTMLImageElement;
-  try {
-    img = await loadImage(localUrl);
-  } finally {
-    URL.revokeObjectURL(localUrl);
+  if (typeLower === "none" || !typeLower) {
+    if (originalBytes) return new Blob([originalBytes], { type: "image/jpeg" });
   }
 
   const W = img.width;
@@ -288,11 +298,14 @@ export async function processNadirClientSide(
     );
   });
 
-  const newBuffer = await newBlob.arrayBuffer();
-  const newBytes = new Uint8Array(newBuffer);
-  const metadataPreservedBytes = transplantMetadata(originalBytes, newBytes);
+  if (originalBytes) {
+    const newBuffer = await newBlob.arrayBuffer();
+    const newBytes = new Uint8Array(newBuffer);
+    const metadataPreservedBytes = transplantMetadata(originalBytes, newBytes);
+    return new Blob([metadataPreservedBytes.buffer as any], { type: "image/jpeg" });
+  }
 
-  return new Blob([metadataPreservedBytes.buffer as any], { type: "image/jpeg" });
+  return newBlob;
 }
 
 // In-memory cache for processed object URLs so that same photo is processed once per session

@@ -524,6 +524,9 @@ function PublishPage() {
     setConfirm(false);
     setPublishing(true);
 
+    // Ensure user-selected Nadir settings are saved to database before publishing
+    await saveNadirSettings(nadirType, size, pos);
+
     let freshToken = accessToken;
     try {
       const { data, error } = await supabase.functions.invoke("google-oauth", {

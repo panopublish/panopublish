@@ -252,6 +252,7 @@ function ConnectionsPage() {
     nadir_size?: string | null;
     nadir_pos?: string | null;
     nadir_logo_url?: string | null;
+    custom_settings?: string | null;
   } | null>(null);
   const [processedUrls, setProcessedUrls] = useState<Record<string, string>>({});
   const processedUrlsRef = useRef(processedUrls);
@@ -379,7 +380,7 @@ function ConnectionsPage() {
           supabase
             .from("tours")
             .select(
-              "name,latitude,longitude,type,nadir_type,nadir_size,nadir_pos,nadir_logo_url",
+              "name,latitude,longitude,type,nadir_type,nadir_size,nadir_pos,nadir_logo_url,custom_settings",
             )
             .eq("id", tourId)
             .maybeSingle(),
@@ -694,23 +695,81 @@ function ConnectionsPage() {
     }
   }, [tour?.type, photos]);
 
+  const createGoogleMapsPanoProvider = useCallback(() => {
+    return (panoId: string) => {
+      const p =
+        activeRef.current && panoId === activeRef.current.id
+          ? activeRef.current
+          : photosRef.current.find((x) => x.id === panoId);
+      if (!p) return null;
+
+      const activeConns = connsRef.current.filter((c) => c.from_photo_id === panoId);
+      const links = activeConns.map((c) => {
+        const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
+        let dynamicHeading = c.heading;
+        if (p && targetPhoto) {
+          const calcH = calcHeading(p, targetPhoto);
+          if (calcH !== null) {
+            dynamicHeading = calcH;
+          }
+        }
+        return {
+          description: targetPhoto?.filename || "Scene",
+          heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
+          pano: c.to_photo_id,
+        };
+      });
+
+      const tileUrl = processedUrlsRef.current[p.id] || p.file_url;
+
+      return {
+        location: {
+          pano: p.id,
+          description: p.filename || "Scene",
+          latLng: new window.google.maps.LatLng(
+            p.latitude || 0,
+            p.longitude || 0,
+          ),
+        },
+        links: links,
+        copyright: "PanoPublish",
+        tiles: {
+          tileSize: new window.google.maps.Size(4096, 2048),
+          worldSize: new window.google.maps.Size(4096, 2048),
+          centerHeading: 0,
+          getTileUrl: () => tileUrl,
+        },
+      };
+    };
+  }, []);
+
   // Process Nadir images (blur or logo patch) client-side for tour preview
   useEffect(() => {
     if (!tour || photos.length === 0) return;
 
+    let csObj: any = null;
+    try {
+      if (tour.custom_settings) {
+        csObj = JSON.parse(tour.custom_settings);
+      }
+    } catch {}
+
     const nType =
       tour.nadir_type ||
+      csObj?.nadir_type ||
       (typeof window !== "undefined" ? localStorage.getItem(`tour-nadir-type-${tourId}`) : null) ||
       "None";
     const nSize =
       tour.nadir_size ||
+      csObj?.nadir_size ||
       (typeof window !== "undefined" ? localStorage.getItem(`tour-size-${tourId}`) : null) ||
       "13%";
     const nPos =
       tour.nadir_pos ||
+      csObj?.nadir_pos ||
       (typeof window !== "undefined" ? localStorage.getItem(`tour-pos-${tourId}`) : null) ||
       "btm";
-    const nLogo = tour.nadir_logo_url;
+    const nLogo = tour.nadir_logo_url || csObj?.nadir_logo_url;
 
     if (nType.toLowerCase().trim() === "none") return;
 
@@ -729,11 +788,18 @@ function ConnectionsPage() {
           const url = await getNadirProcessedUrl(p.file_url, nType, nSize, nPos, nLogo);
           if (!cancelled && url) {
             setProcessedUrls((prev) => ({ ...prev, [p.id]: url }));
-            // If viewer is currently on this scene, refresh scene tiles
-            if (active && p.id === active.id && viewerRef.current) {
+            // If custom tour viewer is active, clear scene cache so it rebuilds with nadir
+            if (tour?.type === "custom") {
+              delete customScenesCacheRef.current[p.id];
+            }
+            // If Google Maps Street View viewer is active, re-register pano provider
+            if (viewerRef.current && typeof viewerRef.current.registerPanoProvider === "function") {
               try {
-                if (typeof viewerRef.current.getPano === "function" && viewerRef.current.getPano() === active.id) {
+                viewerRef.current.registerPanoProvider(createGoogleMapsPanoProvider());
+                if (active && p.id === active.id) {
+                  const currentPov = viewerRef.current.getPov();
                   viewerRef.current.setPano(active.id);
+                  if (currentPov) viewerRef.current.setPov(currentPov);
                 }
               } catch {}
             }
@@ -749,7 +815,7 @@ function ConnectionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [tour, photos, active?.id, tourId]);
+  }, [tour, photos, active?.id, tourId, createGoogleMapsPanoProvider]);
 
   // 360 Panorama Main Viewer (Custom Tour Engine & StreetView)
   useEffect(() => {
@@ -881,49 +947,7 @@ function ConnectionsPage() {
           motionTracking: false,
           motionTrackingControl: false,
           clickToGo: false,
-          panoProvider: (panoId: string) => {
-            const p =
-              active && panoId === active.id
-                ? active
-                : photosRef.current.find((x) => x.id === panoId);
-            if (!p) return null;
-
-            const activeConns = connsRef.current.filter((c) => c.from_photo_id === panoId);
-            const links = activeConns.map((c) => {
-              const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
-              let dynamicHeading = c.heading;
-              if (p && targetPhoto) {
-                const calcH = calcHeading(p, targetPhoto);
-                if (calcH !== null) {
-                  dynamicHeading = calcH;
-                }
-              }
-              return {
-                description: targetPhoto?.filename || "Scene",
-                heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
-                pano: c.to_photo_id,
-              };
-            });
-
-            return {
-              location: {
-                pano: p.id,
-                description: p.filename || "Scene",
-                latLng: new window.google.maps.LatLng(
-                  p.latitude || tour?.latitude || 0,
-                  p.longitude || tour?.longitude || 0,
-                ),
-              },
-              links: links,
-              copyright: "PanoPublish",
-              tiles: {
-                tileSize: new window.google.maps.Size(4096, 2048),
-                worldSize: new window.google.maps.Size(4096, 2048),
-                centerHeading: 0,
-                getTileUrl: () => processedUrlsRef.current[p.id] || p.file_url,
-              },
-            };
-          },
+          panoProvider: createGoogleMapsPanoProvider(),
         });
 
         prevActiveIdRef.current = active.id;
