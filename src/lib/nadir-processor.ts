@@ -80,9 +80,9 @@ export async function processNadirClientSide(
       const originalBuffer = await res.arrayBuffer();
       originalBytes = new Uint8Array(originalBuffer);
       if (typeLower === "none" || !typeLower) {
-        return new Blob([originalBytes], { type: "image/jpeg" });
+        return new Blob([originalBytes.buffer as any], { type: "image/jpeg" });
       }
-      const localBlob = new Blob([originalBytes], { type: "image/jpeg" });
+      const localBlob = new Blob([originalBytes.buffer as any], { type: "image/jpeg" });
       const localUrl = URL.createObjectURL(localBlob);
       try {
         img = await loadImage(localUrl);
@@ -97,7 +97,7 @@ export async function processNadirClientSide(
   }
 
   if (typeLower === "none" || !typeLower) {
-    if (originalBytes) return new Blob([originalBytes], { type: "image/jpeg" });
+    if (originalBytes) return new Blob([originalBytes.buffer as any], { type: "image/jpeg" });
   }
 
   const W = img.width;
