@@ -40,8 +40,19 @@ import { SEO } from "@/components/SEO";
 export const Route = createFileRoute("/tours/$tourId/")({
   head: () => ({
     meta: [
-      { title: "Upload Photos â€” PanoPublish" },
+      { title: "Upload Photos — PanoPublish" },
       { name: "robots", content: "noindex, nofollow" },
+    ],
+    links: [
+      {
+        rel: "stylesheet",
+        href: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css",
+      },
+    ],
+    scripts: [
+      {
+        src: "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js",
+      },
     ],
   }),
   component: TourDetail,

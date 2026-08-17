@@ -94,6 +94,47 @@ declare global {
   }
 }
 
+function ensurePannellumLoaded(): Promise<void> {
+  if (typeof window !== "undefined" && window.pannellum) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    if (typeof document === "undefined") return resolve();
+
+    if (!document.getElementById("pannellum-css")) {
+      const link = document.createElement("link");
+      link.id = "pannellum-css";
+      link.rel = "stylesheet";
+      link.href = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css";
+      document.head.appendChild(link);
+    }
+
+    if (window.pannellum) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.getElementById("pannellum-js") as HTMLScriptElement;
+    if (existingScript) {
+      if (window.pannellum) {
+        resolve();
+      } else {
+        existingScript.addEventListener("load", () => resolve());
+        existingScript.addEventListener("error", () => reject(new Error("Failed to load Pannellum JS")));
+      }
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "pannellum-js";
+    script.src = "https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Pannellum JS"));
+    document.head.appendChild(script);
+  });
+}
+
 export function BlurEditorModal({
   photo,
   onClose,
@@ -156,29 +197,31 @@ export function BlurEditorModal({
     }, 50);
   };
 
-  // Pre-fetch original image buffer in memory
+  // Pre-fetch original image buffer and initialize editor
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
     async function loadResources() {
       try {
-        const res = await fetch(photo.file_url);
-        const buffer = await res.arrayBuffer();
+        await ensurePannellumLoaded();
         if (cancelled) return;
 
-        originalBufferRef.current = buffer;
+        // Concurrently fetch original buffer for EXIF metadata preservation
+        fetch(photo.file_url)
+          .then((r) => r.arrayBuffer())
+          .then((buf) => {
+            if (!cancelled) originalBufferRef.current = buf;
+          })
+          .catch((err) => console.warn("Buffer fetch fallback:", err));
 
-        const blob = new Blob([buffer]);
-        const imgUrl = URL.createObjectURL(blob);
+        // Load image via HTML Image element for instant browser-cached decoding
         const img = new Image();
-        img.src = imgUrl;
+        img.crossOrigin = "anonymous";
+        img.src = photo.file_url;
 
         img.onload = () => {
-          if (cancelled) {
-            URL.revokeObjectURL(imgUrl);
-            return;
-          }
+          if (cancelled) return;
           originalImageRef.current = img;
 
           // Compute editing resolution (Max 2048 width for ultra-smooth rendering)
@@ -222,8 +265,8 @@ export function BlurEditorModal({
           }
           maskCanvasRef.current = maskCanvas;
 
-          // 4. Initialize 360 viewer with Blob URL
-          initPannellum(imgUrl);
+          // 4. Initialize 360 viewer directly
+          initPannellum(photo.file_url);
         };
 
         img.onerror = () => {
@@ -233,6 +276,7 @@ export function BlurEditorModal({
         };
       } catch (e) {
         if (cancelled) return;
+        console.error("Error loading editor resources:", e);
         toast.error("Network error loading image.");
         setLoading(false);
       }
@@ -255,7 +299,10 @@ export function BlurEditorModal({
 
   // Initializing Pannellum
   const initPannellum = (url: string) => {
-    if (!panoRef.current || !window.pannellum) return;
+    if (!panoRef.current || !window.pannellum) {
+      setLoading(false);
+      return;
+    }
     try {
       if (viewerRef.current) {
         viewerRef.current.destroy();
@@ -272,6 +319,13 @@ export function BlurEditorModal({
         pitch: 0,
       });
 
+      viewerRef.current.on("load", () => {
+        setLoading(false);
+        updateDirectionReadouts();
+      });
+      viewerRef.current.on("error", () => {
+        setLoading(false);
+      });
       viewerRef.current.on("animatefinished", updateDirectionReadouts);
       viewerRef.current.on("zoomchange", updateDirectionReadouts);
 
@@ -284,7 +338,9 @@ export function BlurEditorModal({
         }
       }, 250);
 
-      setLoading(false);
+      // Fallback timeout to guarantee spinner is hidden
+      setTimeout(() => setLoading(false), 500);
+
       return () => clearInterval(t);
     } catch (err) {
       console.error("Pannellum init error", err);
