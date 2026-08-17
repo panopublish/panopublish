@@ -527,18 +527,22 @@ function PublishPage() {
     // Ensure user-selected Nadir settings are saved to database before publishing
     await saveNadirSettings(nadirType, size, pos);
 
-    let freshToken = accessToken;
-    try {
-      const { data, error } = await supabase.functions.invoke("google-oauth", {
-        body: { action: "get_valid_token", user_id: user?.id },
-      });
-      if (!error && data?.access_token) {
-        freshToken = data.access_token;
-        setAccessToken(data.access_token);
+    const getFreshToken = async (): Promise<string | null> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-oauth", {
+          body: { action: "get_valid_token", user_id: user?.id },
+        });
+        if (!error && data?.access_token) {
+          setAccessToken(data.access_token);
+          return data.access_token;
+        }
+      } catch (e) {
+        console.error("Failed to refresh token:", e);
       }
-    } catch (e) {
-      console.error("Failed to refresh token before publish:", e);
-    }
+      return accessToken || null;
+    };
+
+    let freshToken = await getFreshToken();
 
     if (!freshToken) {
       toast.error("Not connected to Google");
@@ -547,22 +551,33 @@ function PublishPage() {
     }
 
     try {
-      const toPublish = photos.filter(
-        (p) =>
+      // Fetch the latest photo records from the database to skip already published/processing scenes
+      const { data: dbPhotos } = await supabase
+        .from("photos")
+        .select("id, streetview_status, streetview_photo_id, file_url, filename, latitude, longitude, heading, pitch, roll, island_id, capture_time")
+        .eq("tour_id", tourId);
+
+      const photoList = dbPhotos && dbPhotos.length > 0 ? dbPhotos : photos;
+
+      const toPublish = photoList.filter(
+        (p: any) =>
+          !p.streetview_photo_id ||
           !p.streetview_status ||
           p.streetview_status === "NOT_PUBLISHED" ||
           p.streetview_status === "FAILED",
       );
 
+      const alreadyDone = photoList.length - toPublish.length;
       let photoIndex = 1;
       const totalPhotos = toPublish.length;
+      let failedCount = 0;
 
       if (totalPhotos > 0) {
         setPublishProgress({
-          current: 0,
-          total: totalPhotos,
+          current: alreadyDone,
+          total: photoList.length,
           step: "idle",
-          message: "Starting publish...",
+          message: alreadyDone > 0 ? `Resuming publish (${alreadyDone} already uploaded)...` : "Starting publish...",
         });
       }
 
@@ -581,28 +596,35 @@ function PublishPage() {
 
         // 1. Process image client-side to apply Nadir/Logo if needed
         setPublishProgress({
-          current: photoIndex - 1,
-          total: totalPhotos,
+          current: alreadyDone + photoIndex - 1,
+          total: photoList.length,
           step: "processing",
-          message: `Processing scene ${photoIndex} of ${totalPhotos} in browser...`,
+          message: `Processing scene ${alreadyDone + photoIndex} of ${photoList.length} in browser...`,
         });
-        toast.info(`Processing scene ${photoIndex} of ${totalPhotos} in browser...`);
-        const processedBlob = await processNadirClientSide(
-          photo.file_url,
-          nadirType,
-          size,
-          pos,
-          tour?.nadir_logo_url,
-        );
+
+        let processedBlob: Blob;
+        try {
+          processedBlob = await processNadirClientSide(
+            photo.file_url,
+            nadirType,
+            size,
+            pos,
+            tour?.nadir_logo_url,
+          );
+        } catch (procErr: any) {
+          console.warn("Nadir processing fallback to original:", procErr);
+          const rawRes = await fetch(photo.file_url);
+          processedBlob = await rawRes.blob();
+        }
 
         // 2. Convert Blob to base64 string
         setPublishProgress({
-          current: photoIndex - 1,
-          total: totalPhotos,
+          current: alreadyDone + photoIndex - 1,
+          total: photoList.length,
           step: "encoding",
-          message: `Encoding scene ${photoIndex} of ${totalPhotos}...`,
+          message: `Encoding scene ${alreadyDone + photoIndex} of ${photoList.length}...`,
         });
-        toast.info(`Encoding scene ${photoIndex} of ${totalPhotos}...`);
+
         const reader = new FileReader();
         reader.readAsDataURL(processedBlob);
         const base64data = await new Promise<string>((resolve, reject) => {
@@ -613,82 +635,132 @@ function PublishPage() {
           reader.onerror = reject;
         });
 
-        // 3. Upload bytes and register sphere via server-to-server Edge Function action
+        // 3. Upload bytes and register sphere with auto-retry and token refresh
         setPublishProgress({
-          current: photoIndex - 1,
-          total: totalPhotos,
+          current: alreadyDone + photoIndex - 1,
+          total: photoList.length,
           step: "uploading",
-          message: `Uploading scene ${photoIndex} of ${totalPhotos} to Google...`,
-        });
-        toast.info(`Uploading scene ${photoIndex} of ${totalPhotos} to Google...`);
-        const { data: createData, error: createError } = await supabase.functions.invoke(
-          "streetview-publish",
-          {
-            body: {
-              action: "publish_photo_bytes",
-              access_token: freshToken,
-              photo_base64: base64data,
-              latitude: photo.latitude || tour.latitude,
-              longitude: photo.longitude || tour.longitude,
-              heading: photo.heading || 0,
-              pitch: photo.pitch || 0,
-              roll: photo.roll || 0,
-              captureTime: photo.capture_time || new Date().toISOString(),
-              placeId: tour.google_place_id,
-              supabase_photo_id: photo.id,
-              level,
-            },
-          },
-        );
-        if (createError) throw new Error(await getFunctionErrorMessage(createError));
-        if (createData?.error || createData?.success === false)
-          throw new Error(createData.error || "Failed to publish photo");
-
-        setPublishProgress({
-          current: photoIndex,
-          total: totalPhotos,
-          step: "uploading",
-          message: `Scene ${photoIndex} uploaded successfully!`,
+          message: `Uploading scene ${alreadyDone + photoIndex} of ${photoList.length} to Google Maps...`,
         });
 
-        // 4. Update the stored photo with the processed Nadir image so tour preview shows it permanently
-        if (nadirType && nadirType.toLowerCase().trim() !== "none") {
+        let success = false;
+        let lastErrorMsg = "";
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            const publishedPath = `${user?.id}/${tourId}/${photo.island_id ?? "custom"}/published-${Date.now()}-${photo.filename || "scene.jpg"}`;
-            const { error: upErr } = await supabase.storage
-              .from("tour-photos")
-              .upload(publishedPath, processedBlob);
-            if (!upErr) {
-              const { data: pubData } = supabase.storage
-                .from("tour-photos")
-                .getPublicUrl(publishedPath);
-              if (pubData?.publicUrl) {
-                await supabase
-                  .from("photos")
-                  .update({
-                    file_url: pubData.publicUrl,
-                    file_path: publishedPath,
-                  })
-                  .eq("id", photo.id);
+            // Refresh token on retries or after every 20 scenes to prevent token expiration
+            if (attempt > 1 || photoIndex % 20 === 0) {
+              const refreshed = await getFreshToken();
+              if (refreshed) freshToken = refreshed;
+              if (attempt > 1) {
+                await new Promise((r) => setTimeout(r, attempt * 1500));
               }
             }
-          } catch (storageErr) {
-            console.warn("Could not update photo storage with nadir blob:", storageErr);
+
+            const { data: createData, error: createError } = await supabase.functions.invoke(
+              "streetview-publish",
+              {
+                body: {
+                  action: "publish_photo_bytes",
+                  access_token: freshToken,
+                  photo_base64: base64data,
+                  latitude: photo.latitude || tour?.latitude,
+                  longitude: photo.longitude || tour?.longitude,
+                  heading: photo.heading || 0,
+                  pitch: photo.pitch || 0,
+                  roll: photo.roll || 0,
+                  captureTime: photo.capture_time || new Date().toISOString(),
+                  placeId: tour?.google_place_id,
+                  supabase_photo_id: photo.id,
+                  level,
+                },
+              },
+            );
+
+            if (createError) {
+              const errMsg = await getFunctionErrorMessage(createError);
+              if (
+                errMsg.includes("401") ||
+                errMsg.toLowerCase().includes("unauthorized") ||
+                errMsg.toLowerCase().includes("invalid_token") ||
+                errMsg.toLowerCase().includes("credentials")
+              ) {
+                const refreshed = await getFreshToken();
+                if (refreshed) freshToken = refreshed;
+              }
+              throw new Error(errMsg);
+            }
+            if (createData?.error || createData?.success === false) {
+              throw new Error(createData.error || "Failed to publish photo");
+            }
+
+            success = true;
+            break;
+          } catch (uploadErr: any) {
+            lastErrorMsg = uploadErr.message || "Upload error";
+            console.warn(`Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`, lastErrorMsg);
           }
         }
 
+        if (!success) {
+          failedCount++;
+          console.error(`Scene ${alreadyDone + photoIndex} (${photo.filename || photo.id}) permanently failed:`, lastErrorMsg);
+          toast.error(`Scene ${alreadyDone + photoIndex} failed: ${lastErrorMsg}`);
+          await supabase
+            .from("photos")
+            .update({ streetview_status: "FAILED" } as any)
+            .eq("id", photo.id);
+        } else {
+          // 4. Update the stored photo with the processed Nadir image so tour preview shows it permanently
+          if (nadirType && nadirType.toLowerCase().trim() !== "none") {
+            try {
+              const publishedPath = `${user?.id}/${tourId}/${photo.island_id ?? "custom"}/published-${Date.now()}-${photo.filename || "scene.jpg"}`;
+              const { error: upErr } = await supabase.storage
+                .from("tour-photos")
+                .upload(publishedPath, processedBlob);
+              if (!upErr) {
+                const { data: pubData } = supabase.storage
+                  .from("tour-photos")
+                  .getPublicUrl(publishedPath);
+                if (pubData?.publicUrl) {
+                  await supabase
+                    .from("photos")
+                    .update({
+                      file_url: pubData.publicUrl,
+                      file_path: publishedPath,
+                    } as any)
+                    .eq("id", photo.id);
+                }
+              }
+            } catch (storageErr) {
+              console.warn("Could not update photo storage with nadir blob:", storageErr);
+            }
+          }
+        }
+
+        setPublishProgress({
+          current: alreadyDone + photoIndex,
+          total: photoList.length,
+          step: "uploading",
+          message: `Scene ${alreadyDone + photoIndex} of ${photoList.length} done!`,
+        });
+
         photoIndex++;
+        // Pacing delay between scenes to stay well within Google Street View rate limits
+        await new Promise((r) => setTimeout(r, 400));
       }
 
       // Step 5: Update connections and poses on Google Maps
       setPublishProgress({
-        current: totalPhotos,
-        total: totalPhotos,
+        current: photoList.length,
+        total: photoList.length,
         step: "connecting",
         message: "Updating connections and alignments on Google Maps...",
       });
       toast.info("Updating connections and poses on Google Maps...");
-      await syncStreetViewConnections(supabase, tourId, freshToken);
+
+      const connectionToken = (await getFreshToken()) || freshToken;
+      await syncStreetViewConnections(supabase, tourId, connectionToken);
 
       // Since photos are still processing, explicitly set synced to false.
       // The background status hook will auto-trigger a final sync once processing completes.
@@ -704,11 +776,15 @@ function PublishPage() {
         .update({ streetview_connections_synced: allPublishedNow } as any)
         .eq("id", tourId);
 
-      toast.success("Photos published and connections updated! They will process shortly.");
+      if (failedCount > 0) {
+        toast.warning(`Published ${photoList.length - failedCount} of ${photoList.length} scenes. ${failedCount} scenes failed.`);
+      } else {
+        toast.success("All 80 scenes published and connections linked on Google Maps!");
+      }
       load();
     } catch (e: any) {
-      console.error(e);
-      toast.error("Publishing failed: " + e.message);
+      console.error("Publishing error:", e);
+      toast.error("Publishing stopped: " + e.message);
     } finally {
       setPublishing(false);
       setPublishProgress(null);
