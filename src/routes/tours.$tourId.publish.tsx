@@ -635,7 +635,7 @@ function PublishPage() {
           reader.onerror = reject;
         });
 
-        // 3. Upload bytes and register sphere with auto-retry and token refresh
+        // 3. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh
         setPublishProgress({
           current: alreadyDone + photoIndex - 1,
           total: photoList.length,
@@ -646,15 +646,12 @@ function PublishPage() {
         let success = false;
         let lastErrorMsg = "";
 
-        for (let attempt = 1; attempt <= 3; attempt++) {
+        for (let attempt = 1; attempt <= 5; attempt++) {
           try {
-            // Refresh token on retries or after every 20 scenes to prevent token expiration
-            if (attempt > 1 || photoIndex % 20 === 0) {
+            // Refresh token after every 15 scenes or on retries
+            if (attempt > 1 || photoIndex % 15 === 0) {
               const refreshed = await getFreshToken();
               if (refreshed) freshToken = refreshed;
-              if (attempt > 1) {
-                await new Promise((r) => setTimeout(r, attempt * 1500));
-              }
             }
 
             const { data: createData, error: createError } = await supabase.functions.invoke(
@@ -679,37 +676,84 @@ function PublishPage() {
 
             if (createError) {
               const errMsg = await getFunctionErrorMessage(createError);
+              const errLower = errMsg.toLowerCase();
+
               if (
-                errMsg.includes("401") ||
-                errMsg.toLowerCase().includes("unauthorized") ||
-                errMsg.toLowerCase().includes("invalid_token") ||
-                errMsg.toLowerCase().includes("credentials")
+                errLower.includes("quota") ||
+                errLower.includes("rate limit") ||
+                errLower.includes("429") ||
+                errLower.includes("resource_exhausted")
+              ) {
+                console.warn("Google Street View per-minute quota reached. Pausing 25s for bucket refill...");
+                setPublishProgress((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        message: `Google rate limit reached. Pausing 25s to refill quota...`,
+                      }
+                    : null,
+                );
+                await new Promise((r) => setTimeout(r, 25000));
+              } else if (
+                errLower.includes("401") ||
+                errLower.includes("unauthorized") ||
+                errLower.includes("invalid_token") ||
+                errLower.includes("credentials")
               ) {
                 const refreshed = await getFreshToken();
                 if (refreshed) freshToken = refreshed;
+                await new Promise((r) => setTimeout(r, 2000));
+              } else {
+                await new Promise((r) => setTimeout(r, attempt * 2000));
               }
               throw new Error(errMsg);
             }
+
             if (createData?.error || createData?.success === false) {
-              throw new Error(createData.error || "Failed to publish photo");
+              const errMsg = createData.error || "Failed to publish photo";
+              const errLower = errMsg.toLowerCase();
+              if (
+                errLower.includes("quota") ||
+                errLower.includes("rate limit") ||
+                errLower.includes("429") ||
+                errLower.includes("resource_exhausted")
+              ) {
+                console.warn("Google quota reached. Pausing 25s...");
+                await new Promise((r) => setTimeout(r, 25000));
+              }
+              throw new Error(errMsg);
             }
 
             success = true;
             break;
           } catch (uploadErr: any) {
             lastErrorMsg = uploadErr.message || "Upload error";
-            console.warn(`Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`, lastErrorMsg);
+            console.warn(
+              `Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`,
+              lastErrorMsg,
+            );
+            if (attempt < 5) {
+              const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
+              if (!isQuota) {
+                await new Promise((r) => setTimeout(r, attempt * 2500));
+              }
+            }
           }
         }
 
         if (!success) {
           failedCount++;
-          console.error(`Scene ${alreadyDone + photoIndex} (${photo.filename || photo.id}) permanently failed:`, lastErrorMsg);
+          console.error(
+            `Scene ${alreadyDone + photoIndex} (${photo.filename || photo.id}) permanently failed:`,
+            lastErrorMsg,
+          );
           toast.error(`Scene ${alreadyDone + photoIndex} failed: ${lastErrorMsg}`);
-          await supabase
-            .from("photos")
-            .update({ streetview_status: "FAILED" } as any)
-            .eq("id", photo.id);
+          try {
+            await supabase
+              .from("photos")
+              .update({ streetview_status: "FAILED" } as any)
+              .eq("id", photo.id);
+          } catch {}
         } else {
           // 4. Update the stored photo with the processed Nadir image so tour preview shows it permanently
           if (nadirType && nadirType.toLowerCase().trim() !== "none") {
@@ -746,8 +790,8 @@ function PublishPage() {
         });
 
         photoIndex++;
-        // Pacing delay between scenes to stay well within Google Street View rate limits
-        await new Promise((r) => setTimeout(r, 400));
+        // Pacing delay (1.2 seconds) to guarantee requests stay under Google's 60 requests/minute quota
+        await new Promise((r) => setTimeout(r, 1200));
       }
 
       // Step 5: Update connections and poses on Google Maps
