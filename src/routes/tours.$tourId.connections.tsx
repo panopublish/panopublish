@@ -3048,20 +3048,20 @@ function ConnectionsPage() {
                                 />
 
                                 {/* Left side node index identifier */}
-                                <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50">
+                                <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-20">
                                   {idx}
                                 </div>
 
-                                {/* Disconnect/Remove connections button */}
+                                {/* Disconnect/Remove connections minus button */}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     removeAllConnections(p.id);
                                   }}
-                                  className="absolute top-2 right-2 h-7 w-7 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all duration-200 shadow-md opacity-0 group-hover:opacity-100"
-                                  title="Delete Scene Connections"
+                                  className="absolute top-2 right-2 h-7 w-7 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white flex items-center justify-center transition-all duration-200 shadow-md z-20 cursor-pointer"
+                                  title="Remove Scene from Connections (-)"
                                 >
-                                  <Minus className="h-4 w-4" />
+                                  <Minus className="h-4.5 w-4.5 stroke-[2.5]" />
                                 </button>
 
                                 {/* GPS warning */}
@@ -3436,7 +3436,7 @@ function ConnectionsPage() {
                                     onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
                                   />
 
-                                  <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50">
+                                  <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-20">
                                     {idx}
                                   </div>
 
@@ -3447,10 +3447,10 @@ function ConnectionsPage() {
                                         setRightPendingTo(p.id);
                                         setPendingTo(p.id);
                                       }}
-                                      className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 bg-emerald-500 hover:bg-emerald-600 shadow-md z-20"
-                                      title="Align & Connect"
+                                      className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center transition-all duration-200 bg-emerald-500 hover:bg-emerald-600 active:scale-95 shadow-md z-20 cursor-pointer"
+                                      title="Align & Connect (+)"
                                     >
-                                      <Plus className="h-4.5 w-4.5" />
+                                      <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
                                     </button>
                                   ) : (
                                     <button
@@ -3458,10 +3458,10 @@ function ConnectionsPage() {
                                         e.stopPropagation();
                                         setActiveIdx(idx);
                                       }}
-                                      className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 bg-blue-500 hover:bg-blue-600 shadow-md z-20"
+                                      className="absolute top-2 right-2 h-7 w-7 rounded-lg text-white flex items-center justify-center transition-all duration-200 bg-blue-500 hover:bg-blue-600 active:scale-95 shadow-md z-20 cursor-pointer"
                                       title="Set as Start Scene"
                                     >
-                                      <Check className="h-4.5 w-4.5" />
+                                      <Check className="h-4.5 w-4.5 stroke-[2.5]" />
                                     </button>
                                   )}
 
