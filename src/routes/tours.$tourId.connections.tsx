@@ -54,7 +54,6 @@ import { MapToolbar } from "@/components/MapToolbar";
 import { PanoramaNode, Connection, MapMode } from "@/types/panorama";
 
 import { getEnv } from "@/lib/env";
-import { getNadirProcessedUrl } from "@/lib/nadir-processor";
 
 import { SEO } from "@/components/SEO";
 
@@ -254,9 +253,6 @@ function ConnectionsPage() {
     nadir_logo_url?: string | null;
     custom_settings?: string | null;
   } | null>(null);
-  const [processedUrls, setProcessedUrls] = useState<Record<string, string>>({});
-  const processedUrlsRef = useRef(processedUrls);
-  processedUrlsRef.current = processedUrls;
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [autoAlign, setAutoAlign] = useState(true);
   const [alignFine, setAlignFine] = useState([5]);
@@ -720,8 +716,6 @@ function ConnectionsPage() {
         };
       });
 
-      const tileUrl = processedUrlsRef.current[p.id] || p.file_url;
-
       return {
         location: {
           pano: p.id,
@@ -737,85 +731,11 @@ function ConnectionsPage() {
           tileSize: new window.google.maps.Size(4096, 2048),
           worldSize: new window.google.maps.Size(4096, 2048),
           centerHeading: 0,
-          getTileUrl: () => tileUrl,
+          getTileUrl: () => p.file_url,
         },
       };
     };
   }, []);
-
-  // Process Nadir images (blur or logo patch) client-side for tour preview
-  useEffect(() => {
-    if (!tour || photos.length === 0) return;
-
-    let csObj: any = null;
-    try {
-      if (tour.custom_settings) {
-        csObj = JSON.parse(tour.custom_settings);
-      }
-    } catch {}
-
-    const nType =
-      tour.nadir_type ||
-      csObj?.nadir_type ||
-      (typeof window !== "undefined" ? localStorage.getItem(`tour-nadir-type-${tourId}`) : null) ||
-      "None";
-    const nSize =
-      tour.nadir_size ||
-      csObj?.nadir_size ||
-      (typeof window !== "undefined" ? localStorage.getItem(`tour-size-${tourId}`) : null) ||
-      "13%";
-    const nPos =
-      tour.nadir_pos ||
-      csObj?.nadir_pos ||
-      (typeof window !== "undefined" ? localStorage.getItem(`tour-pos-${tourId}`) : null) ||
-      "btm";
-    const nLogo = tour.nadir_logo_url || csObj?.nadir_logo_url;
-
-    if (nType.toLowerCase().trim() === "none") return;
-
-    let cancelled = false;
-
-    const processPhotos = async () => {
-      const orderedPhotos = active
-        ? [active, ...photos.filter((p) => p.id !== active.id)]
-        : photos;
-
-      for (const p of orderedPhotos) {
-        if (cancelled) break;
-        if (!p.file_url || processedUrlsRef.current[p.id]) continue;
-
-        try {
-          const url = await getNadirProcessedUrl(p.file_url, nType, nSize, nPos, nLogo);
-          if (!cancelled && url) {
-            setProcessedUrls((prev) => ({ ...prev, [p.id]: url }));
-            // If custom tour viewer is active, clear scene cache so it rebuilds with nadir
-            if (tour?.type === "custom") {
-              delete customScenesCacheRef.current[p.id];
-            }
-            // If Google Maps Street View viewer is active, re-register pano provider
-            if (viewerRef.current && typeof viewerRef.current.registerPanoProvider === "function") {
-              try {
-                viewerRef.current.registerPanoProvider(createGoogleMapsPanoProvider());
-                if (active && p.id === active.id) {
-                  const currentPov = viewerRef.current.getPov();
-                  viewerRef.current.setPano(active.id);
-                  if (currentPov) viewerRef.current.setPov(currentPov);
-                }
-              } catch {}
-            }
-          }
-        } catch (e) {
-          console.warn("Failed to process nadir for preview photo", p.id, e);
-        }
-      }
-    };
-
-    processPhotos();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [tour, photos, active?.id, tourId, createGoogleMapsPanoProvider]);
 
   // 360 Panorama Main Viewer (Custom Tour Engine & StreetView)
   useEffect(() => {
@@ -858,8 +778,7 @@ function ConnectionsPage() {
             } catch {}
             const targetGeomWidth = Math.min(4000, maxTexSize);
 
-            const photoUrlToLoad = processedUrlsRef.current[active.id] || active.file_url;
-            const source = PanoEngine.ImageUrlSource.fromString(photoUrlToLoad, {
+            const source = PanoEngine.ImageUrlSource.fromString(active.file_url, {
               crossOrigin: "anonymous",
             });
             const geometry = new PanoEngine.EquirectGeometry([{ width: targetGeomWidth }]);

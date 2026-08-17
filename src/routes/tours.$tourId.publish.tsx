@@ -651,6 +651,32 @@ function PublishPage() {
           message: `Scene ${photoIndex} uploaded successfully!`,
         });
 
+        // 4. Update the stored photo with the processed Nadir image so tour preview shows it permanently
+        if (nadirType && nadirType.toLowerCase().trim() !== "none") {
+          try {
+            const publishedPath = `${user?.id}/${tourId}/${photo.island_id ?? "custom"}/published-${Date.now()}-${photo.filename || "scene.jpg"}`;
+            const { error: upErr } = await supabase.storage
+              .from("tour-photos")
+              .upload(publishedPath, processedBlob);
+            if (!upErr) {
+              const { data: pubData } = supabase.storage
+                .from("tour-photos")
+                .getPublicUrl(publishedPath);
+              if (pubData?.publicUrl) {
+                await supabase
+                  .from("photos")
+                  .update({
+                    file_url: pubData.publicUrl,
+                    file_path: publishedPath,
+                  })
+                  .eq("id", photo.id);
+              }
+            }
+          } catch (storageErr) {
+            console.warn("Could not update photo storage with nadir blob:", storageErr);
+          }
+        }
+
         photoIndex++;
       }
 
