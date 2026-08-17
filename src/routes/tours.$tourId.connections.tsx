@@ -54,6 +54,7 @@ import { MapToolbar } from "@/components/MapToolbar";
 import { PanoramaNode, Connection, MapMode } from "@/types/panorama";
 
 import { getEnv } from "@/lib/env";
+import { getNadirProcessedUrl } from "@/lib/nadir-processor";
 
 import { SEO } from "@/components/SEO";
 
@@ -247,7 +248,14 @@ function ConnectionsPage() {
     latitude: number | null;
     longitude: number | null;
     type?: string | null;
+    nadir_type?: string | null;
+    nadir_size?: string | null;
+    nadir_pos?: string | null;
+    nadir_logo_url?: string | null;
   } | null>(null);
+  const [processedUrls, setProcessedUrls] = useState<Record<string, string>>({});
+  const processedUrlsRef = useRef(processedUrls);
+  processedUrlsRef.current = processedUrls;
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [autoAlign, setAutoAlign] = useState(true);
   const [alignFine, setAlignFine] = useState([5]);
@@ -368,7 +376,13 @@ function ConnectionsPage() {
     try {
       const [{ data: t }, { data: ps }, { data: cs }, { data: cons }, { data: is }] =
         await Promise.all([
-          supabase.from("tours").select("name,latitude,longitude,type").eq("id", tourId).maybeSingle(),
+          supabase
+            .from("tours")
+            .select(
+              "name,latitude,longitude,type,nadir_type,nadir_size,nadir_pos,nadir_logo_url",
+            )
+            .eq("id", tourId)
+            .maybeSingle(),
           supabase.from("photos").select("*").eq("tour_id", tourId),
           supabase.from("connections").select("*").eq("tour_id", tourId),
           supabase.from("constellations").select("id,name").eq("tour_id", tourId).order("created_at"),
@@ -680,6 +694,63 @@ function ConnectionsPage() {
     }
   }, [tour?.type, photos]);
 
+  // Process Nadir images (blur or logo patch) client-side for tour preview
+  useEffect(() => {
+    if (!tour || photos.length === 0) return;
+
+    const nType =
+      tour.nadir_type ||
+      (typeof window !== "undefined" ? localStorage.getItem(`tour-nadir-type-${tourId}`) : null) ||
+      "None";
+    const nSize =
+      tour.nadir_size ||
+      (typeof window !== "undefined" ? localStorage.getItem(`tour-size-${tourId}`) : null) ||
+      "13%";
+    const nPos =
+      tour.nadir_pos ||
+      (typeof window !== "undefined" ? localStorage.getItem(`tour-pos-${tourId}`) : null) ||
+      "btm";
+    const nLogo = tour.nadir_logo_url;
+
+    if (nType.toLowerCase().trim() === "none") return;
+
+    let cancelled = false;
+
+    const processPhotos = async () => {
+      const orderedPhotos = active
+        ? [active, ...photos.filter((p) => p.id !== active.id)]
+        : photos;
+
+      for (const p of orderedPhotos) {
+        if (cancelled) break;
+        if (!p.file_url || processedUrlsRef.current[p.id]) continue;
+
+        try {
+          const url = await getNadirProcessedUrl(p.file_url, nType, nSize, nPos, nLogo);
+          if (!cancelled && url) {
+            setProcessedUrls((prev) => ({ ...prev, [p.id]: url }));
+            // If viewer is currently on this scene, refresh scene tiles
+            if (active && p.id === active.id && viewerRef.current) {
+              try {
+                if (typeof viewerRef.current.getPano === "function" && viewerRef.current.getPano() === active.id) {
+                  viewerRef.current.setPano(active.id);
+                }
+              } catch {}
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to process nadir for preview photo", p.id, e);
+        }
+      }
+    };
+
+    processPhotos();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tour, photos, active?.id, tourId]);
+
   // 360 Panorama Main Viewer (Custom Tour Engine & StreetView)
   useEffect(() => {
     if (!active || !panoRef.current) return;
@@ -721,7 +792,8 @@ function ConnectionsPage() {
             } catch {}
             const targetGeomWidth = Math.min(4000, maxTexSize);
 
-            const source = PanoEngine.ImageUrlSource.fromString(active.file_url, {
+            const photoUrlToLoad = processedUrlsRef.current[active.id] || active.file_url;
+            const source = PanoEngine.ImageUrlSource.fromString(photoUrlToLoad, {
               crossOrigin: "anonymous",
             });
             const geometry = new PanoEngine.EquirectGeometry([{ width: targetGeomWidth }]);
@@ -848,7 +920,7 @@ function ConnectionsPage() {
                 tileSize: new window.google.maps.Size(4096, 2048),
                 worldSize: new window.google.maps.Size(4096, 2048),
                 centerHeading: 0,
-                getTileUrl: () => p.file_url,
+                getTileUrl: () => processedUrlsRef.current[p.id] || p.file_url,
               },
             };
           },
@@ -1225,7 +1297,7 @@ function ConnectionsPage() {
               tileSize: new window.google.maps.Size(4096, 2048),
               worldSize: new window.google.maps.Size(4096, 2048),
               centerHeading: 0,
-              getTileUrl: () => p.file_url,
+              getTileUrl: () => processedUrlsRef.current[p.id] || p.file_url,
             },
           };
         },
@@ -1282,7 +1354,7 @@ function ConnectionsPage() {
               tileSize: new window.google.maps.Size(4096, 2048),
               worldSize: new window.google.maps.Size(4096, 2048),
               centerHeading: 0,
-              getTileUrl: () => p.file_url,
+              getTileUrl: () => processedUrlsRef.current[p.id] || p.file_url,
             },
           };
         },
