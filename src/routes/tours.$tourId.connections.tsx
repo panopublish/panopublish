@@ -806,6 +806,9 @@ function ConnectionsPage() {
           linksControl: true,
           enableCloseButton: false,
           showRoadLabels: false,
+          motionTracking: false,
+          motionTrackingControl: false,
+          clickToGo: false,
           panoProvider: (panoId: string) => {
             const p =
               active && panoId === active.id
@@ -2199,77 +2202,87 @@ function ConnectionsPage() {
             />
           </div>
 
-          {/* Connected hotspots — 3D projected to match builder positions exactly */}
-          {active && (() => {
-            const containerW = panoRef.current?.clientWidth || 0;
-            const containerH = panoRef.current?.clientHeight || 0;
-            return activeConns
-              .filter((c) => c.from_photo_id === active.id)
-              .map((c) => {
-                let meta: any = {};
-                try { if (c.metadata) meta = JSON.parse(c.metadata); } catch {}
-                const iconType = meta.icon_type || "arrow";
-                const pitchDeg = meta.pitch ?? c.pitch ?? -10;
-                const { x, y, visible } = getHotspotScreenCoords(
-                  c.heading,
-                  pitchDeg,
-                  currentPov,
-                  active.heading || 0,
-                  containerW,
-                  containerH,
-                );
-                if (!visible) return null;
-                const labelText = meta.label || photos.find((p) => p.id === c.to_photo_id)?.filename || "";
+          {/* Connected hotspots — 3D projected to match builder positions exactly (custom tours only) */}
+          {tour?.type === "custom" &&
+            active &&
+            (() => {
+              const containerW = panoRef.current?.clientWidth || 0;
+              const containerH = panoRef.current?.clientHeight || 0;
+              return activeConns
+                .filter((c) => c.from_photo_id === active.id)
+                .map((c) => {
+                  let meta: any = {};
+                  try {
+                    if (c.metadata) meta = JSON.parse(c.metadata);
+                  } catch {}
+                  const iconType = meta.icon_type || "arrow";
+                  const pitchDeg = meta.pitch ?? c.pitch ?? -10;
+                  const { x, y, visible } = getHotspotScreenCoords(
+                    c.heading,
+                    pitchDeg,
+                    currentPov,
+                    active.heading || 0,
+                    containerW,
+                    containerH,
+                  );
+                  if (!visible) return null;
+                  const labelText =
+                    meta.label || photos.find((p) => p.id === c.to_photo_id)?.filename || "";
 
-                return (
-                  <div
-                    key={c.id}
-                    className="absolute z-20 pointer-events-auto select-none"
-                    style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
-                  >
-                    <button
-                      className={`flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-95 ${
-                        iconType === "info" ? "cursor-help" : "cursor-pointer"
-                      }`}
-                      onClick={() => {
-                        if (iconType === "info") {
-                          setPreviewInfoContent(meta.info_content || "No information provided.");
-                        } else {
-                          const idx = photos.findIndex((p) => p.id === c.to_photo_id);
-                          if (idx !== -1) setActiveIdx(idx);
-                        }
-                      }}
-                      title={labelText || (iconType === "info" ? "Click for information" : "Go to scene")}
+                  return (
+                    <div
+                      key={c.id}
+                      className="absolute z-20 pointer-events-auto select-none"
+                      style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
                     >
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 border-white shadow-2xl transition-colors ${
-                        iconType === "info"
-                          ? "bg-sky-600 hover:bg-sky-500"
-                          : "bg-[#0277bd] hover:bg-[#0288d1]"
-                      }`}>
-                        {iconType === "door" && <span className="text-xl">🚪</span>}
-                        {iconType === "arrow" && <ArrowUp className="h-6 w-6 text-white" />}
-                        {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
-                        {iconType === "chevron" && <span className="text-xl">⏫</span>}
-                        {iconType === "info" && <Info className="h-6 w-6 text-white" />}
-                        {iconType === "help" && <HelpCircle className="h-6 w-6 text-white" />}
-                        {iconType === "cart" && <span className="text-xl">🛒</span>}
-                        {iconType === "pin" && <MapPin className="h-6 w-6 text-white" />}
-                        {iconType === "camera" && <Camera className="h-6 w-6 text-white" />}
-                        {iconType === "eye" && <Eye className="h-6 w-6 text-white" />}
-                      </div>
-                      {labelText && (
-                        <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10 shadow whitespace-nowrap max-w-[140px] truncate">
-                          {labelText}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                );
-              });
-          })()}
+                      <button
+                        className={`flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-95 ${
+                          iconType === "info" ? "cursor-help" : "cursor-pointer"
+                        }`}
+                        onClick={() => {
+                          if (iconType === "info") {
+                            setPreviewInfoContent(meta.info_content || "No information provided.");
+                          } else {
+                            const idx = photos.findIndex((p) => p.id === c.to_photo_id);
+                            if (idx !== -1) setActiveIdx(idx);
+                          }
+                        }}
+                        title={
+                          labelText ||
+                          (iconType === "info" ? "Click for information" : "Go to scene")
+                        }
+                      >
+                        <div
+                          className={`w-12 h-12 rounded-full flex items-center justify-center border-2 border-white shadow-2xl transition-colors ${
+                            iconType === "info"
+                              ? "bg-sky-600 hover:bg-sky-500"
+                              : "bg-[#0277bd] hover:bg-[#0288d1]"
+                          }`}
+                        >
+                          {iconType === "door" && <span className="text-xl">🚪</span>}
+                          {iconType === "arrow" && <ArrowUp className="h-6 w-6 text-white" />}
+                          {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
+                          {iconType === "chevron" && <span className="text-xl">⏫</span>}
+                          {iconType === "info" && <Info className="h-6 w-6 text-white" />}
+                          {iconType === "help" && <HelpCircle className="h-6 w-6 text-white" />}
+                          {iconType === "cart" && <span className="text-xl">🛒</span>}
+                          {iconType === "pin" && <MapPin className="h-6 w-6 text-white" />}
+                          {iconType === "camera" && <Camera className="h-6 w-6 text-white" />}
+                          {iconType === "eye" && <Eye className="h-6 w-6 text-white" />}
+                        </div>
+                        {labelText && (
+                          <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10 shadow whitespace-nowrap max-w-[140px] truncate">
+                            {labelText}
+                          </span>
+                        )}
+                      </button>
+                    </div>
+                  );
+                });
+            })()}
 
           {/* Info hotspot content popup */}
-          {previewInfoContent !== null && (
+          {tour?.type === "custom" && previewInfoContent !== null && (
             <div
               className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm"
               onClick={() => setPreviewInfoContent(null)}
