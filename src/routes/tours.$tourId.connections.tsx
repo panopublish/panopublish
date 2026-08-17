@@ -1240,7 +1240,7 @@ function ConnectionsPage() {
               tileSize: new window.google.maps.Size(4096, 2048),
               worldSize: new window.google.maps.Size(4096, 2048),
               centerHeading: 0,
-              getTileUrl: () => processedUrlsRef.current[p.id] || p.file_url,
+              getTileUrl: () => p.file_url,
             },
           };
         },
@@ -1297,7 +1297,7 @@ function ConnectionsPage() {
               tileSize: new window.google.maps.Size(4096, 2048),
               worldSize: new window.google.maps.Size(4096, 2048),
               centerHeading: 0,
-              getTileUrl: () => processedUrlsRef.current[p.id] || p.file_url,
+              getTileUrl: () => p.file_url,
             },
           };
         },
