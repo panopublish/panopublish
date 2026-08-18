@@ -23,7 +23,7 @@ const items = [
 
 export function AppSidebar() {
   const path = useRouterState({ select: (r) => r.location.pathname });
-  const { signOut, user } = useAuth();
+  const { signOut, user, impersonatorSession, stopImpersonation } = useAuth();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem("sidebar_collapsed") === "true";
@@ -103,11 +103,36 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <div className="p-3 border-t">
+      <div className="p-3 border-t space-y-1.5">
+        {impersonatorSession && (
+          <div className="mb-2">
+            {!isCollapsed && (
+              <div className="px-2 py-1 mb-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[10px] font-bold uppercase tracking-wider text-center">
+                🎭 Impersonating
+              </div>
+            )}
+            <Button
+              variant="default"
+              size="sm"
+              className={cn(
+                "w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition-all duration-200 shadow-sm",
+                isCollapsed ? "justify-center px-0 h-10" : "justify-start text-xs",
+              )}
+              onClick={stopImpersonation}
+              title="Exit Impersonation & Return to Admin"
+            >
+              <ChevronLeft className={cn("h-4 w-4 shrink-0", !isCollapsed && "mr-1.5")} />
+              {!isCollapsed && <span>Return to Admin</span>}
+            </Button>
+          </div>
+        )}
+
         {!isCollapsed && (
-          <div className="px-2 py-2 text-xs animate-fade-in overflow-hidden">
+          <div className="px-2 py-1 text-xs animate-fade-in overflow-hidden">
             <div className="font-medium truncate">{user?.email}</div>
-            <div className="text-muted-foreground">PanoPublish account</div>
+            <div className="text-muted-foreground text-[10px]">
+              {impersonatorSession ? "Target user session" : "PanoPublish account"}
+            </div>
           </div>
         )}
         <Button

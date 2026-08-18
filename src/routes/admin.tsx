@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { adminAddUser, adminDeleteUser } from "@/lib/d1-server";
+import { adminAddUser, adminDeleteUser, adminImpersonateUser } from "@/lib/d1-server";
 import {
   Dialog,
   DialogContent,
@@ -40,6 +40,7 @@ import {
   Clock,
   RefreshCw,
   Ticket,
+  LogIn,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
@@ -94,7 +95,7 @@ type Coupon = {
 };
 
 function AdminDashboard() {
-  const { session, user, loading: authLoading } = useAuth();
+  const { session, user, loading: authLoading, startImpersonation } = useAuth();
   const navigate = useNavigate();
 
   // Data State
@@ -110,6 +111,10 @@ function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
   const [activeTab, setActiveTab] = useState<"users" | "subscriptions" | "coupons">("users");
+
+  // Impersonation State
+  const [impersonateTarget, setImpersonateTarget] = useState<Profile | null>(null);
+  const [impersonating, setImpersonating] = useState(false);
 
   // Modal / Form State: Edit Profile
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -306,6 +311,40 @@ function AdminDashboard() {
       }
     } catch (err: any) {
       toast.error("Delete user error: " + err.message);
+    }
+  };
+
+  // Impersonate User handler
+  const handleConfirmImpersonate = async () => {
+    if (!impersonateTarget) return;
+    setImpersonating(true);
+    try {
+      const res = await adminImpersonateUser({
+        data: {
+          token: session?.access_token || "",
+          targetUserId: impersonateTarget.id,
+        },
+      });
+
+      if (res?.error) {
+        toast.error("Failed to impersonate user: " + res.error.message);
+        setImpersonating(false);
+        return;
+      }
+
+      if (res?.data?.session) {
+        toast.success(`Logged in as ${impersonateTarget.name || impersonateTarget.email}`);
+        startImpersonation(res.data.session);
+        setImpersonateTarget(null);
+        navigate({ to: "/dashboard/" });
+      } else {
+        toast.error("Failed to establish session for this user");
+        setImpersonating(false);
+      }
+    } catch (err: any) {
+      console.error("Impersonate error:", err);
+      toast.error("Impersonate error: " + err.message);
+      setImpersonating(false);
     }
   };
 
@@ -626,6 +665,15 @@ function AdminDashboard() {
 
                                 <td className="p-4 pr-6 text-right">
                                   <div className="flex justify-end gap-1.5">
+                                    <Button
+                                      onClick={() => setImpersonateTarget(p)}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="hover:bg-amber-50 text-amber-600 hover:text-amber-700 cursor-pointer rounded-xl"
+                                      title={`Log in as ${p.name || p.email} (Impersonate)`}
+                                    >
+                                      <LogIn className="h-4 w-4" />
+                                    </Button>
                                     <Button
                                       onClick={() => handleOpenEditProfile(p)}
                                       variant="ghost"
@@ -1207,6 +1255,82 @@ function AdminDashboard() {
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog>
+
+      {/* Impersonate User Confirmation Dialog */}
+      <Dialog
+        open={!!impersonateTarget}
+        onOpenChange={(open) => !open && !impersonating && setImpersonateTarget(null)}
+      >
+        {impersonateTarget && (
+          <DialogContent className="rounded-2xl max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-amber-100 text-amber-700">
+                  <LogIn className="h-5 w-5" />
+                </span>
+                Log in as User
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="py-3 space-y-3 text-sm">
+              <p className="text-slate-600">
+                You are about to sign into PanoPublish as{" "}
+                <strong className="text-slate-900 font-bold">{impersonateTarget.name || impersonateTarget.email}</strong>.
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5 text-xs text-slate-700">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">User Email:</span>
+                  <span className="font-bold text-slate-800">{impersonateTarget.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">Account Plan:</span>
+                  <span className="font-bold uppercase text-slate-800">{impersonateTarget.plan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">User ID:</span>
+                  <span className="font-mono text-[11px] text-slate-500">{impersonateTarget.id}</span>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-amber-50 border border-amber-200/60 p-3 text-xs text-amber-800 flex items-start gap-2">
+                <span className="text-sm">⚠️</span>
+                <span>
+                  You will be able to create and edit tours, manage clients, and configure settings directly in their account. You can return to the Admin Panel anytime using the top banner button.
+                </span>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setImpersonateTarget(null)}
+                disabled={impersonating}
+                className="rounded-xl border-slate-200 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmImpersonate}
+                disabled={impersonating}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl px-5 flex items-center gap-2 cursor-pointer"
+              >
+                {impersonating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Switching Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    <span>Log in as {impersonateTarget.name ? impersonateTarget.name.split(" ")[0] : "User"}</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
       </Dialog>
     </AppShell>
   );

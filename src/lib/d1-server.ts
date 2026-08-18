@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getEnv, getBinding } from "./env";
-import { verifyJWT, hashPassword } from "./auth-server";
+import { verifyJWT, hashPassword, signJWT } from "./auth-server";
 
 function decodeJWT(token: string) {
   try {
@@ -585,3 +585,70 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
       return { error: { message: err.message || "Failed to delete user" } };
     }
   });
+
+export const adminImpersonateUser = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const { token, targetUserId } = ctx.data;
+
+      // 1. Verify caller is admin
+      const caller = await getUserFromToken(token);
+      if (!checkIsAdmin(caller)) {
+        throw new Error("Access denied. Admin access only.");
+      }
+
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding missing");
+
+      // 2. Fetch target user from users table or fallback to profiles table
+      let targetUser: any = await db
+        .prepare("SELECT id, email FROM users WHERE id = ?")
+        .bind(targetUserId)
+        .first();
+
+      if (!targetUser) {
+        const targetProfile: any = await db
+          .prepare("SELECT id, email, username FROM profiles WHERE id = ?")
+          .bind(targetUserId)
+          .first();
+
+        if (targetProfile) {
+          targetUser = {
+            id: targetProfile.id,
+            email: targetProfile.email || `${targetProfile.username || "user"}@panopublish.com`,
+          };
+        }
+      }
+
+      if (!targetUser) {
+        return { error: { message: "Target user account not found" } };
+      }
+
+      // 3. Issue JWT token for the target user (30 days validity)
+      const jwtSecret = getEnv("JWT_SECRET") || "secret";
+      const exp = Math.floor(Date.now() / 1000) + 30 * 86400;
+      const accessToken = await signJWT(
+        { sub: targetUser.id, email: targetUser.email, exp },
+        jwtSecret
+      );
+
+      return {
+        data: {
+          session: {
+            access_token: accessToken,
+            expires_at: exp,
+            user: {
+              id: targetUser.id,
+              email: targetUser.email,
+            },
+          },
+        },
+        error: null,
+      };
+    } catch (err: any) {
+      console.error("adminImpersonateUser error:", err);
+      return { error: { message: err.message || "Failed to impersonate user" } };
+    }
+  });
+

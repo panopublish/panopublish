@@ -17,6 +17,9 @@ type AuthCtx = {
   loading: boolean;
   signOut: () => Promise<void>;
   setSession: (s: CustomSession | null) => void;
+  impersonatorSession: CustomSession | null;
+  startImpersonation: (targetSession: CustomSession) => void;
+  stopImpersonation: () => void;
 };
 
 const Ctx = createContext<AuthCtx>({
@@ -25,6 +28,9 @@ const Ctx = createContext<AuthCtx>({
   loading: true,
   signOut: async () => {},
   setSession: () => {},
+  impersonatorSession: null,
+  startImpersonation: () => {},
+  stopImpersonation: () => {},
 });
 
 function decodeJWT(token: string) {
@@ -43,6 +49,7 @@ function decodeJWT(token: string) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<CustomSession | null>(null);
+  const [impersonatorSession, setImpersonatorSessionState] = useState<CustomSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   const setSession = (s: CustomSession | null) => {
@@ -52,6 +59,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("panopublish_session");
     }
     setSessionState(s);
+  };
+
+  const startImpersonation = (targetSession: CustomSession) => {
+    if (session) {
+      localStorage.setItem("panopublish_admin_impersonator", JSON.stringify(session));
+      setImpersonatorSessionState(session);
+    }
+    setSession(targetSession);
+  };
+
+  const stopImpersonation = () => {
+    try {
+      const adminSessionStr = localStorage.getItem("panopublish_admin_impersonator");
+      localStorage.removeItem("panopublish_admin_impersonator");
+      setImpersonatorSessionState(null);
+
+      if (adminSessionStr) {
+        const adminSession = JSON.parse(adminSessionStr);
+        setSession(adminSession);
+      }
+      window.location.href = "/admin";
+    } catch (err) {
+      console.error("Failed to stop impersonation:", err);
+      window.location.href = "/admin";
+    }
   };
 
   useEffect(() => {
@@ -66,6 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setSessionState(s);
             } else {
               localStorage.removeItem("panopublish_session");
+            }
+          }
+        }
+
+        const impersonatorStr = localStorage.getItem("panopublish_admin_impersonator");
+        if (impersonatorStr) {
+          const imp = JSON.parse(impersonatorStr);
+          if (imp?.access_token) {
+            const payload = decodeJWT(imp.access_token);
+            if (payload?.exp && payload.exp > Date.now() / 1000) {
+              setImpersonatorSessionState(imp);
+            } else {
+              localStorage.removeItem("panopublish_admin_impersonator");
             }
           }
         }
@@ -86,6 +131,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setSessionState(null);
         }
+      } else if (e.key === "panopublish_admin_impersonator") {
+        if (e.newValue) {
+          setImpersonatorSessionState(JSON.parse(e.newValue));
+        } else {
+          setImpersonatorSessionState(null);
+        }
       }
     };
     window.addEventListener("storage", handleStorageChange);
@@ -99,7 +150,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         loading,
         setSession,
+        impersonatorSession,
+        startImpersonation,
+        stopImpersonation,
         signOut: async () => {
+          localStorage.removeItem("panopublish_admin_impersonator");
+          setImpersonatorSessionState(null);
           setSession(null);
           window.location.href = "/login";
         },
