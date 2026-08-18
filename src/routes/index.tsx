@@ -144,12 +144,8 @@ export const Route = createFileRoute("/")({
       { property: "og:type", content: "website" },
     ],
     links: [
-      // Preload the demo/LCP image so browser discovers it during SSR head parsing
-      {
-        rel: "preload",
-        as: "image",
-        href: "/robot_beach_upload.webp",
-      },
+      { rel: "preconnect", href: "https://www.youtube-nocookie.com" },
+      { rel: "preconnect", href: "https://www.google.com" },
     ],
   }),
   component: Landing,
@@ -288,33 +284,18 @@ function Landing() {
           </div>
         </section>
 
-        {/* Demo Section */}
+        {/* Demo / Video Tutorial Section */}
         <section id="demo" className="container mx-auto px-4 py-16 max-w-5xl scroll-mt-20">
-          <div className="relative rounded-2xl border bg-card/60 backdrop-blur-sm p-2 shadow-2xl overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-            <div className="aspect-video w-full rounded-xl bg-muted flex flex-col items-center justify-center relative overflow-hidden">
-              <img
-                src="/robot_beach_upload.webp"
-                alt="PanoPublish Interactive Map Dashboard interface showing 360 degree photos and camera settings"
-                width={1280}
-                height={720}
-                className="absolute inset-0 w-full h-full object-cover opacity-30 select-none pointer-events-none"
-                loading="eager"
-                fetchPriority="high"
-                decoding="async"
+          <div className="relative rounded-2xl border bg-card/60 backdrop-blur-sm p-2 md:p-3 shadow-2xl overflow-hidden">
+            <div className="aspect-video w-full rounded-xl bg-slate-950 overflow-hidden relative shadow-inner">
+              <iframe
+                className="w-full h-full border-0"
+                src="https://www.youtube-nocookie.com/embed/N2N5zLbF9gw?rel=0"
+                title="PanoPublish Tutorial — 360° Virtual Tour & Google Street View Publishing"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
               />
-              <div className="relative z-10 text-center p-6 max-w-md">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white shadow-elegant transition-transform group-hover:scale-110 cursor-pointer">
-                  <Play className="h-6 w-6 fill-white ml-1" />
-                </div>
-                <h3 className="text-lg font-bold mb-1 text-foreground font-serif">
-                  See PanoPublish in action
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Discover how to upload, blur tripod nadirs, connect rooms, and sync metadata with
-                  Google Street View in under 2 minutes.
-                </p>
-              </div>
             </div>
           </div>
         </section>
