@@ -10,11 +10,11 @@ import { faqsByCategory } from "@/lib/faq-data";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
-      { title: "PanoPublish Pricing — Free Trial & INR Monthly Plans" },
+      { title: "PanoPublish Pricing — 360° Virtual Tour & Street View Plans" },
       {
         name: "description",
         content:
-          "Transparent PanoPublish pricing starting at ₹499/mo. 7-day free trial, zero per-publish fees, direct Google Maps API publishing, and UPI payment support.",
+          "Explore PanoPublish pricing plans starting at ₹499/mo. 7-day free trial, unlimited Google Maps publishing, custom nadir branding, and UPI payments.",
       },
     ],
   }),
@@ -88,6 +88,10 @@ function PricingPage() {
     name: "PanoPublish",
     operatingSystem: "Web",
     applicationCategory: "BusinessApplication",
+    applicationSubCategory: "Virtual Tour Software",
+    url: "https://panopublish.com/pricing/",
+    description:
+      "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
     offers: pricingPlans.map((plan) => ({
       "@type": "Offer",
       name: plan.name,
@@ -95,24 +99,21 @@ function PricingPage() {
       priceCurrency: "INR",
       priceValidUntil: "2026-12-31",
       description: plan.description,
-      url: "https://panopublish.com/pricing",
+      url: "https://panopublish.com/pricing/",
     })),
   };
 
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans antialiased text-foreground">
       <SEO
-        title="PanoPublish Pricing — Free Trial & INR Monthly Plans"
-        description="Transparent PanoPublish pricing starting at ₹499/mo. 7-day free trial, zero per-publish fees, direct Google Maps API publishing, and UPI payment support."
+        title="PanoPublish Pricing — 360° Virtual Tour & Street View Plans"
+        description="Explore PanoPublish pricing plans starting at ₹499/mo. 7-day free trial, unlimited Google Maps publishing, custom nadir branding, and UPI payments."
         canonical="https://panopublish.com/pricing/"
+        schema={schema}
         breadcrumbs={[
           { name: "Home", url: "https://panopublish.com/" },
           { name: "Pricing", url: "https://panopublish.com/pricing/" },
         ]}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
       />
       <PublicHeader />
 

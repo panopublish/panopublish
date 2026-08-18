@@ -7,6 +7,7 @@ export function getOrganizationSchema() {
     name: COMPANY_CONFIG.name,
     url: COMPANY_CONFIG.url,
     logo: COMPANY_CONFIG.logo,
+    description: COMPANY_CONFIG.description,
     email: COMPANY_CONFIG.email,
     telephone: COMPANY_CONFIG.telephone,
     sameAs: [...COMPANY_CONFIG.sameAs],

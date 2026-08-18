@@ -22,12 +22,12 @@ export const Route = createFileRoute("/faq")({
     meta: [
       {
         title:
-          "FAQ — Google Street View & 360° Virtual Tour Publishing | PanoPublish",
+          "FAQ — 360° Virtual Tour & Google Street View Publishing | PanoPublish",
       },
       {
         name: "description",
         content:
-          "Answers to the most common questions about PanoPublish — pricing plans, Google Street View publishing, 360° photo requirements, billing, and support.",
+          "Find answers to common questions about PanoPublish, 360° cameras, Google Street View publishing, custom nadir branding, and INR pricing plans.",
       },
     ],
   }),
@@ -65,8 +65,8 @@ function FAQPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="FAQ — Google Street View & 360° Virtual Tour Publishing | PanoPublish"
-        description="Answers to common questions about PanoPublish — pricing, Street View publishing, 360° photo requirements, billing, and support."
+        title="FAQ — 360° Virtual Tour & Google Street View Publishing | PanoPublish"
+        description="Find answers to common questions about PanoPublish, 360° cameras, Google Street View publishing, custom nadir branding, and INR pricing plans."
         canonical="https://panopublish.com/faq/"
         schema={[faqPageSchema]}
         breadcrumbs={breadcrumbs}

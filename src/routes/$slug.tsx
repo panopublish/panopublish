@@ -60,11 +60,12 @@ function SeoPage() {
       return {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": page.heading,
+        "name": "PanoPublish",
         "operatingSystem": "Web",
         "applicationCategory": "BusinessApplication",
         "applicationSubCategory": "Virtual Tour Software",
-        "description": page.description,
+        "url": "https://panopublish.com/",
+        "description": "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
         "inLanguage": "en-IN",
         "offers": {
           "@type": "Offer",
@@ -77,11 +78,12 @@ function SeoPage() {
       return {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": page.heading,
+        "name": "PanoPublish",
         "operatingSystem": "Web",
         "applicationCategory": "BusinessApplication",
         "applicationSubCategory": "Virtual Tour Software",
-        "description": page.description,
+        "url": "https://panopublish.com/",
+        "description": "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
         "inLanguage": "en-IN",
         "offers": {
           "@type": "Offer",

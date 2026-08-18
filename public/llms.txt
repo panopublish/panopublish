@@ -1,13 +1,13 @@
 # PanoPublish
 
-> PanoPublish (https://panopublish.com/) is India's dedicated Google Street View and 360° virtual tour publishing platform. Built specifically for 360° photographers, digital marketing agencies, commercial real estate brokers, and hospitality businesses across India, PanoPublish automates EXIF GPS metadata tagging, tripod nadir logo disk removal, and direct Google Maps blue-line tour connections. It offers flat Indian Rupee (INR) subscription plans starting at ₹499/month with Razorpay UPI payment integration, eliminating USD foreign exchange surcharges and international credit card fees.
+> PanoPublish (https://panopublish.com/) is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Create, manage, brand, host, and publish immersive 360° tours to Google Maps and Street View with professional project management and INR pricing. It offers flat Indian Rupee (INR) subscription plans starting at ₹499/month with Razorpay UPI payment integration, eliminating USD foreign exchange surcharges and international credit card fees.
 
 - Full LLM Context & Architecture: https://panopublish.com/llms-full.txt
 - Official Sitemap: https://panopublish.com/sitemap.xml
 
 ## Core Pages & Documentation
 
-- [Home](https://panopublish.com/): Official overview of PanoPublish Google Maps virtual tour publishing.
+- [Home](https://panopublish.com/): PanoPublish — 360° Virtual Tours & Google Street View Publishing.
 - [Pricing](https://panopublish.com/pricing/): Subscription plans starting at ₹499/month (Basic), ₹1,499/month (Pro), and ₹2,999/month (Agency) with flat INR billing and UPI support.
 - [Google Street View Publishing](https://panopublish.com/google-street-view-publishing/): Automated 360 photo uploads and blue-line path connections to Google Maps.
 - [360 Virtual Tour Software](https://panopublish.com/360-virtual-tour-publishing-platform/): WebGL-powered 360 panorama editor with hotspots, level organization, and nadir branding.
@@ -27,7 +27,7 @@
 ## Key Facts & Frequently Asked Questions
 
 ### What is PanoPublish?
-PanoPublish is a web-based software platform that enables 360° photographers and agencies to stitch, brand, and publish virtual tours directly to Google Maps and self-hosted websites.
+PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Create, manage, brand, host, and publish immersive 360° tours to Google Maps and Street View with professional project management and INR pricing.
 
 ### How much does PanoPublish cost?
 PanoPublish plans start at ₹499/month (Basic plan), ₹1,499/month (Pro plan), and ₹2,999/month (Agency plan). All payments are processed in Indian Rupees (INR) via Razorpay, supporting UPI, NetBanking, and Indian debit/credit cards with zero foreign transaction fees.

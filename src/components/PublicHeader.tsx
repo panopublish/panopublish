@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
-import { ChevronRight, MessageCircle } from "lucide-react";
+import { ChevronRight, ChevronDown, MessageCircle } from "lucide-react";
 
 const WA_NUMBER = "919408808438"; // WhatsApp business number
 const WA_MSG = encodeURIComponent("Hi! I'd like to learn more about PanoPublish virtual tour software.");
@@ -24,21 +24,48 @@ export function PublicHeader() {
           <a href="/">
             <Logo logoClassName="text-primary h-8 w-8" className="text-xl" />
           </a>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <a href="/#features" className="hover:text-primary transition-colors">
-              Features
-            </a>
-            <a href="/#workflow" className="hover:text-primary transition-colors">
-              How It Works
-            </a>
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-muted-foreground">
+            {/* Product Dropdown */}
+            <div className="relative group">
+              <button
+                type="button"
+                className="flex items-center gap-1 hover:text-primary transition-colors py-2 focus:outline-none focus:text-primary"
+                aria-expanded="false"
+                aria-haspopup="true"
+              >
+                Product <ChevronDown className="h-3.5 w-3.5 opacity-70 group-hover:opacity-100 transition-transform duration-200 group-hover:rotate-180" />
+              </button>
+              <div className="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-1 z-50">
+                <div className="bg-popover text-popover-foreground border rounded-lg shadow-xl py-2 w-64 ring-1 ring-black/5 animate-in fade-in-50 zoom-in-95">
+                  <a
+                    href="/360-virtual-tour-publishing-platform/"
+                    className="block px-4 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <div className="font-semibold text-sm text-foreground">360° Virtual Tours</div>
+                    <div className="text-xs text-muted-foreground">Create, brand, and host interactive tours</div>
+                  </a>
+                  <a
+                    href="/google-street-view-publishing/"
+                    className="block px-4 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors"
+                  >
+                    <div className="font-semibold text-sm text-foreground">Google Street View</div>
+                    <div className="text-xs text-muted-foreground">Automated path linking & Maps publishing</div>
+                  </a>
+                </div>
+              </div>
+            </div>
+
             <a href="/pricing/" className="hover:text-primary transition-colors">
               Pricing
             </a>
-            <a href="/#faq" className="hover:text-primary transition-colors">
-              FAQ
+            <a href="/case-studies/" className="hover:text-primary transition-colors">
+              Case Studies
             </a>
             <a href="/blog/" className="hover:text-primary transition-colors">
               Blog
+            </a>
+            <a href="/faq/" className="hover:text-primary transition-colors">
+              FAQ
             </a>
             <a href="/contact/" className="hover:text-primary transition-colors">
               Contact

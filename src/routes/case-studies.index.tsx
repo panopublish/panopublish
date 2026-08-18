@@ -23,13 +23,12 @@ export const Route = createFileRoute("/case-studies/")({
   head: () => ({
     meta: [
       {
-        title:
-          "Virtual Tour Case Studies — Real Results for Indian Businesses | PanoPublish",
+        title: "360° Virtual Tour Case Studies & Results — PanoPublish",
       },
       {
         name: "description",
         content:
-          "See how hotels, restaurants, gyms, schools, and offices across Gujarat used PanoPublish's Google Street View publishing to grow their digital presence and drive more customers.",
+          "Explore real case studies of businesses using PanoPublish to create and publish 360° virtual tours to Google Street View and Google Maps.",
       },
     ],
   }),
@@ -77,8 +76,8 @@ function CaseStudiesIndex() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <SEO
-        title="Virtual Tour Case Studies — Real Results for Indian Businesses | PanoPublish"
-        description="See how hotels, restaurants, gyms, schools, and offices across Gujarat used PanoPublish to grow their Google Maps presence and drive customers."
+        title="360° Virtual Tour Case Studies & Results — PanoPublish"
+        description="Explore real case studies of businesses using PanoPublish to create and publish 360° virtual tours to Google Street View and Google Maps."
         canonical="https://panopublish.com/case-studies/"
         schema={[collectionSchema]}
         breadcrumbs={breadcrumbs}

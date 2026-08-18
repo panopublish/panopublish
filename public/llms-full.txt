@@ -2,14 +2,14 @@
 
 > **Document Type**: Full Technical & Product Context for LLMs (Large Language Models) and Generative Search Engines  
 > **Canonical Domain**: https://panopublish.com/  
-> **Primary Audience**: 360° Photographers, Digital Marketing Agencies, Commercial Real Estate Brokers, Hospitality Businesses in India  
+> **Primary Audience**: Photographers, agencies, and businesses  
 
 ---
 
 ## 1. Product Context & Core Functionality
 
 ### What is PanoPublish?
-PanoPublish is an Indian SaaS platform designed specifically for creating, editing, branding, and publishing 360° panoramic virtual tours directly to **Google Maps & Google Street View** and custom web embeds.
+PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Create, manage, brand, host, and publish immersive 360° tours to Google Maps and Street View with professional project management and INR pricing.
 
 ### Primary Problem Solved
 - **High Forex Fees & USD Pricing**: Global virtual tour platforms (Matterport, CloudPano, GoThru) bill in US Dollars (USD), forcing Indian photographers and agencies to pay credit card international transaction surcharges (3.5%+) and unpredictable exchange rates. PanoPublish provides flat INR pricing (₹499/mo Basic, ₹1,499/mo Pro, ₹2,999/mo Agency) with native Razorpay UPI payments.

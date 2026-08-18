@@ -29,19 +29,10 @@ const landingSchemas = [
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "PanoPublish",
-    alternateName: "PanoPublish Platform",
     url: "https://panopublish.com/",
     description:
-      "Publish 360° virtual tours to Google Maps & Street View. Built for photographers, agencies, hotels, and real estate professionals in India.",
+      "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
     inLanguage: "en-IN",
-    potentialAction: {
-      "@type": "SearchAction",
-      target: {
-        "@type": "EntryPoint",
-        urlTemplate: "https://panopublish.com/signup",
-      },
-      "query-input": "required name=search_term_string",
-    },
   },
   {
     "@context": "https://schema.org",
@@ -52,7 +43,7 @@ const landingSchemas = [
     applicationSubCategory: "Virtual Tour Software",
     url: "https://panopublish.com/",
     description:
-      "SaaS platform for publishing 360° panoramic photos to Google Street View and Google Maps. Designed for Indian photographers and marketing agencies.",
+      "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
     screenshot: "https://panopublish.com/robot_beach_upload.webp",
     featureList: [
       "Direct Google Street View publishing",
@@ -91,28 +82,6 @@ const landingSchemas = [
         url: "https://panopublish.com/signup",
       },
     ],
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.8",
-      reviewCount: "3",
-      bestRating: "5",
-    },
-    review: [
-      {
-        "@type": "Review",
-        author: { "@type": "Person", name: "Rahul M." },
-        reviewBody:
-          "PanoPublish's direct publishing cut my upload time and metadata alignment in half. The support is top-notch.",
-        reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
-      },
-      {
-        "@type": "Review",
-        author: { "@type": "Person", name: "Priya S." },
-        reviewBody:
-          "Finally, a platform built for India with INR pricing and real WhatsApp support.",
-        reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" },
-      },
-    ],
   },
   {
     "@context": "https://schema.org",
@@ -123,7 +92,7 @@ const landingSchemas = [
         name: "What is PanoPublish and who is it for?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "PanoPublish is a SaaS platform for photographers, marketing agencies, hotels, and real estate professionals in India who want to publish 360° virtual tours directly to Google Street View and Google Maps. It manages the entire workflow from photo upload to publishing.",
+          text: "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. It manages the entire workflow from photo upload to publishing.",
         },
       },
       {
@@ -157,20 +126,20 @@ const landingSchemas = [
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "PanoPublish — Google Street View Publishing for Indian Businesses" },
+      { title: "PanoPublish — 360° Virtual Tours & Google Street View Publishing" },
       {
         name: "description",
         content:
-          "Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!",
+          "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Publish 360° tours to Google Maps with simple INR pricing.",
       },
       {
         property: "og:title",
-        content: "PanoPublish — Google Street View Publishing for Indian Businesses",
+        content: "PanoPublish — 360° Virtual Tours & Google Street View Publishing",
       },
       {
         property: "og:description",
         content:
-          "Manage and publish client 360° panoramas. Organize tours with levels, add custom nadir logos, and map connections. Easy and robust edge deployment.",
+          "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Publish 360° tours to Google Maps with simple INR pricing.",
       },
       { property: "og:type", content: "website" },
     ],
@@ -180,25 +149,6 @@ export const Route = createFileRoute("/")({
         rel: "preload",
         as: "image",
         href: "/robot_beach_upload.webp",
-      },
-    ],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "SoftwareApplication",
-          name: "PanoPublish",
-          operatingSystem: "All",
-          applicationCategory: "BusinessApplication",
-          description: "Google Street View Publishing platform for Indian businesses.",
-          offers: {
-            "@type": "AggregateOffer",
-            priceCurrency: "INR",
-            lowPrice: "499",
-            highPrice: "2999",
-          },
-        }),
       },
     ],
   }),
@@ -279,8 +229,8 @@ function Landing() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans antialiased text-foreground">
       <SEO
-        title="PanoPublish — Google Street View Publishing for Indian Businesses"
-        description="Publish 360° virtual tours to Google Maps & Street View in minutes. SaaS built for photographers, agencies, hotels, and real estate in India. Start free!"
+        title="PanoPublish — 360° Virtual Tours & Google Street View Publishing"
+        description="PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Publish 360° tours to Google Maps with simple INR pricing."
         canonical="https://panopublish.com/"
         schema={landingSchemas}
       />
@@ -295,8 +245,7 @@ function Landing() {
 
           <div className="container relative mx-auto px-4 text-center max-w-4xl">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary mb-6 select-none hover:bg-primary/10 transition-colors">
-              <Sparkles className="h-3.5 w-3.5" /> Built for photographers & marketing agencies in
-              India
+              <Sparkles className="h-3.5 w-3.5" /> Built for photographers, agencies & businesses
             </span>
             <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.1] text-foreground font-serif">
               Publish 360° Virtual Tours to Google Maps.{" "}
@@ -305,8 +254,9 @@ function Landing() {
               </span>
             </h1>
             <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              India's dedicated Street View publishing platform. Upload panoramas, connect scenes,
-              brand your nadir, and go live on Google Maps — starting at ₹499/month.
+              PanoPublish is a 360° virtual tour and Google Street View publishing platform for
+              photographers, agencies, and businesses. Create, manage, brand, and publish immersive
+              360° tours to Google Maps and Street View with simple INR pricing.
             </p>
             <div className="mt-10 flex flex-wrap justify-center gap-4">
               <Link to="/signup/">
