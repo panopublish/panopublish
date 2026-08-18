@@ -18,10 +18,7 @@ export async function syncStreetViewConnections(
     .select("*")
     .eq("tour_id", tourId);
 
-  if (!connections || connections.length === 0) {
-    console.log("No connections to sync for tour", tourId);
-    return;
-  }
+  const connsList = connections || [];
 
   // 3. Fetch latest photos with Google photo IDs
   const { data: latestPhotos } = await supabaseClient
@@ -29,7 +26,10 @@ export async function syncStreetViewConnections(
     .select("id, streetview_photo_id, latitude, longitude, heading, pitch, roll, island_id")
     .eq("tour_id", tourId);
 
-  if (!latestPhotos) throw new Error("Failed to fetch photos");
+  if (!latestPhotos || latestPhotos.length === 0) {
+    console.log("No photos to sync for tour", tourId);
+    return;
+  }
 
   // 4. Fetch islands to determine floor/level mapping
   const { data: islands } = await supabaseClient.from("islands").select("*").eq("tour_id", tourId);
@@ -38,7 +38,7 @@ export async function syncStreetViewConnections(
 
   const svConnections: Record<string, string[]> = {};
 
-  connections.forEach((conn: any) => {
+  connsList.forEach((conn: any) => {
     const fromP = latestPhotos.find((p: any) => p.id === conn.from_photo_id);
     const toP = latestPhotos.find((p: any) => p.id === conn.to_photo_id);
     if (fromP?.streetview_photo_id && toP?.streetview_photo_id) {

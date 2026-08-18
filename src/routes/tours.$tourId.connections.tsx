@@ -111,7 +111,14 @@ type Conn = {
   metadata?: string | null;
 };
 type Constellation = { id: string; name: string };
-type Island = { id: string; name: string; order_index: number };
+type Island = {
+  id: string;
+  name: string;
+  order_index: number;
+  is_level?: boolean;
+  level_number?: number;
+  level_name?: string;
+};
 
 declare global {
   interface Window {
@@ -305,6 +312,9 @@ function ConnectionsPage() {
   const [rightIslandOpen, setRightIslandOpen] = useState<Record<string, boolean>>({});
   const [activeIslandId, setActiveIslandId] = useState<string | null>(null);
   const [levelDropdownOpen, setLevelDropdownOpen] = useState(false);
+  const [addFloorOpen, setAddFloorOpen] = useState(false);
+  const [newFloorName, setNewFloorName] = useState("");
+  const [newFloorNumber, setNewFloorNumber] = useState<number>(1);
 
   const [opacity, setOpacity] = useState([100]);
 
@@ -486,27 +496,37 @@ function ConnectionsPage() {
       console.error("Failed to mark connections unsynced:", e);
     }
   }, [tourId]);
-
+  
   // Synchronize expanded island and map focus when active photo changes
   useEffect(() => {
     if (active) {
       const targetIslandId = active.island_id || "unassigned";
       setActiveIslandId(targetIslandId);
 
-      const newOpen: Record<string, boolean> = {};
-      [...islands, { id: "unassigned", name: "Unassigned", order_index: 999 }].forEach((is) => {
-        newOpen[is.id] = is.id === targetIslandId;
-      });
-      setIslandOpen(newOpen);
-      setRightIslandOpen(newOpen);
+      // Open the active island without force-collapsing other islands
+      setIslandOpen((prev) => ({ ...prev, [targetIslandId]: true }));
+      setRightIslandOpen((prev) => ({ ...prev, [targetIslandId]: true }));
     }
-  }, [active?.id, islands]);
+  }, [active?.id]);
 
   // Derived state for map overlay (filtered by active island/floor)
   const mapNodes: PanoramaNode[] = useMemo(() => {
     const filteredPhotos = photos.filter((p) => {
       const pIslandId = p.island_id || "unassigned";
-      return activeIslandId ? pIslandId === activeIslandId : true;
+      if (!activeIslandId || activeIslandId === "all") return true;
+      if (pIslandId === activeIslandId) return true;
+      // Show photos connected across floors to the active scene
+      if (
+        active &&
+        conns.some(
+          (c) =>
+            (c.from_photo_id === active.id && c.to_photo_id === p.id) ||
+            (c.to_photo_id === active.id && c.from_photo_id === p.id),
+        )
+      ) {
+        return true;
+      }
+      return false;
     });
 
     // Compute the preview coordinates for pendingTo dynamically
@@ -519,7 +539,7 @@ function ConnectionsPage() {
       const finalHeading = (baseHeading + alignFine[0] - 5 + 360) % 360;
       const geographicHeading = finalHeading;
 
-      if (typeof window !== "undefined" && window.google?.maps?.geometry?.spherical) {
+      if (window.google?.maps?.geometry?.spherical) {
         const fromLatLng = new window.google.maps.LatLng(active.latitude, active.longitude);
         const toLatLng = window.google.maps.geometry.spherical.computeOffset(
           fromLatLng,
@@ -578,8 +598,8 @@ function ConnectionsPage() {
         const fromIsland = fromP.island_id || "unassigned";
         const toIsland = toP.island_id || "unassigned";
 
-        if (activeIslandId) {
-          return fromIsland === activeIslandId && toIsland === activeIslandId;
+        if (activeIslandId && activeIslandId !== "all") {
+          return fromIsland === activeIslandId || toIsland === activeIslandId;
         }
         return true;
       })
@@ -2085,6 +2105,33 @@ function ConnectionsPage() {
     load();
   };
 
+  const handleCreateFloor = async () => {
+    if (!user || !newFloorName.trim()) return;
+    try {
+      const { data, error } = await supabase
+        .from("islands")
+        .insert({
+          user_id: user.id,
+          tour_id: tourId,
+          name: newFloorName.trim(),
+          order_index: islands.length,
+          is_level: true,
+          level_number: Number(newFloorNumber) || islands.length + 1,
+          level_name: newFloorName.trim().slice(0, 3).toUpperCase(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      toast.success(`Floor "${newFloorName}" added!`);
+      setNewFloorName("");
+      setAddFloorOpen(false);
+      load();
+    } catch (err: any) {
+      toast.error("Failed to add floor: " + err.message);
+    }
+  };
+
   const setNorth = async () => {
     if (!active) return;
     const newHeading = (360 - currentHeading) % 360;
@@ -2989,14 +3036,33 @@ function ConnectionsPage() {
           )}
 
           <div className="flex-1 overflow-y-auto bg-slate-50/50 p-2 space-y-2.5">
+            {/* Floor List Header / Quick Add */}
+            <div className="flex items-center justify-between px-1.5 py-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Floor Groups ({islands.length})
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewFloorNumber(islands.length + 1);
+                  setNewFloorName(`Level ${islands.length + 1}`);
+                  setAddFloorOpen(true);
+                }}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer border border-blue-200"
+              >
+                <Plus className="h-3 w-3" /> Add Floor
+              </button>
+            </div>
+
             {/* Connected scenes grouped by island */}
             {[...islands, { id: "unassigned", name: "Unassigned", order_index: 999 }].map(
               (island) => {
                 const islandPhotos = photos.filter((p) =>
                   island.id === "unassigned" ? !p.island_id : p.island_id === island.id,
                 );
+                // Allow connected photos, active photo, OR single standalone photo on this island!
                 const connectedIslandPhotos = islandPhotos.filter(
-                  (p) => connectedIds.has(p.id) || (active && p.id === active.id),
+                  (p) => connectedIds.has(p.id) || (active && p.id === active.id) || islandPhotos.length === 1,
                 );
                 if (connectedIslandPhotos.length === 0) return null;
 
@@ -3370,13 +3436,33 @@ function ConnectionsPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto bg-slate-50/50 p-2 space-y-2.5">
+            {/* Unconnected scenes header / Quick Add Floor */}
+            <div className="flex items-center justify-between px-1.5 py-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                Scenes by Floor
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewFloorNumber(islands.length + 1);
+                  setNewFloorName(`Level ${islands.length + 1}`);
+                  setAddFloorOpen(true);
+                }}
+                className="text-[10px] font-bold text-sky-600 hover:text-sky-700 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer border border-sky-200"
+              >
+                <Plus className="h-3 w-3" /> Add Floor
+              </button>
+            </div>
+
             {[...islands, { id: "unassigned", name: "Unassigned", order_index: 999 }].map(
               (island) => {
                 const islandPhotos = photos.filter((p) =>
                   island.id === "unassigned" ? !p.island_id : p.island_id === island.id,
                 );
                 const unconnectedIslandPhotos = islandPhotos.filter((p) => !connectedIds.has(p.id));
-                if (unconnectedIslandPhotos.length === 0) return null;
+                const isSingleSceneFloor = islandPhotos.length === 1;
+
+                if (unconnectedIslandPhotos.length === 0 && !isSingleSceneFloor) return null;
 
                 const isOpen = rightIslandOpen[island.id];
 
@@ -3399,7 +3485,7 @@ function ConnectionsPage() {
                         </div>
                         <span className="font-bold tracking-wide uppercase">{island.name}</span>
                         <span className="text-[10px] bg-sky-600 text-white font-extrabold px-1.5 py-0.5 rounded-full border border-sky-500 shadow-sm ml-1.5">
-                          {unconnectedIslandPhotos.length}
+                          {unconnectedIslandPhotos.length || (isSingleSceneFloor ? 1 : 0)}
                         </span>
                       </div>
                     </div>
@@ -3434,9 +3520,9 @@ function ConnectionsPage() {
 
                         {/* Scene Cards Grid */}
                         <div className="px-2 grid grid-cols-2 gap-2">
-                          {unconnectedIslandPhotos.map((p) => {
+                          {(unconnectedIslandPhotos.length > 0 ? unconnectedIslandPhotos : islandPhotos).map((p) => {
                             const idx = photos.findIndex((x) => x.id === p.id);
-                            if (active && p.id === active.id) return null;
+                            const isActiveScene = active && p.id === active.id;
                             const isPending = rightPendingTo === p.id;
                             return (
                               <div
@@ -3444,7 +3530,9 @@ function ConnectionsPage() {
                                 className={`relative rounded-xl overflow-hidden border bg-white group shadow-xs transition-all duration-300 ${
                                   isPending
                                     ? "border-sky-500 ring-2 ring-sky-500/20 shadow-md scale-[1.02]"
-                                    : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                                    : isActiveScene
+                                      ? "border-orange-400 ring-2 ring-orange-400/20"
+                                      : "border-slate-200 hover:border-slate-300 hover:shadow-sm"
                                 }`}
                               >
                                 <div
@@ -3452,7 +3540,7 @@ function ConnectionsPage() {
                                   onClick={() => {
                                     if (!active) {
                                       setActiveIdx(idx);
-                                    } else {
+                                    } else if (!isActiveScene) {
                                       setRightPendingTo(p.id);
                                     }
                                   }}
@@ -3464,14 +3552,16 @@ function ConnectionsPage() {
                                     loading="lazy"
                                     decoding="async"
                                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 relative z-10"
-                                    onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
+                                    onLoad={(e) => {
+                                      (e.currentTarget.previousSibling as HTMLElement)?.remove();
+                                    }}
                                   />
 
                                   <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-20">
                                     {idx}
                                   </div>
 
-                                  {active ? (
+                                  {active && !isActiveScene ? (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -3483,7 +3573,7 @@ function ConnectionsPage() {
                                     >
                                       <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
                                     </button>
-                                  ) : (
+                                  ) : !isActiveScene ? (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -3494,6 +3584,10 @@ function ConnectionsPage() {
                                     >
                                       <Check className="h-4.5 w-4.5 stroke-[2.5]" />
                                     </button>
+                                  ) : (
+                                    <div className="absolute top-2 right-2 rounded bg-orange-600 text-white font-black px-1.5 py-0.5 text-[8px] uppercase tracking-wider z-20">
+                                      Active
+                                    </div>
                                   )}
 
                                   {isPending && (
@@ -3503,6 +3597,32 @@ function ConnectionsPage() {
                                       </div>
                                     </div>
                                   )}
+                                </div>
+
+                                {/* Reassign floor dropdown in right panel */}
+                                <div
+                                  className="p-1.5 border-t border-slate-100 bg-white flex items-center justify-between gap-1 text-[10px]"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <span className="text-slate-400 font-bold uppercase text-[9px]">
+                                    Floor:
+                                  </span>
+                                  <select
+                                    value={p.island_id || "unassigned"}
+                                    onChange={async (e) => {
+                                      const val =
+                                        e.target.value === "unassigned" ? null : e.target.value;
+                                      await handleReassignIsland(p.id, val);
+                                    }}
+                                    className="text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 outline-none font-bold text-slate-700 cursor-pointer transition-colors max-w-[100px]"
+                                  >
+                                    <option value="unassigned">Unassigned</option>
+                                    {islands.map((i) => (
+                                      <option key={i.id} value={i.id}>
+                                        {i.name}
+                                      </option>
+                                    ))}
+                                  </select>
                                 </div>
                               </div>
                             );
@@ -3709,6 +3829,62 @@ function ConnectionsPage() {
           </div>
         </div>
       )}
+      {/* Add Floor / Island Dialog */}
+      <Dialog open={addFloorOpen} onOpenChange={setAddFloorOpen}>
+        <DialogContent className="max-w-sm bg-white rounded-2xl p-6 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-black text-slate-800 flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-blue-100 text-blue-700">
+                <Plus className="h-4 w-4" />
+              </span>
+              Add New Floor / Level
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 py-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600">Floor Name</label>
+              <Input
+                placeholder="e.g. 1st Floor, Level 1, Terrace"
+                value={newFloorName}
+                onChange={(e) => setNewFloorName(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-600">Level Number (Street View)</label>
+              <Input
+                type="number"
+                placeholder="e.g. 1 (for 1st Floor), 2 (for 2nd Floor), 0 (Ground)"
+                value={newFloorNumber}
+                onChange={(e) => setNewFloorNumber(Number(e.target.value))}
+                className="rounded-xl font-mono"
+              />
+              <p className="text-[10px] text-slate-400">
+                Google Maps uses level numbers (0 = Ground, 1 = 1st floor, -1 = Basement).
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setAddFloorOpen(false)}
+              className="rounded-xl border-slate-200 cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateFloor}
+              disabled={!newFloorName.trim()}
+              className="bg-[#0277bd] hover:bg-[#0266a1] text-white font-bold rounded-xl px-5 border-0 cursor-pointer"
+            >
+              Add Floor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
