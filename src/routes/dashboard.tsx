@@ -154,6 +154,16 @@ function Dashboard() {
         userProfile.onboarding_dismissed = true;
       }
 
+      // Self-heal: Sync billing_cycle_tours_used with actual published tours if it was 0
+      if (userProfile && (userProfile.billing_cycle_tours_used == null || userProfile.billing_cycle_tours_used < publishedCount)) {
+        await supabase
+          .from("profiles")
+          .update({ billing_cycle_tours_used: publishedCount })
+          .eq("id", user.id);
+        userProfile.billing_cycle_tours_used = publishedCount;
+        setProfile({ ...userProfile });
+      }
+
       setStats({
         clients: clientsCount,
         tours: toursCount,
@@ -199,7 +209,7 @@ function Dashboard() {
     user?.email === "vista360gtp@gmail.com" ||
     user?.email === "er.prashantyadav37@gmail.com";
   const limit = planLimit[profile?.plan ?? "trial"] ?? 1;
-  const tourCount = profile?.billing_cycle_tours_used ?? 0;
+  const tourCount = Math.max(profile?.billing_cycle_tours_used ?? 0, stats?.published ?? 0);
   const usagePct = Math.min(100, (tourCount / limit) * 100);
 
   const onboarding = [

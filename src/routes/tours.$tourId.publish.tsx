@@ -815,10 +815,25 @@ function PublishPage() {
       const allPublishedNow = latestPhotos
         ? latestPhotos.every((p: any) => p.streetview_status === "PUBLISHED")
         : false;
+
+      const isAlreadyPublished = tour?.has_been_published ?? false;
       await supabase
         .from("tours")
-        .update({ streetview_connections_synced: allPublishedNow } as any)
+        .update({
+          status: "published",
+          has_been_published: true,
+          streetview_connections_synced: allPublishedNow,
+        } as any)
         .eq("id", tourId);
+
+      if (!isAlreadyPublished && user) {
+        const currentUsed = profile?.billing_cycle_tours_used ?? 0;
+        await supabase
+          .from("profiles")
+          .update({ billing_cycle_tours_used: currentUsed + 1 } as any)
+          .eq("id", user.id);
+        setProfile((prev) => (prev ? { ...prev, billing_cycle_tours_used: currentUsed + 1 } : null));
+      }
 
       if (failedCount > 0) {
         toast.warning(`Published ${photoList.length - failedCount} of ${photoList.length} scenes. ${failedCount} scenes failed.`);
