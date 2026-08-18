@@ -823,7 +823,7 @@ function PublishPage() {
       if (failedCount > 0) {
         toast.warning(`Published ${photoList.length - failedCount} of ${photoList.length} scenes. ${failedCount} scenes failed.`);
       } else {
-        toast.success("All 80 scenes published and connections linked on Google Maps!");
+        toast.success(`All ${photoList.length} scene${photoList.length === 1 ? "" : "s"} published and connections linked on Google Maps!`);
       }
       load();
     } catch (e: any) {
