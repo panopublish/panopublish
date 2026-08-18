@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { getEnv } from "@/lib/env";
+import { resolveLocationFromInput, parseMapsInput, ResolvedPlace } from "@/lib/google-places";
 
 import { SEO } from "@/components/SEO";
 
@@ -29,22 +30,6 @@ export const Route = createFileRoute("/tours/new")({
   }),
   component: CreateTour,
 });
-
-function extractCidFromUrl(url: string): string | null {
-  if (!url) return null;
-  const cidMatch = url.match(/cid=([0-9]+)/);
-  if (cidMatch) return cidMatch[1];
-
-  const ftidMatch = url.match(/ftid=(0x[0-9a-fA-F]+):(0x[0-9a-fA-F]+)/);
-  if (ftidMatch && ftidMatch[2]) {
-    try {
-      return BigInt(ftidMatch[2]).toString();
-    } catch (e) {
-      console.error("Failed to parse CID from hex:", e);
-    }
-  }
-  return null;
-}
 
 function CreateTour() {
   const { user } = useAuth();
@@ -63,34 +48,32 @@ function CreateTour() {
 
   const [tourInput, setTourInput] = useState("");
   const [cid, setCid] = useState("");
+  const [resolving, setResolving] = useState(false);
 
-  const resolveCid = (cidVal: string) => {
-    if (!cidVal || !/^[0-9]+$/.test(cidVal)) return;
-    if (!(window as any).google) return;
-
-    try {
-      const service = new (window as any).google.maps.places.PlacesService(document.createElement("div"));
-      service.textSearch({ query: cidVal }, (results: any, status: any) => {
-        if (status === (window as any).google.maps.places.PlacesServiceStatus.OK && results && results[0]) {
-          const place = results[0];
-          service.getDetails({ placeId: place.place_id }, (placeDetail: any, detailStatus: any) => {
-            if (detailStatus === (window as any).google.maps.places.PlacesServiceStatus.OK) {
-              setTourInput(placeDetail.name || "");
-              setPlaceDetails({
-                address: placeDetail.formatted_address,
-                url: placeDetail.url,
-                place_id: placeDetail.place_id,
-                name: placeDetail.name,
-                lat: placeDetail.geometry?.location?.lat(),
-                lng: placeDetail.geometry?.location?.lng(),
-              });
-            }
-          });
-        }
-      });
-    } catch (e) {
-      console.error("Error resolving CID:", e);
-    }
+  const handleResolveInput = (rawInput: string) => {
+    if (!rawInput.trim()) return;
+    setResolving(true);
+    resolveLocationFromInput(
+      rawInput,
+      (resolved: ResolvedPlace) => {
+        setResolving(false);
+        if (resolved.name) setTourInput(resolved.name);
+        if (resolved.cid) setCid(resolved.cid);
+        setPlaceDetails({
+          address: resolved.address,
+          url: resolved.url,
+          place_id: resolved.place_id,
+          name: resolved.name,
+          lat: resolved.lat,
+          lng: resolved.lng,
+        });
+        toast.success(`Found: ${resolved.name || "Location"}`);
+      },
+      (errMsg: string) => {
+        setResolving(false);
+        console.warn(errMsg);
+      }
+    );
   };
   const [placeDetails, setPlaceDetails] = useState<{
     address?: string;
@@ -184,23 +167,32 @@ function CreateTour() {
     if (!inputRef.current || !(window as any).google?.maps?.places) return;
     try {
       const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, {
-        types: ["establishment", "geocode"],
+        fields: ["place_id", "geometry", "name", "formatted_address", "url"],
       });
       autocomplete.addListener("place_changed", () => {
         const place = autocomplete.getPlace();
-        if (!place.place_id) return;
-        setTourInput(place.name || inputRef.current?.value || "");
+        if (!place.place_id && !place.geometry) {
+          // If user typed a custom query and pressed enter without selecting dropdown
+          const rawVal = inputRef.current?.value || "";
+          if (rawVal.trim()) {
+            handleResolveInput(rawVal.trim());
+          }
+          return;
+        }
 
-        const extractedCid = extractCidFromUrl(place.url);
-        if (extractedCid) {
-          setCid(extractedCid);
+        const name = place.name || inputRef.current?.value || "";
+        setTourInput(name);
+
+        const parsed = parseMapsInput(place.url || "");
+        if (parsed.cid) {
+          setCid(parsed.cid);
         }
 
         setPlaceDetails({
-          address: place.formatted_address,
+          address: place.formatted_address || name,
           url: place.url,
           place_id: place.place_id,
-          name: place.name,
+          name,
           lat: place.geometry?.location?.lat(),
           lng: place.geometry?.location?.lng(),
         });
@@ -605,18 +597,17 @@ function CreateTour() {
           {step === 3 && type !== "custom" && (
             <div className="max-w-3xl mx-auto text-center animate-in fade-in zoom-in-95 duration-200">
               <p className="text-gray-600 mb-8 font-medium">
-                To get started, find your place page by cid, business name, address or Google place
-                page url.
+                To get started, find your place page by CID, business name, address, Place ID, or Google Maps URL.
               </p>
 
-              <div className="flex border rounded border-gray-300 overflow-hidden mb-12 bg-white">
+              <div className="flex border rounded-lg border-gray-300 overflow-hidden mb-6 bg-white shadow-sm focus-within:ring-2 focus-within:ring-[#0277bd]/50 focus-within:border-[#0277bd]">
                 <div className="px-4 py-3 bg-gray-50 border-r text-gray-500 flex items-center">
                   <Search className="h-5 w-5" />
                 </div>
                 <Input
                   ref={inputRef}
-                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 w-[60%]"
-                  placeholder="Business Name, Address, or Google Place URL"
+                  className="border-0 h-14 text-base md:text-lg rounded-none focus-visible:ring-0 px-4 w-[60%]"
+                  placeholder="Business Name, Address, or Google Maps URL"
                   value={tourInput}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -624,30 +615,82 @@ function CreateTour() {
                     if (val === "") {
                       setPlaceDetails({});
                       setCid("");
+                    } else if (
+                      val.includes("google.com/maps") ||
+                      val.includes("maps.app.goo.gl") ||
+                      val.includes("goo.gl/maps") ||
+                      val.startsWith("ChIJ")
+                    ) {
+                      handleResolveInput(val.trim());
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleResolveInput(tourInput.trim());
                     }
                   }}
                 />
-                <div className="px-4 py-3 bg-gray-50 border-x font-bold text-gray-400 flex items-center shrink-0">
+                <div className="px-3 py-3 bg-gray-50 border-x font-bold text-gray-400 flex items-center shrink-0 text-xs">
                   OR
                 </div>
-                <div className="px-4 py-3 bg-gray-50 border-r text-gray-500 flex items-center text-sm shrink-0">
-                  cid
+                <div className="px-3 py-3 bg-gray-50 border-r text-gray-500 flex items-center text-xs font-bold shrink-0">
+                  CID / Place ID
                 </div>
                 <Input
-                  className="border-0 h-14 text-lg rounded-none focus-visible:ring-0 px-4 flex-1"
-                  placeholder="CID# (most precise)"
+                  className="border-0 h-14 text-base md:text-lg rounded-none focus-visible:ring-0 px-4 flex-1 font-mono text-sm"
+                  placeholder="CID# or Place ID"
                   value={cid}
                   onChange={(e) => {
                     const val = e.target.value;
                     setCid(val);
-                    if (/^[0-9]+$/.test(val.trim()) && val.trim().length >= 8) {
-                      resolveCid(val.trim());
+                    if (val.trim().length >= 8) {
+                      handleResolveInput(val.trim());
                     } else if (val.trim() === "") {
                       setPlaceDetails({});
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleResolveInput(cid.trim());
+                    }
+                  }}
                 />
               </div>
+
+              {/* Place Resolution Feedback Card */}
+              {resolving && (
+                <div className="mb-8 p-4 rounded-xl border border-blue-100 bg-blue-50/70 text-blue-700 text-sm flex items-center justify-center gap-2 animate-pulse">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                  <span>Looking up location details on Google Maps...</span>
+                </div>
+              )}
+
+              {placeDetails.name && !resolving && (
+                <div className="mb-8 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-left shadow-sm animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="font-bold text-emerald-900 text-base">{placeDetails.name}</span>
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-emerald-200/60 text-emerald-800 rounded-full">
+                          Location Confirmed
+                        </span>
+                      </div>
+                      {placeDetails.address && (
+                        <p className="text-xs text-emerald-700 pl-4">{placeDetails.address}</p>
+                      )}
+                      {(placeDetails.lat != null && placeDetails.lng != null) && (
+                        <p className="text-[11px] font-mono text-emerald-600 pl-4">
+                          Coordinates: {placeDetails.lat.toFixed(6)}, {placeDetails.lng.toFixed(6)}
+                          {placeDetails.place_id && ` | Place ID: ${placeDetails.place_id}`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="mb-12 relative flex justify-center">
                 {/* Astronaut Placeholder */}
@@ -662,10 +705,10 @@ function CreateTour() {
 
               <button
                 onClick={submit}
-                disabled={saving || (!tourInput && !cid)}
+                disabled={saving || (!tourInput.trim() && !cid.trim())}
                 className={`w-full flex items-center justify-center px-6 py-4 rounded-full text-lg font-medium transition-colors ${
-                  (tourInput || cid) && !saving
-                    ? "bg-gray-400 hover:bg-[#8bc34a] text-white cursor-pointer"
+                  (tourInput.trim() || cid.trim()) && !saving
+                    ? "bg-[#0277bd] hover:bg-[#0266a1] text-white cursor-pointer shadow-md"
                     : "bg-gray-300 text-gray-100 cursor-not-allowed"
                 }`}
               >

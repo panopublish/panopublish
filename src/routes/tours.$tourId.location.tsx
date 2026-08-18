@@ -11,6 +11,7 @@ import { Search, ExternalLink, CheckCircle2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner";
 
 import { getEnv } from "@/lib/env";
+import { resolveLocationFromInput, parseMapsInput, ResolvedPlace } from "@/lib/google-places";
 
 import { SEO } from "@/components/SEO";
 
@@ -63,7 +64,34 @@ function LocationPage() {
   const [address, setAddress] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resolving, setResolving] = useState(false);
   const acRef = useRef<HTMLInputElement>(null);
+
+  const handleResolveLocation = (inputStr: string) => {
+    if (!inputStr || !inputStr.trim()) return;
+    setResolving(true);
+    resolveLocationFromInput(
+      inputStr.trim(),
+      (resolved: ResolvedPlace) => {
+        setResolving(false);
+        if (resolved.name && (!title || title.startsWith("Tour "))) {
+          setTitle(resolved.name);
+        }
+        if (resolved.address) setAddress(resolved.address);
+        if (resolved.place_id) setPlaceId(resolved.place_id);
+        if (resolved.cid) setCid(resolved.cid);
+        if (resolved.lat != null && resolved.lng != null) {
+          setCoords({ lat: resolved.lat, lng: resolved.lng });
+          setConfirmed(true);
+          toast.success(`Location confirmed: ${resolved.name || resolved.address || "Found on Google Maps"}`);
+        }
+      },
+      (err: string) => {
+        setResolving(false);
+        toast.error(err);
+      }
+    );
+  };
 
   useEffect(() => {
     (async () => {
@@ -80,6 +108,13 @@ function LocationPage() {
         if (data.latitude != null && data.longitude != null) {
           setCoords({ lat: data.latitude, lng: data.longitude });
           setConfirmed(true);
+        } else if (data.google_place_id || data.cid) {
+          // Auto-resolve missing coords if place_id or CID exists
+          if (MAPS_KEY) {
+            loadGoogleMaps(MAPS_KEY).then(() => {
+              handleResolveLocation(data.google_place_id || data.cid || "");
+            });
+          }
         }
       }
     })();
@@ -92,15 +127,25 @@ function LocationPage() {
       .then(() => {
         if (!acRef.current || !window.google) return;
         ac = new window.google.maps.places.Autocomplete(acRef.current, {
-          fields: ["place_id", "geometry", "name", "formatted_address"],
+          fields: ["place_id", "geometry", "name", "formatted_address", "url"],
         });
         ac.addListener("place_changed", () => {
           const place = ac.getPlace();
-          if (!place.geometry) return toast.error("No location for this place");
+          if (!place.geometry) {
+            const rawVal = acRef.current?.value || "";
+            if (rawVal.trim()) {
+              handleResolveLocation(rawVal.trim());
+            }
+            return;
+          }
           setPlaceId(place.place_id);
           setCoords({ lat: place.geometry.location.lat(), lng: place.geometry.location.lng() });
           setAddress(place.formatted_address ?? place.name ?? "");
-          if (!title) setTitle(place.name ?? "");
+          if (!title || title.startsWith("Tour ")) setTitle(place.name ?? "");
+
+          const parsed = parseMapsInput(place.url || "");
+          if (parsed.cid) setCid(parsed.cid);
+
           setConfirmed(true);
           toast.success("Location confirmed");
         });
@@ -202,23 +247,70 @@ function LocationPage() {
                 ref={acRef}
                 placeholder="Business Name, Address, or Google Place URL"
                 className="pl-9 h-11"
-                onChange={(e) => setAddress(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setAddress(val);
+                  if (
+                    val.includes("google.com/maps") ||
+                    val.includes("maps.app.goo.gl") ||
+                    val.includes("goo.gl/maps") ||
+                    val.startsWith("ChIJ")
+                  ) {
+                    handleResolveLocation(val);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleResolveLocation(address);
+                  }
+                }}
                 defaultValue={address}
               />
             </div>
           </div>
           <div className="text-center text-sm text-muted-foreground self-center pt-6">OR</div>
           <div>
-            <Label htmlFor="cid">CID</Label>
-            <Input
-              id="cid"
-              value={cid}
-              onChange={(e) => setCid(e.target.value)}
-              placeholder="CID# (most precise way to search)"
-              className="mt-1 h-11"
-            />
+            <Label htmlFor="cid">CID or Place ID</Label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                id="cid"
+                value={cid}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCid(val);
+                  if (val.trim().length >= 10 && (/^[0-9]+$/.test(val.trim()) || val.startsWith("ChIJ") || val.includes("google.com/maps"))) {
+                    handleResolveLocation(val.trim());
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleResolveLocation(cid);
+                  }
+                }}
+                placeholder="CID# or Place ID (e.g. 16299367724023995367)"
+                className="h-11 font-mono text-sm"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={resolving || !cid.trim()}
+                onClick={() => handleResolveLocation(cid)}
+                className="h-11 px-4 text-xs font-bold shrink-0 cursor-pointer"
+              >
+                {resolving ? "Finding..." : "Find"}
+              </Button>
+            </div>
           </div>
         </div>
+
+        {resolving && (
+          <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs flex items-center gap-2">
+            <div className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span>Resolving location on Google Maps...</span>
+          </div>
+        )}
 
         {(placeId || coords) && (
           <div className="flex flex-wrap items-center gap-3 text-sm rounded-lg border bg-muted/40 p-3">
