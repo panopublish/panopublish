@@ -629,13 +629,15 @@ const JS_SOURCE = `(function() {
       var container = document.createElement('div');
       container.className = 'custom-hotspot';
 
-      // Tooltip: show target scene's tag. If no tag given to that scene, show nothing!
-      var targetScene = (APP_DATA.scenes || []).find(function(s) { return s.id === hotspotData.target; });
-      var tooltipText = (targetScene && targetScene.tag && targetScene.tag.trim()) ? targetScene.tag.trim() : '';
-
-      // If info hotspot has a custom label, show it:
-      if (hotspotData.icon === 'info' && hotspotData.label && !tooltipText) {
-        tooltipText = hotspotData.label;
+      // Tooltip:
+      var tooltipText = '';
+      if (hotspotData.icon === 'link' || hotspotData.icon === 'website') {
+        tooltipText = hotspotData.url || hotspotData.label || '';
+      } else if (hotspotData.icon === 'info') {
+        tooltipText = hotspotData.label || (hotspotData.infoContent ? 'Information' : '');
+      } else {
+        var targetScene = (APP_DATA.scenes || []).find(function(s) { return s.id === hotspotData.target; });
+        tooltipText = (targetScene && targetScene.tag && targetScene.tag.trim()) ? targetScene.tag.trim() : '';
       }
 
       if (tooltipText) {
@@ -662,7 +664,13 @@ const JS_SOURCE = `(function() {
 
       // Click event
       container.addEventListener('click', function() {
-        if (hotspotData.icon === 'info') {
+        if (hotspotData.icon === 'link' || hotspotData.icon === 'website') {
+          var rawUrl = hotspotData.url || hotspotData.label || '';
+          if (rawUrl) {
+            var targetUrl = (rawUrl.indexOf('http://') === 0 || rawUrl.indexOf('https://') === 0) ? rawUrl : ('https://' + rawUrl);
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+          }
+        } else if (hotspotData.icon === 'info') {
           var infoText = hotspotData.infoContent || hotspotData.label || '';
           if (infoText) {
             // Show info popup instead of navigating
@@ -1034,21 +1042,24 @@ const JS_SOURCE = `(function() {
       'chevron': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
       'door': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h20"/><path d="M13 20V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16"/><circle cx="9" cy="12" r="1"/></svg>',
       'bed': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/></svg>',
-      'gallery': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
-      'video': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>',
-      'floorplan': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>',
-      'star': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      'lift': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m8 10 4-4 4 4"/><path d="m8 14 4 4 4-4"/></svg>',
+      'stairs': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h4v-4h4v-4h4V7h4"/></svg>',
       'info': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
       'link': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
-      'warning': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-      'pin': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
+      'website': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
       // Backward compatibility fallbacks:
       'double-arrow': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
       'double': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
       'help': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
       'cart': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
       'camera': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
-      'eye': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+      'gallery': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+      'video': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>',
+      'floorplan': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>',
+      'star': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      'eye': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      'warning': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      'pin': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>'
     };
     return svgs[icon] || svgs['arrow'];
   }
@@ -1232,7 +1243,8 @@ export async function exportCustomTour(
           target: c.to_photo_id,
           icon: meta.icon_type || "arrow",
           label: meta.label || "",
-          infoContent: meta.info_content || ""
+          infoContent: meta.info_content || "",
+          url: meta.url || meta.link || ""
         };
       });
 
@@ -1367,7 +1379,8 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
         target: c.to_photo_id,
         icon: meta.icon_type || "arrow",
         label: meta.label || "",
-        infoContent: meta.info_content || ""
+        infoContent: meta.info_content || "",
+        url: meta.url || meta.link || ""
       };
     });
 

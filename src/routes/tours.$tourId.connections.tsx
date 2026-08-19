@@ -66,20 +66,31 @@ import { getEnv } from "@/lib/env";
 
 import { SEO } from "@/components/SEO";
 
-// Available hotspot icon styles for custom virtual tours
+// Lift & Stairs SVG Icon Components
+const LiftIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="m8 10 4-4 4 4" />
+    <path d="m8 14 4 4 4-4" />
+  </svg>
+);
+
+const StairsIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 19h4v-4h4v-4h4V7h4" />
+  </svg>
+);
+
+// Exactly 8 requested hotspot icon styles for custom virtual tours
 const HOTSPOT_ICONS = [
   { id: "arrow", label: "Forward", icon: ArrowUp },
   { id: "chevron", label: "Chevron", icon: ChevronsUp },
   { id: "door", label: "Door", icon: DoorOpen },
-  { id: "bed", label: "Room / Bed", icon: BedDouble },
-  { id: "gallery", label: "Gallery", icon: Images },
-  { id: "video", label: "Video / Audio", icon: PlayCircle },
-  { id: "floorplan", label: "Floor Plan", icon: LayoutPanelTop },
-  { id: "star", label: "Highlight", icon: Star },
+  { id: "bed", label: "Room", icon: BedDouble },
+  { id: "lift", label: "Lift", icon: LiftIcon },
+  { id: "stairs", label: "Stairs", icon: StairsIcon },
   { id: "info", label: "Info", icon: Info },
   { id: "link", label: "Website", icon: ExternalLink },
-  { id: "warning", label: "Warning", icon: AlertTriangle },
-  { id: "pin", label: "Pin", icon: MapPin },
 ];
 
 const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
@@ -92,6 +103,16 @@ const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
       return <ChevronsUp className={className} />;
     case "bed":
       return <BedDouble className={className} />;
+    case "lift":
+      return <LiftIcon className={className} />;
+    case "stairs":
+      return <StairsIcon className={className} />;
+    case "info":
+    case "help":
+      return <Info className={className} />;
+    case "link":
+    case "website":
+      return <ExternalLink className={className} />;
     case "gallery":
     case "camera":
       return <Images className={className} />;
@@ -102,11 +123,6 @@ const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
     case "star":
     case "eye":
       return <Star className={`${className} fill-white/20`} />;
-    case "info":
-    case "help":
-      return <Info className={className} />;
-    case "link":
-      return <ExternalLink className={className} />;
     case "warning":
       return <AlertTriangle className={className} />;
     case "pin":
@@ -402,6 +418,8 @@ function ConnectionsPage() {
   const [editingTagPopoverId, setEditingTagPopoverId] = useState<string | null>(null);
   const [editingInfoPopoverId, setEditingInfoPopoverId] = useState<string | null>(null);
   const [infoInputVal, setInfoInputVal] = useState<string>("");
+  const [editingWebsitePopoverId, setEditingWebsitePopoverId] = useState<string | null>(null);
+  const [websiteInputVal, setWebsiteInputVal] = useState<string>("");
   const [tagInputVal, setTagInputVal] = useState<string>("");
   const [tagError, setTagError] = useState<string>("");
   const [sceneTags, setSceneTags] = useState<Record<string, string>>({});
@@ -1561,6 +1579,33 @@ function ConnectionsPage() {
       await markConnectionsUnsynced();
     } catch (err: any) {
       toast.error("Failed to save information: " + err.message);
+    }
+  };
+
+  const handleSaveWebsiteUrl = async (conn: Conn, url: string) => {
+    let meta: any = {};
+    try {
+      if (conn.metadata) meta = JSON.parse(conn.metadata);
+    } catch {}
+    meta.url = url.trim();
+    meta.link = url.trim();
+    meta.label = url.trim();
+    const metaJson = JSON.stringify(meta);
+
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ metadata: metaJson } as any)
+        .eq("id", conn.id);
+      if (error) throw error;
+      toast.success("Website link saved!");
+      setConns((prev) =>
+        prev.map((c) => (c.id === conn.id ? { ...c, metadata: metaJson } : c)),
+      );
+      setEditingWebsitePopoverId(null);
+      await markConnectionsUnsynced();
+    } catch (err: any) {
+      toast.error("Failed to save website link: " + err.message);
     }
   };
 
@@ -2771,7 +2816,9 @@ function ConnectionsPage() {
 
                   const iconType = meta.icon_type || "arrow";
                   const targetTag = sceneTags[c.to_photo_id];
-                  const labelText = targetTag || (iconType === "info" ? meta.label : "");
+                  const labelText = (iconType === "link" || iconType === "website")
+                    ? (meta.url || meta.link || meta.label || "")
+                    : (iconType === "info" ? (meta.info_content || meta.label || "") : (targetTag || ""));
                   const isTargetPopoverOpen = editingTargetPopoverId === c.id;
                   const isIconPopoverOpen = editingIconPopoverId === c.id;
                   const isDragging = draggingHotspotId === c.id;
@@ -2791,6 +2838,7 @@ function ConnectionsPage() {
                         <div className="absolute inset-0 pointer-events-none">
                           {iconType === "info" ? (
                             <>
+                              {/* Info Hotspot Controls: Delete, Edit Info Text, Change Icon */}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -2809,6 +2857,7 @@ function ConnectionsPage() {
                                   setEditingIconPopoverId(null);
                                   setEditingTargetPopoverId(null);
                                   setEditingTagPopoverId(null);
+                                  setEditingWebsitePopoverId(null);
                                   setInfoInputVal(meta.info_content || meta.label || "");
                                   setEditingInfoPopoverId(editingInfoPopoverId === c.id ? null : c.id);
                                 }}
@@ -2828,6 +2877,59 @@ function ConnectionsPage() {
                                   setEditingTargetPopoverId(null);
                                   setEditingTagPopoverId(null);
                                   setEditingInfoPopoverId(null);
+                                  setEditingWebsitePopoverId(null);
+                                  setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
+                                }}
+                                className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
+                                }`}
+                                title="Change icon style"
+                              >
+                                <Sparkles className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          ) : (iconType === "link" || iconType === "website") ? (
+                            <>
+                              {/* Website Hotspot Controls: Delete, Edit Website Link, Change Icon */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCustomHotspot(c.id);
+                                }}
+                                className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                                title="Delete website hotspot"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingIconPopoverId(null);
+                                  setEditingTargetPopoverId(null);
+                                  setEditingTagPopoverId(null);
+                                  setEditingInfoPopoverId(null);
+                                  setWebsiteInputVal(meta.url || meta.link || meta.label || "");
+                                  setEditingWebsitePopoverId(editingWebsitePopoverId === c.id ? null : c.id);
+                                }}
+                                className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  editingWebsitePopoverId === c.id || (meta.url || meta.link)
+                                    ? "bg-emerald-600 ring-2 ring-emerald-400/50"
+                                    : "bg-slate-900/95 hover:bg-emerald-600"
+                                }`}
+                                title="Edit website URL"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTargetPopoverId(null);
+                                  setEditingTagPopoverId(null);
+                                  setEditingInfoPopoverId(null);
+                                  setEditingWebsitePopoverId(null);
                                   setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
                                 }}
                                 className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
@@ -2840,6 +2942,7 @@ function ConnectionsPage() {
                             </>
                           ) : (
                             <>
+                              {/* Navigation Hotspot Controls: Move to Scene, Tag, Delete, Edit Target, Change Icon */}
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -2859,6 +2962,7 @@ function ConnectionsPage() {
                                   setEditingTargetPopoverId(null);
                                   setEditingIconPopoverId(null);
                                   setEditingInfoPopoverId(null);
+                                  setEditingWebsitePopoverId(null);
                                   const targetSceneId = c.to_photo_id || active.id;
                                   setTagInputVal(sceneTags[targetSceneId] || "");
                                   setTagError("");
@@ -2895,6 +2999,7 @@ function ConnectionsPage() {
                                   setEditingIconPopoverId(null);
                                   setEditingTagPopoverId(null);
                                   setEditingInfoPopoverId(null);
+                                  setEditingWebsitePopoverId(null);
                                   setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
                                 }}
                                 className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
@@ -2911,6 +3016,7 @@ function ConnectionsPage() {
                                   setEditingTargetPopoverId(null);
                                   setEditingTagPopoverId(null);
                                   setEditingInfoPopoverId(null);
+                                  setEditingWebsitePopoverId(null);
                                   setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
                                 }}
                                 className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
@@ -2988,10 +3094,33 @@ function ConnectionsPage() {
                           </div>
                           <div className="text-[11px] text-slate-400 mb-2">Enter text description shown when viewers click this info icon in the tour.</div>
                           <div className="space-y-2.5">
-                            <textarea rows={3} value={infoInputVal} onChange={(e) => setInfoInputVal(e.target.value)} placeholder="e.g. Master Bedroom..." className="w-full bg-slate-950/90 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 resize-none" />
+                            <textarea rows={3} value={infoInputVal} onChange={(e) => setInfoInputVal(e.target.value)} placeholder="e.g. Master Bedroom with ensuite bath..." className="w-full bg-slate-950/90 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 resize-none" />
                             <div className="flex items-center justify-end gap-2 pt-1">
                               <button type="button" onClick={() => setEditingInfoPopoverId(null)} className="px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
                               <Button type="button" size="sm" onClick={() => handleSaveInfoContent(c, infoInputVal)} className="bg-[#0277bd] hover:bg-[#01579b] text-white text-xs h-7 px-3 font-semibold">Save Info</Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {editingWebsitePopoverId === c.id && (
+                        <div
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-3.5 w-76 z-50 pointer-events-auto ring-1 ring-white/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <ExternalLink className="h-3.5 w-3.5 text-emerald-400" />
+                              <span className="text-xs font-bold text-slate-200">Website Link</span>
+                            </div>
+                            <button type="button" onClick={() => setEditingWebsitePopoverId(null)} className="text-slate-400 hover:text-white"><X className="h-3.5 w-3.5" /></button>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mb-2">Enter website URL to open in a new tab when viewers click this hotspot.</div>
+                          <div className="space-y-2.5">
+                            <input type="url" value={websiteInputVal} onChange={(e) => setWebsiteInputVal(e.target.value)} placeholder="https://example.com" className="w-full bg-slate-950/90 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500" />
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <button type="button" onClick={() => setEditingWebsitePopoverId(null)} className="px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+                              <Button type="button" size="sm" onClick={() => handleSaveWebsiteUrl(c, websiteInputVal)} className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-7 px-3 font-semibold">Save Link</Button>
                             </div>
                           </div>
                         </div>
@@ -3026,7 +3155,7 @@ function ConnectionsPage() {
                             </div>
                             <button type="button" onClick={() => setEditingIconPopoverId(null)} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800"><X className="h-3.5 w-3.5" /></button>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-0.5">
+                          <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-0.5">
                             {HOTSPOT_ICONS.map((item) => {
                               const isSelected = iconType === item.id;
                               const IconComp = item.icon;
