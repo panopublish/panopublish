@@ -399,6 +399,16 @@ function ConnectionsPage() {
   const [hotspotLabel, setHotspotLabel] = useState<string>("");
   const [savingHotspot, setSavingHotspot] = useState<boolean>(false);
 
+  const customThemeColor = useMemo(() => {
+    try {
+      if (tour?.custom_settings) {
+        const s = JSON.parse(tour.custom_settings);
+        if (s?.branding?.theme_color) return s.branding.theme_color;
+      }
+    } catch {}
+    return "#0277bd";
+  }, [tour?.custom_settings]);
+
   const activeConnObj = useMemo(() => {
     if (!selectedConnection) return null;
     return conns.find(
@@ -3078,27 +3088,18 @@ function ConnectionsPage() {
                           )}
                         </div>
 
-                        {/* Main Center Hotspot Circle (Draggable Handle) with Premium Beacon Aura */}
+                        {/* Main Center Hotspot Circle (Draggable Handle) */}
                         <div
                           onPointerDown={(e) => handleStartMarzipanoDrag(e, c.id)}
                           onMouseDown={(e) => handleStartMarzipanoDrag(e, c.id)}
                           onTouchStart={(e) => handleStartMarzipanoDrag(e as any, c.id)}
-                          className="relative group cursor-grab active:cursor-grabbing select-none"
-                          title="Click & drag to move hotspot"
+                          className={`w-12 h-12 rounded-full text-white flex items-center justify-center border-2 border-white shadow-2xl transition-transform cursor-grab active:cursor-grabbing ${
+                            isDragging ? "scale-125 ring-4 ring-white/50" : "hover:scale-110"
+                          }`}
+                          style={{ backgroundColor: customThemeColor }}
+                          title="Click & drag cursor to move hotspot"
                         >
-                          {/* Glowing Beacon Aura Ring */}
-                          <div className={`absolute -inset-1.5 rounded-full bg-sky-400/30 blur-sm pointer-events-none transition-all duration-300 ${
-                            isDragging ? "opacity-100 scale-125 bg-sky-300/60" : "opacity-75 group-hover:opacity-100 group-hover:scale-115"
-                          }`} />
-
-                          {/* Main Button with Multi-layer Gradient */}
-                          <div
-                            className={`relative w-12 h-12 rounded-full bg-gradient-to-tr from-[#0277bd] via-[#0288d1] to-[#29b6f6] text-white flex items-center justify-center border-2 border-white shadow-[0_8px_20px_rgba(2,119,189,0.5),inset_0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 ${
-                              isDragging ? "scale-125 ring-4 ring-sky-300/70" : "group-hover:scale-110 group-hover:shadow-[0_10px_25px_rgba(2,119,189,0.7)]"
-                            }`}
-                          >
-                            {renderHotspotIcon(iconType, "h-6 w-6 drop-shadow-md")}
-                          </div>
+                          {renderHotspotIcon(iconType, "h-6 w-6")}
                         </div>
                       </div>
 
