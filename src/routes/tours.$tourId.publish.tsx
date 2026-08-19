@@ -1054,7 +1054,14 @@ function PublishPage() {
 
   const handleSaveCustomSettings = async (showToast = true) => {
     setSavingSettings(true);
+
+    let existingSettings: any = {};
+    try {
+      if (tour?.custom_settings) existingSettings = JSON.parse(tour.custom_settings);
+    } catch {}
+
     const updatedSettings = JSON.stringify({
+      ...existingSettings,
       branding: {
         name: brandingName,
         link: brandingLink,
@@ -1086,7 +1093,8 @@ function PublishPage() {
         type: nadirType,
         size: size,
         pos: pos
-      }
+      },
+      scene_tags: existingSettings.scene_tags || {}
     });
 
     await saveNadirSettings(nadirType, size, pos);
@@ -1176,10 +1184,16 @@ function PublishPage() {
 
   const previewUrl = useMemo(() => {
     if (!tour || photos.length === 0) return "";
+    let existingSettings: any = {};
+    try {
+      if (tour.custom_settings) existingSettings = JSON.parse(tour.custom_settings);
+    } catch {}
+
     const tempTour = {
       id: tourId,
       name: brandingName || tour.name,
       custom_settings: JSON.stringify({
+        ...existingSettings,
         branding: {
           name: brandingName,
           link: brandingLink,
@@ -1206,7 +1220,8 @@ function PublishPage() {
           track_name: musicTitle,
           volume: musicVolume,
           autoplay: musicAutoplay
-        }
+        },
+        scene_tags: existingSettings.scene_tags || {}
       })
     };
     return generateLivePreviewUrl({
