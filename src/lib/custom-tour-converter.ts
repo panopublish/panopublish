@@ -118,6 +118,7 @@ export async function pushTourToCustom(
       type: "custom",
       status: "draft",
       has_been_published: false,
+      streetview_connections_synced: true,
       address: sourceTour.address,
       latitude: sourceTour.latitude,
       longitude: sourceTour.longitude,
@@ -192,9 +193,9 @@ export async function pushTourToCustom(
       order_index: p.order_index,
       latitude: p.latitude,
       longitude: p.longitude,
-      heading: p.heading,
-      pitch: p.pitch,
-      roll: p.roll,
+      heading: 0,
+      pitch: 0,
+      roll: 0,
       capture_time: p.capture_time,
       size_bytes: p.size_bytes,
       status: "ready",
@@ -248,11 +249,12 @@ export async function pushTourToCustom(
         } catch (_) {}
       }
 
-      // In Google tours, connection heading is geographic. Compute dynamic geographic heading from GPS if available:
+      // In Google tours, c.heading is stored as the geographic direction aligned by user.
+      // If c.heading is present, use it directly; otherwise fallback to GPS calculation:
       let dynamicHeading = c.heading;
-      if (fromOldPhoto && targetOldPhoto) {
+      if (dynamicHeading == null && fromOldPhoto && targetOldPhoto) {
         const calcH = calcHeading(fromOldPhoto, targetOldPhoto);
-        if (calcH !== null && !c.is_locked) {
+        if (calcH !== null) {
           dynamicHeading = calcH;
         }
       }

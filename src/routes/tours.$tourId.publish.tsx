@@ -420,9 +420,15 @@ function PublishPage() {
     setConfirm(true);
   };
 
-  useStreetViewStatus(photos as StatusPhoto[], accessToken, load);
+  useStreetViewStatus(
+    (tour?.type === "custom" ? [] : photos) as StatusPhoto[],
+    tour?.type === "custom" ? null : accessToken,
+    load,
+  );
 
   useEffect(() => {
+    if (!tour || tour.type === "custom") return;
+
     const anyProcessing = photos.some((p) => p.streetview_status === "PROCESSING");
     const allPublished =
       photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED");
@@ -431,7 +437,7 @@ function PublishPage() {
       setPrevWasProcessing(true);
     }
 
-    const needsSync = tour && !tour.streetview_connections_synced;
+    const needsSync = !tour.streetview_connections_synced;
     const shouldSync = allPublished && needsSync && accessToken && !publishing;
 
     if (shouldSync) {
@@ -443,7 +449,7 @@ function PublishPage() {
       toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
       syncConnectionsOnly();
     }
-  }, [photos, tour?.streetview_connections_synced, accessToken, publishing, prevWasProcessing]);
+  }, [photos, tour?.type, tour?.streetview_connections_synced, accessToken, publishing, prevWasProcessing]);
 
   const connectGoogle = async () => {
     try {
