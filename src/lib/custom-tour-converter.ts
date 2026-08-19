@@ -8,6 +8,19 @@ export interface ConvertTourResult {
   newTourId: string;
 }
 
+function calcHeading(
+  from: { latitude?: number | null; longitude?: number | null },
+  to: { latitude?: number | null; longitude?: number | null },
+): number | null {
+  if (!from?.latitude || !from?.longitude || !to?.latitude || !to?.longitude) return null;
+  const dLon = to.longitude - from.longitude;
+  const dLat = to.latitude - from.latitude;
+  if (dLon === 0 && dLat === 0) return null;
+  let h = Math.atan2(dLon, dLat) * (180 / Math.PI);
+  if (h < 0) h += 360;
+  return h;
+}
+
 /**
  * Clones a Google Maps tour into a new Custom Tour with all photos duplicated
  * and all connections converted into custom tour hotspots.
@@ -226,6 +239,7 @@ export async function pushTourToCustom(
     );
 
     const hotspotsToInsert = validConnections.map((c: any) => {
+      const fromOldPhoto = photoMapById.get(c.from_photo_id);
       const targetOldPhoto = photoMapById.get(c.to_photo_id);
       let meta: any = {};
       if (c.metadata) {
@@ -233,6 +247,19 @@ export async function pushTourToCustom(
           meta = JSON.parse(c.metadata);
         } catch (_) {}
       }
+
+      // In Google tours, connection heading is geographic. Compute dynamic geographic heading from GPS if available:
+      let dynamicHeading = c.heading;
+      if (fromOldPhoto && targetOldPhoto) {
+        const calcH = calcHeading(fromOldPhoto, targetOldPhoto);
+        if (calcH !== null && !c.is_locked) {
+          dynamicHeading = calcH;
+        }
+      }
+
+      // Convert geographic heading to 360 image texture heading (matching the arrow direction in Google Street View)
+      const fromPhotoNorthHeading = fromOldPhoto?.heading || 0;
+      const arrowHeadingOnImage = Math.round(((dynamicHeading ?? 0) - fromPhotoNorthHeading + 360) % 360);
 
       const hotspotMeta = JSON.stringify({
         icon_type: meta.icon_type || "arrow",
@@ -245,7 +272,7 @@ export async function pushTourToCustom(
         tour_id: newTourId,
         from_photo_id: photoIdMap.get(c.from_photo_id)!,
         to_photo_id: photoIdMap.get(c.to_photo_id)!,
-        heading: c.heading,
+        heading: arrowHeadingOnImage,
         is_locked: !!c.is_locked,
         spacing: c.spacing || "3m",
         metadata: hotspotMeta,
