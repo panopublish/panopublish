@@ -48,6 +48,14 @@ import {
   Sparkles,
   ExternalLink,
   Tag,
+  BedDouble,
+  Images,
+  PlayCircle,
+  LayoutPanelTop,
+  Star,
+  DoorOpen,
+  ChevronsUp,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePanoramaMap } from "@/hooks/usePanoramaMap";
@@ -57,6 +65,58 @@ import { PanoramaNode, Connection, MapMode } from "@/types/panorama";
 import { getEnv } from "@/lib/env";
 
 import { SEO } from "@/components/SEO";
+
+// Available hotspot icon styles for custom virtual tours
+const HOTSPOT_ICONS = [
+  { id: "arrow", label: "Forward", icon: ArrowUp },
+  { id: "chevron", label: "Chevron", icon: ChevronsUp },
+  { id: "door", label: "Door", icon: DoorOpen },
+  { id: "bed", label: "Room / Bed", icon: BedDouble },
+  { id: "gallery", label: "Gallery", icon: Images },
+  { id: "video", label: "Video / Audio", icon: PlayCircle },
+  { id: "floorplan", label: "Floor Plan", icon: LayoutPanelTop },
+  { id: "star", label: "Highlight", icon: Star },
+  { id: "info", label: "Info", icon: Info },
+  { id: "link", label: "Website", icon: ExternalLink },
+  { id: "warning", label: "Warning", icon: AlertTriangle },
+  { id: "pin", label: "Pin", icon: MapPin },
+];
+
+const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
+  switch (type) {
+    case "door":
+      return <DoorOpen className={className} />;
+    case "chevron":
+    case "double-arrow":
+    case "double":
+      return <ChevronsUp className={className} />;
+    case "bed":
+      return <BedDouble className={className} />;
+    case "gallery":
+    case "camera":
+      return <Images className={className} />;
+    case "video":
+      return <PlayCircle className={className} />;
+    case "floorplan":
+      return <LayoutPanelTop className={className} />;
+    case "star":
+    case "eye":
+      return <Star className={`${className} fill-white/20`} />;
+    case "info":
+    case "help":
+      return <Info className={className} />;
+    case "link":
+      return <ExternalLink className={className} />;
+    case "warning":
+      return <AlertTriangle className={className} />;
+    case "pin":
+    case "cart":
+      return <MapPin className={className} />;
+    case "arrow":
+    default:
+      return <ArrowUp className={className} />;
+  }
+};
 
 export const Route = createFileRoute("/tours/$tourId/connections")({
   head: () => ({
@@ -340,6 +400,8 @@ function ConnectionsPage() {
   const [editingTargetPopoverId, setEditingTargetPopoverId] = useState<string | null>(null);
   const [editingIconPopoverId, setEditingIconPopoverId] = useState<string | null>(null);
   const [editingTagPopoverId, setEditingTagPopoverId] = useState<string | null>(null);
+  const [editingInfoPopoverId, setEditingInfoPopoverId] = useState<string | null>(null);
+  const [infoInputVal, setInfoInputVal] = useState<string>("");
   const [tagInputVal, setTagInputVal] = useState<string>("");
   const [tagError, setTagError] = useState<string>("");
   const [sceneTags, setSceneTags] = useState<Record<string, string>>({});
@@ -1473,6 +1535,32 @@ function ConnectionsPage() {
       await markConnectionsUnsynced();
     } catch (err: any) {
       toast.error("Failed to update icon: " + err.message);
+    }
+  };
+
+  const handleSaveInfoContent = async (conn: Conn, content: string) => {
+    let meta: any = {};
+    try {
+      if (conn.metadata) meta = JSON.parse(conn.metadata);
+    } catch {}
+    meta.info_content = content.trim();
+    meta.label = content.trim();
+    const metaJson = JSON.stringify(meta);
+
+    try {
+      const { error } = await supabase
+        .from("connections")
+        .update({ metadata: metaJson } as any)
+        .eq("id", conn.id);
+      if (error) throw error;
+      toast.success("Hotspot information saved!");
+      setConns((prev) =>
+        prev.map((c) => (c.id === conn.id ? { ...c, metadata: metaJson } : c)),
+      );
+      setEditingInfoPopoverId(null);
+      await markConnectionsUnsynced();
+    } catch (err: any) {
+      toast.error("Failed to save information: " + err.message);
     }
   };
 
@@ -2701,92 +2789,139 @@ function ConnectionsPage() {
                       <div className="relative flex items-center justify-center">
                         {/* Quick Action Floating Controls around the hotspot */}
                         <div className="absolute inset-0 pointer-events-none">
-                          {/* 1. Move to Target Scene (Top Right) */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const targetIdx = photos.findIndex((p) => p.id === c.to_photo_id);
-                              if (targetIdx !== -1) setActiveIdx(targetIdx);
-                            }}
-                            className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
-                            title="Move to target scene"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* 2. Tag Scene (Top Left) */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTargetPopoverId(null);
-                              setEditingIconPopoverId(null);
-                              const targetSceneId = c.to_photo_id || active.id;
-                              setTagInputVal(sceneTags[targetSceneId] || "");
-                              setTagError("");
-                              setEditingTagPopoverId(editingTagPopoverId === c.id ? null : c.id);
-                            }}
-                            className={`absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
-                              editingTagPopoverId === c.id || (sceneTags[c.to_photo_id])
-                                ? "bg-amber-600 ring-2 ring-amber-400/50"
-                                : "bg-slate-900/95 hover:bg-amber-600"
-                            }`}
-                            title={
-                              sceneTags[c.to_photo_id]
-                                ? `Tag: "${sceneTags[c.to_photo_id]}" (Click to edit)`
-                                : "Assign unique scene navigation tag"
-                            }
-                          >
-                            <Tag className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* 3. Delete Hotspot (Bottom Left) */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteCustomHotspot(c.id);
-                            }}
-                            className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
-                            title="Delete hotspot"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* 4. Edit Target Scene (Bottom Right) */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingIconPopoverId(null);
-                              setEditingTagPopoverId(null);
-                              setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
-                            }}
-                            className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
-                              isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/95 hover:bg-sky-600"
-                            }`}
-                            title="Edit target scene"
-                          >
-                            <Edit3 className="h-3.5 w-3.5" />
-                          </button>
-
-                          {/* 5. Change Icon Type (Bottom Center) */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTargetPopoverId(null);
-                              setEditingTagPopoverId(null);
-                              setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
-                            }}
-                            className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
-                              isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
-                            }`}
-                            title="Change icon style"
-                          >
-                            <Sparkles className="h-3.5 w-3.5" />
-                          </button>
+                          {iconType === "info" ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCustomHotspot(c.id);
+                                }}
+                                className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                                title="Delete info hotspot"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingIconPopoverId(null);
+                                  setEditingTargetPopoverId(null);
+                                  setEditingTagPopoverId(null);
+                                  setInfoInputVal(meta.info_content || meta.label || "");
+                                  setEditingInfoPopoverId(editingInfoPopoverId === c.id ? null : c.id);
+                                }}
+                                className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  editingInfoPopoverId === c.id || (meta.info_content || meta.label)
+                                    ? "bg-sky-600 ring-2 ring-sky-400/50"
+                                    : "bg-slate-900/95 hover:bg-sky-600"
+                                }`}
+                                title="Edit info text"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTargetPopoverId(null);
+                                  setEditingTagPopoverId(null);
+                                  setEditingInfoPopoverId(null);
+                                  setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
+                                }}
+                                className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
+                                }`}
+                                title="Change icon style"
+                              >
+                                <Sparkles className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const targetIdx = photos.findIndex((p) => p.id === c.to_photo_id);
+                                  if (targetIdx !== -1) setActiveIdx(targetIdx);
+                                }}
+                                className="absolute -top-3.5 -right-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-emerald-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                                title="Move to target scene"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTargetPopoverId(null);
+                                  setEditingIconPopoverId(null);
+                                  setEditingInfoPopoverId(null);
+                                  const targetSceneId = c.to_photo_id || active.id;
+                                  setTagInputVal(sceneTags[targetSceneId] || "");
+                                  setTagError("");
+                                  setEditingTagPopoverId(editingTagPopoverId === c.id ? null : c.id);
+                                }}
+                                className={`absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  editingTagPopoverId === c.id || (sceneTags[c.to_photo_id])
+                                    ? "bg-amber-600 ring-2 ring-amber-400/50"
+                                    : "bg-slate-900/95 hover:bg-amber-600"
+                                }`}
+                                title={
+                                  sceneTags[c.to_photo_id]
+                                    ? `Tag: "${sceneTags[c.to_photo_id]}" (Click to edit)`
+                                    : "Assign unique scene navigation tag"
+                                }
+                              >
+                                <Tag className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCustomHotspot(c.id);
+                                }}
+                                className="absolute -bottom-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-red-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
+                                title="Delete hotspot"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingIconPopoverId(null);
+                                  setEditingTagPopoverId(null);
+                                  setEditingInfoPopoverId(null);
+                                  setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
+                                }}
+                                className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  isTargetPopoverOpen ? "bg-sky-600" : "bg-slate-900/95 hover:bg-sky-600"
+                                }`}
+                                title="Edit target scene"
+                              >
+                                <Edit3 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTargetPopoverId(null);
+                                  setEditingTagPopoverId(null);
+                                  setEditingInfoPopoverId(null);
+                                  setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
+                                }}
+                                className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                                  isIconPopoverOpen ? "bg-purple-600" : "bg-slate-900/95 hover:bg-purple-600"
+                                }`}
+                                title="Change icon style"
+                              >
+                                <Sparkles className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
 
                         {/* Main Center Hotspot Circle (Draggable Handle) */}
@@ -2799,103 +2934,64 @@ function ConnectionsPage() {
                           }`}
                           title="Click & drag cursor to move hotspot"
                         >
-                          {iconType === "door" && <span className="text-xl">🚪</span>}
-                          {iconType === "arrow" && <ArrowUp className="h-6 w-6" />}
-                          {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
-                          {iconType === "chevron" && <span className="text-xl">⏫</span>}
-                          {iconType === "info" && <Info className="h-6 w-6" />}
-                          {iconType === "help" && <HelpCircle className="h-6 w-6" />}
-                          {iconType === "cart" && <span className="text-xl">🛒</span>}
-                          {iconType === "pin" && <MapPin className="h-6 w-6" />}
-                          {iconType === "camera" && <Camera className="h-6 w-6" />}
-                          {iconType === "eye" && <Eye className="h-6 w-6" />}
+                          {renderHotspotIcon(iconType, "h-6 w-6")}
                         </div>
                       </div>
 
-                      {/* Popover Boxes */}
+                      {/* Popovers */}
                       {editingTagPopoverId === c.id && (
                         <div
-                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-72 z-50 pointer-events-auto"
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-3.5 w-72 z-50 pointer-events-auto ring-1 ring-white/10"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
                             <div className="flex items-center gap-1.5">
                               <Tag className="h-3.5 w-3.5 text-amber-400" />
-                              <span className="text-xs font-bold text-slate-200">
-                                Scene Navigation Tag
-                              </span>
+                              <span className="text-xs font-bold text-slate-200">Scene Navigation Tag</span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingTagPopoverId(null);
-                                setTagError("");
-                              }}
-                              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
+                            <button type="button" onClick={() => setEditingTagPopoverId(null)} className="text-slate-400 hover:text-white"><X className="h-3.5 w-3.5" /></button>
                           </div>
-
-                          <div className="text-[11px] text-slate-400 mb-2">
-                            Give <span className="font-semibold text-slate-200">{targetPhoto?.filename || "this scene"}</span> a unique name for the dropdown menu in tour preview and export.
+                          <input
+                            type="text"
+                            value={tagInputVal}
+                            onChange={(e) => {
+                              setTagInputVal(e.target.value);
+                              if (tagError) setTagError("");
+                            }}
+                            placeholder="e.g. Reception, Poolside, Room 101"
+                            className="w-full bg-slate-950/80 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                          />
+                          {tagError && <p className="text-[11px] text-red-400 font-medium">{tagError}</p>}
+                          <div className="flex items-center justify-between pt-1">
+                            {sceneTags[c.to_photo_id || active.id] ? (
+                              <button type="button" onClick={() => handleSaveSceneTag(c.to_photo_id || active.id, "")} className="text-[11px] text-red-400 hover:underline">Remove Tag</button>
+                            ) : <span />}
+                            <div className="flex items-center gap-1.5">
+                              <button type="button" onClick={() => { setEditingTagPopoverId(null); setTagError(""); }} className="px-2 py-1 text-xs text-slate-400 hover:text-white">Cancel</button>
+                              <Button type="button" size="sm" onClick={() => handleSaveSceneTag(c.to_photo_id || active.id, tagInputVal)} className="bg-amber-600 hover:bg-amber-500 text-white text-xs h-7 px-3 font-semibold">Save Tag</Button>
+                            </div>
                           </div>
+                        </div>
+                      )}
 
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={tagInputVal}
-                              onChange={(e) => {
-                                setTagInputVal(e.target.value);
-                                if (tagError) setTagError("");
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleSaveSceneTag(c.to_photo_id, tagInputVal);
-                                }
-                              }}
-                              placeholder="e.g. Reception, Swimming Pool, Room 101..."
-                              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                              autoFocus
-                            />
-
-                            {tagError && (
-                              <p className="text-[10px] text-red-400 font-medium leading-tight">
-                                {tagError}
-                              </p>
-                            )}
-
-                            <div className="flex items-center justify-between pt-1 gap-2">
-                              {sceneTags[c.to_photo_id] ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveSceneTag(c.to_photo_id, "")}
-                                  className="text-[10px] text-red-400 hover:text-red-300 font-bold px-1.5 py-1 rounded transition-colors"
-                                >
-                                  Remove Tag
-                                </button>
-                              ) : <span />}
-
-                              <div className="flex items-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingTagPopoverId(null);
-                                    setTagError("");
-                                  }}
-                                  className="px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-white rounded-lg transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSaveSceneTag(c.to_photo_id, tagInputVal)}
-                                  className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold rounded-lg shadow transition-colors flex items-center gap-1"
-                                >
-                                  Save Tag
-                                </button>
-                              </div>
+                      {editingInfoPopoverId === c.id && (
+                        <div
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-3.5 w-72 z-50 pointer-events-auto ring-1 ring-white/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <Info className="h-3.5 w-3.5 text-sky-400" />
+                              <span className="text-xs font-bold text-slate-200">Hotspot Information</span>
+                            </div>
+                            <button type="button" onClick={() => setEditingInfoPopoverId(null)} className="text-slate-400 hover:text-white"><X className="h-3.5 w-3.5" /></button>
+                          </div>
+                          <div className="text-[11px] text-slate-400 mb-2">Enter text description shown when viewers click this info icon in the tour.</div>
+                          <div className="space-y-2.5">
+                            <textarea rows={3} value={infoInputVal} onChange={(e) => setInfoInputVal(e.target.value)} placeholder="e.g. Master Bedroom..." className="w-full bg-slate-950/90 border border-slate-700 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-sky-500 resize-none" />
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <button type="button" onClick={() => setEditingInfoPopoverId(null)} className="px-2.5 py-1 text-xs text-slate-400 hover:text-white transition-colors">Cancel</button>
+                              <Button type="button" size="sm" onClick={() => handleSaveInfoContent(c, infoInputVal)} className="bg-[#0277bd] hover:bg-[#01579b] text-white text-xs h-7 px-3 font-semibold">Save Info</Button>
                             </div>
                           </div>
                         </div>
@@ -2903,92 +2999,44 @@ function ConnectionsPage() {
 
                       {isTargetPopoverOpen && (
                         <div
-                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-64 z-50 pointer-events-auto"
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-3 w-64 z-50 pointer-events-auto ring-1 ring-white/10"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                            <span className="text-xs font-bold text-slate-200">Select target scene</span>
-                            <button
-                              type="button"
-                              onClick={() => setEditingTargetPopoverId(null)}
-                              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
+                            <span className="text-xs font-bold text-slate-200">Connect to Scene</span>
+                            <button type="button" onClick={() => setEditingTargetPopoverId(null)} className="text-slate-400 hover:text-white"><X className="h-3.5 w-3.5" /></button>
                           </div>
-
                           <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                            {photos
-                              .filter((p) => p.id !== active.id)
-                              .map((p, idx) => {
-                                const isSelected = c.to_photo_id === p.id;
-                                return (
-                                  <button
-                                    key={p.id}
-                                    type="button"
-                                    onClick={async () => {
-                                      await updateHotspotTarget(c.id, p.id);
-                                      setEditingTargetPopoverId(null);
-                                    }}
-                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
-                                      isSelected
-                                        ? "bg-[#0277bd] text-white font-bold"
-                                        : "text-slate-300 hover:bg-slate-800 hover:text-white"
-                                    }`}
-                                  >
-                                    <span className="truncate">{p.filename || `Scene ${idx}`}</span>
-                                    {isSelected && <span className="text-[10px] text-sky-200">✓</span>}
-                                  </button>
-                                );
-                              })}
+                            {photos.filter((p) => p.id !== active.id).map((p, idx) => (
+                              <button key={p.id} type="button" onClick={async () => { await updateHotspotTarget(c.id, p.id); setEditingTargetPopoverId(null); }} className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-white">{p.filename || `Scene ${idx}`}</button>
+                            ))}
                           </div>
                         </div>
                       )}
 
                       {isIconPopoverOpen && (
                         <div
-                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-2.5 w-56 z-50 pointer-events-auto"
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-3.5 w-72 z-50 pointer-events-auto ring-1 ring-white/10"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
-                            <span className="text-xs font-bold text-slate-200">Change Icon</span>
-                            <button
-                              type="button"
-                              onClick={() => setEditingIconPopoverId(null)}
-                              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+                              <span className="text-xs font-bold text-slate-200">Change Hotspot Icon</span>
+                            </div>
+                            <button type="button" onClick={() => setEditingIconPopoverId(null)} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800"><X className="h-3.5 w-3.5" /></button>
                           </div>
-
-                          <div className="grid grid-cols-4 gap-1.5">
-                            {[
-                              { id: "arrow", icon: "⬆️", label: "Forward" },
-                              { id: "door", icon: "🚪", label: "Door" },
-                              { id: "double-arrow", icon: "⇡", label: "Double" },
-                              { id: "chevron", icon: "⏫", label: "Chevron" },
-                              { id: "info", icon: "ℹ️", label: "Info" },
-                              { id: "help", icon: "❓", label: "Help" },
-                              { id: "cart", icon: "🛒", label: "Cart" },
-                              { id: "pin", icon: "📍", label: "Pin" },
-                            ].map((item) => (
-                              <button
-                                key={item.id}
-                                type="button"
-                                onClick={async () => {
-                                  await updateHotspotIcon(c, item.id);
-                                  setEditingIconPopoverId(null);
-                                }}
-                                className={`p-1.5 rounded-lg flex flex-col items-center justify-center text-xs font-bold transition-all ${
-                                  iconType === item.id
-                                    ? "bg-[#0277bd] text-white"
-                                    : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                                }`}
-                              >
-                                <span className="text-base">{item.icon}</span>
-                                <span className="text-[8px] truncate">{item.label}</span>
-                              </button>
-                            ))}
+                          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-0.5">
+                            {HOTSPOT_ICONS.map((item) => {
+                              const isSelected = iconType === item.id;
+                              const IconComp = item.icon;
+                              return (
+                                <button key={item.id} type="button" onClick={async () => { await updateHotspotIcon(c, item.id); setEditingIconPopoverId(null); }} className={`group relative p-2.5 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all text-center border cursor-pointer ${isSelected ? "bg-gradient-to-b from-[#0277bd] to-[#01579b] border-sky-400 text-white shadow-lg shadow-sky-950/60 ring-2 ring-sky-400/50 scale-[1.02]" : "bg-gradient-to-b from-slate-800/80 to-slate-900/90 border-slate-700/60 text-slate-300 hover:border-sky-500/50 hover:from-slate-800 hover:to-slate-850 hover:text-white hover:shadow-md hover:scale-[1.03]"}`}>
+                                  <div className={`p-1.5 rounded-lg transition-colors ${isSelected ? "bg-white/20 text-white" : "bg-slate-700/40 text-sky-400 group-hover:text-sky-300 group-hover:bg-slate-700/70"}`}><IconComp className="h-4 w-4" /></div>
+                                  <span className="text-[10px] font-semibold tracking-tight truncate w-full">{item.label}</span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -3029,16 +3077,7 @@ function ConnectionsPage() {
                           onClick={() => handleEditCustomHotspot(c)}
                         >
                           <div className="w-7 h-7 rounded-lg bg-[#0277bd] text-white flex items-center justify-center shrink-0">
-                            {iconType === "door" && <span className="text-sm">🚪</span>}
-                            {iconType === "arrow" && <ArrowUp className="h-4 w-4" />}
-                            {iconType === "double-arrow" && <span className="text-sm">⇡</span>}
-                            {iconType === "chevron" && <span className="text-sm">⏫</span>}
-                            {iconType === "info" && <Info className="h-4 w-4" />}
-                            {iconType === "help" && <HelpCircle className="h-4 w-4" />}
-                            {iconType === "cart" && <span className="text-sm">🛒</span>}
-                            {iconType === "pin" && <MapPin className="h-4 w-4" />}
-                            {iconType === "camera" && <Camera className="h-4 w-4" />}
-                            {iconType === "eye" && <Eye className="h-4 w-4" />}
+                            {renderHotspotIcon(iconType, "h-4 w-4")}
                           </div>
 
                           <div className="flex-1 min-w-[120px]">

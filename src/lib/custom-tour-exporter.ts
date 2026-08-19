@@ -662,33 +662,36 @@ const JS_SOURCE = `(function() {
 
       // Click event
       container.addEventListener('click', function() {
-        if (hotspotData.icon === 'info' && hotspotData.infoContent) {
-          // Show info popup instead of navigating
-          var overlay = document.createElement('div');
-          overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;';
-          overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) document.body.removeChild(overlay);
-          });
-          var panel = document.createElement('div');
-          panel.style.cssText = 'background:rgba(15,23,42,0.95);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:16px;padding:24px;max-width:360px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
-          var header = document.createElement('div');
-          header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
-          var title = document.createElement('div');
-          title.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;';
-          title.innerHTML = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#38bdf8;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>' + (hotspotData.label || 'Information');
-          var closeBtn = document.createElement('button');
-          closeBtn.innerHTML = '&times;';
-          closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;';
-          closeBtn.onclick = function() { document.body.removeChild(overlay); };
-          header.appendChild(title);
-          header.appendChild(closeBtn);
-          var body = document.createElement('p');
-          body.style.cssText = 'font-size:13px;line-height:1.6;color:#cbd5e1;white-space:pre-wrap;';
-          body.innerText = hotspotData.infoContent;
-          panel.appendChild(header);
-          panel.appendChild(body);
-          overlay.appendChild(panel);
-          document.body.appendChild(overlay);
+        if (hotspotData.icon === 'info') {
+          var infoText = hotspotData.infoContent || hotspotData.label || '';
+          if (infoText) {
+            // Show info popup instead of navigating
+            var overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;';
+            overlay.addEventListener('click', function(e) {
+              if (e.target === overlay) document.body.removeChild(overlay);
+            });
+            var panel = document.createElement('div');
+            panel.style.cssText = 'background:rgba(15,23,42,0.95);border:1px solid rgba(255,255,255,0.15);color:#fff;border-radius:18px;padding:24px;max-width:380px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.6);';
+            var header = document.createElement('div');
+            header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:12px;';
+            var title = document.createElement('div');
+            title.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#fff;';
+            title.innerHTML = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;stroke:#38bdf8;fill:none;stroke-width:2;"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg> <span>Information</span>';
+            var closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '&times;';
+            closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.6);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;border-radius:6px;';
+            closeBtn.onclick = function() { document.body.removeChild(overlay); };
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+            var body = document.createElement('p');
+            body.style.cssText = 'font-size:13px;line-height:1.6;color:#e2e8f0;white-space:pre-wrap;margin:0;';
+            body.innerText = infoText;
+            panel.appendChild(header);
+            panel.appendChild(body);
+            overlay.appendChild(panel);
+            document.body.appendChild(overlay);
+          }
         } else {
           switchScene(hotspotData.target);
         }
@@ -1027,16 +1030,25 @@ const JS_SOURCE = `(function() {
   // Helper to return the SVG HTML based on selected icon name
   function getSvgForIcon(icon) {
     var svgs = {
-      'arrow': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>',
-      'double-arrow': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 2L4.5 14l.71.71L12 11.5l6.79 3.21.71-.71zM12 10L4.5 22l.71.71L12 19.5l6.79 3.21.71-.71z"/></svg>',
-      'chevron': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 5.86L6.5 11.36l1.42 1.41L12 8.69l4.08 4.08 1.42-1.41zM12 13L6.5 18.5l1.42 1.42L12 15.83l4.08 4.09 1.42-1.42z"/></svg>',
-      'info': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>',
-      'help': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>',
-      'cart': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>',
-      'pin': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
-      'door': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 10c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>',
-      'camera': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 9c-2.209 0-4 1.791-4 4s1.791 4 4 4 4-1.791 4-4-1.791-4-4-4zm0 6c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2zm9-11h-3.17l-1.83-2h-8l-1.83 2h-3.17c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2v-12c0-1.1-.9-2-2-2zm0 14h-18v-12h18v12z"/></svg>',
-      'eye': '<svg class="hotspot-svg" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>'
+      'arrow': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>',
+      'chevron': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
+      'door': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h20"/><path d="M13 20V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16"/><circle cx="9" cy="12" r="1"/></svg>',
+      'bed': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"/><path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4"/><path d="M12 4v6"/><path d="M2 18h20"/></svg>',
+      'gallery': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+      'video': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>',
+      'floorplan': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/></svg>',
+      'star': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+      'info': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+      'link': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
+      'warning': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      'pin': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
+      // Backward compatibility fallbacks:
+      'double-arrow': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
+      'double': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg>',
+      'help': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+      'cart': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>',
+      'camera': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+      'eye': '<svg class="hotspot-svg" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
     };
     return svgs[icon] || svgs['arrow'];
   }
