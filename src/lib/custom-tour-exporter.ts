@@ -629,11 +629,19 @@ const JS_SOURCE = `(function() {
       var container = document.createElement('div');
       container.className = 'custom-hotspot';
 
-      // Tooltip
-      if (hotspotData.label) {
+      // Tooltip: show target scene's tag. If no tag given to that scene, show nothing!
+      var targetScene = (APP_DATA.scenes || []).find(function(s) { return s.id === hotspotData.target; });
+      var tooltipText = (targetScene && targetScene.tag && targetScene.tag.trim()) ? targetScene.tag.trim() : '';
+
+      // If info hotspot has a custom label, show it:
+      if (hotspotData.icon === 'info' && hotspotData.label && !tooltipText) {
+        tooltipText = hotspotData.label;
+      }
+
+      if (tooltipText) {
         var tooltip = document.createElement('div');
         tooltip.className = 'hotspot-tooltip';
-        tooltip.innerText = hotspotData.label;
+        tooltip.innerText = tooltipText;
         container.appendChild(tooltip);
       }
 
@@ -737,8 +745,12 @@ const JS_SOURCE = `(function() {
     // Update Tag Navigation Active Label & Checkmarks
     var activeScene = (APP_DATA.scenes || []).find(function(s) { return s.id === id; });
     var activeLabel = document.getElementById('active-tag-label');
-    if (activeLabel && activeScene) {
-      activeLabel.innerText = activeScene.tag ? activeScene.tag : (activeScene.name || 'Select Scene');
+    if (activeLabel) {
+      if (activeScene && activeScene.tag && activeScene.tag.trim()) {
+        activeLabel.innerText = activeScene.tag.trim();
+      } else {
+        activeLabel.innerText = 'Go To';
+      }
     }
     var menu = document.getElementById('scene-tags-menu');
     if (menu) {
@@ -986,8 +998,12 @@ const JS_SOURCE = `(function() {
 
     // Update active label initially
     var initialScene = (APP_DATA.scenes || []).find(function(s) { return s.id === currentSceneId; });
-    if (initialScene && initialScene.tag) {
-      activeLabel.innerText = initialScene.tag;
+    if (activeLabel) {
+      if (initialScene && initialScene.tag && initialScene.tag.trim()) {
+        activeLabel.innerText = initialScene.tag.trim();
+      } else {
+        activeLabel.innerText = 'Go To';
+      }
     }
 
     btn.addEventListener('click', function(e) {

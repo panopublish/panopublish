@@ -2682,17 +2682,20 @@ function ConnectionsPage() {
                   } catch {}
 
                   const iconType = meta.icon_type || "arrow";
-                  const labelText = meta.label || targetPhoto?.filename || "Linked Scene";
+                  const targetTag = sceneTags[c.to_photo_id];
+                  const labelText = targetTag || (iconType === "info" ? meta.label : "");
                   const isTargetPopoverOpen = editingTargetPopoverId === c.id;
                   const isIconPopoverOpen = editingIconPopoverId === c.id;
                   const isDragging = draggingHotspotId === c.id;
 
                   return createPortal(
                     <div key={c.id} className="flex flex-col items-center select-none">
-                      {/* Tooltip badge floating cleanly above hotspot */}
-                      <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md border border-white/20 shadow-2xl whitespace-nowrap z-30 pointer-events-none">
-                        {labelText}
-                      </div>
+                      {/* Tooltip badge floating cleanly above hotspot (only if tagged or info) */}
+                      {labelText ? (
+                        <div className="absolute -top-11 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-md text-white text-[10px] font-extrabold px-2.5 py-1 rounded-md border border-white/20 shadow-2xl whitespace-nowrap z-30 pointer-events-none">
+                          {labelText}
+                        </div>
+                      ) : null}
 
                       {/* Hotspot Outer Container with Quick Action Control Ring */}
                       <div className="relative flex items-center justify-center">
