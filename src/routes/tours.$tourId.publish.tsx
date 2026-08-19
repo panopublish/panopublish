@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { TourStepsNav } from "@/components/TourStepsNav";
 import { useEffect, useState, useMemo } from "react";
@@ -33,12 +33,14 @@ import {
   Volume2,
   Play,
   Pause,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
 import { syncStreetViewConnections } from "@/lib/streetview";
 import { exportCustomTour, generateLivePreviewUrl } from "@/lib/custom-tour-exporter";
+import { pushTourToCustom } from "@/lib/custom-tour-converter";
 
 const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
 
@@ -131,6 +133,7 @@ const getFunctionErrorMessage = async (error: any): Promise<string> => {
 function PublishPage() {
   const { tourId } = Route.useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [tour, setTour] = useState<any>(null);
   const [nadirType, setNadirType] = useState(() => {
@@ -166,6 +169,42 @@ function PublishPage() {
   const [profile, setProfile] = useState<{ plan: string; billing_cycle_tours_used: number } | null>(
     null,
   );
+
+  // Push to Custom Tour state
+  const [convertingToCustom, setConvertingToCustom] = useState(false);
+  const [customConvertProgress, setCustomConvertProgress] = useState<{
+    pct: number;
+    message: string;
+  } | null>(null);
+
+  const handlePushToCustomTour = async () => {
+    if (!user) return;
+    if (photos.length === 0) {
+      toast.error("Please add photos to this tour before converting to Custom Tour.");
+      return;
+    }
+
+    setConvertingToCustom(true);
+    setCustomConvertProgress({ pct: 0, message: "Initializing conversion..." });
+
+    try {
+      const { newTourId } = await pushTourToCustom(
+        tourId,
+        user.id,
+        (pct, message) => {
+          setCustomConvertProgress({ pct, message });
+        },
+      );
+
+      toast.success("Tour converted to Custom Tour successfully!");
+      (navigate as any)({ to: "/tours/$tourId/publish", params: { tourId: newTourId } });
+    } catch (err: any) {
+      console.error("Custom tour conversion error:", err);
+      toast.error(err.message || "Failed to convert tour to Custom Tour");
+      setConvertingToCustom(false);
+      setCustomConvertProgress(null);
+    }
+  };
 
   // Connections state
   const [connections, setConnections] = useState<any[]>([]);
@@ -1893,6 +1932,36 @@ function PublishPage() {
             <h2 className="text-2xl font-bold text-center mb-3">Publish your scenes to Google</h2>
             <div className="h-1 rounded-full bg-blue-100 mb-8 max-w-xs mx-auto" />
 
+            {/* Push to Custom Tour Action Banner */}
+            <div className="rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50/80 via-blue-50/50 to-indigo-50/60 p-4 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-[#0277bd] text-white shadow-xs">
+                    <Sparkles className="h-4 w-4" />
+                  </span>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Standalone Custom Tour
+                  </h3>
+                  <span className="text-[10px] uppercase font-black tracking-wider bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full">
+                    1-Click
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 font-medium max-w-lg">
+                  Convert this Google Maps tour directly into a Custom Tour with interactive hotspots, branding, audio, and offline export.
+                </p>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handlePushToCustomTour}
+                disabled={convertingToCustom || photos.length === 0}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9.5 px-4.5 rounded-xl border-0 shadow-sm flex items-center gap-2 shrink-0 cursor-pointer hover:shadow-md transition-all"
+              >
+                <Sparkles className="h-4 w-4 text-sky-400" />
+                Push to Custom Tour
+              </Button>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-6 items-center">
               <div className="space-y-4">
                 {publishProgress && (
@@ -2135,6 +2204,47 @@ function PublishPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Processing Window Modal for Push to Custom Tour */}
+      <Dialog open={convertingToCustom} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md bg-white rounded-2xl p-6 border border-slate-100 shadow-2xl [&>button]:hidden">
+          <DialogHeader className="text-center space-y-2">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center text-[#0277bd] shadow-inner mb-1">
+              <Sparkles className="h-7 w-7 animate-pulse text-[#0277bd]" />
+            </div>
+            <DialogTitle className="text-lg font-extrabold text-slate-900">
+              Creating Custom Tour...
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 font-medium">
+              Please wait while your images and connections are converted into an interactive custom tour.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="my-5 space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-slate-600 truncate max-w-[280px]">
+                {customConvertProgress?.message || "Processing..."}
+              </span>
+              <span className="text-[#0277bd] font-black text-sm font-mono">
+                {customConvertProgress?.pct || 0}%
+              </span>
+            </div>
+
+            {/* Animated Progress Bar */}
+            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/60 shadow-inner">
+              <div
+                className="h-full bg-gradient-to-r from-[#0277bd] via-sky-500 to-indigo-500 rounded-full transition-all duration-300 ease-out shadow-xs"
+                style={{ width: `${customConvertProgress?.pct || 0}%` }}
+              />
+            </div>
+
+            <div className="flex items-center justify-center gap-2 pt-2 text-[11px] text-slate-400 font-medium">
+              <Clock className="h-3.5 w-3.5 animate-spin text-sky-600" />
+              <span>Duplicating panoramas and compiling hotspots</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
