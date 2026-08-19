@@ -67,6 +67,21 @@ const HTML_SOURCE = `<!DOCTYPE html>
     </a>
   </div>
 
+  <!-- Scene Navigation Tags Dropdown -->
+  <div id="scene-tags-container" style="display:none;">
+    <button id="scene-tags-btn" class="glass-panel" title="Select Scene">
+      <svg class="tag-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+      </svg>
+      <span id="active-tag-label">Select Scene</span>
+      <svg class="chevron-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </button>
+    <div id="scene-tags-menu" class="glass-panel" style="display:none;"></div>
+  </div>
+
   <!-- Top-Right Controls (Fullscreen, Zoom, Music) -->
   <div id="top-right-controls">
     <button id="fullscreen-btn" class="control-btn" title="Toggle Fullscreen" style="display:none;">
@@ -183,6 +198,116 @@ html, body {
   width: auto;
   border-radius: 6px;
   object-fit: contain;
+}
+
+/* Scene Tags Navigation Dropdown (Top Left below Branding) */
+#scene-tags-container {
+  position: absolute;
+  top: 68px;
+  left: 16px;
+  z-index: 100;
+  pointer-events: auto;
+}
+
+#scene-tags-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+  max-width: 260px;
+}
+
+#scene-tags-btn:hover {
+  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+#scene-tags-btn .tag-icon {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+#scene-tags-btn .chevron-icon {
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+#scene-tags-btn.open .chevron-icon {
+  transform: rotate(180deg);
+}
+
+#active-tag-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#scene-tags-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 240px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scene-tag-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.scene-tag-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding-left: 12px;
+}
+
+.scene-tag-item.active {
+  background: var(--theme-color, #0277bd);
+  color: #fff;
+  font-weight: 700;
 }
 
 /* Top Right Controls Overlay (Fullscreen, Zoom, Music) */
@@ -608,6 +733,25 @@ const JS_SOURCE = `(function() {
 
     // Preload neighbor scenes on demand
     preloadAdjacentScenes(id);
+
+    // Update Tag Navigation Active Label & Checkmarks
+    var activeScene = (APP_DATA.scenes || []).find(function(s) { return s.id === id; });
+    var activeLabel = document.getElementById('active-tag-label');
+    if (activeLabel && activeScene) {
+      activeLabel.innerText = activeScene.tag ? activeScene.tag : (activeScene.name || 'Select Scene');
+    }
+    var menu = document.getElementById('scene-tags-menu');
+    if (menu) {
+      var items = menu.querySelectorAll('.scene-tag-item');
+      items.forEach(function(el) {
+        var sid = el.getAttribute('data-scene-id');
+        if (sid === id) {
+          el.className = 'scene-tag-item active';
+        } else {
+          el.className = 'scene-tag-item';
+        }
+      });
+    }
   }
 
   // Switch to the first scene initially
@@ -797,6 +941,71 @@ const JS_SOURCE = `(function() {
         }
       }
     }
+
+    // Setup Scene Tags Navigation Dropdown
+    setupSceneTagsDropdown();
+  }
+
+  function setupSceneTagsDropdown() {
+    var container = document.getElementById('scene-tags-container');
+    var btn = document.getElementById('scene-tags-btn');
+    var menu = document.getElementById('scene-tags-menu');
+    var activeLabel = document.getElementById('active-tag-label');
+    if (!container || !btn || !menu || !activeLabel) return;
+
+    var taggedScenes = [];
+    (APP_DATA.scenes || []).forEach(function(s) {
+      if (s.tag && s.tag.trim()) {
+        taggedScenes.push(s);
+      }
+    });
+
+    if (taggedScenes.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    menu.innerHTML = '';
+
+    taggedScenes.forEach(function(s) {
+      var itemBtn = document.createElement('button');
+      itemBtn.className = 'scene-tag-item' + (s.id === currentSceneId ? ' active' : '');
+      itemBtn.setAttribute('data-scene-id', s.id);
+      itemBtn.innerHTML = '<span>' + s.tag + '</span>' + (s.id === currentSceneId ? '<span style="font-size:10px;">✓</span>' : '');
+      
+      itemBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        switchScene(s.id);
+        menu.style.display = 'none';
+        btn.classList.remove('open');
+      });
+
+      menu.appendChild(itemBtn);
+    });
+
+    // Update active label initially
+    var initialScene = (APP_DATA.scenes || []).find(function(s) { return s.id === currentSceneId; });
+    if (initialScene && initialScene.tag) {
+      activeLabel.innerText = initialScene.tag;
+    }
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isVisible = menu.style.display === 'flex' || menu.style.display === 'block';
+      if (isVisible) {
+        menu.style.display = 'none';
+        btn.classList.remove('open');
+      } else {
+        menu.style.display = 'flex';
+        btn.classList.add('open');
+      }
+    });
+
+    document.addEventListener('click', function() {
+      menu.style.display = 'none';
+      btn.classList.remove('open');
+    });
   }
 
   // Helper to return the SVG HTML based on selected icon name
@@ -1002,6 +1211,7 @@ export async function exportCustomTour(
       scenes.push({
         id: photo.id,
         name: photo.filename || `Scene ${i}`,
+        tag: (settings.scene_tags || {})[photo.id] || "",
         image: fileName,
         initialViewParameters: {
           yaw: ((photo.heading || 0) * Math.PI) / 180,
@@ -1136,6 +1346,7 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
     return {
       id: photo.id,
       name: photo.filename || `Scene ${i}`,
+      tag: (settings.scene_tags || {})[photo.id] || "",
       image: photo.file_url, // For preview, load directly from R2 URL!
       initialViewParameters: {
         yaw: ((photo.heading || 0) * Math.PI) / 180,
@@ -1214,6 +1425,20 @@ export function generateLivePreviewUrl(params: Omit<ExportTourParams, "photos"> 
       <img id="branding-logo" src="" alt="Logo" style="display:none;">
       <span id="branding-text"></span>
     </a>
+  </div>
+  <!-- Scene Navigation Tags Dropdown -->
+  <div id="scene-tags-container" style="display:none;">
+    <button id="scene-tags-btn" class="glass-panel" title="Select Scene">
+      <svg class="tag-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+      </svg>
+      <span id="active-tag-label">Select Scene</span>
+      <svg class="chevron-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="6 9 12 15 18 9"></polyline>
+      </svg>
+    </button>
+    <div id="scene-tags-menu" class="glass-panel" style="display:none;"></div>
   </div>
   <!-- Top-Right Controls (Fullscreen, Zoom, Music) -->
   <div id="top-right-controls">

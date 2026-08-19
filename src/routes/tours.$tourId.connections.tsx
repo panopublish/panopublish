@@ -47,6 +47,7 @@ import {
   LogOut,
   Sparkles,
   ExternalLink,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePanoramaMap } from "@/hooks/usePanoramaMap";
@@ -338,6 +339,10 @@ function ConnectionsPage() {
   const draggingHotspotIdRef = useRef<string | null>(null);
   const [editingTargetPopoverId, setEditingTargetPopoverId] = useState<string | null>(null);
   const [editingIconPopoverId, setEditingIconPopoverId] = useState<string | null>(null);
+  const [editingTagPopoverId, setEditingTagPopoverId] = useState<string | null>(null);
+  const [tagInputVal, setTagInputVal] = useState<string>("");
+  const [tagError, setTagError] = useState<string>("");
+  const [sceneTags, setSceneTags] = useState<Record<string, string>>({});
 
   const headingBadgeRef = useRef<HTMLSpanElement>(null);
   const compassNeedleRef = useRef<SVGSVGElement>(null);
@@ -398,6 +403,14 @@ function ConnectionsPage() {
           supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index"),
         ]);
       setTour(t as any);
+      if (t?.custom_settings) {
+        try {
+          const parsed = JSON.parse(t.custom_settings);
+          setSceneTags(parsed.scene_tags || {});
+        } catch (_) {}
+      } else {
+        setSceneTags({});
+      }
       if (typeof window !== "undefined" && t?.type) {
         try {
           sessionStorage.setItem(`tour_type_${tourId}`, t.type);
@@ -1512,6 +1525,55 @@ function ConnectionsPage() {
     }
   };
 
+  const handleSaveSceneTag = async (sceneId: string, rawTag: string) => {
+    const trimmed = rawTag.trim();
+    if (trimmed) {
+      // Uniqueness check: is trimmed already assigned to another scene?
+      const duplicatePhotoId = Object.keys(sceneTags).find(
+        (pId) => pId !== sceneId && sceneTags[pId]?.toLowerCase().trim() === trimmed.toLowerCase(),
+      );
+      if (duplicatePhotoId) {
+        const dupPhoto = photos.find((p) => p.id === duplicatePhotoId);
+        const dupName = dupPhoto?.filename || "another scene";
+        setTagError(`Tag "${trimmed}" is already used on ${dupName}. Tags must be unique.`);
+        return false;
+      }
+    }
+
+    const updatedTags = { ...sceneTags };
+    if (trimmed) {
+      updatedTags[sceneId] = trimmed;
+    } else {
+      delete updatedTags[sceneId];
+    }
+
+    setSceneTags(updatedTags);
+
+    let parsedSettings: any = {};
+    try {
+      if (tour?.custom_settings) parsedSettings = JSON.parse(tour.custom_settings);
+    } catch {}
+    parsedSettings.scene_tags = updatedTags;
+    const customSettingsStr = JSON.stringify(parsedSettings);
+
+    try {
+      const { error } = await supabase
+        .from("tours")
+        .update({ custom_settings: customSettingsStr } as any)
+        .eq("id", tourId);
+      if (error) throw error;
+      setTour((prev: any) => (prev ? { ...prev, custom_settings: customSettingsStr } : null));
+      toast.success(trimmed ? `Tag "${trimmed}" saved!` : "Tag removed!");
+      setEditingTagPopoverId(null);
+      setTagError("");
+      await markConnectionsUnsynced();
+      return true;
+    } catch (err: any) {
+      toast.error("Failed to save tag: " + err.message);
+      return false;
+    }
+  };
+
   const handlePointerDownHotspot = (e: React.PointerEvent, connId: string) => {
     e.stopPropagation();
     setDraggingHotspotId(connId);
@@ -2518,7 +2580,7 @@ function ConnectionsPage() {
                       <div className="text-xs font-bold text-slate-800 truncate">
                         {p.filename || `Scene ${idx}`}
                       </div>
-                      <div className="text-[10px] text-slate-500 font-medium flex items-center gap-1.5 mt-0.5">
+                      <div className="text-[10px] text-slate-500 font-medium flex flex-wrap items-center gap-1.5 mt-0.5">
                         <span
                           className={`px-1.5 py-0.5 rounded font-bold text-[9px] ${
                             activeHotspotsCount > 0
@@ -2528,6 +2590,12 @@ function ConnectionsPage() {
                         >
                           {activeHotspotsCount} {activeHotspotsCount === 1 ? "hotspot" : "hotspots"}
                         </span>
+                        {sceneTags[p.id] && (
+                          <span className="px-1.5 py-0.5 rounded font-bold text-[9px] bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1 max-w-[120px] truncate" title={`Tag: ${sceneTags[p.id]}`}>
+                            <Tag className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate">{sceneTags[p.id]}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -2644,17 +2712,30 @@ function ConnectionsPage() {
                             <ExternalLink className="h-3.5 w-3.5" />
                           </button>
 
-                          {/* 2. Reset Position (Top Left) */}
+                          {/* 2. Tag Scene (Top Left) */}
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              resetHotspotPosition(c.id);
+                              setEditingTargetPopoverId(null);
+                              setEditingIconPopoverId(null);
+                              const targetSceneId = c.to_photo_id || active.id;
+                              setTagInputVal(sceneTags[targetSceneId] || "");
+                              setTagError("");
+                              setEditingTagPopoverId(editingTagPopoverId === c.id ? null : c.id);
                             }}
-                            className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full bg-slate-900/95 hover:bg-amber-600 text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20"
-                            title="Reset position to view center"
+                            className={`absolute -top-3.5 -left-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
+                              editingTagPopoverId === c.id || (sceneTags[c.to_photo_id])
+                                ? "bg-amber-600 ring-2 ring-amber-400/50"
+                                : "bg-slate-900/95 hover:bg-amber-600"
+                            }`}
+                            title={
+                              sceneTags[c.to_photo_id]
+                                ? `Tag: "${sceneTags[c.to_photo_id]}" (Click to edit)`
+                                : "Assign unique scene navigation tag"
+                            }
                           >
-                            <RotateCcw className="h-3.5 w-3.5" />
+                            <Tag className="h-3.5 w-3.5" />
                           </button>
 
                           {/* 3. Delete Hotspot (Bottom Left) */}
@@ -2676,6 +2757,7 @@ function ConnectionsPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingIconPopoverId(null);
+                              setEditingTagPopoverId(null);
                               setEditingTargetPopoverId(isTargetPopoverOpen ? null : c.id);
                             }}
                             className={`absolute -bottom-3.5 -right-3.5 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
@@ -2692,6 +2774,7 @@ function ConnectionsPage() {
                             onClick={(e) => {
                               e.stopPropagation();
                               setEditingTargetPopoverId(null);
+                              setEditingTagPopoverId(null);
                               setEditingIconPopoverId(isIconPopoverOpen ? null : c.id);
                             }}
                             className={`absolute -bottom-7 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full text-white border border-white/30 flex items-center justify-center shadow-lg transition-transform hover:scale-115 pointer-events-auto cursor-pointer z-20 ${
@@ -2727,6 +2810,94 @@ function ConnectionsPage() {
                       </div>
 
                       {/* Popover Boxes */}
+                      {editingTagPopoverId === c.id && (
+                        <div
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-72 z-50 pointer-events-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <Tag className="h-3.5 w-3.5 text-amber-400" />
+                              <span className="text-xs font-bold text-slate-200">
+                                Scene Navigation Tag
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingTagPopoverId(null);
+                                setTagError("");
+                              }}
+                              className="text-slate-400 hover:text-white p-0.5 rounded transition-colors"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="text-[11px] text-slate-400 mb-2">
+                            Give <span className="font-semibold text-slate-200">{targetPhoto?.filename || "this scene"}</span> a unique name for the dropdown menu in tour preview and export.
+                          </div>
+
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={tagInputVal}
+                              onChange={(e) => {
+                                setTagInputVal(e.target.value);
+                                if (tagError) setTagError("");
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleSaveSceneTag(c.to_photo_id, tagInputVal);
+                                }
+                              }}
+                              placeholder="e.g. Reception, Swimming Pool, Room 101..."
+                              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                              autoFocus
+                            />
+
+                            {tagError && (
+                              <p className="text-[10px] text-red-400 font-medium leading-tight">
+                                {tagError}
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between pt-1 gap-2">
+                              {sceneTags[c.to_photo_id] ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveSceneTag(c.to_photo_id, "")}
+                                  className="text-[10px] text-red-400 hover:text-red-300 font-bold px-1.5 py-1 rounded transition-colors"
+                                >
+                                  Remove Tag
+                                </button>
+                              ) : <span />}
+
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingTagPopoverId(null);
+                                    setTagError("");
+                                  }}
+                                  className="px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-white rounded-lg transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveSceneTag(c.to_photo_id, tagInputVal)}
+                                  className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold rounded-lg shadow transition-colors flex items-center gap-1"
+                                >
+                                  Save Tag
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {isTargetPopoverOpen && (
                         <div
                           className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/95 backdrop-blur border border-slate-700 text-white rounded-xl shadow-2xl p-3 w-64 z-50 pointer-events-auto"
