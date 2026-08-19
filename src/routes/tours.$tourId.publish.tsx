@@ -197,6 +197,8 @@ function PublishPage() {
       );
 
       toast.success("Tour converted to Custom Tour successfully!");
+      setConvertingToCustom(false);
+      setCustomConvertProgress(null);
       (navigate as any)({ to: "/tours/$tourId/publish", params: { tourId: newTourId } });
     } catch (err: any) {
       console.error("Custom tour conversion error:", err);
@@ -205,6 +207,11 @@ function PublishPage() {
       setCustomConvertProgress(null);
     }
   };
+
+  useEffect(() => {
+    setConvertingToCustom(false);
+    setCustomConvertProgress(null);
+  }, [tourId]);
 
   // Connections state
   const [connections, setConnections] = useState<any[]>([]);

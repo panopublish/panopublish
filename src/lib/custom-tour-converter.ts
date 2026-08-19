@@ -243,12 +243,10 @@ export async function pushTourToCustom(
 
       return {
         tour_id: newTourId,
-        user_id: userId,
         from_photo_id: photoIdMap.get(c.from_photo_id)!,
         to_photo_id: photoIdMap.get(c.to_photo_id)!,
         heading: c.heading,
-        pitch: c.pitch ?? -10,
-        is_locked: c.is_locked ?? false,
+        is_locked: !!c.is_locked,
         spacing: c.spacing || "3m",
         metadata: hotspotMeta,
       };
@@ -263,7 +261,8 @@ export async function pushTourToCustom(
           .insert(batch as any);
 
         if (connErr) {
-          console.warn("Failed to insert converted hotspots batch:", connErr);
+          console.error("Failed to insert converted hotspots batch:", connErr);
+          throw new Error("Failed to create tour hotspots: " + connErr.message);
         }
       }
     }
