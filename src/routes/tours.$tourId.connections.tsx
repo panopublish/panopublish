@@ -66,53 +66,101 @@ import { getEnv } from "@/lib/env";
 
 import { SEO } from "@/components/SEO";
 
-// Lift & Stairs SVG Icon Components
-const LiftIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
+// Premium Handcrafted Vector Icon Components for Custom Tours
+const ForwardIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m5 12 7-7 7 7" />
+    <path d="M12 19V5" />
+  </svg>
+);
+
+const ChevronIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m17 11-5-5-5 5" />
+    <path d="m17 18-5-5-5 5" />
+  </svg>
+);
+
+const DoorIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="M13 4h3a2 2 0 0 1 2 2v14" />
+    <path d="M2 20h20" />
+    <path d="M13 20V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v16" />
+    <circle cx="9" cy="12" r="1" fill="currentColor" />
+  </svg>
+);
+
+const RoomIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8" />
+    <path d="M4 10V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4" />
+    <path d="M12 4v6" />
+    <path d="M2 18h20" />
+  </svg>
+);
+
+const LiftIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="18" x="3" y="3" rx="3" />
     <path d="m8 10 4-4 4 4" />
     <path d="m8 14 4 4 4-4" />
   </svg>
 );
 
-const StairsIcon = ({ className = "h-4 w-4" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const StairsIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 19h4v-4h4v-4h4V7h4" />
+  </svg>
+);
+
+const InfoHotspotIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </svg>
+);
+
+const WebsiteIcon = ({ className = "h-5 w-5" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+    <path d="M2 12h20" />
   </svg>
 );
 
 // Exactly 8 requested hotspot icon styles for custom virtual tours
 const HOTSPOT_ICONS = [
-  { id: "arrow", label: "Forward", icon: ArrowUp },
-  { id: "chevron", label: "Chevron", icon: ChevronsUp },
-  { id: "door", label: "Door", icon: DoorOpen },
-  { id: "bed", label: "Room", icon: BedDouble },
+  { id: "arrow", label: "Forward", icon: ForwardIcon },
+  { id: "chevron", label: "Chevron", icon: ChevronIcon },
+  { id: "door", label: "Door", icon: DoorIcon },
+  { id: "bed", label: "Room", icon: RoomIcon },
   { id: "lift", label: "Lift", icon: LiftIcon },
   { id: "stairs", label: "Stairs", icon: StairsIcon },
-  { id: "info", label: "Info", icon: Info },
-  { id: "link", label: "Website", icon: ExternalLink },
+  { id: "info", label: "Info", icon: InfoHotspotIcon },
+  { id: "link", label: "Website", icon: WebsiteIcon },
 ];
 
 const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
   switch (type) {
-    case "door":
-      return <DoorOpen className={className} />;
     case "chevron":
     case "double-arrow":
     case "double":
-      return <ChevronsUp className={className} />;
+      return <ChevronIcon className={className} />;
+    case "door":
+      return <DoorIcon className={className} />;
     case "bed":
-      return <BedDouble className={className} />;
+      return <RoomIcon className={className} />;
     case "lift":
       return <LiftIcon className={className} />;
     case "stairs":
       return <StairsIcon className={className} />;
     case "info":
     case "help":
-      return <Info className={className} />;
+      return <InfoHotspotIcon className={className} />;
     case "link":
     case "website":
-      return <ExternalLink className={className} />;
+      return <WebsiteIcon className={className} />;
     case "gallery":
     case "camera":
       return <Images className={className} />;
@@ -130,7 +178,7 @@ const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
       return <MapPin className={className} />;
     case "arrow":
     default:
-      return <ArrowUp className={className} />;
+      return <ForwardIcon className={className} />;
   }
 };
 
@@ -3030,17 +3078,27 @@ function ConnectionsPage() {
                           )}
                         </div>
 
-                        {/* Main Center Hotspot Circle (Draggable Handle) */}
+                        {/* Main Center Hotspot Circle (Draggable Handle) with Premium Beacon Aura */}
                         <div
                           onPointerDown={(e) => handleStartMarzipanoDrag(e, c.id)}
                           onMouseDown={(e) => handleStartMarzipanoDrag(e, c.id)}
                           onTouchStart={(e) => handleStartMarzipanoDrag(e as any, c.id)}
-                          className={`w-12 h-12 rounded-full bg-[#0277bd] text-white flex items-center justify-center border-2 border-white shadow-2xl transition-transform cursor-grab active:cursor-grabbing ${
-                            isDragging ? "scale-125 bg-sky-400 ring-4 ring-sky-300/50" : "hover:scale-110"
-                          }`}
-                          title="Click & drag cursor to move hotspot"
+                          className="relative group cursor-grab active:cursor-grabbing select-none"
+                          title="Click & drag to move hotspot"
                         >
-                          {renderHotspotIcon(iconType, "h-6 w-6")}
+                          {/* Glowing Beacon Aura Ring */}
+                          <div className={`absolute -inset-1.5 rounded-full bg-sky-400/30 blur-sm pointer-events-none transition-all duration-300 ${
+                            isDragging ? "opacity-100 scale-125 bg-sky-300/60" : "opacity-75 group-hover:opacity-100 group-hover:scale-115"
+                          }`} />
+
+                          {/* Main Button with Multi-layer Gradient */}
+                          <div
+                            className={`relative w-12 h-12 rounded-full bg-gradient-to-tr from-[#0277bd] via-[#0288d1] to-[#29b6f6] text-white flex items-center justify-center border-2 border-white shadow-[0_8px_20px_rgba(2,119,189,0.5),inset_0_1px_2px_rgba(255,255,255,0.7)] transition-all duration-200 ${
+                              isDragging ? "scale-125 ring-4 ring-sky-300/70" : "group-hover:scale-110 group-hover:shadow-[0_10px_25px_rgba(2,119,189,0.7)]"
+                            }`}
+                          >
+                            {renderHotspotIcon(iconType, "h-6 w-6 drop-shadow-md")}
+                          </div>
                         </div>
                       </div>
 
@@ -3145,24 +3203,61 @@ function ConnectionsPage() {
 
                       {isIconPopoverOpen && (
                         <div
-                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-3.5 w-72 z-50 pointer-events-auto ring-1 ring-white/10"
+                          className="absolute left-1/2 bottom-full mb-8 -translate-x-1/2 bg-slate-900/98 backdrop-blur-2xl border border-slate-700/80 text-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.7)] p-4 w-84 z-50 pointer-events-auto ring-1 ring-white/10"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3">
-                            <div className="flex items-center gap-1.5">
-                              <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-                              <span className="text-xs font-bold text-slate-200">Change Hotspot Icon</span>
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1 rounded-lg bg-purple-500/20 text-purple-400">
+                                <Sparkles className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-100">Hotspot Icon</div>
+                                <div className="text-[10px] text-slate-400">Select icon style for this spot</div>
+                              </div>
                             </div>
-                            <button type="button" onClick={() => setEditingIconPopoverId(null)} className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800"><X className="h-3.5 w-3.5" /></button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingIconPopoverId(null)}
+                              className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           </div>
-                          <div className="grid grid-cols-4 gap-2 max-h-64 overflow-y-auto pr-0.5">
+
+                          <div className="grid grid-cols-4 gap-2">
                             {HOTSPOT_ICONS.map((item) => {
                               const isSelected = iconType === item.id;
                               const IconComp = item.icon;
                               return (
-                                <button key={item.id} type="button" onClick={async () => { await updateHotspotIcon(c, item.id); setEditingIconPopoverId(null); }} className={`group relative p-2.5 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all text-center border cursor-pointer ${isSelected ? "bg-gradient-to-b from-[#0277bd] to-[#01579b] border-sky-400 text-white shadow-lg shadow-sky-950/60 ring-2 ring-sky-400/50 scale-[1.02]" : "bg-gradient-to-b from-slate-800/80 to-slate-900/90 border-slate-700/60 text-slate-300 hover:border-sky-500/50 hover:from-slate-800 hover:to-slate-850 hover:text-white hover:shadow-md hover:scale-[1.03]"}`}>
-                                  <div className={`p-1.5 rounded-lg transition-colors ${isSelected ? "bg-white/20 text-white" : "bg-slate-700/40 text-sky-400 group-hover:text-sky-300 group-hover:bg-slate-700/70"}`}><IconComp className="h-4 w-4" /></div>
-                                  <span className="text-[10px] font-semibold tracking-tight truncate w-full">{item.label}</span>
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  onClick={async () => {
+                                    await updateHotspotIcon(c, item.id);
+                                    setEditingIconPopoverId(null);
+                                  }}
+                                  className={`group relative p-2.5 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all duration-200 text-center border cursor-pointer ${
+                                    isSelected
+                                      ? "bg-gradient-to-b from-sky-500/25 to-sky-600/35 border-sky-400 text-white shadow-[0_0_16px_rgba(56,189,248,0.35)] ring-2 ring-sky-400/60 scale-[1.03]"
+                                      : "bg-slate-800/60 border-slate-700/60 text-slate-300 hover:border-sky-400/50 hover:bg-slate-800 hover:text-white hover:shadow-md hover:scale-[1.03]"
+                                  }`}
+                                >
+                                  {isSelected && (
+                                    <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]" />
+                                  )}
+                                  <div
+                                    className={`p-2 rounded-lg transition-all duration-200 ${
+                                      isSelected
+                                        ? "bg-gradient-to-tr from-sky-600 to-sky-400 text-white shadow-md"
+                                        : "bg-slate-700/40 text-sky-400 group-hover:text-white group-hover:bg-sky-500/30"
+                                    }`}
+                                  >
+                                    <IconComp className="h-4 w-4" />
+                                  </div>
+                                  <span className="text-[10px] font-bold tracking-tight truncate w-full">
+                                    {item.label}
+                                  </span>
                                 </button>
                               );
                             })}
