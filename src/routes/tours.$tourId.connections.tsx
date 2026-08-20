@@ -974,7 +974,7 @@ function ConnectionsPage() {
             cached = { scene, view };
             customScenesCacheRef.current[active.id] = cached;
 
-            let syncRaf: number | null = null;
+            let povDebounceTimer: any = null;
             const syncPov = () => {
               if (view && !cancelled) {
                 try {
@@ -983,10 +983,9 @@ function ConnectionsPage() {
                   const fovRad = view.fov() || Math.PI / 2;
 
                   const yDeg = Math.round(((yRad * 180) / Math.PI + 360) % 360);
-                  const pDeg = Math.round((pRad * 180) / Math.PI);
-                  const zoom = (Math.PI / 2) / fovRad;
                   lastHeadingRef.current = yDeg;
 
+                  // Ultra-fast 60fps direct DOM updates (0 React re-render lag)
                   if (headingBadgeRef.current) {
                     headingBadgeRef.current.textContent = `H: ${yDeg}°`;
                   }
@@ -995,13 +994,13 @@ function ConnectionsPage() {
                     compassNeedleRef.current.style.transform = `rotate(${-geographicH}deg)`;
                   }
 
-                  if (syncRaf === null) {
-                    syncRaf = requestAnimationFrame(() => {
-                      syncRaf = null;
+                  // Debounce React state updates to avoid re-rendering entire component tree on drag
+                  clearTimeout(povDebounceTimer);
+                  povDebounceTimer = setTimeout(() => {
+                    if (!cancelled) {
                       setCurrentHeading(yDeg);
-                      setCurrentPov({ heading: yDeg, pitch: pDeg, zoom });
-                    });
-                  }
+                    }
+                  }, 120);
                 } catch {}
               }
             };
@@ -1060,13 +1059,14 @@ function ConnectionsPage() {
 
         prevActiveIdRef.current = active.id;
 
-        let povRaf: number | null = null;
+        let povDebounceTimer: any = null;
         viewerRef.current.addListener("pov_changed", () => {
           const pov = viewerRef.current.getPov();
           if (pov) {
             const headingVal = (pov.heading + 360) % 360;
             lastHeadingRef.current = headingVal;
 
+            // Ultra-fast 60fps direct DOM updates (0 React re-render lag)
             if (headingBadgeRef.current) {
               headingBadgeRef.current.textContent = `H: ${Math.round(headingVal)}°`;
             }
@@ -1075,17 +1075,11 @@ function ConnectionsPage() {
               compassNeedleRef.current.style.transform = `rotate(${-geographicH}deg)`;
             }
 
-            if (povRaf === null) {
-              povRaf = requestAnimationFrame(() => {
-                povRaf = null;
-                setCurrentHeading(headingVal);
-                setCurrentPov({
-                  heading: headingVal,
-                  pitch: pov.pitch ?? 0,
-                  zoom: pov.zoom ?? 1,
-                });
-              });
-            }
+            // Debounce React state updates to avoid re-rendering entire component tree on drag
+            clearTimeout(povDebounceTimer);
+            povDebounceTimer = setTimeout(() => {
+              setCurrentHeading(headingVal);
+            }, 120);
           }
         });
 

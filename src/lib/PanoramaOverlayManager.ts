@@ -448,7 +448,11 @@ export function createPanoramaOverlayManager(options: {
         el.style.top = `${p.y}px`;
         el.style.zIndex = isActive ? "50" : "10";
 
-        el.innerHTML = this.renderNodeHTML(node, isActive);
+        const nodeCacheKey = `${node.id}:${node.label}:${node.status}:${isActive}:${node.connectionCount}`;
+        if (el.dataset.cacheKey !== nodeCacheKey) {
+          el.innerHTML = this.renderNodeHTML(node, isActive);
+          el.dataset.cacheKey = nodeCacheKey;
+        }
 
         // 3. Draw Active Node Heading Ray in SVG
         if (isActive) {
