@@ -934,9 +934,30 @@ function PublishPage() {
         message: "Fetching connections and photo alignments...",
       });
 
-      toast.info("Updating connections and poses on Google Maps...");
+      let synced = false;
+      let lastSyncErr = "";
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          if (attempt > 1) {
+            setPublishProgress({
+              current: 50,
+              total: 100,
+              step: "connecting",
+              message: `Network reconnecting, retrying sync (attempt ${attempt}/3)...`,
+            });
+            await new Promise((r) => setTimeout(r, 2000));
+          }
+          await syncStreetViewConnections(supabase, tourId, freshToken);
+          synced = true;
+          break;
+        } catch (syncErr: any) {
+          lastSyncErr = syncErr.message || "Sync failed";
+        }
+      }
 
-      await syncStreetViewConnections(supabase, tourId, freshToken);
+      if (!synced) {
+        throw new Error(lastSyncErr);
+      }
 
       // Update database and local state to prevent loop
       const { error: dbErr } = await supabase
