@@ -2,10 +2,12 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "allowJs": true,
     "skipLibCheck": true,
     "noImplicitAny": false
   },
-  "include": ["functions/**/*"]
+  "include": ["functions/**/*", "functions/deno-types.d.ts"]
 }
