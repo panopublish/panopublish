@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -1154,6 +1155,9 @@ function TourDetail() {
         >
           <DialogHeader>
             <DialogTitle>Add island</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Create a named group to organize your 360 panorama scenes.
+            </DialogDescription>
           </DialogHeader>
           <div>
             <Label>Island name</Label>
@@ -1186,6 +1190,9 @@ function TourDetail() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rename island</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Enter a new name for this scene collection.
+            </DialogDescription>
           </DialogHeader>
           <Input value={renameVal} onChange={(e) => setRenameVal(e.target.value)} />
           <DialogFooter>

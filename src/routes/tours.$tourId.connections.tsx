@@ -1013,7 +1013,9 @@ function ConnectionsPage() {
 
           cached.view.setYaw(((active.heading || 0) * Math.PI) / 180);
           cached.view.setPitch(0);
-          cached.scene.switchTo({ transitionDuration: 300 });
+          cached.scene.switchTo({ transitionDuration: 300 }, (err: any) => {
+            // Ignore cancelled transition errors during fast scene clicks
+          });
         } catch (err) {
           console.error("360 viewer init error", err);
         }
@@ -1361,11 +1363,12 @@ function ConnectionsPage() {
 
   // Synchronize 3D chevron links dynamically when coordinates or headings update (e.g. during dragging)
   useEffect(() => {
-    if (!viewerRef.current || !active) return;
+    if (!viewerRef.current || !active || tour?.type === "custom" || typeof viewerRef.current.setLinks !== "function") return;
     const p = photos.find((x) => x.id === active.id);
     if (!p) return;
 
     const updateLinks = () => {
+      if (!viewerRef.current || typeof viewerRef.current.setLinks !== "function") return;
       const activeConns = conns.filter((c) => c.from_photo_id === active.id);
       const links = activeConns.map((c) => {
         const targetPhoto = photos.find((x) => x.id === c.to_photo_id);
@@ -1386,7 +1389,7 @@ function ConnectionsPage() {
       try {
         viewerRef.current.setLinks(links);
       } catch (err) {
-        console.warn("Failed to set links dynamically", err);
+        // Silently ignore if viewer is unmounted or in transition
       }
     };
 
@@ -4089,6 +4092,9 @@ function ConnectionsPage() {
             <DialogTitle className="text-lg font-bold text-white">
               {editingCustomHotspotId ? "Edit Hotspot" : "Add Scene Hotspot"}
             </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Configure navigation links or information popups for this 360 scene.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -4277,6 +4283,9 @@ function ConnectionsPage() {
               </span>
               Add New Floor / Level
             </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Create a new building level or floor plan grouping for this tour.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-1">

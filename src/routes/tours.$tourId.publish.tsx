@@ -249,6 +249,29 @@ function PublishPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ message: string; pct: number } | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [syncingConnections, setSyncingConnections] = useState(false);
+
+  const handleSyncConnections = async () => {
+    if (!accessToken) {
+      toast.error("Please connect your Google account first.");
+      return;
+    }
+    setSyncingConnections(true);
+    const tid = toast.loading("Syncing all connections and walking paths to Google Maps...");
+    try {
+      await syncStreetViewConnections(supabase, tourId, accessToken);
+      await supabase
+        .from("tours")
+        .update({ streetview_connections_synced: true } as any)
+        .eq("id", tourId);
+      toast.success("All connections successfully synced to Google Street View!", { id: tid });
+    } catch (err: any) {
+      console.error("Manual connection sync error:", err);
+      toast.error("Failed to sync connections: " + (err.message || "Unknown error"), { id: tid });
+    } finally {
+      setSyncingConnections(false);
+    }
+  };
 
   const saveNadirSettings = async (newType: string, newSize: string, newPos: string) => {
     localStorage.setItem(`tour-nadir-type-${tourId}`, newType);
@@ -2046,13 +2069,17 @@ function PublishPage() {
                 )}
               </div>
 
-              <div className="relative h-32 rounded-lg bg-gray-50 border flex flex-col items-center justify-center p-4">
-                <Cloud className="h-12 w-12 text-[#0277bd] mb-1 opacity-50" />
+              <div className="relative rounded-lg bg-gray-50 border flex flex-col items-center justify-center p-4 min-h-[8rem]">
+                <Cloud className="h-10 w-10 text-[#0277bd] mb-1 opacity-50" />
                 <div className="text-xs text-gray-500 font-semibold text-center mb-0.5">
-                  Processing status will update automatically.
+                  {photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED")
+                    ? "All scenes are published on Google!"
+                    : "Processing status will update automatically."}
                 </div>
                 <div className="text-[10px] text-gray-400 text-center mb-1 max-w-[280px]">
-                  Street View processing may take up to 24 hours.
+                  {photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED")
+                    ? "Your 360 scenes are live on Google Maps & Street View."
+                    : "Street View processing may take up to 24 hours."}
                 </div>
                 {accessToken && photos.some((p) => p.streetview_status === "PROCESSING") && (
                   <button
@@ -2065,6 +2092,17 @@ function PublishPage() {
                   >
                     <Clock className="h-3.5 w-3.5" /> Sync Google Status
                   </button>
+                )}
+                {accessToken && photos.some((p) => p.streetview_status === "PUBLISHED") && (
+                  <Button
+                    onClick={handleSyncConnections}
+                    disabled={syncingConnections}
+                    size="sm"
+                    className="mt-2 bg-[#0277bd] hover:bg-[#01579b] text-white text-xs font-bold h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {syncingConnections ? "Syncing Connections..." : "Sync Connections to Google"}
+                  </Button>
                 )}
               </div>
             </div>
@@ -2216,7 +2254,9 @@ function PublishPage() {
             <DialogHeader className="bg-slate-900 border-b border-slate-800 p-4 flex flex-row items-center justify-between shrink-0">
               <div className="space-y-0.5">
                 <DialogTitle className="text-white text-base font-bold">Interactive Live Preview</DialogTitle>
-                <p className="text-[10px] text-slate-400 font-medium">Viewing real-time compiled virtual tour player</p>
+                <DialogDescription className="text-[10px] text-slate-400 font-medium">
+                  Viewing real-time compiled virtual tour player
+                </DialogDescription>
               </div>
             </DialogHeader>
             <div className="flex-1 bg-black relative">
@@ -2224,8 +2264,7 @@ function PublishPage() {
                 src={previewUrl}
                 className="w-full h-full border-0 absolute inset-0"
                 title="Virtual Tour Player Preview"
-                sandbox="allow-scripts allow-popups allow-forms allow-same-origin"
-                allow="fullscreen"
+                allow="fullscreen; accelerometer; gyroscope"
                 allowFullScreen
               />
             </div>

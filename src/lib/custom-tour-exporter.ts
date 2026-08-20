@@ -588,6 +588,12 @@ const JS_SOURCE = `(function() {
         }
       };
       img.src = url;
+
+      return function cancel() {
+        img.onload = null;
+        img.onerror = null;
+        img.src = '';
+      };
     };
   }
 

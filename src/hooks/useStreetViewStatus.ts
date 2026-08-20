@@ -97,6 +97,9 @@ export function useStreetViewStatus(
         } catch (err) {
           console.error("Error polling photo status for", photo.id, err);
         }
+
+        // Throttle requests (600ms between calls) to strictly respect Google's 60 req/min quota
+        await new Promise((r) => setTimeout(r, 600));
       }
 
       // Automatically sync connections for any tours that just finished processing all photos
@@ -113,12 +116,29 @@ export function useStreetViewStatus(
             console.log(
               `All photos for tour ${tourId} are published! Running final connection sync...`,
             );
-            await syncStreetViewConnections(supabase, tourId, accessToken);
-            // Mark as synced in DB to prevent loops
-            await supabase
-              .from("tours")
-              .update({ streetview_connections_synced: true } as any)
-              .eq("id", tourId);
+            // Retry with exponential backoff (up to 3 attempts) in case Google API is temporarily rate-limiting
+            let synced = false;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              try {
+                if (attempt > 1) {
+                  console.log(`Retrying connection sync for ${tourId} (attempt ${attempt}/3)...`);
+                  await new Promise((r) => setTimeout(r, attempt * 3000));
+                }
+                await syncStreetViewConnections(supabase, tourId, accessToken);
+                synced = true;
+                break;
+              } catch (retryErr) {
+                console.warn(`Connection sync attempt ${attempt} failed:`, retryErr);
+              }
+            }
+            if (synced) {
+              // Mark as synced in DB
+              await supabase
+                .from("tours")
+                .update({ streetview_connections_synced: true } as any)
+                .eq("id", tourId);
+              toast.success("Street View connections synced to Google Maps!");
+            }
           }
         } catch (syncErr) {
           console.error(`Failed to auto-sync connections for tour ${tourId}:`, syncErr);
