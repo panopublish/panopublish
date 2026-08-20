@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "noEmit": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false
+  },
+  "include": ["functions/**/*"]
+}
