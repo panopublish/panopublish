@@ -79,6 +79,7 @@ export async function pushTourToCustom(
     : `${sourceTour.name} (Custom Tour)`;
 
   const customSettingsPayload = JSON.stringify({
+    source_tour_id: sourceTourId,
     branding: {
       name: initialCustomSettings?.branding?.name || sourceTour.name || "Virtual Tour",
       link: initialCustomSettings?.branding?.link || "",
@@ -106,39 +107,88 @@ export async function pushTourToCustom(
       volume: initialCustomSettings?.music?.volume ?? 50,
       autoplay: initialCustomSettings?.music?.autoplay !== false,
     },
+    scene_tags: initialCustomSettings?.scene_tags || {},
   });
 
-  // 4. Insert new Tour
-  const { data: newTour, error: newTourErr } = await supabase
+  // 4. Check if custom tour already exists to update it seamlessly
+  const { data: existingCustomTours } = await supabase
     .from("tours")
-    .insert({
-      user_id: userId,
-      client_id: sourceTour.client_id,
-      name: customTourName,
-      type: "custom",
-      status: "draft",
-      has_been_published: false,
-      streetview_connections_synced: true,
-      address: sourceTour.address,
-      latitude: sourceTour.latitude,
-      longitude: sourceTour.longitude,
-      google_place_id: sourceTour.google_place_id,
-      google_place_url: sourceTour.google_place_url,
-      cid: sourceTour.cid,
-      nadir_type: sourceTour.nadir_type || "None",
-      nadir_size: sourceTour.nadir_size || "13%",
-      nadir_pos: sourceTour.nadir_pos || "btm",
-      nadir_logo_url: sourceTour.nadir_logo_url,
-      custom_settings: customSettingsPayload,
-    } as any)
-    .select("id")
-    .single();
+    .select("id, name, custom_settings")
+    .eq("user_id", userId)
+    .eq("type", "custom");
 
-  if (newTourErr || !newTour) {
-    throw new Error(newTourErr?.message || "Failed to create custom tour");
+  const existingTour = (existingCustomTours || []).find((ct: any) => {
+    try {
+      const s = JSON.parse(ct.custom_settings || "{}");
+      return s.source_tour_id === sourceTourId;
+    } catch {
+      return ct.name === customTourName;
+    }
+  });
+
+  let newTourId: string;
+
+  if (existingTour) {
+    newTourId = existingTour.id;
+    let existingSettings: any = {};
+    try {
+      existingSettings = JSON.parse(existingTour.custom_settings || "{}");
+    } catch (_) {}
+    const mergedSettings = JSON.stringify({
+      ...existingSettings,
+      source_tour_id: sourceTourId,
+      nadir: {
+        type: sourceTour.nadir_type || "None",
+        size: sourceTour.nadir_size || "13%",
+        pos: sourceTour.nadir_pos || "btm",
+      },
+    });
+
+    await supabase
+      .from("tours")
+      .update({
+        custom_settings: mergedSettings,
+        address: sourceTour.address,
+        latitude: sourceTour.latitude,
+        longitude: sourceTour.longitude,
+        nadir_type: sourceTour.nadir_type || "None",
+        nadir_size: sourceTour.nadir_size || "13%",
+        nadir_pos: sourceTour.nadir_pos || "btm",
+        nadir_logo_url: sourceTour.nadir_logo_url,
+      } as any)
+      .eq("id", newTourId);
+  } else {
+    // Insert new Tour
+    const { data: newTour, error: newTourErr } = await supabase
+      .from("tours")
+      .insert({
+        user_id: userId,
+        client_id: sourceTour.client_id,
+        name: customTourName,
+        type: "custom",
+        status: "draft",
+        has_been_published: false,
+        streetview_connections_synced: true,
+        address: sourceTour.address,
+        latitude: sourceTour.latitude,
+        longitude: sourceTour.longitude,
+        google_place_id: sourceTour.google_place_id,
+        google_place_url: sourceTour.google_place_url,
+        cid: sourceTour.cid,
+        nadir_type: sourceTour.nadir_type || "None",
+        nadir_size: sourceTour.nadir_size || "13%",
+        nadir_pos: sourceTour.nadir_pos || "btm",
+        nadir_logo_url: sourceTour.nadir_logo_url,
+        custom_settings: customSettingsPayload,
+      } as any)
+      .select("id")
+      .single();
+
+    if (newTourErr || !newTour) {
+      throw new Error(newTourErr?.message || "Failed to create custom tour");
+    }
+    newTourId = newTour.id;
   }
-
-  const newTourId = newTour.id;
   try {
     sessionStorage.setItem(`tour_type_${newTourId}`, "custom");
   } catch (_) {}

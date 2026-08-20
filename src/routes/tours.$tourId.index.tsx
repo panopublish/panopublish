@@ -189,6 +189,65 @@ function TourDetail() {
       });
       setPhotos(sortedPhotos);
 
+      if ((t as any)?.type === "custom") {
+        // Auto-heal / sync missing or updated photos from the source Google Tour
+        try {
+          let sourceTourId: string | null = null;
+          try {
+            const cs = JSON.parse((t as any)?.custom_settings || "{}");
+            sourceTourId = cs.source_tour_id;
+          } catch {}
+
+          if (!sourceTourId && (t as any)?.name) {
+            const baseName = (t as any).name
+              .replace(/\s*\(Custom Tour\)\s*$/i, "")
+              .replace(/\s*\(Copy\)\s*$/i, "")
+              .trim();
+            const { data: matchedTours } = await supabase
+              .from("tours")
+              .select("id")
+              .eq("user_id", user.id)
+              .eq("name", baseName)
+              .limit(1);
+            if (matchedTours?.[0]?.id) sourceTourId = matchedTours[0].id;
+          }
+
+          if (sourceTourId) {
+            const { data: sourcePhotos } = await supabase
+              .from("photos")
+              .select("filename, file_url, file_path, order_index")
+              .eq("tour_id", sourceTourId);
+
+            if (sourcePhotos && sourcePhotos.length > 0) {
+              const sourceMap = new Map<string, any>();
+              sourcePhotos.forEach((sp: any) => {
+                if (sp.filename) sourceMap.set(sp.filename, sp);
+              });
+
+              let anyHealed = false;
+              for (const p of sortedPhotos) {
+                const match = p.filename ? sourceMap.get(p.filename) : null;
+                if (match && (match.file_url !== p.file_url || match.file_path !== p.file_path)) {
+                  p.file_url = match.file_url;
+                  p.file_path = match.file_path;
+                  anyHealed = true;
+                  await supabase
+                    .from("photos")
+                    .update({ file_url: match.file_url, file_path: match.file_path })
+                    .eq("id", p.id);
+                }
+              }
+
+              if (anyHealed) {
+                setPhotos([...sortedPhotos]);
+              }
+            }
+          }
+        } catch (healErr) {
+          console.warn("Could not auto-heal custom tour photos:", healErr);
+        }
+      }
+
       if ((t as any)?.type !== "custom") {
         // Only load islands for non-custom tours
         const { data: is } = await supabase
@@ -475,10 +534,34 @@ function TourDetail() {
 
     if (dbErr) throw dbErr;
 
+    // Automatically sync updated image to any derived Custom Tours
     try {
-      await supabase.storage.from("tour-photos").remove([editingPhoto.file_path]);
-    } catch (e) {
-      console.warn("Could not delete old storage file", e);
+      const { data: customTours } = await supabase
+        .from("tours")
+        .select("id, custom_settings")
+        .eq("user_id", user.id)
+        .eq("type", "custom");
+
+      for (const ct of customTours || []) {
+        let isLinked = false;
+        try {
+          const s = JSON.parse(ct.custom_settings || "{}");
+          if (s.source_tour_id === tourId) isLinked = true;
+        } catch {}
+
+        if (isLinked && editingPhoto.filename) {
+          await supabase
+            .from("photos")
+            .update({
+              file_path: newPath,
+              file_url: pub.publicUrl,
+            })
+            .eq("tour_id", ct.id)
+            .eq("filename", editingPhoto.filename);
+        }
+      }
+    } catch (syncErr) {
+      console.warn("Could not sync blurred photo to custom tour:", syncErr);
     }
 
     setEditingPhoto(null);
