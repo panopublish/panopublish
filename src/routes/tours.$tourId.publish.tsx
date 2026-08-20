@@ -987,6 +987,7 @@ function PublishPage() {
     )
       return;
 
+    const tid = toast.loading("Connecting to Google and preparing deletion...");
     setPublishing(true);
     try {
       let freshToken = accessToken;
@@ -1003,29 +1004,38 @@ function PublishPage() {
       }
 
       if (!freshToken) {
-        toast.error("Not connected to Google");
+        toast.error("Not connected to Google. Please connect your Google account first.", { id: tid });
         setPublishing(false);
         return;
       }
 
-      // 1. Delete from Google Maps
-      for (const photo of photos) {
-        if (photo.streetview_photo_id && freshToken) {
-          try {
-            await supabase.functions.invoke("streetview-publish", {
-              body: {
-                action: "delete_photo",
-                access_token: freshToken,
-                streetview_photo_id: photo.streetview_photo_id,
-              },
-            });
-          } catch (e) {
-            console.error("Failed to delete photo from Google:", e);
-          }
+      // Collect all published photo IDs on Google Street View
+      const publishedPhotoIds = photos
+        .map((p) => p.streetview_photo_id)
+        .filter((id): id is string => !!id && typeof id === "string" && id.trim().length > 0);
+
+      if (publishedPhotoIds.length > 0) {
+        toast.loading(`Deleting ${publishedPhotoIds.length} scenes from Google Maps...`, { id: tid });
+
+        const { data: delResult, error: delError } = await supabase.functions.invoke(
+          "streetview-publish",
+          {
+            body: {
+              action: "batch_delete_photos",
+              access_token: freshToken,
+              photo_ids: publishedPhotoIds,
+            },
+          },
+        );
+
+        if (delError) {
+          console.error("Batch delete API error:", delError);
+        } else if (delResult?.errors?.length) {
+          console.warn("Some photos had warnings during deletion:", delResult.errors);
         }
       }
 
-      // 2. Clear database fields
+      // 2. Clear database fields & unsync connections
       const { error } = await supabase
         .from("photos")
         .update({
@@ -1037,10 +1047,23 @@ function PublishPage() {
 
       if (error) throw error;
 
-      toast.success("Publishing status reset successfully! You can now publish again.");
+      await supabase
+        .from("tours")
+        .update({
+          streetview_connections_synced: false,
+          streetview_status: "NOT_PUBLISHED",
+        } as any)
+        .eq("id", tourId);
+
+      toast.success(
+        publishedPhotoIds.length > 0
+          ? `Successfully deleted ${publishedPhotoIds.length} scenes from Google Maps and reset tour!`
+          : "Tour publishing status reset successfully!",
+        { id: tid },
+      );
       load();
     } catch (e: any) {
-      toast.error("Failed to reset publishing status: " + e.message);
+      toast.error("Failed to reset publishing status: " + e.message, { id: tid });
     } finally {
       setPublishing(false);
     }

@@ -540,6 +540,83 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
       return { status, shareLink, viewCount, data: rawData };
     }
 
+    if (payload.action === "batch_delete_photos") {
+      const { photo_ids } = payload;
+      if (!photo_ids || !Array.isArray(photo_ids) || photo_ids.length === 0) {
+        return { success: true, deleted_count: 0 };
+      }
+
+      const BATCH_SIZE = 40;
+      let totalDeleted = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < photo_ids.length; i += BATCH_SIZE) {
+        const batch = photo_ids.slice(i, i + BATCH_SIZE);
+        let batchSuccess = false;
+        let attempts = 0;
+
+        while (!batchSuccess && attempts < 3) {
+          attempts++;
+          try {
+            const res = await fetch(
+              `https://streetviewpublish.googleapis.com/v1/photos:batchDelete?key=${apiKey}`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${access_token}`,
+                  "Content-Type": "application/json",
+                  Referer: referer,
+                },
+                body: JSON.stringify({ photoIds: batch }),
+              },
+            );
+
+            if (res.status === 429) {
+              await new Promise((r) => setTimeout(r, attempts * 1500));
+              continue;
+            }
+
+            if (!res.ok) {
+              const errBody = await res.text();
+              throw new Error(`Google batchDelete HTTP ${res.status}: ${errBody}`);
+            }
+
+            totalDeleted += batch.length;
+            batchSuccess = true;
+          } catch (batchErr: any) {
+            console.error(`batchDelete attempt ${attempts} failed:`, batchErr);
+            if (attempts >= 3) {
+              errors.push(batchErr.message);
+              // Fallback to individual deletes with throttle
+              for (const pid of batch) {
+                try {
+                  await fetch(
+                    `https://streetviewpublish.googleapis.com/v1/photo/${pid}?key=${apiKey}`,
+                    {
+                      method: "DELETE",
+                      headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+                    },
+                  );
+                  totalDeleted++;
+                  await new Promise((r) => setTimeout(r, 250));
+                } catch (singleErr) {
+                  console.error(`Single delete fallback failed for ${pid}:`, singleErr);
+                }
+              }
+            } else {
+              await new Promise((r) => setTimeout(r, 1000));
+            }
+          }
+        }
+      }
+
+      return {
+        success: errors.length === 0 || totalDeleted > 0,
+        deleted_count: totalDeleted,
+        errors: errors.length > 0 ? errors : undefined,
+      };
+    }
+
     if (payload.action === "delete_photo") {
       const { streetview_photo_id } = payload;
       const res = await fetch(
