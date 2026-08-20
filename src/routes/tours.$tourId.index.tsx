@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { SceneViewerModal } from "@/components/SceneViewerModal";
+import { LazyThumbnail } from "@/components/LazyThumbnail";
 import {
   Plus,
   Trash2,
@@ -663,16 +664,14 @@ function TourDetail() {
                           onClick={() => setViewerIndex(idx)}
                           className={`relative aspect-square rounded-xl border bg-gray-100 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg ${dragOverPhotoId === p.id ? "ring-2 ring-[#0277bd] ring-offset-2" : ""}`}
                         >
-                          <img
+                          <LazyThumbnail
                             src={p.file_url}
-                            loading="lazy"
                             alt={p.filename ?? "Photo"}
-                            width={400}
-                            height={400}
-                            className="w-full h-full object-cover"
+                            aspectRatio="aspect-square"
+                            className="group-hover:scale-105 transition-transform"
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
-                          <div className="absolute top-2 left-2 rounded bg-black/70 text-white px-2 py-0.5 text-[11px] font-bold">
+                          <div className="absolute top-2 left-2 rounded bg-black/70 text-white px-2 py-0.5 text-[11px] font-bold z-10">
                             {idx}
                           </div>
                           <button

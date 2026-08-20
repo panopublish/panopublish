@@ -18,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { LazyThumbnail } from "@/components/LazyThumbnail";
 import {
   Plus,
   Minus,
@@ -437,6 +438,7 @@ function ConnectionsPage() {
     }
   }, [activeConnObj]);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [isPanoLoading, setIsPanoLoading] = useState(false);
   const [currentHeading, setCurrentHeading] = useState(0);
   const [currentPov, setCurrentPov] = useState<{ heading: number; pitch: number; zoom: number }>({
     heading: 0,
@@ -451,6 +453,23 @@ function ConnectionsPage() {
   const [addFloorOpen, setAddFloorOpen] = useState(false);
   const [newFloorName, setNewFloorName] = useState("");
   const [newFloorNumber, setNewFloorNumber] = useState<number>(1);
+
+  // High-priority preload active 360 panorama image to prevent black screen delay
+  useEffect(() => {
+    if (active?.file_url) {
+      setIsPanoLoading(true);
+      const img = new Image();
+      // @ts-ignore
+      img.fetchPriority = "high";
+      img.onload = () => {
+        setIsPanoLoading(false);
+      };
+      img.onerror = () => {
+        setIsPanoLoading(false);
+      };
+      img.src = active.file_url;
+    }
+  }, [active?.id, active?.file_url]);
 
   const [opacity, setOpacity] = useState([100]);
 
@@ -2751,14 +2770,11 @@ function ConnectionsPage() {
                     }`}
                   >
                     <div className="w-16 h-12 rounded-lg bg-slate-200 overflow-hidden relative shrink-0 border border-slate-200">
-                      <div className="absolute inset-0 bg-slate-200 animate-pulse" />
-                      <img
+                      <LazyThumbnail
                         src={p.file_url}
                         alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform relative z-10"
-                        onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
+                        aspectRatio="aspect-auto"
+                        className="group-hover:scale-105 transition-transform relative z-10"
                       />
                       <span className="absolute top-0.5 left-0.5 bg-slate-900/90 text-white text-[9px] font-mono font-bold px-1 rounded shadow z-20">
                         {String(idx).padStart(2, "0")}
@@ -3569,14 +3585,11 @@ function ConnectionsPage() {
                               }`}
                             >
                               <div className="aspect-[16/9] relative bg-slate-200 w-full overflow-hidden">
-                                <div className="absolute inset-0 bg-slate-200 animate-pulse" />
-                                <img
+                                <LazyThumbnail
                                   src={p.file_url}
                                   alt=""
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 relative z-10"
-                                  onLoad={(e) => { (e.currentTarget.previousSibling as HTMLElement)?.remove(); }}
+                                  aspectRatio="aspect-auto"
+                                  className="group-hover:scale-105 transition-transform relative z-10"
                                 />
 
                                 {/* Left side node index identifier */}
@@ -3676,6 +3689,12 @@ function ConnectionsPage() {
 
           <div className="relative flex-1 bg-black">
             <div ref={panoRef} className="absolute inset-0" />
+            {active && isPanoLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white bg-slate-950/80 z-20 gap-3 backdrop-blur-xs transition-opacity duration-300">
+                <div className="w-9 h-9 rounded-full border-3 border-emerald-400 border-t-transparent animate-spin" />
+                <div className="text-xs font-bold tracking-wider text-slate-200">Loading 360 Panorama...</div>
+              </div>
+            )}
             {active && (
               <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-green-500 shadow-[0_0_8px_#22c55e] z-10 pointer-events-none" />
             )}
@@ -3972,28 +3991,23 @@ function ConnectionsPage() {
                                 }`}
                               >
                                 <div
-                                  className="aspect-[4/3] relative cursor-pointer overflow-hidden"
-                                  onClick={() => {
-                                    if (!active) {
-                                      setActiveIdx(idx);
-                                    } else if (!isActiveScene) {
-                                      setRightPendingTo(p.id);
-                                    }
-                                  }}
-                                >
-                                  <div className="absolute inset-0 bg-slate-200 animate-pulse" />
-                                  <img
-                                    src={p.file_url}
-                                    alt=""
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 relative z-10"
-                                    onLoad={(e) => {
-                                      (e.currentTarget.previousSibling as HTMLElement)?.remove();
+                                    className="aspect-[4/3] relative cursor-pointer overflow-hidden"
+                                    onClick={() => {
+                                      if (!active) {
+                                        setActiveIdx(idx);
+                                      } else if (!isActiveScene) {
+                                        setRightPendingTo(p.id);
+                                      }
                                     }}
-                                  />
+                                  >
+                                    <LazyThumbnail
+                                      src={p.file_url}
+                                      alt=""
+                                      aspectRatio="aspect-auto"
+                                      className="group-hover:scale-105 transition-transform relative z-10"
+                                    />
 
-                                  <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-20">
+                                    <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-20">
                                     {idx}
                                   </div>
 
