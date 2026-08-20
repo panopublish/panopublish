@@ -824,10 +824,12 @@ function PublishPage() {
             break;
           } catch (uploadErr: any) {
             lastErrorMsg = uploadErr.message || "Upload error";
-            console.warn(
-              `Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`,
-              lastErrorMsg,
-            );
+            if (import.meta.env.DEV) {
+              console.warn(
+                `Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`,
+                lastErrorMsg,
+              );
+            }
             if (attempt < 6) {
               const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
               const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");

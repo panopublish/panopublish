@@ -152,7 +152,7 @@ function CreateTour() {
           existingScript.addEventListener("load", initAutocomplete);
         } else {
           const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
           script.async = true;
           script.defer = true;
           script.dataset.gmaps = "1";

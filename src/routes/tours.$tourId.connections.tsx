@@ -342,7 +342,7 @@ function useGoogleMaps() {
       return () => clearInterval(interval);
     }
     const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geometry`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geometry&loading=async`;
     s.async = true;
     s.defer = true;
     s.dataset.gmaps = "1";

@@ -43,7 +43,7 @@ function loadGoogleMaps(key: string): Promise<void> {
       return;
     }
     const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
     s.async = true;
     s.defer = true;
     s.dataset.gmaps = "1";
