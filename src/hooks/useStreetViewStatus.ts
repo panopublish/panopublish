@@ -15,6 +15,7 @@ export function useStreetViewStatus(
   photos: Photo[],
   accessToken: string | null,
   onPhotosUpdated: () => void,
+  enabled: boolean = true,
 ) {
   const onPhotosUpdatedRef = useRef(onPhotosUpdated);
 
@@ -22,14 +23,14 @@ export function useStreetViewStatus(
     onPhotosUpdatedRef.current = onPhotosUpdated;
   }, [onPhotosUpdated]);
 
-  const firstSeenProcessingRef = useRef<Record<string, number>>({});
-
   const processingPhotosKey = photos
     .filter((p) => p.streetview_status === "PROCESSING" && p.streetview_photo_id)
     .map((p) => `${p.id}:${p.streetview_status}`)
     .join(",");
 
   useEffect(() => {
+    if (!enabled) return;
+
     const processingPhotos = photos.filter(
       (p) => p.streetview_status === "PROCESSING" && p.streetview_photo_id,
     );
@@ -39,126 +40,74 @@ export function useStreetViewStatus(
     let isCancelled = false;
 
     const checkStatuses = async () => {
-      let anyUpdated = false;
-      const toursToSync = new Set<string>();
+      if (isCancelled) return;
 
-      for (const photo of processingPhotos) {
-        if (isCancelled) break;
+      try {
+        // Use 1 single batch status API call to check all photos at once!
+        const { data, error } = await supabase.functions.invoke("streetview-publish", {
+          body: {
+            action: "batch_get_photo_status",
+            access_token: accessToken,
+          },
+        });
 
-        // Record the first time we see this photo as PROCESSING in this session to prevent premature failure during Google replication
-        if (
-          photo.streetview_photo_id &&
-          !firstSeenProcessingRef.current[photo.streetview_photo_id]
-        ) {
-          firstSeenProcessingRef.current[photo.streetview_photo_id] = Date.now();
+        if (error) {
+          console.warn("Status check notice:", error.message || error);
+          return;
         }
 
-        try {
-          const { data, error } = await supabase.functions.invoke("streetview-publish", {
-            body: {
-              action: "get_photo_status",
-              access_token: accessToken,
-              streetview_photo_id: photo.streetview_photo_id,
-            },
-          });
+        if (data?.success && !isCancelled) {
+          onPhotosUpdatedRef.current();
 
-          if (error) {
-            console.error("Supabase Edge Function error:", error);
-          } else if (data?.success === false || data?.error) {
-            console.error("Google Street View API error in Edge Function:", data?.error);
-            const errStr = String(data?.error || "");
-            if (
-              errStr.toLowerCase().includes("image not found") ||
-              errStr.toUpperCase().includes("NOT_FOUND")
-            ) {
-              const firstSeen =
-                firstSeenProcessingRef.current[photo.streetview_photo_id || ""] || Date.now();
-              const elapsedSeconds = (Date.now() - firstSeen) / 1000;
-              console.log(
-                `Ignoring 'Image not found' error for ${photo.filename || ""} (elapsed: ${elapsedSeconds.toFixed(0)}s). It is still replicating on Google...`,
-              );
-            }
-          } else if (data?.status && data.status !== "PROCESSING") {
-            const { error: updateError } = await supabase
+          // Check if all photos in this tour have finished processing
+          const tourId = processingPhotos[0]?.tour_id;
+          if (tourId) {
+            const { data: remainingProcessing } = await supabase
               .from("photos")
-              .update({
-                streetview_status: data.status,
-                streetview_share_link: data.shareLink,
-              })
-              .eq("id", photo.id);
+              .select("id")
+              .eq("tour_id", tourId)
+              .eq("streetview_status", "PROCESSING")
+              .limit(1);
 
-            if (!updateError) {
-              anyUpdated = true;
-              if (photo.tour_id) {
-                toursToSync.add(photo.tour_id);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error polling photo status for", photo.id, err);
-        }
-
-        // Throttle requests (600ms between calls) to strictly respect Google's 60 req/min quota
-        await new Promise((r) => setTimeout(r, 600));
-      }
-
-      // Automatically sync connections for any tours that just finished processing all photos
-      for (const tourId of toursToSync) {
-        try {
-          const { data: remainingProcessing, error: countErr } = await supabase
-            .from("photos")
-            .select("id")
-            .eq("tour_id", tourId)
-            .eq("streetview_status", "PROCESSING")
-            .limit(1);
-
-          if (!countErr && (!remainingProcessing || remainingProcessing.length === 0)) {
-            console.log(
-              `All photos for tour ${tourId} are published! Running final connection sync...`,
-            );
-            // Retry with exponential backoff (up to 3 attempts) in case Google API is temporarily rate-limiting
-            let synced = false;
-            for (let attempt = 1; attempt <= 3; attempt++) {
-              try {
-                if (attempt > 1) {
-                  console.log(`Retrying connection sync for ${tourId} (attempt ${attempt}/3)...`);
-                  await new Promise((r) => setTimeout(r, attempt * 3000));
+            if (!remainingProcessing || remainingProcessing.length === 0) {
+              console.log(`All photos for tour ${tourId} published! Syncing connections...`);
+              let synced = false;
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                  if (attempt > 1) await new Promise((r) => setTimeout(r, attempt * 3000));
+                  await syncStreetViewConnections(supabase, tourId, accessToken);
+                  synced = true;
+                  break;
+                } catch (retryErr) {
+                  console.warn(`Connection sync attempt ${attempt} failed:`, retryErr);
                 }
-                await syncStreetViewConnections(supabase, tourId, accessToken);
-                synced = true;
-                break;
-              } catch (retryErr) {
-                console.warn(`Connection sync attempt ${attempt} failed:`, retryErr);
+              }
+              if (synced) {
+                await supabase
+                  .from("tours")
+                  .update({ streetview_connections_synced: true } as any)
+                  .eq("id", tourId);
+                toast.success("Street View connections synced to Google Maps!");
+                onPhotosUpdatedRef.current();
               }
             }
-            if (synced) {
-              // Mark as synced in DB
-              await supabase
-                .from("tours")
-                .update({ streetview_connections_synced: true } as any)
-                .eq("id", tourId);
-              toast.success("Street View connections synced to Google Maps!");
-            }
           }
-        } catch (syncErr) {
-          console.error(`Failed to auto-sync connections for tour ${tourId}:`, syncErr);
         }
-      }
-
-      if (anyUpdated && !isCancelled) {
-        onPhotosUpdatedRef.current();
+      } catch (err) {
+        console.warn("Status polling notice:", err);
       }
     };
 
     // Poll every 30 seconds
     const interval = setInterval(checkStatuses, 30000);
 
-    // Initial check
-    checkStatuses();
+    // Initial check after a slight delay
+    const initialTimer = setTimeout(checkStatuses, 3000);
 
     return () => {
       isCancelled = true;
       clearInterval(interval);
+      clearTimeout(initialTimer);
     };
-  }, [processingPhotosKey, accessToken]);
+  }, [processingPhotosKey, accessToken, enabled]);
 }

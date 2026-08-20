@@ -619,12 +619,44 @@ serve(async (req) => {
             Referer: referer,
           },
         },
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "Failed to list photos");
-      return new Response(JSON.stringify(data), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (action === "batch_get_photo_status") {
+      try {
+        const listRes = await fetch(
+          `https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC&pageSize=100`,
+          {
+            headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+          },
+        );
+        if (!listRes.ok) {
+          throw new Error(`Failed to list photos: status ${listRes.status}`);
+        }
+        const listData: any = await listRes.json();
+        const googlePhotos = listData.photos || [];
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            photos: googlePhotos.map((gp: any) => ({
+              id: gp.photoId?.id,
+              status:
+                gp.mapsPublishStatus === "PUBLISHED"
+                  ? "PUBLISHED"
+                  : gp.mapsPublishStatus?.includes("REJECTED")
+                    ? "FAILED"
+                    : "PROCESSING",
+              shareLink: gp.shareLink,
+              viewCount: gp.viewCount ? parseInt(gp.viewCount, 10) : 0,
+            })),
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      } catch (err: any) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (action === "batch_delete_photos") {

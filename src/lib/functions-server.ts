@@ -473,6 +473,49 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
       return { results };
     }
 
+    if (payload.action === "batch_get_photo_status") {
+      try {
+        const listRes = await fetch(
+          `https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC&pageSize=100`,
+          {
+            headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+          },
+        );
+        if (!listRes.ok) {
+          throw new Error(`Failed to list photos: status ${listRes.status}`);
+        }
+        const listData: any = await listRes.json();
+        const googlePhotos = listData.photos || [];
+
+        const updates: Array<{ id: string; status: string; shareLink?: string }> = [];
+        for (const gp of googlePhotos) {
+          const pid = gp.photoId?.id;
+          if (!pid) continue;
+          let status = "PROCESSING";
+          if (gp.mapsPublishStatus === "PUBLISHED") status = "PUBLISHED";
+          else if (
+            gp.mapsPublishStatus === "REJECTED_UNKNOWN" ||
+            gp.mapsPublishStatus === "REJECTED"
+          )
+            status = "FAILED";
+
+          await db
+            .prepare(
+              "UPDATE photos SET streetview_status = ?, streetview_share_link = COALESCE(?, streetview_share_link), view_count = ? WHERE streetview_photo_id = ?",
+            )
+            .bind(status, gp.shareLink || null, gp.viewCount ? parseInt(gp.viewCount, 10) : 0, pid)
+            .run();
+
+          updates.push({ id: pid, status, shareLink: gp.shareLink });
+        }
+
+        return { success: true, count: updates.length, updates };
+      } catch (err: any) {
+        console.error("batch_get_photo_status error:", err);
+        return { success: false, error: err.message };
+      }
+    }
+
     if (payload.action === "get_photo_status") {
       const { streetview_photo_id } = payload;
       let status = "PROCESSING";

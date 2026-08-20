@@ -444,9 +444,10 @@ function PublishPage() {
   };
 
   useStreetViewStatus(
-    (tour?.type === "custom" ? [] : photos) as StatusPhoto[],
-    tour?.type === "custom" ? null : accessToken,
+    (tour?.type === "custom" || publishing ? [] : photos) as StatusPhoto[],
+    tour?.type === "custom" || publishing ? null : accessToken,
     load,
+    !publishing,
   );
 
   useEffect(() => {
@@ -770,6 +771,21 @@ function PublishPage() {
                 );
                 await new Promise((r) => setTimeout(r, 25000));
               } else if (
+                errLower.includes("503") ||
+                errLower.includes("unavailable") ||
+                errLower.includes("service unavailable")
+              ) {
+                console.warn(`Server 503 on scene ${alreadyDone + photoIndex}. Pausing 4s before retry...`);
+                setPublishProgress((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        message: `Server busy on scene ${alreadyDone + photoIndex}. Retrying in 4s...`,
+                      }
+                    : null,
+                );
+                await new Promise((r) => setTimeout(r, 4000));
+              } else if (
                 errLower.includes("401") ||
                 errLower.includes("unauthorized") ||
                 errLower.includes("invalid_token") ||
@@ -795,6 +811,11 @@ function PublishPage() {
               ) {
                 console.warn("Google quota reached. Pausing 25s...");
                 await new Promise((r) => setTimeout(r, 25000));
+              } else if (
+                errLower.includes("503") ||
+                errLower.includes("unavailable")
+              ) {
+                await new Promise((r) => setTimeout(r, 4000));
               }
               throw new Error(errMsg);
             }
@@ -807,9 +828,10 @@ function PublishPage() {
               `Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`,
               lastErrorMsg,
             );
-            if (attempt < 5) {
+            if (attempt < 6) {
               const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
-              if (!isQuota) {
+              const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
+              if (!isQuota && !is503) {
                 await new Promise((r) => setTimeout(r, attempt * 2500));
               }
             }
