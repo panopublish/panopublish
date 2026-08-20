@@ -693,25 +693,7 @@ function PublishPage() {
           processedBlob = await rawRes.blob();
         }
 
-        // 2. Convert Blob to base64 string
-        setPublishProgress({
-          current: alreadyDone + photoIndex - 1,
-          total: photoList.length,
-          step: "encoding",
-          message: `Encoding scene ${alreadyDone + photoIndex} of ${photoList.length}...`,
-        });
-
-        const reader = new FileReader();
-        reader.readAsDataURL(processedBlob);
-        const base64data = await new Promise<string>((resolve, reject) => {
-          reader.onloadend = () => {
-            const base64 = (reader.result as string).split(",")[1];
-            resolve(base64);
-          };
-          reader.onerror = reject;
-        });
-
-        // 3. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh
+        // 2. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh
         setPublishProgress({
           current: alreadyDone + photoIndex - 1,
           total: photoList.length,
@@ -722,21 +704,55 @@ function PublishPage() {
         let success = false;
         let lastErrorMsg = "";
 
-        for (let attempt = 1; attempt <= 5; attempt++) {
+        for (let attempt = 1; attempt <= 6; attempt++) {
           try {
-            // Refresh token after every 15 scenes or on retries
+            // Refresh token periodically or on retries
             if (attempt > 1 || photoIndex % 15 === 0) {
               const refreshed = await getFreshToken();
               if (refreshed) freshToken = refreshed;
             }
 
+            // Step 2a: Request uploadUrl from Google (tiny request, 0MB memory on server)
+            const { data: startData, error: startError } = await supabase.functions.invoke(
+              "streetview-publish",
+              {
+                body: {
+                  action: "start_upload",
+                  access_token: freshToken,
+                },
+              },
+            );
+
+            if (startError || !startData?.uploadUrl) {
+              const errMsg = (await getFunctionErrorMessage(startError)) || startData?.error || "Failed to start upload";
+              throw new Error(errMsg);
+            }
+
+            const uploadUrl = startData.uploadUrl;
+
+            // Step 2b: Upload processed image directly to Google's uploadUrl from browser (CORS enabled)
+            const uploadRes = await fetch(uploadUrl, {
+              method: "POST",
+              body: processedBlob,
+              headers: {
+                Authorization: `Bearer ${freshToken}`,
+                "Content-Type": "image/jpeg",
+              },
+            });
+
+            if (!uploadRes.ok) {
+              const text = await uploadRes.text();
+              throw new Error(`Direct Google upload failed (${uploadRes.status}): ${text}`);
+            }
+
+            // Step 2c: Register photo metadata and link scene
             const { data: createData, error: createError } = await supabase.functions.invoke(
               "streetview-publish",
               {
                 body: {
-                  action: "publish_photo_bytes",
+                  action: "create_photo",
                   access_token: freshToken,
-                  photo_base64: base64data,
+                  uploadUrl,
                   latitude: photo.latitude || tour?.latitude,
                   longitude: photo.longitude || tour?.longitude,
                   heading: photo.heading || 0,
@@ -752,72 +768,11 @@ function PublishPage() {
 
             if (createError) {
               const errMsg = await getFunctionErrorMessage(createError);
-              const errLower = errMsg.toLowerCase();
-
-              if (
-                errLower.includes("quota") ||
-                errLower.includes("rate limit") ||
-                errLower.includes("429") ||
-                errLower.includes("resource_exhausted")
-              ) {
-                console.warn("Google Street View per-minute quota reached. Pausing 25s for bucket refill...");
-                setPublishProgress((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        message: `Google rate limit reached. Pausing 25s to refill quota...`,
-                      }
-                    : null,
-                );
-                await new Promise((r) => setTimeout(r, 25000));
-              } else if (
-                errLower.includes("503") ||
-                errLower.includes("unavailable") ||
-                errLower.includes("service unavailable")
-              ) {
-                console.warn(`Server 503 on scene ${alreadyDone + photoIndex}. Pausing 4s before retry...`);
-                setPublishProgress((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        message: `Server busy on scene ${alreadyDone + photoIndex}. Retrying in 4s...`,
-                      }
-                    : null,
-                );
-                await new Promise((r) => setTimeout(r, 4000));
-              } else if (
-                errLower.includes("401") ||
-                errLower.includes("unauthorized") ||
-                errLower.includes("invalid_token") ||
-                errLower.includes("credentials")
-              ) {
-                const refreshed = await getFreshToken();
-                if (refreshed) freshToken = refreshed;
-                await new Promise((r) => setTimeout(r, 2000));
-              } else {
-                await new Promise((r) => setTimeout(r, attempt * 2000));
-              }
               throw new Error(errMsg);
             }
 
             if (createData?.error || createData?.success === false) {
-              const errMsg = createData.error || "Failed to publish photo";
-              const errLower = errMsg.toLowerCase();
-              if (
-                errLower.includes("quota") ||
-                errLower.includes("rate limit") ||
-                errLower.includes("429") ||
-                errLower.includes("resource_exhausted")
-              ) {
-                console.warn("Google quota reached. Pausing 25s...");
-                await new Promise((r) => setTimeout(r, 25000));
-              } else if (
-                errLower.includes("503") ||
-                errLower.includes("unavailable")
-              ) {
-                await new Promise((r) => setTimeout(r, 4000));
-              }
-              throw new Error(errMsg);
+              throw new Error(createData.error || "Failed to create photo");
             }
 
             success = true;

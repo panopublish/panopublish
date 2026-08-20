@@ -184,6 +184,86 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
     const referer = "https://panopublish.com/";
     const access_token = payload.access_token;
 
+    if (payload.action === "start_upload") {
+      const startRes = await fetch(
+        `https://streetviewpublish.googleapis.com/v1/photo:startUpload?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Length": "0",
+            Referer: referer,
+          },
+        },
+      );
+      const startData: any = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error?.message || "Failed to start upload");
+      return { uploadUrl: startData.uploadUrl };
+    }
+
+    if (payload.action === "create_photo") {
+      const {
+        uploadUrl,
+        latitude,
+        longitude,
+        heading,
+        pitch,
+        roll,
+        captureTime,
+        placeId,
+        supabase_photo_id,
+        level,
+      } = payload;
+
+      const body: any = {
+        uploadReference: { uploadUrl },
+        pose: {
+          latLngPair: { latitude, longitude },
+          heading,
+          pitch,
+          roll,
+        },
+      };
+      if (level && typeof level.number === "number" && level.name) {
+        body.pose.level = {
+          number: level.number,
+          name: level.name.toUpperCase().slice(0, 3),
+        };
+      }
+      if (captureTime) {
+        body.captureTime = { seconds: Math.floor(new Date(captureTime).getTime() / 1000) };
+      }
+      if (placeId) {
+        body.places = [{ placeId }];
+      }
+
+      const createRes = await fetch(
+        `https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+            Referer: referer,
+          },
+          body: JSON.stringify(body),
+        },
+      );
+      const createData: any = await createRes.json();
+      if (!createRes.ok) throw new Error(createData.error?.message || "Failed to create photo");
+
+      if (supabase_photo_id) {
+        await db
+          .prepare(
+            "UPDATE photos SET streetview_photo_id = ?, streetview_share_link = ?, streetview_status = 'PROCESSING' WHERE id = ?",
+          )
+          .bind(createData.photoId?.id, createData.shareLink || null, supabase_photo_id)
+          .run();
+      }
+
+      return createData;
+    }
+
     if (payload.action === "publish_photo" || payload.action === "publish_photo_bytes") {
       const { latitude, longitude, heading, pitch, roll, captureTime, placeId, supabase_photo_id } =
         payload;

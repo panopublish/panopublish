@@ -610,6 +610,92 @@ serve(async (req) => {
       });
     }
 
+    if (action === "start_upload") {
+      const startRes = await fetch(
+        `https://streetviewpublish.googleapis.com/v1/photo:startUpload?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Length": "0",
+            Referer: referer,
+          },
+        },
+      );
+      const startData = await startRes.json();
+      if (!startRes.ok) throw new Error(startData.error?.message || "Failed to start upload");
+      return new Response(JSON.stringify(startData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "create_photo") {
+      const {
+        uploadUrl,
+        latitude,
+        longitude,
+        heading,
+        pitch,
+        roll,
+        captureTime,
+        placeId,
+        supabase_photo_id,
+        level,
+      } = payload;
+
+      const body: any = {
+        uploadReference: { uploadUrl },
+        pose: {
+          latLngPair: { latitude, longitude },
+          heading,
+          pitch,
+          roll,
+        },
+      };
+      if (level && typeof level.number === "number" && level.name) {
+        body.pose.level = {
+          number: level.number,
+          name: level.name.toUpperCase().slice(0, 3),
+        };
+      }
+      if (captureTime) {
+        body.captureTime = { seconds: Math.floor(new Date(captureTime).getTime() / 1000) };
+      }
+      if (placeId) {
+        body.places = [{ placeId }];
+      }
+
+      const createRes = await fetch(
+        `https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+            Referer: referer,
+          },
+          body: JSON.stringify(body),
+        },
+      );
+      const createData = await createRes.json();
+      if (!createRes.ok) throw new Error(createData.error?.message || "Failed to create photo");
+
+      if (supabase_photo_id) {
+        await supabaseClient
+          .from("photos")
+          .update({
+            streetview_photo_id: createData.photoId?.id,
+            streetview_share_link: createData.shareLink || null,
+            streetview_status: "PROCESSING",
+          })
+          .eq("id", supabase_photo_id);
+      }
+
+      return new Response(JSON.stringify(createData), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "list_photos") {
       const res = await fetch(
         `https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC`,
@@ -619,6 +705,14 @@ serve(async (req) => {
             Referer: referer,
           },
         },
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error?.message || "Failed to list photos");
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "batch_get_photo_status") {
       try {
         const listRes = await fetch(
