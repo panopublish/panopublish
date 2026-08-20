@@ -454,23 +454,6 @@ function ConnectionsPage() {
   const [newFloorName, setNewFloorName] = useState("");
   const [newFloorNumber, setNewFloorNumber] = useState<number>(1);
 
-  // High-priority preload active 360 panorama image to prevent black screen delay
-  useEffect(() => {
-    if (active?.file_url) {
-      setIsPanoLoading(true);
-      const img = new Image();
-      // @ts-ignore
-      img.fetchPriority = "high";
-      img.onload = () => {
-        setIsPanoLoading(false);
-      };
-      img.onerror = () => {
-        setIsPanoLoading(false);
-      };
-      img.src = active.file_url;
-    }
-  }, [active?.id, active?.file_url]);
-
   const [opacity, setOpacity] = useState([100]);
 
   // Map Editor State
@@ -527,6 +510,23 @@ function ConnectionsPage() {
 
   const activeRef = useRef(active);
   activeRef.current = active;
+
+  // High-priority preload active 360 panorama image to prevent black screen delay
+  useEffect(() => {
+    if (active?.file_url) {
+      setIsPanoLoading(true);
+      const img = new Image();
+      // @ts-ignore
+      img.fetchPriority = "high";
+      img.onload = () => {
+        setIsPanoLoading(false);
+      };
+      img.onerror = () => {
+        setIsPanoLoading(false);
+      };
+      img.src = active.file_url;
+    }
+  }, [active?.id, active?.file_url]);
 
   const connsRef = useRef(conns);
   connsRef.current = conns;
