@@ -376,8 +376,13 @@ function AdminDashboard() {
   const handleOpenEditProfile = (p: Profile) => {
     const isAdminUser =
       p.email === "er.prashantyadav37@gmail.com" || p.email === "vista360gtp@gmail.com";
-    const totalLimit = isAdminUser ? 9999 : (planLimits[p.plan] ?? 1);
-    const totalAllowance = Math.max(p.credits ?? 0, totalLimit);
+    const isTrialUser = (p.plan ?? "trial") === "trial";
+    const isTrialExpired =
+      isTrialUser &&
+      ((p.trial_ends_at && new Date(p.trial_ends_at).getTime() < Date.now()) ||
+        (p.created_at && Date.now() - new Date(p.created_at).getTime() > 7 * 86400000));
+    const totalLimit = isAdminUser ? 9999 : isTrialExpired ? 0 : (planLimits[p.plan] ?? 1);
+    const totalAllowance = isTrialExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
     const activeCredits =
       isAdminUser
         ? 9999
@@ -663,8 +668,13 @@ function AdminDashboard() {
                                     const isAdminUser =
                                       p.email === "er.prashantyadav37@gmail.com" ||
                                       p.email === "vista360gtp@gmail.com";
-                                    const totalLimit = isAdminUser ? 9999 : (planLimits[p.plan] ?? 1);
-                                    const totalAllowance = Math.max(p.credits ?? 0, totalLimit);
+                                    const isTrialUser = (p.plan ?? "trial") === "trial";
+                                    const isTrialExpired =
+                                      isTrialUser &&
+                                      ((p.trial_ends_at && new Date(p.trial_ends_at).getTime() < Date.now()) ||
+                                        (p.created_at && Date.now() - new Date(p.created_at).getTime() > 7 * 86400000));
+                                    const totalLimit = isAdminUser ? 9999 : isTrialExpired ? 0 : (planLimits[p.plan] ?? 1);
+                                    const totalAllowance = isTrialExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
                                     const remainingCredits =
                                       isAdminUser
                                         ? 9999
@@ -673,6 +683,8 @@ function AdminDashboard() {
                                       <div className="text-[11px] mt-1.5 font-bold">
                                         {isAdminUser ? (
                                           <span className="text-emerald-600 font-extrabold">Credits: 9999 (Admin)</span>
+                                        ) : isTrialExpired ? (
+                                          <span className="text-red-500 font-extrabold">Credits: 0 left (Expired)</span>
                                         ) : (
                                           <span className="text-slate-500">
                                             Credits:{" "}

@@ -39,7 +39,13 @@ function ToursPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_desc");
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [profile, setProfile] = useState<{ plan: string; billing_cycle_tours_used: number; credits?: number } | null>(null);
+  const [profile, setProfile] = useState<{
+    plan: string;
+    billing_cycle_tours_used: number;
+    credits?: number;
+    trial_ends_at?: string | null;
+    created_at?: string;
+  } | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -54,7 +60,7 @@ function ToursPage() {
           .eq("user_id", user.id),
         supabase
           .from("profiles")
-          .select("plan, billing_cycle_tours_used, credits")
+          .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
           .eq("id", user.id)
           .maybeSingle(),
       ]);
@@ -207,8 +213,13 @@ function ToursPage() {
     pro: 20,
     agency: 50,
   };
-  const totalLimit = isAdmin ? 9999 : (planLimits[profile?.plan ?? "trial"] ?? 1);
-  const totalAllowance = Math.max(profile?.credits ?? 0, totalLimit);
+  const isTrialUser = (profile?.plan ?? "trial") === "trial";
+  const isTrialExpired =
+    isTrialUser &&
+    ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
+      (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
+  const totalLimit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
   const usedPublished = profile?.billing_cycle_tours_used ?? 0;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
   const hasCredits = isAdmin || remainingCredits > 0;

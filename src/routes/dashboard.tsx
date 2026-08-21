@@ -50,6 +50,8 @@ function Dashboard() {
     onboarding_dismissed: boolean;
     billing_cycle_tours_used: number;
     credits?: number;
+    trial_ends_at?: string | null;
+    created_at?: string;
   } | null>(null);
 
   // Onboarding Wizard State
@@ -63,7 +65,7 @@ function Dashboard() {
       const [p, c, t, token, photosRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("plan,onboarding_dismissed,billing_cycle_tours_used,credits")
+          .select("plan,onboarding_dismissed,billing_cycle_tours_used,credits,trial_ends_at,created_at")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
@@ -210,12 +212,17 @@ function Dashboard() {
   const isAdmin =
     user?.email === "vista360gtp@gmail.com" ||
     user?.email === "er.prashantyadav37@gmail.com";
-  const limit = isAdmin ? 9999 : (planLimit[profile?.plan ?? "trial"] ?? 1);
-  const totalAllowance = Math.max(profile?.credits ?? 0, limit);
+  const isTrialUser = (profile?.plan ?? "trial") === "trial";
+  const isTrialExpired =
+    isTrialUser &&
+    ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
+      (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
+  const limit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimit[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
   const tourCount = profile?.billing_cycle_tours_used ?? 0;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - tourCount);
   const hasCredits = isAdmin || remainingCredits > 0;
-  const usagePct = Math.min(100, (tourCount / limit) * 100);
+  const usagePct = limit > 0 ? Math.min(100, (tourCount / limit) * 100) : 100;
 
   const onboarding = [
     { label: "Create your first client", done: (stats?.clients ?? 0) > 0, to: "/clients" },

@@ -117,7 +117,7 @@ function CreateTour() {
       try {
         const { data: prof, error: profErr } = await supabase
           .from("profiles")
-          .select("plan, billing_cycle_tours_used, credits")
+          .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
           .eq("id", userId)
           .single();
 
@@ -374,14 +374,21 @@ function CreateTour() {
       pro: 20,
       agency: 50,
     };
-    const totalLimit = isAdmin ? 9999 : (planLimits[profile?.plan ?? "trial"] ?? 1);
-    const totalAllowance = Math.max(profile?.credits ?? 0, totalLimit);
+    const isTrialUser = (profile?.plan ?? "trial") === "trial";
+    const isTrialExpired =
+      isTrialUser &&
+      ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
+        (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
+    const totalLimit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+    const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
     const usedPublished = profile?.billing_cycle_tours_used ?? 0;
     const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
 
     if (!isAdmin && remainingCredits <= 0) {
       toast.error(
-        `You have 0 credits remaining on your ${profile?.plan || "trial"} plan. Please upgrade your subscription to a paid plan in Settings to create and publish more tours.`
+        isTrialExpired
+          ? "Your 7-day free trial has expired. Please upgrade to a paid plan in Settings to create and publish tours."
+          : `You have 0 credits remaining on your ${profile?.plan || "trial"} plan. Please upgrade your subscription to a paid plan in Settings to create and publish more tours.`
       );
       setSaving(false);
       return;
@@ -478,8 +485,13 @@ function CreateTour() {
     pro: 20,
     agency: 50,
   };
-  const limit = isAdmin ? 9999 : (planLimits[profile?.plan ?? "trial"] ?? 1);
-  const totalAllowance = Math.max(profile?.credits ?? 0, limit);
+  const isTrialUser = (profile?.plan ?? "trial") === "trial";
+  const isTrialExpired =
+    isTrialUser &&
+    ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
+      (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
+  const limit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
   const usedPublished = profile?.billing_cycle_tours_used ?? 0;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
   const isLimitReached = !isAdmin && remainingCredits <= 0;
