@@ -62,7 +62,7 @@ export const Route = createFileRoute("/tours/$tourId/")({
 
 const MAX_BYTES = 50 * 1024 * 1024;
 const PHOTO_LIMITS: Record<string, number> = {
-  trial: 30,
+  trial: 15,
   basic: 30,
   pro: 200,
   agency: 1000,
@@ -404,13 +404,13 @@ function TourDetail() {
     const isAdmin =
       user?.email === "vista360gtp@gmail.com" ||
       user?.email === "er.prashantyadav37@gmail.com";
-    const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "basic"] ?? 30);
+    const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "trial"] ?? 15);
     const currentPhotoCount = photos.length;
     const remainingSlots = maxPhotos - currentPhotoCount;
 
     if (remainingSlots <= 0) {
       toast.error(
-        `Photo limit reached! Your ${profile?.plan || "basic"} plan allows up to ${maxPhotos} photos per tour. Please upgrade your subscription in Settings to upload more photos.`
+        `Photo limit reached! Your ${profile?.plan || "free trial"} plan allows up to ${maxPhotos} photos per tour. Please upgrade your subscription in Settings to upload more photos.`
       );
       return;
     }
@@ -692,7 +692,7 @@ function TourDetail() {
                     const isAdmin =
                       user?.email === "vista360gtp@gmail.com" ||
                       user?.email === "er.prashantyadav37@gmail.com";
-                    const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "basic"] ?? 30);
+                    const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "trial"] ?? 15);
                     return (
                       <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                         photos.length >= maxPhotos
@@ -995,7 +995,7 @@ function TourDetail() {
                       const isAdmin =
                         user?.email === "vista360gtp@gmail.com" ||
                         user?.email === "er.prashantyadav37@gmail.com";
-                      const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "basic"] ?? 30);
+                      const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "trial"] ?? 15);
                       return (
                         <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
                           photos.length >= maxPhotos

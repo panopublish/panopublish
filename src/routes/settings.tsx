@@ -869,7 +869,7 @@ function SettingsPage() {
                       </div>
                       {profile?.trial_ends_at && profile.plan === "trial" && (
                         <p className="text-xs text-blue-600 mt-1">
-                          Free Trial ends on <strong>{formatDateIN(profile.trial_ends_at)}</strong>
+                          Free Trial (1 tour, 15 photos max) ends on <strong>{formatDateIN(profile.trial_ends_at)}</strong>
                         </p>
                       )}
                     </div>

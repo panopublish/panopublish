@@ -117,7 +117,7 @@ function CreateTour() {
       try {
         const { data: prof, error: profErr } = await supabase
           .from("profiles")
-          .select("plan")
+          .select("plan, billing_cycle_tours_used")
           .eq("id", userId)
           .single();
 
@@ -368,6 +368,24 @@ function CreateTour() {
       return;
     }
 
+    const planLimit =
+      profile?.plan === "agency"
+        ? 50
+        : profile?.plan === "pro"
+        ? 20
+        : profile?.plan === "basic"
+        ? 5
+        : 1;
+
+    const usedTours = Math.max(tourCount ?? 0, profile?.billing_cycle_tours_used ?? 0);
+    if (!isAdmin && usedTours >= planLimit) {
+      toast.error(
+        `Limit reached! You have used ${usedTours}/${planLimit} tours on your ${profile?.plan || "trial"} plan. Deleted tours still count toward your quota.`
+      );
+      setSaving(false);
+      return;
+    }
+
     if (type === "custom") {
       if (!canCreateCustomTour) {
         toast.error("Custom Tours are only available on Pro and Agency plans. Please upgrade in Settings.");
@@ -453,14 +471,18 @@ function CreateTour() {
   const canCreateCustomTour =
     isAdmin || profile?.plan === "pro" || profile?.plan === "agency";
 
-  const isTrialLimitReached = profile?.plan === "trial" && (tourCount ?? 0) >= 1;
-  const isBasicLimitReached = profile?.plan === "basic" && (tourCount ?? 0) >= 5;
-  const isProLimitReached = profile?.plan === "pro" && (tourCount ?? 0) >= 20;
-  const isAgencyLimitReached = profile?.plan === "agency" && (tourCount ?? 0) >= 50;
+  const limit =
+    profile?.plan === "agency"
+      ? 50
+      : profile?.plan === "pro"
+      ? 20
+      : profile?.plan === "basic"
+      ? 5
+      : 1;
 
-  const isLimitReached =
-    !isAdmin &&
-    (isTrialLimitReached || isBasicLimitReached || isProLimitReached || isAgencyLimitReached);
+  // Once a tour is created/published in this cycle, it permanently consumes quota even if deleted
+  const usedTours = Math.max(tourCount ?? 0, profile?.billing_cycle_tours_used ?? 0);
+  const isLimitReached = !isAdmin && usedTours >= limit;
 
   if (checkingLimits) {
     return (
@@ -476,14 +498,6 @@ function CreateTour() {
   }
 
   if (isLimitReached) {
-    const limit =
-      profile?.plan === "agency"
-        ? 50
-        : profile?.plan === "pro"
-        ? 20
-        : profile?.plan === "basic"
-        ? 5
-        : 1;
     return (
       <AppShell
         title="Create Tour"
