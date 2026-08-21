@@ -201,9 +201,16 @@ function ToursPage() {
   });
 
   const isAdmin = user?.email === "vista360gtp@gmail.com" || user?.email === "er.prashantyadav37@gmail.com";
-  const planLimit = profile?.plan === "agency" ? 50 : profile?.plan === "pro" ? 20 : profile?.plan === "basic" ? 5 : 1;
-  const usedTours = Math.max(tours?.length ?? 0, profile?.billing_cycle_tours_used ?? 0);
-  const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, planLimit - usedTours));
+  const planLimits: Record<string, number> = {
+    trial: 1,
+    basic: 5,
+    pro: 20,
+    agency: 50,
+  };
+  const totalLimit = isAdmin ? 9999 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = Math.max(profile?.credits ?? 0, totalLimit);
+  const usedPublished = profile?.billing_cycle_tours_used ?? 0;
+  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
   const hasCredits = isAdmin || remainingCredits > 0;
 
   return (

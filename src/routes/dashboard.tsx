@@ -211,8 +211,9 @@ function Dashboard() {
     user?.email === "vista360gtp@gmail.com" ||
     user?.email === "er.prashantyadav37@gmail.com";
   const limit = isAdmin ? 9999 : (planLimit[profile?.plan ?? "trial"] ?? 1);
-  const tourCount = Math.max(profile?.billing_cycle_tours_used ?? 0, stats?.published ?? 0);
-  const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, limit - tourCount));
+  const totalAllowance = Math.max(profile?.credits ?? 0, limit);
+  const tourCount = profile?.billing_cycle_tours_used ?? 0;
+  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - tourCount);
   const hasCredits = isAdmin || remainingCredits > 0;
   const usagePct = Math.min(100, (tourCount / limit) * 100);
 

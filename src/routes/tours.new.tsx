@@ -368,17 +368,16 @@ function CreateTour() {
       return;
     }
 
-    const planLimit =
-      profile?.plan === "agency"
-        ? 50
-        : profile?.plan === "pro"
-        ? 20
-        : profile?.plan === "basic"
-        ? 5
-        : 1;
-
-    const usedTours = Math.max(tourCount ?? 0, profile?.billing_cycle_tours_used ?? 0);
-    const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, planLimit - usedTours));
+    const planLimits: Record<string, number> = {
+      trial: 1,
+      basic: 5,
+      pro: 20,
+      agency: 50,
+    };
+    const totalLimit = isAdmin ? 9999 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+    const totalAllowance = Math.max(profile?.credits ?? 0, totalLimit);
+    const usedPublished = profile?.billing_cycle_tours_used ?? 0;
+    const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
 
     if (!isAdmin && remainingCredits <= 0) {
       toast.error(
@@ -473,18 +472,16 @@ function CreateTour() {
   const canCreateCustomTour =
     isAdmin || profile?.plan === "pro" || profile?.plan === "agency";
 
-  const limit =
-    profile?.plan === "agency"
-      ? 50
-      : profile?.plan === "pro"
-      ? 20
-      : profile?.plan === "basic"
-      ? 5
-      : 1;
-
-  // Once a tour is created/published in this cycle, it permanently consumes quota even if deleted
-  const usedTours = Math.max(tourCount ?? 0, profile?.billing_cycle_tours_used ?? 0);
-  const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, limit - usedTours));
+  const planLimits: Record<string, number> = {
+    trial: 1,
+    basic: 5,
+    pro: 20,
+    agency: 50,
+  };
+  const limit = isAdmin ? 9999 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = Math.max(profile?.credits ?? 0, limit);
+  const usedPublished = profile?.billing_cycle_tours_used ?? 0;
+  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
   const isLimitReached = !isAdmin && remainingCredits <= 0;
 
   if (checkingLimits) {
