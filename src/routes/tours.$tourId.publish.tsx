@@ -896,11 +896,21 @@ function PublishPage() {
 
       if (!isAlreadyPublished && user) {
         const currentUsed = profile?.billing_cycle_tours_used ?? 0;
+        const planLimitMap: Record<string, number> = { trial: 1, basic: 5, pro: 20, agency: 50 };
+        const totalAllowance = Math.max(profile?.credits ?? 0, planLimitMap[profile?.plan ?? "trial"] ?? 1);
+        const newCredits = Math.max(0, totalAllowance - (currentUsed + 1));
         await supabase
           .from("profiles")
-          .update({ billing_cycle_tours_used: currentUsed + 1 } as any)
+          .update({
+            billing_cycle_tours_used: currentUsed + 1,
+            credits: newCredits,
+          } as any)
           .eq("id", user.id);
-        setProfile((prev) => (prev ? { ...prev, billing_cycle_tours_used: currentUsed + 1 } : null));
+        setProfile((prev: any) =>
+          prev
+            ? { ...prev, billing_cycle_tours_used: currentUsed + 1, credits: newCredits }
+            : null
+        );
       }
 
       if (failedCount > 0) {

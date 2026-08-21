@@ -377,12 +377,11 @@ function AdminDashboard() {
     const isAdminUser =
       p.email === "er.prashantyadav37@gmail.com" || p.email === "vista360gtp@gmail.com";
     const totalLimit = isAdminUser ? 9999 : (planLimits[p.plan] ?? 1);
+    const totalAllowance = Math.max(p.credits ?? 0, totalLimit);
     const activeCredits =
       isAdminUser
         ? 9999
-        : p.credits != null
-        ? p.credits
-        : Math.max(0, totalLimit - (p.billing_cycle_tours_used ?? 0));
+        : Math.max(0, totalAllowance - (p.billing_cycle_tours_used ?? 0));
 
     setEditingProfile(p);
     setProfileForm({
@@ -665,12 +664,11 @@ function AdminDashboard() {
                                       p.email === "er.prashantyadav37@gmail.com" ||
                                       p.email === "vista360gtp@gmail.com";
                                     const totalLimit = isAdminUser ? 9999 : (planLimits[p.plan] ?? 1);
+                                    const totalAllowance = Math.max(p.credits ?? 0, totalLimit);
                                     const remainingCredits =
                                       isAdminUser
                                         ? 9999
-                                        : p.credits != null
-                                        ? p.credits
-                                        : Math.max(0, totalLimit - (p.billing_cycle_tours_used ?? 0));
+                                        : Math.max(0, totalAllowance - (p.billing_cycle_tours_used ?? 0));
                                     return (
                                       <div className="text-[11px] mt-1.5 font-bold">
                                         {isAdminUser ? (
