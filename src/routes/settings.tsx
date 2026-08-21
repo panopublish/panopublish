@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   FileText,
   MessageCircle,
+  Calendar,
 } from "lucide-react";
 import { waLink, formatDateIN } from "@/lib/format";
 
@@ -49,6 +50,7 @@ function SettingsPage() {
 
   // Profile State
   const [profile, setProfile] = useState<any>(null);
+  const [latestSub, setLatestSub] = useState<any | null>(null);
 
   // Basic Form Fields
   const [firstName, setFirstName] = useState("");
@@ -124,6 +126,19 @@ function SettingsPage() {
 
       setIsGoogleConnected(!!tokenData);
       setGoogleEmail(user.email ?? "");
+
+      // 3. Fetch latest active/current subscription
+      const { data: subData } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (subData) {
+        setLatestSub(subData);
+      }
     } catch (err: any) {
       console.error(err);
       toast.error("Failed to load settings: " + err.message);
@@ -845,51 +860,101 @@ function SettingsPage() {
               )}
 
               {/* TABS 3: BILLING TAB */}
-              {activeTab === "billing" && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-800">Billing & Subscription</h2>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Manage your active plans, billing history, invoicing details, and upgrade
-                      securely.
-                    </p>
-                  </div>
+              {activeTab === "billing" && (() => {
+                const getRenewalDate = () => {
+                  if (latestSub?.end_date) {
+                    return formatDateIN(latestSub.end_date);
+                  }
+                  if (latestSub?.start_date) {
+                    const start = new Date(latestSub.start_date);
+                    start.setMonth(start.getMonth() + 1);
+                    return formatDateIN(start);
+                  }
+                  if (latestSub?.created_at) {
+                    const start = new Date(latestSub.created_at);
+                    start.setMonth(start.getMonth() + 1);
+                    return formatDateIN(start);
+                  }
+                  if (profile?.created_at) {
+                    const created = new Date(profile.created_at);
+                    const now = new Date();
+                    const nextCycle = new Date(created);
+                    while (nextCycle.getTime() <= now.getTime()) {
+                      nextCycle.setMonth(nextCycle.getMonth() + 1);
+                    }
+                    return formatDateIN(nextCycle);
+                  }
+                  const d = new Date();
+                  d.setMonth(d.getMonth() + 1);
+                  return formatDateIN(d);
+                };
 
-                  {/* Current plan status board */}
-                  <div className="bg-[#f0f9ff] border border-blue-100 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                return (
+                  <div className="space-y-8">
                     <div>
-                      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-1">
-                        Active Plan
-                      </span>
-                      <div className="text-2xl font-extrabold text-blue-900 capitalize flex items-center gap-2">
-                        {profile?.plan ?? "trial"} Tier
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
-                          Active
+                      <h2 className="text-xl font-bold text-gray-800">Billing & Subscription</h2>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Manage your active plans, billing history, invoicing details, and upgrade
+                        securely.
+                      </p>
+                    </div>
+
+                    {/* Current plan status board */}
+                    <div className="bg-[#f0f9ff] border border-blue-100 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-1">
+                          Active Plan
                         </span>
+                        <div className="text-2xl font-extrabold text-blue-900 capitalize flex items-center gap-2">
+                          {profile?.plan ?? "trial"} Tier
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
+                            Active
+                          </span>
+                        </div>
+                        {profile?.plan === "trial" ? (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Free Trial (1 tour, 15 photos max){" "}
+                            {profile?.trial_ends_at ? (
+                              <>
+                                ends on <strong>{formatDateIN(profile.trial_ends_at)}</strong>
+                              </>
+                            ) : (
+                              <>valid for 7 days from signup</>
+                            )}
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-blue-700 font-medium mt-1.5">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                              Next Renewal Date: <strong>{getRenewalDate()}</strong>
+                            </span>
+                            <span>•</span>
+                            <span>Auto-renews monthly</span>
+                          </div>
+                        )}
                       </div>
-                      {profile?.trial_ends_at && profile.plan === "trial" && (
-                        <p className="text-xs text-blue-600 mt-1">
-                          Free Trial (1 tour, 15 photos max) ends on <strong>{formatDateIN(profile.trial_ends_at)}</strong>
-                        </p>
+                      {profile?.plan !== "trial" && (
+                        <div className="flex flex-col sm:items-end gap-1.5 w-full sm:w-auto">
+                          <Button
+                            variant="outline"
+                            onClick={cancelSubscription}
+                            className="border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold w-full sm:w-auto"
+                          >
+                            Cancel Subscription
+                          </Button>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            Renews / Expires on: <strong className="text-slate-800 font-bold">{getRenewalDate()}</strong>
+                          </span>
+                        </div>
                       )}
                     </div>
-                    {profile?.plan !== "trial" && (
-                      <Button
-                        variant="outline"
-                        onClick={cancelSubscription}
-                        className="border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold"
-                      >
-                        Cancel Subscription
-                      </Button>
-                    )}
-                  </div>
 
-                  {/* Razorpay Plans Grid */}
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                      Available Subscription Upgrades
-                    </h3>
-                    <div className="grid md:grid-cols-3 gap-5">
+                    {/* Razorpay Plans Grid */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+                        Available Subscription Upgrades
+                      </h3>
+                      <div className="grid md:grid-cols-3 gap-5">
                       {/* Basic Plan card */}
                       <div
                         className={`border rounded-2xl p-5 flex flex-col justify-between transition-all relative ${
@@ -1107,10 +1172,10 @@ function SettingsPage() {
                         </tbody>
                       </table>
                     </div>
-
                   </div>
                 </div>
-              )}
+              );
+            })()}
 
               {/* TABS 4: ACCESS TAB */}
               {activeTab === "access" && (
