@@ -167,9 +167,11 @@ function PublishPage() {
     step: "idle" | "processing" | "encoding" | "uploading" | "connecting" | "success" | "failed";
     message: string;
   } | null>(null);
-  const [profile, setProfile] = useState<{ plan: string; billing_cycle_tours_used: number } | null>(
-    null,
-  );
+  const [profile, setProfile] = useState<{
+    plan: string;
+    billing_cycle_tours_used: number;
+    credits?: number;
+  } | null>(null);
 
   // Push to Custom Tour state
   const [convertingToCustom, setConvertingToCustom] = useState(false);
@@ -419,7 +421,7 @@ function PublishPage() {
     try {
       const { data: p } = await supabase
         .from("profiles")
-        .select("plan, billing_cycle_tours_used")
+        .select("plan, billing_cycle_tours_used, credits")
         .eq("id", user.id)
         .maybeSingle();
       if (p) {
