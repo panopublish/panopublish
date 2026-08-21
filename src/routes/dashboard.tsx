@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Check,
   Shield,
+  Lock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ function Dashboard() {
     plan: string;
     onboarding_dismissed: boolean;
     billing_cycle_tours_used: number;
+    credits?: number;
   } | null>(null);
 
   // Onboarding Wizard State
@@ -61,14 +63,14 @@ function Dashboard() {
       const [p, c, t, token, photosRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("plan,onboarding_dismissed,billing_cycle_tours_used")
+          .select("plan,onboarding_dismissed,billing_cycle_tours_used,credits")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
           .from("clients")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id),
-        supabase.from("tours").select("id,status").eq("user_id", user.id),
+        supabase.from("tours").select("id,status,type").eq("user_id", user.id),
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("photos").select("tour_id,streetview_status").eq("user_id", user.id),
       ]);
@@ -210,6 +212,8 @@ function Dashboard() {
     user?.email === "er.prashantyadav37@gmail.com";
   const limit = isAdmin ? 9999 : (planLimit[profile?.plan ?? "trial"] ?? 1);
   const tourCount = Math.max(profile?.billing_cycle_tours_used ?? 0, stats?.published ?? 0);
+  const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, limit - tourCount));
+  const hasCredits = isAdmin || remainingCredits > 0;
   const usagePct = Math.min(100, (tourCount / limit) * 100);
 
   const onboarding = [
@@ -232,11 +236,23 @@ function Dashboard() {
       />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="flex items-center gap-3">
-          <Link to="/tours/new/">
-            <Button>
-              <Plus className="h-4 w-4 mr-1" /> Create Tour
-            </Button>
-          </Link>
+          {hasCredits ? (
+            <Link to="/tours/new/">
+              <Button>
+                <Plus className="h-4 w-4 mr-1" /> Create Tour
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/settings/" search={{ tab: "billing" } as any}>
+              <Button
+                variant="outline"
+                className="bg-slate-100 text-slate-400 border-slate-300 font-bold gap-1.5 cursor-pointer hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300"
+                title="0 credits remaining. Upgrade your subscription to create more tours."
+              >
+                <Lock className="h-3.5 w-3.5 mr-1" /> 0 Credits • Upgrade
+              </Button>
+            </Link>
+          )}
           <Link to="/tours/">
             <Button variant="outline">
               <Map className="h-4 w-4 mr-1" /> My Tours

@@ -117,7 +117,7 @@ function CreateTour() {
       try {
         const { data: prof, error: profErr } = await supabase
           .from("profiles")
-          .select("plan, billing_cycle_tours_used")
+          .select("plan, billing_cycle_tours_used, credits")
           .eq("id", userId)
           .single();
 
@@ -378,9 +378,11 @@ function CreateTour() {
         : 1;
 
     const usedTours = Math.max(tourCount ?? 0, profile?.billing_cycle_tours_used ?? 0);
-    if (!isAdmin && usedTours >= planLimit) {
+    const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, planLimit - usedTours));
+
+    if (!isAdmin && remainingCredits <= 0) {
       toast.error(
-        `Limit reached! You have used ${usedTours}/${planLimit} tours on your ${profile?.plan || "trial"} plan. Deleted tours still count toward your quota.`
+        `You have 0 credits remaining on your ${profile?.plan || "trial"} plan. Please upgrade your subscription to a paid plan in Settings to create and publish more tours.`
       );
       setSaving(false);
       return;
@@ -482,7 +484,8 @@ function CreateTour() {
 
   // Once a tour is created/published in this cycle, it permanently consumes quota even if deleted
   const usedTours = Math.max(tourCount ?? 0, profile?.billing_cycle_tours_used ?? 0);
-  const isLimitReached = !isAdmin && usedTours >= limit;
+  const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, limit - usedTours));
+  const isLimitReached = !isAdmin && remainingCredits <= 0;
 
   if (checkingLimits) {
     return (
@@ -509,7 +512,7 @@ function CreateTour() {
               <Rocket className="h-8 w-8 animate-bounce" />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-slate-800">Limit Reached</h2>
+              <h2 className="text-2xl font-bold text-slate-800">0 Credits Remaining</h2>
               <p className="text-sm text-slate-500 leading-relaxed">
                 You have reached your limit of{" "}
                 <strong className="text-slate-800 font-extrabold">
@@ -519,10 +522,10 @@ function CreateTour() {
                 <span className="capitalize font-bold text-slate-700">
                   {profile?.plan ?? "trial"}
                 </span>{" "}
-                plan.
+                plan. Upgrade your subscription to a paid plan to get more credits and unlock advanced features.
               </p>
               <p className="text-xs text-slate-400">
-                Upgrade your subscription to create and publish more high-quality 360-degree tours.
+                Deleted tours still count toward your billing cycle quota.
               </p>
             </div>
             <div className="flex flex-col gap-2 pt-2">
@@ -531,7 +534,7 @@ function CreateTour() {
                 search={{ tab: "billing" } as any}
                 className="w-full bg-[#0277bd] hover:bg-[#0266a1] text-white py-3 rounded-xl font-bold shadow-md hover:shadow-lg transition-all text-sm uppercase tracking-wider block"
               >
-                Upgrade Subscription
+                Upgrade to Paid Plan
               </Link>
               <Link
                 to="/tours/"

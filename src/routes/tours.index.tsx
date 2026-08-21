@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Pencil, Share2, ListFilter, Map } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Share2, ListFilter, Map, Lock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
@@ -39,6 +39,7 @@ function ToursPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("created_desc");
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [profile, setProfile] = useState<{ plan: string; billing_cycle_tours_used: number; credits?: number } | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -46,14 +47,22 @@ function ToursPage() {
       setLoading(true);
     }
     try {
-      const { data: tourData, error: tourErr } = await supabase
-        .from("tours")
-        .select("id,name,status,type,created_at,cid,google_place_id,client:clients(name)")
-        .eq("user_id", user.id);
+      const [tourRes, profRes] = await Promise.all([
+        supabase
+          .from("tours")
+          .select("id,name,status,type,created_at,cid,google_place_id,client:clients(name)")
+          .eq("user_id", user.id),
+        supabase
+          .from("profiles")
+          .select("plan, billing_cycle_tours_used, credits")
+          .eq("id", user.id)
+          .maybeSingle(),
+      ]);
 
-      if (tourErr) throw tourErr;
+      if (tourRes.error) throw tourRes.error;
+      if (profRes.data) setProfile(profRes.data);
 
-      const tList = (tourData as any[]) ?? [];
+      const tList = (tourRes.data as any[]) ?? [];
       setTours(tList);
       if (typeof window !== "undefined") {
         tList.forEach((t) => {
@@ -191,6 +200,12 @@ function ToursPage() {
     return 0;
   });
 
+  const isAdmin = user?.email === "vista360gtp@gmail.com" || user?.email === "er.prashantyadav37@gmail.com";
+  const planLimit = profile?.plan === "agency" ? 50 : profile?.plan === "pro" ? 20 : profile?.plan === "basic" ? 5 : 1;
+  const usedTours = Math.max(tours?.length ?? 0, profile?.billing_cycle_tours_used ?? 0);
+  const remainingCredits = isAdmin ? 9999 : (profile?.credits != null ? profile.credits : Math.max(0, planLimit - usedTours));
+  const hasCredits = isAdmin || remainingCredits > 0;
+
   return (
     <AppShell
       title="Tours"
@@ -204,12 +219,27 @@ function ToursPage() {
             <span className="text-gray-500 font-bold bg-gray-100 px-3 py-1 rounded-full text-xs border">
               Tours Found ({sortedTours.length})
             </span>
+            <span className="text-blue-700 font-bold bg-blue-50 px-3 py-1 rounded-full text-xs border border-blue-100">
+              {isAdmin ? "Credits: 9999 (Unlimited)" : `Credits: ${remainingCredits} remaining`}
+            </span>
           </div>
-          <Link to="/tours/new/">
-            <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold gap-1 shadow">
-              <Plus className="h-4 w-4" /> Create Tour
-            </Button>
-          </Link>
+          {hasCredits ? (
+            <Link to="/tours/new/">
+              <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold gap-1 shadow">
+                <Plus className="h-4 w-4" /> Create Tour
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/settings/" search={{ tab: "billing" } as any}>
+              <Button
+                variant="outline"
+                className="bg-slate-100 text-slate-400 border-slate-300 font-bold gap-1.5 cursor-pointer hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300"
+                title="0 credits remaining. Upgrade your subscription to create more tours."
+              >
+                <Lock className="h-3.5 w-3.5" /> 0 Credits • Upgrade to Paid Plan
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Search & Sort Panel */}

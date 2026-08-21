@@ -365,13 +365,30 @@ function AdminDashboard() {
     }
   };
 
+  const planLimits: Record<string, number> = {
+    trial: 1,
+    basic: 5,
+    pro: 20,
+    agency: 50,
+  };
+
   // Open Edit Profile Dialog
   const handleOpenEditProfile = (p: Profile) => {
+    const isAdminUser =
+      p.email === "er.prashantyadav37@gmail.com" || p.email === "vista360gtp@gmail.com";
+    const totalLimit = isAdminUser ? 9999 : (planLimits[p.plan] ?? 1);
+    const activeCredits =
+      isAdminUser
+        ? 9999
+        : p.credits != null
+        ? p.credits
+        : Math.max(0, totalLimit - (p.billing_cycle_tours_used ?? 0));
+
     setEditingProfile(p);
     setProfileForm({
       plan: p.plan,
-      credits: p.credits,
-      billing_cycle_tours_used: p.billing_cycle_tours_used,
+      credits: activeCredits,
+      billing_cycle_tours_used: p.billing_cycle_tours_used ?? 0,
     });
   };
 
@@ -643,9 +660,39 @@ function AdminDashboard() {
                                   >
                                     {p.plan}
                                   </span>
-                                  <div className="text-[10px] text-slate-400 mt-1.5 font-semibold">
-                                    Credits: {p.credits}
-                                  </div>
+                                  {(() => {
+                                    const isAdminUser =
+                                      p.email === "er.prashantyadav37@gmail.com" ||
+                                      p.email === "vista360gtp@gmail.com";
+                                    const totalLimit = isAdminUser ? 9999 : (planLimits[p.plan] ?? 1);
+                                    const remainingCredits =
+                                      isAdminUser
+                                        ? 9999
+                                        : p.credits != null
+                                        ? p.credits
+                                        : Math.max(0, totalLimit - (p.billing_cycle_tours_used ?? 0));
+                                    return (
+                                      <div className="text-[11px] mt-1.5 font-bold">
+                                        {isAdminUser ? (
+                                          <span className="text-emerald-600 font-extrabold">Credits: 9999 (Admin)</span>
+                                        ) : (
+                                          <span className="text-slate-500">
+                                            Credits:{" "}
+                                            <strong
+                                              className={
+                                                remainingCredits > 0
+                                                  ? "text-emerald-600 font-extrabold"
+                                                  : "text-red-500 font-extrabold"
+                                              }
+                                            >
+                                              {remainingCredits}
+                                            </strong>{" "}
+                                            left
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
 
                                 <td className="p-4">
