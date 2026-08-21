@@ -60,7 +60,7 @@ const landingSchemas = [
         price: "499",
         priceCurrency: "INR",
         billingIncrement: "P1M",
-        description: "1 user, 5 tours, 50 photos per tour, email support",
+        description: "1 user, 5 tours, 30 photos per tour, email support",
         url: "https://panopublish.com/signup",
       },
       {
@@ -69,7 +69,7 @@ const landingSchemas = [
         price: "1499",
         priceCurrency: "INR",
         billingIncrement: "P1M",
-        description: "3 users, 25 tours, 200 photos per tour, WhatsApp support",
+        description: "3 users, 20 tours, 200 photos per tour, WhatsApp support",
         url: "https://panopublish.com/signup",
       },
       {
@@ -78,7 +78,7 @@ const landingSchemas = [
         price: "2999",
         priceCurrency: "INR",
         billingIncrement: "P1M",
-        description: "Unlimited users, unlimited tours, dedicated manager",
+        description: "10 users, 50 tours, unlimited photos, dedicated manager",
         url: "https://panopublish.com/signup",
       },
     ],
@@ -100,7 +100,7 @@ const landingSchemas = [
         name: "Do I need a professional 360° camera to use PanoPublish?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You need a 360° camera that produces equirectangular JPEG images (like Insta360, Ricoh Theta, or similar). Consumer-grade cameras like the Insta360 ONE X2 work perfectly. We accept files up to 75MB per photo.",
+          text: "You need a 360° camera that produces equirectangular JPEG images (like Insta360, Ricoh Theta, or similar). Consumer-grade cameras like the Insta360 ONE X2 work perfectly. We accept files up to 50MB per photo.",
         },
       },
       {
@@ -160,9 +160,9 @@ const plans = [
     features: [
       "1 active user account",
       "5 Google virtual tours",
-      "Up to 50 photos per tour",
-      "Email support",
+      "Up to 30 photos per tour",
       "Direct Google Maps upload",
+      "Email support",
     ],
   },
   {
@@ -173,11 +173,11 @@ const plans = [
       "Designed for professional agencies and developers managing multiple client assets.",
     features: [
       "3 team member logins",
-      "25 Google virtual tours",
+      "20 Google & Custom virtual tours",
       "Up to 200 photos per tour",
-      "Priority WhatsApp support (Mon-Sat)",
-      "Faster image processing",
+      "Standalone Custom Tours & 1-Click Converter",
       "Custom nadir blurs & logos",
+      "Priority WhatsApp support (Mon-Sat)",
     ],
   },
   {
@@ -186,11 +186,12 @@ const plans = [
     popular: false,
     description: "Best for enterprise networks, tourism boards, and white-label media publishers.",
     features: [
-      "Unlimited team members",
-      "Unlimited virtual tours",
+      "10 team member logins",
+      "50 Google & Custom virtual tours",
       "Unlimited scenes and photos",
-      "Dedicated relationship manager",
+      "All Pro Features + Custom Tours",
       "White-label client presentation mode",
+      "Dedicated relationship manager",
     ],
   },
 ];
@@ -343,7 +344,7 @@ function Landing() {
               {
                 i: Camera,
                 t: "360° Photo Manager",
-                d: "Drag and drop massive 360-degree panoramic files (up to 75MB). We extract GPS coordinates and heading parameters automatically.",
+                d: "Drag and drop massive 360-degree panoramic files (up to 50MB). We extract GPS coordinates and heading parameters automatically.",
               },
               {
                 i: Globe2,

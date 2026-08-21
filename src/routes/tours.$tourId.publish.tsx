@@ -34,6 +34,7 @@ import {
   Play,
   Pause,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
@@ -42,7 +43,7 @@ import { syncStreetViewConnections } from "@/lib/streetview";
 import { exportCustomTour, generateLivePreviewUrl } from "@/lib/custom-tour-exporter";
 import { pushTourToCustom } from "@/lib/custom-tour-converter";
 
-const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
+const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 20, agency: 50 };
 
 const MUSIC_PRESETS = [
   {
@@ -179,6 +180,19 @@ function PublishPage() {
 
   const handlePushToCustomTour = async () => {
     if (!user) return;
+    const isAdmin =
+      user?.email === "vista360gtp@gmail.com" ||
+      user?.email === "er.prashantyadav37@gmail.com";
+    const canUseCustomTour =
+      isAdmin || profile?.plan === "pro" || profile?.plan === "agency";
+
+    if (!canUseCustomTour) {
+      toast.error(
+        "1-Click Custom Tour conversion requires a Pro or Agency subscription. Please upgrade in Settings."
+      );
+      return;
+    }
+
     if (photos.length === 0) {
       toast.error("Please add photos to this tour before converting to Custom Tour.");
       return;
@@ -2025,15 +2039,44 @@ function PublishPage() {
                 </p>
               </div>
 
-              <Button
-                type="button"
-                onClick={handlePushToCustomTour}
-                disabled={convertingToCustom || photos.length === 0}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9.5 px-4.5 rounded-xl border-0 shadow-sm flex items-center gap-2 shrink-0 cursor-pointer hover:shadow-md transition-all"
-              >
-                <Sparkles className="h-4 w-4 text-sky-400" />
-                Push to Custom Tour
-              </Button>
+              {(() => {
+                const isAdmin =
+                  user?.email === "vista360gtp@gmail.com" ||
+                  user?.email === "er.prashantyadav37@gmail.com";
+                const canUseCustomTour =
+                  isAdmin || profile?.plan === "pro" || profile?.plan === "agency";
+
+                return canUseCustomTour ? (
+                  <Button
+                    type="button"
+                    onClick={handlePushToCustomTour}
+                    disabled={convertingToCustom || photos.length === 0}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs h-9.5 px-4.5 rounded-xl border-0 shadow-sm flex items-center gap-2 shrink-0 cursor-pointer hover:shadow-md transition-all"
+                  >
+                    <Sparkles className="h-4 w-4 text-sky-400" />
+                    Push to Custom Tour
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      type="button"
+                      disabled
+                      onClick={() =>
+                        toast.error(
+                          "1-Click Custom Tour conversion requires a Pro or Agency subscription. Please upgrade in Settings."
+                        )
+                      }
+                      className="bg-slate-100 border border-slate-200 text-slate-400 font-bold text-xs h-9.5 px-4.5 rounded-xl shadow-none flex items-center gap-2 cursor-not-allowed opacity-80"
+                    >
+                      <Lock className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="line-through decoration-slate-300">Push to Custom Tour</span>
+                    </Button>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200">
+                      Pro & Agency Only
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 items-center">

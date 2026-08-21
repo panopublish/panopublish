@@ -111,9 +111,10 @@
 |---|---|---|---|
 | **Price** | ₹499/month | ₹1,499/month | ₹2,999/month |
 | **Annual** | ₹4,790/year (20% off) | ₹14,390/year (20% off) | ₹28,790/year (20% off) |
-| **Users** | 1 active user | 3 team members | Unlimited team members |
-| **Tours** | 5 active tours | 25 active tours | Unlimited tours |
-| **Photos/Tour** | 50 | 200 | Unlimited |
+| **Users** | 1 active user | 3 team members | 10 team members |
+| **Tours** | 5 active tours | 20 active tours | 50 active tours |
+| **Photos/Tour** | 30 | 200 | Unlimited |
+| **Custom Tours** | ❌ Not available | ✅ Custom Tours & 1-Click | ✅ Custom Tours & 1-Click |
 | **Nadir** | Standard blur editor | Custom logo nadir branding | Custom nadir branding |
 | **Street View** | Direct publishing (included) | Direct publishing + auto-linking | Direct publishing + auto-linking |
 | **Support** | Email | Priority WhatsApp (IST) | Dedicated account manager |

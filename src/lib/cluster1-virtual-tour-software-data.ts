@@ -152,11 +152,11 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
       },
       {
         "title": "2. Phase 2: Importing Assets into the Virtual Tour Creator Workspace",
-        "content": "Once panoramic JPEGs are exported from your camera or stitching software (PTGui / Lightroom), open your browser-based virtual tour creator workspace.\n\nUpload equirectangular JPEG files (kept under 75MB per file for optimal processing speed). The virtual tour creator automatically parses EXIF GPS tags, latitude, longitude, and compass yaw headings.\n\nUse the creator interface to group panoramas into logical floor levels or building sections using a Level and Island Organizer. For instance, group Ground Floor, First Floor, and Outdoor Patio scenes into separate folders to keep the navigation menu clean and optimize mobile loading bundles.",
+        "content": "Once panoramic JPEGs are exported from your camera or stitching software (PTGui / Lightroom), open your browser-based virtual tour creator workspace.\n\nUpload equirectangular JPEG files (kept under 50MB per file for optimal processing speed). The virtual tour creator automatically parses EXIF GPS tags, latitude, longitude, and compass yaw headings.\n\nUse the creator interface to group panoramas into logical floor levels or building sections using a Level and Island Organizer. For instance, group Ground Floor, First Floor, and Outdoor Patio scenes into separate folders to keep the navigation menu clean and optimize mobile loading bundles.",
         "listItems": [
           "EXIF Parsing: Automatic detection of GPS location and camera compass headings.",
           "Level Grouping: Organizing scenes by floor levels for clean user navigation.",
-          "Asset Optimization: Keeping individual panorama file sizes under 75MB."
+          "Asset Optimization: Keeping individual panorama file sizes under 50MB."
         ]
       },
       {
@@ -786,10 +786,10 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
       },
       {
         "title": "2. Image File Requirements & EXIF Preservation",
-        "content": "When importing panoramic photos into virtual tour software like PanoPublish, ensure your exported files meet these criteria:\n\n- File Format: Standard 2:1 aspect ratio equirectangular JPEGs (e.g. 6720x3360 or 11968x5984 resolution).\n- Max File Size: Keep compressed JPEG files under 75MB to maintain high loading speeds on mobile CDNs.\n- EXIF Metadata Preservation: Do not strip EXIF headers during Photoshop or Lightroom exports. Ensure PoseHeadingDegrees (compass heading) and GPS coordinates remain embedded in the file.",
+        "content": "When importing panoramic photos into virtual tour software like PanoPublish, ensure your exported files meet these criteria:\n\n- File Format: Standard 2:1 aspect ratio equirectangular JPEGs (e.g. 6720x3360 or 11968x5984 resolution).\n- Max File Size: Keep compressed JPEG files under 50MB to maintain high loading speeds on mobile CDNs.\n- EXIF Metadata Preservation: Do not strip EXIF headers during Photoshop or Lightroom exports. Ensure PoseHeadingDegrees (compass heading) and GPS coordinates remain embedded in the file.",
         "listItems": [
           "Aspect Ratio: Strictly 2:1 equirectangular projection ratio.",
-          "File Compression: Keeping file sizes under 75MB for edge CDN speed optimization.",
+          "File Compression: Keeping file sizes under 50MB for edge CDN speed optimization.",
           "EXIF Data Integrity: Preserving embedded GPS coordinates and compass heading tags."
         ]
       }

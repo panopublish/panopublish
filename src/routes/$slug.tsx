@@ -387,7 +387,7 @@ function SeoPage() {
                     <Check className="h-4 w-4 text-primary shrink-0" /> Up to 5 Active Tours
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> 50 Photos Per Tour
+                    <Check className="h-4 w-4 text-primary shrink-0" /> 30 Photos Per Tour
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-primary shrink-0" /> Standard Nadir Blur Editor
@@ -419,16 +419,19 @@ function SeoPage() {
                 </div>
                 <ul className="space-y-3 text-xs md:text-sm text-muted-foreground mb-8 flex-1 font-medium">
                   <li className="flex items-center gap-2 text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> Up to 25 Active Tours
+                    <Check className="h-4 w-4 text-primary shrink-0" /> Up to 20 Active Tours
+                  </li>
+                  <li className="flex items-center gap-2 text-foreground">
+                    <Check className="h-4 w-4 text-primary shrink-0" /> 3 Team Logins
                   </li>
                   <li className="flex items-center gap-2 text-foreground">
                     <Check className="h-4 w-4 text-primary shrink-0" /> 200 Photos Per Tour
                   </li>
                   <li className="flex items-center gap-2 text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> Custom Logo Nadir Brand
+                    <Check className="h-4 w-4 text-primary shrink-0" /> Custom Tours & 1-Click Converter
                   </li>
                   <li className="flex items-center gap-2 text-foreground">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> Proximity Auto-linking
+                    <Check className="h-4 w-4 text-primary shrink-0" /> Custom Logo Nadir Brand
                   </li>
                   <li className="flex items-center gap-2 text-foreground">
                     <Check className="h-4 w-4 text-primary shrink-0" /> Priority WhatsApp Support
@@ -451,16 +454,19 @@ function SeoPage() {
                 </div>
                 <ul className="space-y-3 text-xs md:text-sm text-muted-foreground mb-8 flex-1">
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> Unlimited Tours
+                    <Check className="h-4 w-4 text-primary shrink-0" /> Up to 50 Active Tours
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary shrink-0" /> 10 Team Logins
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-primary shrink-0" /> Unlimited Photos
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> Custom Nadir Branding
+                    <Check className="h-4 w-4 text-primary shrink-0" /> Custom Tours & 1-Click Converter
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary shrink-0" /> Auto-linking Paths
+                    <Check className="h-4 w-4 text-primary shrink-0" /> White-Label Presentation
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-primary shrink-0" /> Dedicated Account Manager

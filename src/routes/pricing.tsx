@@ -28,7 +28,7 @@ const pricingPlans = [
     description: "Ideal for independent photographers starting with Google Street View.",
     features: [
       "Up to 5 Active Tours",
-      "50 Photos Per Tour",
+      "30 Photos Per Tour",
       "Standard Nadir Blur Editor",
       "Direct Street View Publishing",
       "Email Support",
@@ -41,10 +41,11 @@ const pricingPlans = [
     price: "1,499",
     description: "Perfect for active agencies, local guides, and freelance publishers.",
     features: [
-      "Up to 25 Active Tours",
+      "Up to 20 Active Tours",
+      "3 Team Logins",
       "200 Photos Per Tour",
+      "Custom Tours & 1-Click Converter",
       "Custom Logo Nadir Branding",
-      "Proximity Auto-linking",
       "Priority WhatsApp Support (IST)",
     ],
     ctaText: "Start Free Trial",
@@ -55,10 +56,11 @@ const pricingPlans = [
     price: "2,999",
     description: "Designed for large media networks, real estate groups, and hotels.",
     features: [
-      "Unlimited Tours",
+      "Up to 50 Active Tours",
+      "10 Team Logins",
       "Unlimited Photos",
-      "Custom Nadir Branding",
-      "Auto-linking Paths",
+      "Custom Tours & 1-Click Converter",
+      "White-Label Client Presentation",
       "Dedicated Account Manager",
     ],
     ctaText: "Start Free Trial",
@@ -191,7 +193,7 @@ function PricingPage() {
                 <ul className="space-y-2 text-xs md:text-sm text-muted-foreground">
                   <li className="flex items-start gap-2">
                     <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                    <span>Upload 360° equirectangular JPEG files up to 75MB.</span>
+                    <span>Upload 360° equirectangular JPEG files up to 50MB.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />

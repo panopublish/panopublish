@@ -206,13 +206,13 @@ When mounting your 360° camera on a carbon fiber light stand, align the lens no
       content: `To get started on your walkthrough project, follow these technical setup steps:
 
 1. **Mount & Shoot:** Set your camera to Multi-Bracketing mode. If you are shooting indoors with high-contrast light, capture 3 or 5 RAW frames at distinct exposures and merge them in Lightroom or PTGui Pro to preserve highlight details.
-2. **Metadata Audit:** Ensure the flat equirectangular JPEG files are under 75MB for fast loading speeds. The PanoPublish browser editor automatically reads coordinates and yaw offsets to map nodes accurately.
+2. **Metadata Audit:** Ensure the flat equirectangular JPEG files are under 50MB for fast loading speeds. The PanoPublish browser editor automatically reads coordinates and yaw offsets to map nodes accurately.
 3. **Compass Alignment:** Use PanoPublish's visual node editor compass dials to rotate panoramas so the forward direction matches true North. This prevents rotation jump when navigating room connections.
 4. **Nadir Cleanup:** Upload a transparent circular logo disk (512x512px) to overlay and hide tripods or stand footprints.
 5. **Publish:** Link your Google Place card listing and publish directly to Google Maps via official API endpoints under PanoPublish's flat monthly plan.`,
       listItems: [
         "Step 1: Capture bracketed exposures to handle high-contrast windows and corridors.",
-        "Step 2: Check JPEG files are under 75MB to maintain global CDN delivery speeds.",
+        "Step 2: Check JPEG files are under 50MB to maintain global CDN delivery speeds.",
         "Step 3: Align compass headings manually using the yaw rotation dial in the node editor.",
         "Step 4: Hide tripods using transparent 512x512px PNG circular logo nadirs."
       ]

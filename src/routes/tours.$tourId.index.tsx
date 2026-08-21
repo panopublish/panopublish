@@ -61,6 +61,12 @@ export const Route = createFileRoute("/tours/$tourId/")({
 });
 
 const MAX_BYTES = 50 * 1024 * 1024;
+const PHOTO_LIMITS: Record<string, number> = {
+  trial: 30,
+  basic: 30,
+  pro: 200,
+  agency: 1000,
+};
 
 type Tour = {
   id: string;
@@ -153,8 +159,8 @@ function TourDetail() {
   const [draggedPhotoId, setDraggedPhotoId] = useState<string | null>(null);
   const [dragOverPhotoId, setDragOverPhotoId] = useState<string | null>(null);
 
-  // Custom tour simple settings (no island)
   const [customShowSceneNames, setCustomShowSceneNames] = useState(true);
+  const [profile, setProfile] = useState<{ plan: string } | null>(null);
 
   const cachedType =
     typeof window !== "undefined" && tourId
@@ -166,14 +172,22 @@ function TourDetail() {
     if (!user) return;
     if (showLoading) setIsLoading(true);
     try {
-      const { data: t } = await supabase
-        .from("tours")
-        .select(
-          "id,name,status,type,address,google_place_url,client:clients(name),latitude,longitude",
-        )
-        .eq("id", tourId)
-        .maybeSingle();
+      const [{ data: t }, { data: prof }] = await Promise.all([
+        supabase
+          .from("tours")
+          .select(
+            "id,name,status,type,address,google_place_url,client:clients(name),latitude,longitude",
+          )
+          .eq("id", tourId)
+          .maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("plan")
+          .eq("id", user.id)
+          .maybeSingle(),
+      ]);
       setTour(t as any);
+      if (prof) setProfile(prof);
 
       // Cache tour type in sessionStorage for instant nav
       if (typeof window !== "undefined" && (t as any)?.type) {
@@ -379,15 +393,37 @@ function TourDetail() {
   };
 
   const onPickFiles = async (files: FileList | null, islandId?: string) => {
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    // For custom tours, no island required â€” use null
+    // For custom tours, no island required — use null
     if (!isCustomTour) {
       const targetIsland = islandId || activeIsland;
       if (!targetIsland) return toast.error("Please select or create an island first!");
     }
 
-    const fileList = Array.from(files);
+    const isAdmin =
+      user?.email === "vista360gtp@gmail.com" ||
+      user?.email === "er.prashantyadav37@gmail.com";
+    const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "basic"] ?? 30);
+    const currentPhotoCount = photos.length;
+    const remainingSlots = maxPhotos - currentPhotoCount;
+
+    if (remainingSlots <= 0) {
+      toast.error(
+        `Photo limit reached! Your ${profile?.plan || "basic"} plan allows up to ${maxPhotos} photos per tour. Please upgrade your subscription in Settings to upload more photos.`
+      );
+      return;
+    }
+
+    const rawFileList = Array.from(files);
+    let fileList = rawFileList;
+
+    if (rawFileList.length > remainingSlots) {
+      toast.warning(
+        `Your ${profile?.plan || "basic"} plan allows up to ${maxPhotos} photos per tour (${remainingSlots} slot${remainingSlots > 1 ? "s" : ""} remaining). Only the first ${remainingSlots} photo${remainingSlots > 1 ? "s" : ""} will be uploaded.`
+      );
+      fileList = rawFileList.slice(0, remainingSlots);
+    }
 
     const newUploads = fileList.map((f) => ({
       id: `${f.name}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -650,8 +686,23 @@ function TourDetail() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col overflow-hidden">
               {/* Toolbar */}
               <div className="p-4 border-b flex justify-between items-center bg-gray-50/50 flex-wrap gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <div className="flex items-center gap-2.5 text-sm font-semibold text-gray-700">
                   <span>{photos.length} scene{photos.length !== 1 ? "s" : ""}</span>
+                  {(() => {
+                    const isAdmin =
+                      user?.email === "vista360gtp@gmail.com" ||
+                      user?.email === "er.prashantyadav37@gmail.com";
+                    const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "basic"] ?? 30);
+                    return (
+                      <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                        photos.length >= maxPhotos
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-slate-100 text-slate-600 border-slate-200"
+                      }`}>
+                        {photos.length} / {maxPhotos === 9999 ? "∞" : maxPhotos} photos
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-gray-600 font-medium flex-wrap">
                   {/* Sort scenes */}
@@ -935,10 +986,27 @@ function TourDetail() {
             ) : (
               <div className="flex flex-col h-full">
                 {/* Island Header */}
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50/50">
-                  <h3 className="font-semibold text-gray-700">
-                    {islands.find((i) => i.id === activeIsland)?.name}
-                  </h3>
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50/50 flex-wrap gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <h3 className="font-semibold text-gray-700">
+                      {islands.find((i) => i.id === activeIsland)?.name}
+                    </h3>
+                    {(() => {
+                      const isAdmin =
+                        user?.email === "vista360gtp@gmail.com" ||
+                        user?.email === "er.prashantyadav37@gmail.com";
+                      const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "basic"] ?? 30);
+                      return (
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          photos.length >= maxPhotos
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-slate-100 text-slate-600 border-slate-200"
+                        }`}>
+                          Tour Total: {photos.length} / {maxPhotos === 9999 ? "∞" : maxPhotos} photos
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <div className="flex items-center gap-4 text-sm text-gray-600 font-medium flex-wrap">
                     {islands.find((i) => i.id === activeIsland)?.is_level && (
                       <div className="flex items-center gap-4">
@@ -1092,8 +1160,8 @@ function TourDetail() {
                   {visiblePhotos.length === 0 ? (
                     <EmptyState
                       icon={ImageIcon}
-                      title="Drop your 360Â° photos here"
-                      description="Accepts .jpg / .jpeg, max 75MB each."
+                      title="Drop your 360° photos here"
+                      description="Accepts .jpg / .jpeg, max 50MB each."
                       action={
                         <Button
                           onClick={() => fileInput.current?.click()}

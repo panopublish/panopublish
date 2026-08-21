@@ -39,7 +39,7 @@ type Stats = {
   uploaded: number;
 };
 
-const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 25, agency: 9999 };
+const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 20, agency: 50 };
 
 function Dashboard() {
   const { user } = useAuth();
@@ -208,7 +208,7 @@ function Dashboard() {
   const isAdmin =
     user?.email === "vista360gtp@gmail.com" ||
     user?.email === "er.prashantyadav37@gmail.com";
-  const limit = planLimit[profile?.plan ?? "trial"] ?? 1;
+  const limit = isAdmin ? 9999 : (planLimit[profile?.plan ?? "trial"] ?? 1);
   const tourCount = Math.max(profile?.billing_cycle_tours_used ?? 0, stats?.published ?? 0);
   const usagePct = Math.min(100, (tourCount / limit) * 100);
 

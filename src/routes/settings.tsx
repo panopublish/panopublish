@@ -914,8 +914,11 @@ function SettingsPage() {
                               <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> 5 tours
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> 50 photos
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> 30 photos
                               per tour
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Direct Street View Publish
                             </li>
                             <li className="flex items-center gap-1.5">
                               <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Email
@@ -965,19 +968,21 @@ function SettingsPage() {
                               <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> 3 users
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> 25 tours
+                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> 20 tours
                             </li>
                             <li className="flex items-center gap-1.5">
                               <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> 200 photos
                               per tour
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> WhatsApp
-                              support
+                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> Custom Tours & 1-Click Convert
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> Priority
-                              processing
+                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> Nadir Branding & Blurs
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-[#8bc34a] shrink-0" /> WhatsApp
+                              support
                             </li>
                           </ul>
                         </div>
@@ -1005,32 +1010,33 @@ function SettingsPage() {
                         <div className="space-y-2">
                           <div className="text-base font-extrabold text-gray-800">Agency Tier</div>
                           <p className="text-[11px] text-gray-400 leading-snug">
-                            Enterprise volume publishing. Unlimited tours, support, and custom
-                            setups.
+                            Enterprise volume publishing. 50 tours, 10 team seats, and white-labeling.
                           </p>
                           <div className="pt-2 text-2xl font-black text-gray-900 flex items-baseline gap-0.5">
                             ₹2,999<span className="text-xs text-gray-400 font-bold">/mo</span>
                           </div>
                           <ul className="text-xs text-gray-500 space-y-1.5 pt-2 border-t font-medium">
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Unlimited
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> 10 team
                               users
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Unlimited
-                              tours
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> 50 tours
                             </li>
                             <li className="flex items-center gap-1.5">
                               <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Unlimited
                               photos
                             </li>
                             <li className="flex items-center gap-1.5">
-                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Dedicated
-                              support
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> All Pro Features + Custom Tours
                             </li>
                             <li className="flex items-center gap-1.5">
                               <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> White label
                               option
+                            </li>
+                            <li className="flex items-center gap-1.5">
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> Dedicated
+                              support
                             </li>
                           </ul>
                         </div>

@@ -20,7 +20,7 @@ export const faqCategories: FAQCategory[] = [
       {
         question: "What are PanoPublish's subscription plans and pricing?",
         answer:
-          "PanoPublish offers three plans in INR: Basic (₹499/month) for up to 5 tours and 50 photos per tour, Pro (₹1,499/month) for up to 25 tours and 200 photos per tour with WhatsApp support, and Agency (₹2,999/month) for unlimited tours and a dedicated account manager. All plans include a 7-day free trial — no credit card required.",
+          "PanoPublish offers three plans in INR: Basic (₹499/month) for up to 5 tours and 30 photos per tour, Pro (₹1,499/month) for up to 20 tours and 200 photos per tour with WhatsApp support, and Agency (₹2,999/month) for up to 50 tours, 10 team logins, and a dedicated account manager. All plans include a 7-day free trial — no credit card required.",
       },
       {
         question: "Is there a free trial? Do I need to enter payment details?",
@@ -87,7 +87,7 @@ export const faqCategories: FAQCategory[] = [
       {
         question: "What are the photo file requirements?",
         answer:
-          "PanoPublish accepts equirectangular JPEG images. Recommended minimum resolution is 4000×2000 pixels (8MP). Maximum file size per photo is 75MB. Photos must contain valid XMP or EXIF metadata with GPano ProjectionType set to 'equirectangular'. We automatically validate metadata on upload.",
+          "PanoPublish accepts equirectangular JPEG images. Recommended minimum resolution is 4000×2000 pixels (8MP). Maximum file size per photo is 50MB. Photos must contain valid XMP or EXIF metadata with GPano ProjectionType set to 'equirectangular'. We automatically validate metadata on upload.",
       },
       {
         question: "How does the nadir tripod removal work?",
@@ -128,7 +128,7 @@ export const faqCategories: FAQCategory[] = [
       {
         question: "Can I share access with my team?",
         answer:
-          "Pro plan supports up to 3 team member logins and Agency plan supports unlimited team members. Each member uses a separate login but shares the same tour library and client list. You can manage team access from the Settings → Team Members section.",
+          "Pro plan supports up to 3 team member logins and Agency plan supports up to 10 team member logins. Each member uses a separate login but shares the same tour library and client list. You can manage team access from the Settings → Team Members section.",
       },
     ],
   },

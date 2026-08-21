@@ -13,6 +13,7 @@ import {
   UserPlus,
   MapPin,
   Rocket,
+  Lock,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -86,6 +87,14 @@ function CreateTour() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
 
+  // Predictions state for fallback & instant inline dropdown
+  const [predictions, setPredictions] = useState<
+    Array<{ place_id: string; description: string; main_text: string; secondary_text: string }>
+  >([]);
+  const [showPredictions, setShowPredictions] = useState(false);
+  const autocompleteInstance = useRef<any>(null);
+  const debounceTimer = useRef<any>(null);
+
   // Subscription plan check states
   const [profile, setProfile] = useState<any>(null);
   const [tourCount, setTourCount] = useState<number | null>(null);
@@ -132,47 +141,18 @@ function CreateTour() {
     checkLimits();
   }, [user]);
 
-  useEffect(() => {
-    if (step === 3) {
-      (window as any).gm_authFailure = () => {
-        toast.error("Google Maps API Authentication Failed. Please verify Places API is enabled and HTTP Referrers permit panopublish.com in Google Cloud Console.");
-      };
-
-      const key = getEnv("VITE_GOOGLE_MAPS_API_KEY");
-      if (!key) {
-        toast.error("Google Maps API key is missing");
-        return;
-      }
-
-      if ((window as any).google?.maps?.places) {
-        initAutocomplete();
-      } else {
-        const existingScript = document.querySelector<HTMLScriptElement>("script[data-gmaps]");
-        if (existingScript) {
-          existingScript.addEventListener("load", initAutocomplete);
-        } else {
-          const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async`;
-          script.async = true;
-          script.defer = true;
-          script.dataset.gmaps = "1";
-          script.onload = initAutocomplete;
-          document.head.appendChild(script);
-        }
-      }
-    }
-  }, [step]);
-
   const initAutocomplete = () => {
-    if (!inputRef.current || !(window as any).google?.maps?.places) return;
+    if (!inputRef.current || !(window as any).google?.maps?.places?.Autocomplete) return;
+    if (autocompleteInstance.current) return; // already initialized
     try {
       const autocomplete = new (window as any).google.maps.places.Autocomplete(inputRef.current, {
         fields: ["place_id", "geometry", "name", "formatted_address", "url"],
       });
+      autocompleteInstance.current = autocomplete;
       autocomplete.addListener("place_changed", () => {
+        setShowPredictions(false);
         const place = autocomplete.getPlace();
         if (!place.place_id && !place.geometry) {
-          // If user typed a custom query and pressed enter without selecting dropdown
           const rawVal = inputRef.current?.value || "";
           if (rawVal.trim()) {
             handleResolveInput(rawVal.trim());
@@ -196,15 +176,144 @@ function CreateTour() {
           lat: place.geometry?.location?.lat(),
           lng: place.geometry?.location?.lng(),
         });
+        toast.success(`Found: ${name}`);
       });
     } catch (e) {
       console.error("Error initializing Google Places Autocomplete:", e);
     }
   };
 
+  const fetchPlacePredictions = (query: string) => {
+    if (!query || query.trim().length < 2) {
+      setPredictions([]);
+      setShowPredictions(false);
+      return;
+    }
+    if ((window as any).google?.maps?.places?.AutocompleteService) {
+      try {
+        const service = new (window as any).google.maps.places.AutocompleteService();
+        service.getPlacePredictions({ input: query }, (results: any[], status: any) => {
+          if (status === (window as any).google?.maps?.places?.PlacesServiceStatus?.OK && results?.length) {
+            setPredictions(
+              results.slice(0, 5).map((r) => ({
+                place_id: r.place_id,
+                description: r.description,
+                main_text: r.structured_formatting?.main_text || r.description,
+                secondary_text: r.structured_formatting?.secondary_text || "",
+              }))
+            );
+            setShowPredictions(true);
+          } else {
+            setPredictions([]);
+            setShowPredictions(false);
+          }
+        });
+      } catch (err) {
+        console.warn("AutocompleteService error:", err);
+      }
+    }
+  };
+
+  const handleSelectPrediction = (item: { place_id: string; description: string; main_text: string }) => {
+    setShowPredictions(false);
+    setTourInput(item.main_text || item.description);
+    setResolving(true);
+
+    if ((window as any).google?.maps?.places?.PlacesService) {
+      try {
+        const dummy = document.createElement("div");
+        const service = new (window as any).google.maps.places.PlacesService(dummy);
+        service.getDetails(
+          {
+            placeId: item.place_id,
+            fields: ["name", "formatted_address", "geometry", "url", "place_id"],
+          },
+          (place: any, status: any) => {
+            setResolving(false);
+            if (status === (window as any).google?.maps?.places?.PlacesServiceStatus?.OK && place) {
+              const name = place.name || item.main_text;
+              setTourInput(name);
+              const parsed = parseMapsInput(place.url || "");
+              if (parsed.cid) setCid(parsed.cid);
+              setPlaceDetails({
+                address: place.formatted_address || name,
+                url: place.url,
+                place_id: place.place_id,
+                name,
+                lat: place.geometry?.location?.lat(),
+                lng: place.geometry?.location?.lng(),
+              });
+              toast.success(`Found: ${name}`);
+              return;
+            }
+            handleResolveInput(item.place_id);
+          }
+        );
+        return;
+      } catch (e) {
+        console.warn("PlacesService details error:", e);
+      }
+    }
+    handleResolveInput(item.place_id);
+  };
+
+  useEffect(() => {
+    if (step === 3) {
+      (window as any).gm_authFailure = () => {
+        toast.error(
+          "Google Maps API Authentication Failed. Please verify Places API is enabled and HTTP Referrers permit panopublish.com in Google Cloud Console."
+        );
+      };
+
+      const key = getEnv("VITE_GOOGLE_MAPS_API_KEY");
+      if (!key) {
+        toast.error("Google Maps API key is missing");
+        return;
+      }
+
+      if ((window as any).google?.maps?.places?.Autocomplete) {
+        initAutocomplete();
+      } else {
+        const existingScript = document.querySelector<HTMLScriptElement>("script[data-gmaps]");
+        if (existingScript) {
+          const timer = setInterval(() => {
+            if ((window as any).google?.maps?.places?.Autocomplete) {
+              clearInterval(timer);
+              initAutocomplete();
+            }
+          }, 50);
+          existingScript.addEventListener("load", () => {
+            clearInterval(timer);
+            initAutocomplete();
+          });
+          setTimeout(() => clearInterval(timer), 3000);
+        } else {
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
+          script.async = true;
+          script.defer = true;
+          script.dataset.gmaps = "1";
+          script.onload = () => {
+            initAutocomplete();
+          };
+          document.head.appendChild(script);
+        }
+      }
+    } else {
+      autocompleteInstance.current = null;
+      setShowPredictions(false);
+    }
+  }, [step]);
+
   const filtered = clients.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
 
   const handleActionSelected = (actionType: "gmaps" | "custom") => {
+    if (actionType === "custom" && !canCreateCustomTour) {
+      toast.error(
+        "Custom Tours are only available on Pro and Agency plans. Please upgrade your subscription."
+      );
+      return;
+    }
     setType(actionType);
     if (actionType === "gmaps") {
       setStep(1.1);
@@ -259,10 +368,17 @@ function CreateTour() {
       return;
     }
 
-    if (type === "custom" && !tourInput.trim()) {
-      toast.error("Please enter a tour name");
-      setSaving(false);
-      return;
+    if (type === "custom") {
+      if (!canCreateCustomTour) {
+        toast.error("Custom Tours are only available on Pro and Agency plans. Please upgrade in Settings.");
+        setSaving(false);
+        return;
+      }
+      if (!tourInput.trim()) {
+        toast.error("Please enter a tour name");
+        setSaving(false);
+        return;
+      }
     }
 
     const finalCid = cid.trim() || null;
@@ -334,11 +450,17 @@ function CreateTour() {
     user?.email === "vista360gtp@gmail.com" ||
     user?.email === "er.prashantyadav37@gmail.com";
 
+  const canCreateCustomTour =
+    isAdmin || profile?.plan === "pro" || profile?.plan === "agency";
+
   const isTrialLimitReached = profile?.plan === "trial" && (tourCount ?? 0) >= 1;
   const isBasicLimitReached = profile?.plan === "basic" && (tourCount ?? 0) >= 5;
-  const isProLimitReached = profile?.plan === "pro" && (tourCount ?? 0) >= 25;
+  const isProLimitReached = profile?.plan === "pro" && (tourCount ?? 0) >= 20;
+  const isAgencyLimitReached = profile?.plan === "agency" && (tourCount ?? 0) >= 50;
 
-  const isLimitReached = !isAdmin && (isTrialLimitReached || isBasicLimitReached || isProLimitReached);
+  const isLimitReached =
+    !isAdmin &&
+    (isTrialLimitReached || isBasicLimitReached || isProLimitReached || isAgencyLimitReached);
 
   if (checkingLimits) {
     return (
@@ -354,7 +476,14 @@ function CreateTour() {
   }
 
   if (isLimitReached) {
-    const limit = profile?.plan === "trial" ? 1 : profile?.plan === "basic" ? 5 : 25;
+    const limit =
+      profile?.plan === "agency"
+        ? 50
+        : profile?.plan === "pro"
+        ? 20
+        : profile?.plan === "basic"
+        ? 5
+        : 1;
     return (
       <AppShell
         title="Create Tour"
@@ -421,16 +550,49 @@ function CreateTour() {
               <div className="space-y-4">
                 <button
                   onClick={() => handleActionSelected("gmaps")}
-                  className="w-full flex items-center gap-4 bg-[#8bc34a] hover:bg-[#7cb342] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium"
+                  className="w-full flex items-center justify-between bg-[#8bc34a] hover:bg-[#7cb342] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium cursor-pointer shadow-sm hover:shadow"
                 >
-                  <MapPin className="h-6 w-6" /> Publish a tour to Google Maps
+                  <div className="flex items-center gap-4">
+                    <MapPin className="h-6 w-6" /> Publish a tour to Google Maps
+                  </div>
+                  <ChevronRight className="h-5 w-5 opacity-70" />
                 </button>
-                <button
-                  onClick={() => handleActionSelected("custom")}
-                  className="w-full flex items-center gap-4 bg-[#0277bd] hover:bg-[#0266a1] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium"
-                >
-                  <Wand2 className="h-6 w-6" /> Create a custom tour
-                </button>
+
+                {canCreateCustomTour ? (
+                  <button
+                    onClick={() => handleActionSelected("custom")}
+                    className="w-full flex items-center justify-between bg-[#0277bd] hover:bg-[#0266a1] text-white px-6 py-4 rounded-full text-lg transition-colors font-medium cursor-pointer shadow-sm hover:shadow"
+                  >
+                    <div className="flex items-center gap-4">
+                      <Wand2 className="h-6 w-6" /> Create a custom tour
+                    </div>
+                    <ChevronRight className="h-5 w-5 opacity-70" />
+                  </button>
+                ) : (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      disabled
+                      onClick={() =>
+                        toast.error(
+                          "Custom Tours require a Pro or Agency subscription. Please upgrade in Settings."
+                        )
+                      }
+                      className="w-full flex items-center justify-between bg-slate-100 border border-slate-200 text-slate-400 px-6 py-4 rounded-full text-lg font-medium cursor-not-allowed transition-all opacity-80"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Wand2 className="h-6 w-6 text-slate-400" />
+                        <span className="line-through decoration-slate-300">Create a custom tour</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200">
+                          Pro & Agency Only
+                        </span>
+                        <Lock className="h-4 w-4 text-slate-400" />
+                      </div>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -612,21 +774,35 @@ function CreateTour() {
                   onChange={(e) => {
                     const val = e.target.value;
                     setTourInput(val);
+                    clearTimeout(debounceTimer.current);
                     if (val === "") {
                       setPlaceDetails({});
                       setCid("");
+                      setPredictions([]);
+                      setShowPredictions(false);
                     } else if (
                       val.includes("google.com/maps") ||
                       val.includes("maps.app.goo.gl") ||
                       val.includes("goo.gl/maps") ||
                       val.startsWith("ChIJ")
                     ) {
+                      setShowPredictions(false);
                       handleResolveInput(val.trim());
+                    } else {
+                      debounceTimer.current = setTimeout(() => {
+                        fetchPlacePredictions(val.trim());
+                      }, 200);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (predictions.length > 0 && tourInput.trim().length >= 2) {
+                      setShowPredictions(true);
                     }
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault();
+                      setShowPredictions(false);
                       handleResolveInput(tourInput.trim());
                     }
                   }}
@@ -658,6 +834,30 @@ function CreateTour() {
                   }}
                 />
               </div>
+
+              {/* Suggestions Dropdown Popup */}
+              {showPredictions && predictions.length > 0 && (
+                <div className="relative -mt-4 mb-6 z-50 text-left">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden divide-y divide-gray-100 animate-in fade-in slide-in-from-top-1">
+                    {predictions.map((p) => (
+                      <button
+                        key={p.place_id}
+                        type="button"
+                        onClick={() => handleSelectPrediction(p)}
+                        className="w-full px-4 py-3 text-left flex items-start gap-3 hover:bg-blue-50/70 transition-colors focus:bg-blue-50 focus:outline-none cursor-pointer"
+                      >
+                        <MapPin className="h-4 w-4 text-[#0277bd] shrink-0 mt-0.5" />
+                        <div>
+                          <div className="font-semibold text-gray-900 text-sm">{p.main_text}</div>
+                          {p.secondary_text && (
+                            <div className="text-xs text-gray-500">{p.secondary_text}</div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Place Resolution Feedback Card */}
               {resolving && (
