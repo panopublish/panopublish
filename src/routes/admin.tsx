@@ -165,8 +165,18 @@ function AdminDashboard() {
     setCleaningStorage(true);
     const tid = toast.loading("Scanning and purging orphaned R2 files...");
     try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token || "";
+      let token = session?.access_token || "";
+      if (!token && typeof window !== "undefined") {
+        try {
+          const s = JSON.parse(localStorage.getItem("panopublish_session") || "{}");
+          token = s?.access_token || "";
+        } catch {}
+      }
+
+      if (!token) {
+        throw new Error("No active session found. Please log in again.");
+      }
+
       const res = await adminCleanOrphanedStorage({ data: { token } });
 
       if (res.error) {

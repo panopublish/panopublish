@@ -300,6 +300,18 @@ export const supabase = new Proxy({} as any, {
     if (prop === "functions") {
       return customFunctions;
     }
+    if (prop === "auth") {
+      return {
+        async getSession() {
+          const s = await getOrRefreshSession();
+          return { data: { session: s }, error: null };
+        },
+        async getUser() {
+          const s = await getOrRefreshSession();
+          return { data: { user: s?.user || null }, error: null };
+        },
+      };
+    }
     return undefined;
   },
 });
