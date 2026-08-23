@@ -670,12 +670,24 @@ export const adminCleanOrphanedStorage = createServerFn({ method: "POST" })
       const bucket = getBinding("BUCKET");
       if (!bucket) throw new Error("Cloudflare R2 Bucket binding missing");
 
-      // 2. Fetch all active tour IDs and active user IDs from DB
-      const toursRes: any = await db.prepare("SELECT id FROM tours").all();
+      // 2. Fetch all active tour IDs, photo file paths, and active user IDs
+      const toursRes: any = await db.prepare("SELECT id, user_id FROM tours").all();
       const activeTourIds = new Set((toursRes?.results || []).map((t: any) => t.id));
+      const tourUserIds = (toursRes?.results || []).map((t: any) => t.user_id);
 
+      const profilesRes: any = await db.prepare("SELECT id FROM profiles").all();
       const usersRes: any = await db.prepare("SELECT id FROM users").all();
-      const activeUserIds = new Set((usersRes?.results || []).map((u: any) => u.id));
+      const photosRes: any = await db.prepare("SELECT file_path FROM photos").all();
+
+      const activeUserIds = new Set([
+        ...(profilesRes?.results || []).map((p: any) => p.id),
+        ...(usersRes?.results || []).map((u: any) => u.id),
+        ...tourUserIds,
+      ]);
+
+      const activePhotoPaths = new Set(
+        (photosRes?.results || []).map((p: any) => p.file_path).filter(Boolean)
+      );
 
       let scannedCount = 0;
       let deletedCount = 0;
@@ -698,11 +710,13 @@ export const adminCleanOrphanedStorage = createServerFn({ method: "POST" })
             const userId = parts[0];
             const tourId = parts[1];
 
-            // If user no longer exists or tour no longer exists, it is orphaned!
-            const isUserOrphaned = !activeUserIds.has(userId);
-            const isTourOrphaned = !activeTourIds.has(tourId);
+            // Never delete if the tour exists in DB or the photo path exists in DB
+            if (activeTourIds.has(tourId) || activePhotoPaths.has(key)) {
+              continue; // Safe!
+            }
 
-            if (isUserOrphaned || isTourOrphaned) {
+            // Only delete if the tour does not exist in active tours AND user doesn't exist
+            if (!activeTourIds.has(tourId) || !activeUserIds.has(userId)) {
               toDelete.push(key);
               deletedBytes += obj.size || 0;
             }
