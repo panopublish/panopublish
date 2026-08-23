@@ -355,7 +355,10 @@ export const customResetPasswordRequest = createServerFn({ method: "POST" })
       const db = getBinding("DB");
       if (!db) throw new Error("Database binding missing");
 
-      const user = await db.prepare("SELECT id, email FROM users WHERE email = ?").bind(email.trim().toLowerCase()).first();
+      let user: any = await db.prepare("SELECT id, email FROM users WHERE email = ?").bind(email.trim().toLowerCase()).first();
+      if (!user) {
+        user = await db.prepare("SELECT id, email FROM profiles WHERE email = ?").bind(email.trim().toLowerCase()).first();
+      }
       if (!user) return { data: { success: true }, error: null }; // silent success
 
       const code = generateOtp();
@@ -404,8 +407,6 @@ export const customVerifyResetCode = createServerFn({ method: "POST" })
     }
   });
 
-// ─── Update Password ──────────────────────────────────────────────────────────
-
 export const customUpdatePassword = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async (ctx: any) => {
@@ -413,8 +414,8 @@ export const customUpdatePassword = createServerFn({ method: "POST" })
       const { token, password } = ctx.data;
       const jwtSecret = getEnv("JWT_SECRET") || "secret";
       const claims = await verifyJWT(token, jwtSecret);
-      if (!claims || !claims.sub || claims.purpose !== "reset") {
-        return { error: { message: "Invalid or expired reset token" } };
+      if (!claims || !claims.sub) {
+        return { error: { message: "Invalid or expired session. Please log in again." } };
       }
 
       const db = getBinding("DB");
@@ -422,9 +423,26 @@ export const customUpdatePassword = createServerFn({ method: "POST" })
 
       const salt = crypto.randomUUID();
       const hash = await hashPassword(password, salt);
-      await db.prepare("UPDATE users SET password_hash = ?, salt = ? WHERE id = ?")
-        .bind(hash, salt, claims.sub)
-        .run();
+
+      // Check if user exists in users table (e.g. email-password account vs Google OAuth account)
+      const existingUser: any = await db.prepare("SELECT id FROM users WHERE id = ?").bind(claims.sub).first();
+      if (existingUser) {
+        await db.prepare("UPDATE users SET password_hash = ?, salt = ? WHERE id = ?")
+          .bind(hash, salt, claims.sub)
+          .run();
+      } else {
+        // User originally created via Google OAuth; create user credential record
+        let userEmail = claims.email;
+        if (!userEmail) {
+          const profile: any = await db.prepare("SELECT email FROM profiles WHERE id = ?").bind(claims.sub).first();
+          userEmail = profile?.email || "";
+        }
+        await db.prepare(
+          "INSERT INTO users (id, email, password_hash, salt, email_verified) VALUES (?, ?, ?, ?, 1)"
+        )
+          .bind(claims.sub, userEmail ? userEmail.toLowerCase() : "", hash, salt)
+          .run();
+      }
 
       return { data: { success: true }, error: null };
     } catch (err: any) {
