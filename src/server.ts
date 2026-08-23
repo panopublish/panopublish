@@ -190,12 +190,31 @@ export default {
         if (!bucket) {
           return new Response("Cloudflare R2 Bucket binding 'BUCKET' is missing", { status: 500 });
         }
-        const { paths } = (await request.json()) as { paths: string[] };
-        if (!paths || !Array.isArray(paths)) {
-          return new Response("Invalid paths body parameters", { status: 400 });
+        const body = (await request.json().catch(() => ({}))) as { paths?: string[]; prefix?: string };
+        const { paths, prefix } = body;
+
+        let deletedCount = 0;
+
+        if (Array.isArray(paths) && paths.length > 0) {
+          await Promise.all(paths.filter(Boolean).map((p) => bucket.delete(p)));
+          deletedCount += paths.length;
         }
-        await Promise.all(paths.map((p) => bucket.delete(p)));
-        return new Response(JSON.stringify({ success: true }), {
+
+        if (prefix && typeof prefix === "string" && prefix.trim().length > 0) {
+          let truncated = true;
+          let cursor: string | undefined = undefined;
+          while (truncated) {
+            const list: any = await bucket.list({ prefix: prefix.trim(), cursor });
+            if (list?.objects && list.objects.length > 0) {
+              await Promise.all(list.objects.map((obj: any) => bucket.delete(obj.key)));
+              deletedCount += list.objects.length;
+            }
+            truncated = list?.truncated ?? false;
+            cursor = list?.cursor;
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true, deleted: deletedCount }), {
           headers: { "content-type": "application/json" },
         });
       }

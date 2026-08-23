@@ -237,12 +237,15 @@ const customStorage = {
             : "/api/files/" + encodeURIComponent(path);
         return { data: { publicUrl } };
       },
-      async remove(paths: string[]) {
+      async remove(pathsOrOptions: string[] | { paths?: string[]; prefix?: string }) {
         try {
+          const body = Array.isArray(pathsOrOptions)
+            ? { paths: pathsOrOptions }
+            : pathsOrOptions;
           const response = await fetch("/api/remove", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ paths }),
+            body: JSON.stringify(body),
           });
           if (!response.ok) {
             throw new Error(`Remove failed with status ${response.status}`);

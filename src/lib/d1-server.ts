@@ -652,3 +652,86 @@ export const adminImpersonateUser = createServerFn({ method: "POST" })
     }
   });
 
+export const adminCleanOrphanedStorage = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const { token } = ctx.data;
+
+      // 1. Verify caller is admin
+      const caller = await getUserFromToken(token);
+      if (!checkIsAdmin(caller)) {
+        throw new Error("Access denied. Admin access only.");
+      }
+
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding missing");
+
+      const bucket = getBinding("BUCKET");
+      if (!bucket) throw new Error("Cloudflare R2 Bucket binding missing");
+
+      // 2. Fetch all active tour IDs and active user IDs from DB
+      const toursRes: any = await db.prepare("SELECT id FROM tours").all();
+      const activeTourIds = new Set((toursRes?.results || []).map((t: any) => t.id));
+
+      const usersRes: any = await db.prepare("SELECT id FROM users").all();
+      const activeUserIds = new Set((usersRes?.results || []).map((u: any) => u.id));
+
+      let scannedCount = 0;
+      let deletedCount = 0;
+      let deletedBytes = 0;
+      let truncated = true;
+      let cursor: string | undefined = undefined;
+
+      while (truncated) {
+        const list: any = await bucket.list({ cursor });
+        const objects = list?.objects || [];
+        scannedCount += objects.length;
+
+        const toDelete: string[] = [];
+        for (const obj of objects) {
+          const key: string = obj.key;
+          const parts = key.split("/");
+
+          // Format is typically: userId/tourId/...
+          if (parts.length >= 2) {
+            const userId = parts[0];
+            const tourId = parts[1];
+
+            // If user no longer exists or tour no longer exists, it is orphaned!
+            const isUserOrphaned = !activeUserIds.has(userId);
+            const isTourOrphaned = !activeTourIds.has(tourId);
+
+            if (isUserOrphaned || isTourOrphaned) {
+              toDelete.push(key);
+              deletedBytes += obj.size || 0;
+            }
+          }
+        }
+
+        if (toDelete.length > 0) {
+          await Promise.all(toDelete.map((k: string) => bucket.delete(k)));
+          deletedCount += toDelete.length;
+        }
+
+        truncated = list?.truncated ?? false;
+        cursor = list?.cursor;
+      }
+
+      return {
+        data: {
+          success: true,
+          scannedCount,
+          deletedCount,
+          deletedBytes,
+          deletedMb: (deletedBytes / (1024 * 1024)).toFixed(2),
+        },
+        error: null,
+      };
+    } catch (err: any) {
+      console.error("adminCleanOrphanedStorage error:", err);
+      return { error: { message: err.message || "Failed to clean orphaned storage" } };
+    }
+  });
+
+

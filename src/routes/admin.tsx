@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { adminAddUser, adminDeleteUser, adminImpersonateUser } from "@/lib/d1-server";
+import { adminAddUser, adminDeleteUser, adminImpersonateUser, adminCleanOrphanedStorage } from "@/lib/d1-server";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,8 @@ import {
   RefreshCw,
   Ticket,
   LogIn,
+  HardDrive,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
@@ -144,6 +146,46 @@ function AdminDashboard() {
     companyName: "",
     plan: "trial",
   });
+
+  // Storage Cleanup State
+  const [cleaningStorage, setCleaningStorage] = useState(false);
+  const [storageCleanResult, setStorageCleanResult] = useState<{
+    scannedCount: number;
+    deletedCount: number;
+    deletedBytes: number;
+    deletedMb: string;
+  } | null>(null);
+
+  const handleCleanStorage = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to scan and purge all orphaned storage files from Cloudflare R2? This will delete files from tours or users that no longer exist in the database, freeing up your storage quota."
+    );
+    if (!confirmed) return;
+
+    setCleaningStorage(true);
+    const tid = toast.loading("Scanning and purging orphaned R2 files...");
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token || "";
+      const res = await adminCleanOrphanedStorage({ data: { token } });
+
+      if (res.error) {
+        throw new Error(res.error.message);
+      }
+
+      setStorageCleanResult(res.data);
+      toast.success(
+        `Cleaned ${res.data.deletedCount} orphaned files (${res.data.deletedMb} MB freed)!`,
+        { id: tid }
+      );
+      loadData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to clean storage: " + err.message, { id: tid });
+    } finally {
+      setCleaningStorage(false);
+    }
+  };
 
   // Verify Admin Access
   useEffect(() => {
@@ -1097,6 +1139,63 @@ function AdminDashboard() {
                   className="w-full bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl shadow-md py-3 transition-all mt-4"
                 >
                   Create Targeted Offer
+                </Button>
+              </div>
+
+              {/* Cloudflare R2 Storage Management Box */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="h-9 w-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                      <HardDrive className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-sm">Cloudflare R2 Storage</h3>
+                      <p className="text-[11px] text-slate-400">10 GB Free Tier Optimizer</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    Auto-Clean
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Scan Cloudflare R2 storage and automatically purge orphaned image files left behind from previously deleted tours or removed users.
+                </p>
+
+                {storageCleanResult && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+                    <div className="flex justify-between font-medium text-slate-600">
+                      <span>Objects Scanned:</span>
+                      <span className="font-bold text-slate-800">{storageCleanResult.scannedCount}</span>
+                    </div>
+                    <div className="flex justify-between font-medium text-slate-600">
+                      <span>Orphaned Purged:</span>
+                      <span className="font-bold text-amber-600">{storageCleanResult.deletedCount} files</span>
+                    </div>
+                    <div className="flex justify-between font-medium text-slate-600">
+                      <span>Space Reclaimed:</span>
+                      <span className="font-bold text-emerald-600">{storageCleanResult.deletedMb} MB</span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleCleanStorage}
+                  disabled={cleaningStorage}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl py-3 shadow-sm flex items-center justify-center gap-2 text-xs transition-all"
+                >
+                  {cleaningStorage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-400" />
+                      Scanning & Purging R2 Storage...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Purge Orphaned R2 Storage (1-Click)
+                    </>
+                  )}
                 </Button>
               </div>
 

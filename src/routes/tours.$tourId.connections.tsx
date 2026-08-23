@@ -1952,9 +1952,10 @@ function ConnectionsPage() {
         .delete()
         .or(`from_photo_id.eq.${photoId},to_photo_id.eq.${photoId}`);
 
-      if (p && p.filename) {
+      const filePath = (p as any)?.file_path || p?.filename;
+      if (filePath) {
         try {
-          await supabase.storage.from("tour-photos").remove([p.filename]);
+          await supabase.storage.from("tour-photos").remove([filePath]);
         } catch {}
       }
       const { error } = await supabase.from("photos").delete().eq("id", photoId);

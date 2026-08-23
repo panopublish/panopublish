@@ -156,12 +156,30 @@ function ToursPage() {
     );
     if (!confirmed) return;
 
-    const tid = toast.loading("Deleting tour...");
+    const tid = toast.loading("Deleting tour and clearing storage...");
     try {
+      // 1. Fetch all associated photo records to get explicit file paths
+      const { data: photoRecords } = await supabase
+        .from("photos")
+        .select("file_path")
+        .eq("tour_id", id);
+
+      const filePaths = ((photoRecords || []) as { file_path?: string }[])
+        .map((p) => p.file_path)
+        .filter(Boolean) as string[];
+
+      // 2. Remove files and purge the entire tour prefix from Cloudflare R2 storage
+      const prefix = user?.id ? `${user.id}/${id}/` : undefined;
+      await (supabase.storage.from("tour-photos") as any).remove({
+        paths: filePaths,
+        prefix,
+      });
+
+      // 3. Delete tour from database (cascades to photos, islands, and connections)
       const { error } = await supabase.from("tours").delete().eq("id", id);
       if (error) throw error;
 
-      toast.success("Tour deleted successfully!", { id: tid });
+      toast.success("Tour deleted and storage cleared!", { id: tid });
       load();
     } catch (err: any) {
       console.error(err);
