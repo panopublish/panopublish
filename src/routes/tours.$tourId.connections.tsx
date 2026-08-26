@@ -2403,6 +2403,92 @@ function ConnectionsPage() {
     }
   };
 
+  const handleDeleteIsland = async (islandId: string) => {
+    const island = islands.find((i) => i.id === islandId);
+    const islandPhotos = photos.filter((p) => p.island_id === islandId);
+    const msg =
+      islandPhotos.length > 0
+        ? `Are you sure you want to delete floor "${island?.name || "Floor"}" and all its ${islandPhotos.length} scene${islandPhotos.length > 1 ? "s" : ""}? All associated photos and connections will be permanently deleted.`
+        : `Are you sure you want to delete empty floor "${island?.name || "Floor"}"?`;
+    if (!confirm(msg)) return;
+
+    try {
+      if (islandPhotos.length > 0) {
+        const photoIds = islandPhotos.map((p) => p.id);
+        for (const pId of photoIds) {
+          await supabase
+            .from("connections")
+            .delete()
+            .or(`from_photo_id.eq.${pId},to_photo_id.eq.${pId}`);
+          const p = islandPhotos.find((x) => x.id === pId);
+          const filePath = (p as any)?.file_path || p?.filename;
+          if (filePath) {
+            try {
+              await supabase.storage.from("tour-photos").remove([filePath]);
+            } catch {}
+          }
+        }
+        const { error: pErr } = await supabase.from("photos").delete().in("id", photoIds);
+        if (pErr) throw pErr;
+      }
+
+      const { error } = await supabase.from("islands").delete().eq("id", islandId);
+      if (error) throw error;
+
+      toast.success("Floor and associated scenes deleted!");
+      if (activeIslandId === islandId) {
+        setActiveIslandId(null);
+      }
+      await markConnectionsUnsynced();
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete floor: " + err.message);
+    }
+  };
+
+  const handleDeleteUnassignedScenes = async () => {
+    const unassigned = photos.filter((p) => !p.island_id);
+    if (unassigned.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete all ${unassigned.length} unassigned scene${unassigned.length > 1 ? "s" : ""}? All associated photos and connections will be permanently deleted.`
+      )
+    )
+      return;
+
+    try {
+      const ids = unassigned.map((p) => p.id);
+      for (const id of ids) {
+        await supabase
+          .from("connections")
+          .delete()
+          .or(`from_photo_id.eq.${id},to_photo_id.eq.${id}`);
+        const p = unassigned.find((x) => x.id === id);
+        const filePath = (p as any)?.file_path || p?.filename;
+        if (filePath) {
+          try {
+            await supabase.storage.from("tour-photos").remove([filePath]);
+          } catch {}
+        }
+      }
+      const { error } = await supabase.from("photos").delete().in("id", ids);
+      if (error) throw error;
+
+      toast.success("Unassigned scenes deleted!");
+      setPhotos((prev) => prev.filter((p) => !!p.island_id));
+      setConns((prev) =>
+        prev.filter((c) => !ids.includes(c.from_photo_id) && !ids.includes(c.to_photo_id))
+      );
+      if (active && !active.island_id) {
+        setActiveIdx(0);
+      }
+      await markConnectionsUnsynced();
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete unassigned scenes: " + err.message);
+    }
+  };
+
   const setNorth = async () => {
     if (!active) return;
     const newHeading = (360 - currentHeading) % 360;
@@ -3543,7 +3629,7 @@ function ConnectionsPage() {
                           {connectedIslandPhotos.length}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -3562,11 +3648,30 @@ function ConnectionsPage() {
                               toast.info(`Centered on ${island.name}`);
                             }
                           }}
-                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
                           title="Focus Map on Floor"
                         >
                           <Maximize2 className="h-3.5 w-3.5" />
                         </button>
+                        {island.id === "unassigned" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUnassignedScenes()}
+                            className="p-1 rounded bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer"
+                            title="Delete all unassigned scenes"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteIsland(island.id)}
+                            className="p-1 rounded bg-slate-800 hover:bg-red-600 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            title={`Delete floor "${island.name}" and scenes`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -3631,7 +3736,7 @@ function ConnectionsPage() {
                                 className="p-2 border-t border-slate-100 bg-white flex items-center justify-between gap-1.5"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold">
+                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold min-w-0">
                                   <span className="uppercase">Floor:</span>
                                   <select
                                     value={p.island_id || "unassigned"}
@@ -3640,7 +3745,7 @@ function ConnectionsPage() {
                                         e.target.value === "unassigned" ? null : e.target.value;
                                       await handleReassignIsland(p.id, val);
                                     }}
-                                    className="text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 outline-none font-bold text-slate-700 cursor-pointer transition-colors max-w-[125px]"
+                                    className="text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 outline-none font-bold text-slate-700 cursor-pointer transition-colors max-w-[110px]"
                                   >
                                     <option value="unassigned">Unassigned</option>
                                     {islands.map((i) => (
@@ -3650,6 +3755,14 @@ function ConnectionsPage() {
                                     ))}
                                   </select>
                                 </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePhoto(p.id)}
+                                  className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer shrink-0"
+                                  title="Delete scene"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
                               </div>
                             </div>
                           );
@@ -3944,6 +4057,28 @@ function ConnectionsPage() {
                           {unconnectedIslandPhotos.length || (isSingleSceneFloor ? 1 : 0)}
                         </span>
                       </div>
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {island.id === "unassigned" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUnassignedScenes()}
+                            className="p-1 rounded bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer flex items-center gap-1 text-[10px] px-2 py-0.5 font-bold shadow-sm"
+                            title="Delete all unassigned scenes"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span>Delete All</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteIsland(island.id)}
+                            className="p-1 rounded bg-sky-950/80 hover:bg-red-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                            title={`Delete floor "${island.name}" and scenes`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {isOpen && (
@@ -4050,30 +4185,40 @@ function ConnectionsPage() {
                                   )}
                                 </div>
 
-                                {/* Reassign floor dropdown in right panel */}
+                                {/* Reassign floor & Delete in right panel */}
                                 <div
                                   className="p-1.5 border-t border-slate-100 bg-white flex items-center justify-between gap-1 text-[10px]"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <span className="text-slate-400 font-bold uppercase text-[9px]">
-                                    Floor:
-                                  </span>
-                                  <select
-                                    value={p.island_id || "unassigned"}
-                                    onChange={async (e) => {
-                                      const val =
-                                        e.target.value === "unassigned" ? null : e.target.value;
-                                      await handleReassignIsland(p.id, val);
-                                    }}
-                                    className="text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 outline-none font-bold text-slate-700 cursor-pointer transition-colors max-w-[100px]"
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <span className="text-slate-400 font-bold uppercase text-[9px]">
+                                      Floor:
+                                    </span>
+                                    <select
+                                      value={p.island_id || "unassigned"}
+                                      onChange={async (e) => {
+                                        const val =
+                                          e.target.value === "unassigned" ? null : e.target.value;
+                                        await handleReassignIsland(p.id, val);
+                                      }}
+                                      className="text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 outline-none font-bold text-slate-700 cursor-pointer transition-colors max-w-[85px] truncate"
+                                    >
+                                      <option value="unassigned">Unassigned</option>
+                                      {islands.map((i) => (
+                                        <option key={i.id} value={i.id}>
+                                          {i.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePhoto(p.id)}
+                                    className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer shrink-0"
+                                    title="Delete scene"
                                   >
-                                    <option value="unassigned">Unassigned</option>
-                                    {islands.map((i) => (
-                                      <option key={i.id} value={i.id}>
-                                        {i.name}
-                                      </option>
-                                    ))}
-                                  </select>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
                                 </div>
                               </div>
                             );

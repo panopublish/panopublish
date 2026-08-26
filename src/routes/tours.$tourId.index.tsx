@@ -28,6 +28,7 @@ import {
   Download,
   Droplets,
   ArrowRight,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
@@ -276,11 +277,16 @@ function TourDetail() {
         const fetchedIslands = (is ?? []).map((i: any) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
         setIslands(fetchedIslands);
 
+        const hasUnassigned = (ps ?? []).some((p: any) => !p.island_id);
         if (fetchedIslands.length > 0) {
           setActiveIsland((prev) => {
+            if (prev === "unassigned" && hasUnassigned) return "unassigned";
             if (prev && fetchedIslands.some((i: any) => i.id === prev)) return prev;
             return fetchedIslands[0].id;
           });
+        } else if (hasUnassigned) {
+          setActiveIsland("unassigned");
+          setShowAddIsland(false);
         } else {
           setActiveIsland(null);
           setShowAddIsland(true);
@@ -297,11 +303,16 @@ function TourDetail() {
     load();
   }, [user, tourId]);
 
+  const unassignedPhotos = !isCustomTour ? photos.filter((p) => !p.island_id) : [];
+  const unassignedCount = unassignedPhotos.length;
+
   const visiblePhotos = isCustomTour
     ? photos
-    : activeIsland
-      ? photos.filter((p) => p.island_id === activeIsland)
-      : [];
+    : activeIsland === "unassigned"
+      ? unassignedPhotos
+      : activeIsland
+        ? photos.filter((p) => p.island_id === activeIsland)
+        : [];
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedPhotoId(id);
@@ -347,7 +358,7 @@ function TourDetail() {
   };
 
   const updateIslandSettings = async (updates: Partial<Island>) => {
-    if (!activeIsland) return;
+    if (!activeIsland || activeIsland === "unassigned") return;
     setIslands((prev) => prev.map((i) => (i.id === activeIsland ? { ...i, ...updates } : i)));
     const { error } = await supabase
       .from("islands")
@@ -384,12 +395,111 @@ function TourDetail() {
   };
 
   const deleteIsland = async (id: string) => {
-    if (!confirm("Delete this island? Photos will be unassigned.")) return;
-    const { error } = await supabase.from("islands").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Island deleted");
-    if (activeIsland === id) setActiveIsland(null);
-    load();
+    const photosToDelete = photos.filter((p) => p.island_id === id);
+    const islandObj = islands.find((i) => i.id === id);
+    const islandName = islandObj?.name || "this island";
+    const msg =
+      photosToDelete.length > 0
+        ? `Are you sure you want to delete "${islandName}" and its ${photosToDelete.length} photo${photosToDelete.length > 1 ? "s" : ""}? All associated photos and connections will be permanently deleted.`
+        : `Are you sure you want to delete "${islandName}"?`;
+    if (!confirm(msg)) return;
+
+    try {
+      if (photosToDelete.length > 0) {
+        const photoIds = photosToDelete.map((p) => p.id);
+        // 1. Delete connections associated with these photos
+        for (const pId of photoIds) {
+          await supabase
+            .from("connections")
+            .delete()
+            .or(`from_photo_id.eq.${pId},to_photo_id.eq.${pId}`);
+        }
+
+        // 2. Remove files from storage
+        const filePaths = photosToDelete
+          .map((p) => p.file_path || (p as any).filename)
+          .filter(Boolean) as string[];
+        if (filePaths.length > 0) {
+          try {
+            await supabase.storage.from("tour-photos").remove(filePaths);
+          } catch (storageErr) {
+            console.warn("Storage removal warning:", storageErr);
+          }
+        }
+
+        // 3. Delete photos from DB
+        const { error: pErr } = await supabase.from("photos").delete().in("id", photoIds);
+        if (pErr) throw pErr;
+      }
+
+      // 4. Delete the island itself
+      const { error } = await supabase.from("islands").delete().eq("id", id);
+      if (error) throw error;
+
+      toast.success("Island and associated photos deleted");
+      if (activeIsland === id) setActiveIsland(null);
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete island: " + err.message);
+    }
+  };
+
+  const deleteUnassignedPhotos = async () => {
+    const unassigned = photos.filter((p) => !p.island_id);
+    if (unassigned.length === 0) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete all ${unassigned.length} unassigned scene${unassigned.length > 1 ? "s" : ""}? All associated photos and connections will be permanently deleted.`
+      )
+    )
+      return;
+
+    try {
+      const photoIds = unassigned.map((p) => p.id);
+      for (const pId of photoIds) {
+        await supabase
+          .from("connections")
+          .delete()
+          .or(`from_photo_id.eq.${pId},to_photo_id.eq.${pId}`);
+      }
+
+      const filePaths = unassigned
+        .map((p) => p.file_path || (p as any).filename)
+        .filter(Boolean) as string[];
+      if (filePaths.length > 0) {
+        try {
+          await supabase.storage.from("tour-photos").remove(filePaths);
+        } catch (storageErr) {
+          console.warn("Storage removal warning:", storageErr);
+        }
+      }
+
+      const { error } = await supabase.from("photos").delete().in("id", photoIds);
+      if (error) throw error;
+
+      toast.success("Unassigned photos deleted successfully");
+      setActiveIsland(null);
+      load();
+    } catch (err: any) {
+      toast.error("Failed to delete unassigned photos: " + err.message);
+    }
+  };
+
+  const reassignPhotoIsland = async (photoId: string, islandId: string | null) => {
+    try {
+      const { error } = await supabase
+        .from("photos")
+        .update({ island_id: islandId })
+        .eq("id", photoId);
+      if (error) throw error;
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, island_id: islandId } : p))
+      );
+      toast.success("Scene reassigned");
+      load(false);
+    } catch (err: any) {
+      toast.error("Failed to reassign scene: " + err.message);
+    }
   };
 
   const onPickFiles = async (files: FileList | null, islandId?: string) => {
@@ -397,8 +507,8 @@ function TourDetail() {
 
     // For custom tours, no island required — use null
     if (!isCustomTour) {
-      const targetIsland = islandId || activeIsland;
-      if (!targetIsland) return toast.error("Please select or create an island first!");
+      const targetIsland = islandId || (activeIsland !== "unassigned" ? activeIsland : null);
+      if (!targetIsland) return toast.error("Please select or create an island first before uploading!");
     }
 
     const isAdmin =
@@ -443,7 +553,7 @@ function TourDetail() {
           throw new Error(`File is too large (max 50MB)`);
         }
 
-        const targetIsland = isCustomTour ? null : (islandId || activeIsland);
+        const targetIsland = isCustomTour ? null : (islandId || (activeIsland !== "unassigned" ? activeIsland : null));
         await uploadPhoto(file, targetIsland, uploadItem.id);
       } catch (err: any) {
         console.error("Upload failed for file:", file.name, err);
@@ -953,6 +1063,42 @@ function TourDetail() {
                 ))}
               </div>
             )}
+
+            {/* Unassigned Section in Sidebar */}
+            {unassignedCount > 0 && (
+              <div className="mt-4 pt-3 border-t border-gray-200/80 pr-4">
+                <div className="mb-2">
+                  <button
+                    onClick={() => setActiveIsland("unassigned")}
+                    className={`w-full text-left px-4 py-3 rounded-l-xl transition-colors font-medium border-l-4 ${
+                      activeIsland === "unassigned"
+                        ? "bg-white border-amber-500 text-gray-800 shadow-sm"
+                        : "bg-transparent border-transparent text-amber-800 hover:bg-amber-100/50"
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="truncate pr-2 font-bold flex items-center gap-1.5 text-xs text-amber-900">
+                        <FolderOpen className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        Unassigned Photos
+                      </span>
+                      <span className="text-xs font-bold text-amber-800 bg-amber-100/80 border border-amber-300/80 px-2 py-0.5 rounded-full">
+                        {unassignedCount}
+                      </span>
+                    </div>
+                  </button>
+                  {activeIsland === "unassigned" && (
+                    <div className="flex gap-3 px-4 py-2 bg-white/50 text-xs text-gray-500">
+                      <button
+                        onClick={deleteUnassignedPhotos}
+                        className="text-red-600 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete All
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Content Area */}
@@ -985,141 +1131,204 @@ function TourDetail() {
               </div>
             ) : (
               <div className="flex flex-col h-full">
-                {/* Island Header */}
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50/50 flex-wrap gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <h3 className="font-semibold text-gray-700">
-                      {islands.find((i) => i.id === activeIsland)?.name}
-                    </h3>
-                    {(() => {
-                      const isAdmin =
-                        user?.email === "vista360gtp@gmail.com" ||
-                        user?.email === "er.prashantyadav37@gmail.com";
-                      const maxPhotos = isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "trial"] ?? 15);
-                      return (
-                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                          photos.length >= maxPhotos
-                            ? "bg-amber-50 text-amber-700 border-amber-200"
-                            : "bg-slate-100 text-slate-600 border-slate-200"
-                        }`}>
-                          Tour Total: {photos.length} / {maxPhotos === 9999 ? "∞" : maxPhotos} photos
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 font-medium flex-wrap">
-                    {islands.find((i) => i.id === activeIsland)?.is_level && (
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="flex items-center gap-1.5"
-                          title="The level number is used for floor ordering by Google Maps.&#10;&#10;-1 indicates the first level under ground, 0 indicates the ground level, 1 indicates the first level above ground, 2 indicates the second level above ground, and so on.&#10;&#10;By default, all scenes are set to ground level unless the island is converted to a level and the level number is set for the island."
-                        >
-                          <svg
-                            className="w-4 h-4 text-gray-400"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                          </svg>
-                          <span>Level Number</span>
+                {/* Island Header or Unassigned Header */}
+                {activeIsland === "unassigned" ? (
+                  <div className="p-4 border-b flex justify-between items-center bg-amber-50/40 flex-wrap gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-amber-600" />
+                        Unassigned Photos
+                      </h3>
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-amber-100 text-amber-800 border-amber-300">
+                        {unassignedCount} scene{unassignedCount > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {islands.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+                          <span>Assign all to:</span>
                           <select
-                            value={islands.find((i) => i.id === activeIsland)?.level_number ?? 0}
-                            onChange={(e) =>
-                              updateIslandSettings({ level_number: parseInt(e.target.value) })
-                            }
-                            className="border border-gray-300 rounded px-1 py-0.5 text-xs bg-white text-gray-700 focus:outline-none focus:border-[#0277bd]"
+                            onChange={async (e) => {
+                              const targetIsl = e.target.value;
+                              if (!targetIsl) return;
+                              try {
+                                const uIds = unassignedPhotos.map((p) => p.id);
+                                await supabase.from("photos").update({ island_id: targetIsl }).in("id", uIds);
+                                toast.success(
+                                  "All unassigned photos moved to " +
+                                    (islands.find((i) => i.id === targetIsl)?.name || "island"),
+                                );
+                                setActiveIsland(targetIsl);
+                                load();
+                              } catch (err: any) {
+                                toast.error("Failed to assign photos: " + err.message);
+                              }
+                            }}
+                            defaultValue=""
+                            className="text-xs bg-white border border-gray-300 rounded px-2 py-1 outline-none font-bold text-gray-700 cursor-pointer shadow-xs"
                           >
-                            {[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                              <option key={n} value={n}>
-                                {n}
+                            <option value="" disabled>
+                              Select Island...
+                            </option>
+                            {islands.map((i) => (
+                              <option key={i.id} value={i.id}>
+                                {i.name}
                               </option>
                             ))}
                           </select>
                         </div>
-                        <div
-                          className="flex items-center gap-1.5"
-                          title="A 1 to 3 letter name for your level that appears on Google Maps"
-                        >
-                          <svg
-                            className="w-4 h-4 text-gray-400"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                          </svg>
-                          <span>Level Name</span>
-                          <input
-                            type="text"
-                            value={(islands.find((i) => i.id === activeIsland)?.level_name ?? "L0")
-                              .toUpperCase()
-                              .slice(0, 3)}
-                            onChange={(e) =>
-                              updateIslandSettings({
-                                level_name: e.target.value.toUpperCase().slice(0, 3),
-                              })
-                            }
-                            className="border border-gray-300 rounded w-12 px-1 py-0.5 text-xs bg-white text-gray-700 focus:outline-none focus:border-[#0277bd]"
-                            placeholder="L0"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={islands.find((i) => i.id === activeIsland)?.is_level ?? false}
-                        onChange={(e) => updateIslandSettings({ is_level: e.target.checked })}
-                        className="rounded border-gray-300 text-[#0277bd] focus:ring-[#0277bd]"
-                      />
-                      convert island to level
-                    </label>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-gray-500 font-medium">sort scenes</span>
-                      <select
-                        onChange={async (e) => {
-                          const val = e.target.value;
-                          if (val === "asc" || val === "desc") {
-                            await sortPhotosByName(val);
-                            e.target.value = "";
-                          }
-                        }}
-                        defaultValue=""
-                        className="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white text-gray-700 focus:outline-none focus:border-[#0277bd] font-semibold cursor-pointer shadow-sm transition-all duration-300 hover:border-gray-400"
+                      )}
+                      <button
+                        onClick={deleteUnassignedPhotos}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                       >
-                        <option value="" disabled>
-                          Choose...
-                        </option>
-                        <option value="asc">Name (A-Z) â†‘</option>
-                        <option value="desc">Name (Z-A) â†“</option>
-                      </select>
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete All Unassigned
+                      </button>
                     </div>
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={
-                          islands.find((i) => i.id === activeIsland)?.show_scene_names ?? true
-                        }
-                        onChange={(e) =>
-                          updateIslandSettings({ show_scene_names: e.target.checked })
-                        }
-                        className="rounded border-gray-300 text-[#0277bd] focus:ring-[#0277bd]"
-                      />
-                      show scene names
-                    </label>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-4 border-b flex justify-between items-center bg-gray-50/50 flex-wrap gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="font-semibold text-gray-700">
+                        {islands.find((i) => i.id === activeIsland)?.name}
+                      </h3>
+                      {(() => {
+                        const isAdmin =
+                          user?.email === "vista360gtp@gmail.com" ||
+                          user?.email === "er.prashantyadav37@gmail.com";
+                        const maxPhotos =
+                          isAdmin ? 9999 : (PHOTO_LIMITS[profile?.plan ?? "trial"] ?? 15);
+                        return (
+                          <span
+                            className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                              photos.length >= maxPhotos
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}
+                          >
+                            Tour Total: {photos.length} / {maxPhotos === 9999 ? "∞" : maxPhotos} photos
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 font-medium flex-wrap">
+                      {islands.find((i) => i.id === activeIsland)?.is_level && (
+                        <div className="flex items-center gap-4">
+                          <div
+                            className="flex items-center gap-1.5"
+                            title="The level number is used for floor ordering by Google Maps.&#10;&#10;-1 indicates the first level under ground, 0 indicates the ground level, 1 indicates the first level above ground, 2 indicates the second level above ground, and so on.&#10;&#10;By default, all scenes are set to ground level unless the island is converted to a level and the level number is set for the island."
+                          >
+                            <svg
+                              className="w-4 h-4 text-gray-400"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span>Level Number</span>
+                            <select
+                              value={islands.find((i) => i.id === activeIsland)?.level_number ?? 0}
+                              onChange={(e) =>
+                                updateIslandSettings({ level_number: parseInt(e.target.value) })
+                              }
+                              className="border border-gray-300 rounded px-1 py-0.5 text-xs bg-white text-gray-700 focus:outline-none focus:border-[#0277bd]"
+                            >
+                              {[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                <option key={n} value={n}>
+                                  {n}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div
+                            className="flex items-center gap-1.5"
+                            title="A 1 to 3 letter name for your level that appears on Google Maps"
+                          >
+                            <svg
+                              className="w-4 h-4 text-gray-400"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <line x1="12" y1="16" x2="12" y2="12"></line>
+                              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            <span>Level Name</span>
+                            <input
+                              type="text"
+                              maxLength={3}
+                              value={
+                                islands.find((i) => i.id === activeIsland)?.level_name ?? "L0"
+                              }
+                              onChange={(e) =>
+                                updateIslandSettings({
+                                  level_name: e.target.value.slice(0, 3).toUpperCase(),
+                                })
+                              }
+                              className="border border-gray-300 rounded px-2 py-0.5 text-xs w-16 bg-white text-gray-700 uppercase focus:outline-none focus:border-[#0277bd]"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={islands.find((i) => i.id === activeIsland)?.is_level ?? false}
+                          onChange={(e) => updateIslandSettings({ is_level: e.target.checked })}
+                          className="rounded border-gray-300 text-[#0277bd] focus:ring-[#0277bd]"
+                        />
+                        is level
+                      </label>
+
+                      {/* Sort scenes by filename ASC / DESC buttons */}
+                      <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-0.5 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => handleSortPhotosByFilename("asc")}
+                          className="px-2 py-1 text-[11px] font-bold text-gray-600 hover:text-[#0277bd] hover:bg-sky-50 rounded transition-colors flex items-center gap-1"
+                          title="Sort scenes A to Z by filename"
+                        >
+                          <span>A→Z</span>
+                        </button>
+                        <span className="text-gray-300 text-xs">|</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSortPhotosByFilename("desc")}
+                          className="px-2 py-1 text-[11px] font-bold text-gray-600 hover:text-[#0277bd] hover:bg-sky-50 rounded transition-colors flex items-center gap-1"
+                          title="Sort scenes Z to A by filename"
+                        >
+                          <span>Z→A</span>
+                        </button>
+                      </div>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={
+                            islands.find((i) => i.id === activeIsland)?.show_scene_names ?? true
+                          }
+                          onChange={(e) =>
+                            updateIslandSettings({ show_scene_names: e.target.checked })
+                          }
+                          className="rounded border-gray-300 text-[#0277bd] focus:ring-[#0277bd]"
+                        />
+                        show scene names
+                      </label>
+                    </div>
+                  </div>
+                )}
 
                 {/* Uploads Process */}
                 {uploads.length > 0 && (
@@ -1160,15 +1369,25 @@ function TourDetail() {
                   {visiblePhotos.length === 0 ? (
                     <EmptyState
                       icon={ImageIcon}
-                      title="Drop your 360° photos here"
-                      description="Accepts .jpg / .jpeg, max 50MB each."
+                      title={
+                        activeIsland === "unassigned"
+                          ? "No unassigned photos"
+                          : "Drop your 360° photos here"
+                      }
+                      description={
+                        activeIsland === "unassigned"
+                          ? "All photos belong to an island/floor."
+                          : "Accepts .jpg / .jpeg, max 50MB each."
+                      }
                       action={
-                        <Button
-                          onClick={() => fileInput.current?.click()}
-                          className="bg-[#0277bd] hover:bg-[#0266a1]"
-                        >
-                          <UploadIcon className="h-4 w-4 mr-2" /> Select Photos
-                        </Button>
+                        activeIsland !== "unassigned" ? (
+                          <Button
+                            onClick={() => fileInput.current?.click()}
+                            className="bg-[#0277bd] hover:bg-[#0266a1]"
+                          >
+                            <UploadIcon className="h-4 w-4 mr-2" /> Select Photos
+                          </Button>
+                        ) : undefined
                       }
                     />
                   ) : (
@@ -1204,6 +1423,7 @@ function TourDetail() {
                                 deletePhoto(p);
                               }}
                               className="absolute top-2 right-2 h-7 w-7 rounded-full bg-red-500 text-white hover:bg-red-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Delete photo"
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
@@ -1233,8 +1453,7 @@ function TourDetail() {
                               </button>
                             </div>
 
-                            {islands.find((i) => i.id === activeIsland)?.show_scene_names !==
-                              false && (
+                            {activeIsland !== "unassigned" && (
                               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
                                 <span className="text-[10px] text-white/90 truncate block">
                                   {p.filename}
@@ -1242,16 +1461,47 @@ function TourDetail() {
                               </div>
                             )}
                           </div>
+
+                          {/* Reassign dropdown on photo card for unassigned */}
+                          {!p.island_id && islands.length > 0 && (
+                            <div
+                              className="mt-1 p-1.5 bg-amber-50/70 border border-amber-200/80 rounded-lg flex items-center justify-between gap-1 text-[10px]"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <span className="text-amber-900 font-bold text-[9px] uppercase">
+                                Assign:
+                              </span>
+                              <select
+                                onChange={async (e) => {
+                                  if (!e.target.value) return;
+                                  await reassignPhotoIsland(p.id, e.target.value);
+                                }}
+                                defaultValue=""
+                                className="text-[10px] bg-white border border-amber-300 rounded px-1.5 py-0.5 outline-none font-bold text-gray-700 cursor-pointer max-w-[120px]"
+                              >
+                                <option value="" disabled>
+                                  Select Island
+                                </option>
+                                {islands.map((i) => (
+                                  <option key={i.id} value={i.id}>
+                                    {i.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       ))}
 
-                      <button
-                        onClick={() => fileInput.current?.click()}
-                        className="aspect-square rounded-xl border-2 border-dashed border-[#8bc34a] bg-[#8bc34a]/5 hover:bg-[#8bc34a]/10 flex flex-col items-center justify-center transition-colors text-[#7cb342]"
-                      >
-                        <Plus className="h-8 w-8 mb-2" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Add More</span>
-                      </button>
+                      {activeIsland !== "unassigned" && (
+                        <button
+                          onClick={() => fileInput.current?.click()}
+                          className="aspect-square rounded-xl border-2 border-dashed border-[#8bc34a] bg-[#8bc34a]/5 hover:bg-[#8bc34a]/10 flex flex-col items-center justify-center transition-colors text-[#7cb342]"
+                        >
+                          <Plus className="h-8 w-8 mb-2" />
+                          <span className="text-xs font-bold uppercase tracking-wider">Add More</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
