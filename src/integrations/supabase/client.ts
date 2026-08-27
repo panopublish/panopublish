@@ -161,7 +161,17 @@ class D1QueryBuilder {
         this.table === "coupons" &&
         this.action === "select";
 
-      const isPublicQuery = isUsernameCheck || isPublicCouponCheck;
+      const isPublicTourPreviewCheck =
+        this.action === "select" &&
+        (
+          (this.table === "tours" && this.filters.some(f => f.column === "id" || f.column === "tours.id")) ||
+          (this.table === "photos" && this.filters.some(f => f.column === "tour_id" || f.column === "photos.tour_id" || f.column === "id" || f.column === "photos.id")) ||
+          (this.table === "connections" && this.filters.some(f => f.column === "tour_id" || f.column === "connections.tour_id")) ||
+          (this.table === "islands" && this.filters.some(f => f.column === "tour_id" || f.column === "islands.tour_id")) ||
+          (this.table === "constellations" && this.filters.some(f => f.column === "tour_id" || f.column === "constellations.tour_id"))
+        );
+
+      const isPublicQuery = isUsernameCheck || isPublicCouponCheck || isPublicTourPreviewCheck;
 
       if (!isPublicQuery) {
         if (typeof window !== "undefined") {

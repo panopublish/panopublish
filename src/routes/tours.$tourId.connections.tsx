@@ -360,7 +360,12 @@ function ConnectionsPage() {
   const { tourId } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("preview") === "true";
+    }
+    return false;
+  });
   const mapsReady = useGoogleMaps();
 
   useEffect(() => {
@@ -541,7 +546,6 @@ function ConnectionsPage() {
   }, [active, tour]);
 
   const load = useCallback(async () => {
-    if (!user) return;
     if (isInitialLoadRef.current) {
       setLoading(true);
     }
@@ -892,7 +896,7 @@ function ConnectionsPage() {
         }
         return {
           description: targetPhoto?.filename || "Scene",
-          heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
+          heading: (((dynamicHeading ?? 0) - (p.heading || 0) + 360) % 360),
           pano: c.to_photo_id,
         };
       });
@@ -909,16 +913,21 @@ function ConnectionsPage() {
         links: links,
         copyright: "PanoPublish",
         tiles: {
-          tileSize: new window.google.maps.Size(4096, 2048),
-          worldSize: new window.google.maps.Size(4096, 2048),
+          tileSize: new window.google.maps.Size(2048, 1024),
+          worldSize: new window.google.maps.Size(2048, 1024),
           centerHeading: 0,
-          getTileUrl: () => p.file_url,
+          getTileUrl: (_pano: string, _zoom: number, tileX: number, tileY: number) => {
+            if (tileX === 0 && tileY === 0) {
+              return p.file_url;
+            }
+            return null;
+          },
         },
       };
     };
   }, []);
 
-  // 360 Panorama Main Viewer (Custom Tour Engine & StreetView)
+  // 360 Panorama Main Viewer (Custom Tour Engine & Google StreetView)
   useEffect(() => {
     if (!active || !panoRef.current) return;
 
@@ -947,7 +956,7 @@ function ConnectionsPage() {
           if (!cached) {
             // Limit scene cache to prevent GPU memory exhaustion on large tours
             const cacheKeys = Object.keys(customScenesCacheRef.current);
-            if (cacheKeys.length >= 6) {
+            if (cacheKeys.length >= 8) {
               const oldestKey = cacheKeys[0];
               try {
                 viewer.destroyScene(customScenesCacheRef.current[oldestKey].scene);
@@ -1002,6 +1011,7 @@ function ConnectionsPage() {
                   const fovRad = view.fov() || Math.PI / 2;
 
                   const yDeg = Math.round(((yRad * 180) / Math.PI + 360) % 360);
+                  const pDeg = Math.round((pRad * 180) / Math.PI);
                   lastHeadingRef.current = yDeg;
 
                   // Ultra-fast 60fps direct DOM updates (0 React re-render lag)
@@ -1018,8 +1028,13 @@ function ConnectionsPage() {
                   povDebounceTimer = setTimeout(() => {
                     if (!cancelled) {
                       setCurrentHeading(yDeg);
+                      setCurrentPov({
+                        heading: yDeg,
+                        pitch: pDeg,
+                        zoom: Math.round(Math.log2(Math.PI / fovRad)),
+                      });
                     }
-                  }, 120);
+                  }, 60);
                 } catch {}
               }
             };
@@ -1044,12 +1059,21 @@ function ConnectionsPage() {
       if (PanoEngine) {
         initCustomViewer();
       } else {
+        if (typeof document !== "undefined" && !document.querySelector("script[src*='marzipano']")) {
+          const s = document.createElement("script");
+          s.src = "https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js";
+          s.async = true;
+          s.onload = () => {
+            if (window.PanoViewer || window.Marzipano) initCustomViewer();
+          };
+          document.head.appendChild(s);
+        }
         const interval = setInterval(() => {
           if (window.PanoViewer || window.Marzipano) {
             clearInterval(interval);
             initCustomViewer();
           }
-        }, 100);
+        }, 60);
         return () => clearInterval(interval);
       }
 
@@ -1057,30 +1081,35 @@ function ConnectionsPage() {
         cancelled = true;
       };
     } else {
-      if (!mapsReady || !window.google?.maps) return;
+      if (!mapsReady || !window.google?.maps || !panoRef.current) return;
 
-      if (!viewerRef.current) {
-        viewerRef.current = new window.google.maps.StreetViewPanorama(panoRef.current, {
+      const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+      if (!viewerRef.current || typeof viewerRef.current.setPano !== "function") {
+        panoRef.current.innerHTML = ""; // Ensure container is clean for Google Maps
+        const panoOptions: any = {
           visible: true,
           pano: active.id,
-          zoomControl: false,
-          panControl: false,
+          zoomControl: true,
+          panControl: !isMobile,
           addressControl: false,
-          fullscreenControl: false,
+          fullscreenControl: !previewMode,
           linksControl: true,
           enableCloseButton: false,
           showRoadLabels: false,
-          motionTracking: false,
-          motionTrackingControl: false,
-          clickToGo: false,
+          motionTracking: true,
+          motionTrackingControl: isMobile,
+          clickToGo: true,
           panoProvider: createGoogleMapsPanoProvider(),
-        });
+        };
 
+        const sv = new window.google.maps.StreetViewPanorama(panoRef.current, panoOptions);
+        viewerRef.current = sv;
         prevActiveIdRef.current = active.id;
 
         let povDebounceTimer: any = null;
-        viewerRef.current.addListener("pov_changed", () => {
-          const pov = viewerRef.current.getPov();
+        sv.addListener("pov_changed", () => {
+          const pov = sv.getPov();
           if (pov) {
             const headingVal = (pov.heading + 360) % 360;
             lastHeadingRef.current = headingVal;
@@ -1098,19 +1127,19 @@ function ConnectionsPage() {
             clearTimeout(povDebounceTimer);
             povDebounceTimer = setTimeout(() => {
               setCurrentHeading(headingVal);
-            }, 120);
+            }, 100);
           }
         });
 
-        viewerRef.current.addListener("zoom_changed", () => {
-          const pov = viewerRef.current.getPov();
+        sv.addListener("zoom_changed", () => {
+          const pov = sv.getPov();
           if (pov) {
             setCurrentPov((prev) => ({ ...prev, zoom: pov.zoom ?? 1 }));
           }
         });
 
-        viewerRef.current.addListener("pano_changed", () => {
-          const newPano = viewerRef.current.getPano();
+        sv.addListener("pano_changed", () => {
+          const newPano = sv.getPano();
           const currentActive = activeRef.current;
           const currentPhotos = photosRef.current;
 
@@ -1124,8 +1153,8 @@ function ConnectionsPage() {
               const newHeadingOffset = targetPhoto.heading || 0;
               const targetPovHeading = (absoluteGeographicHeading - newHeadingOffset + 360) % 360;
 
-              const currentPov = viewerRef.current.getPov();
-              viewerRef.current.setPov({
+              const currentPov = sv.getPov();
+              sv.setPov({
                 heading: targetPovHeading,
                 pitch: currentPov?.pitch ?? 0,
                 zoom: currentPov?.zoom ?? 1,
@@ -1142,7 +1171,7 @@ function ConnectionsPage() {
             const idx = currentPhotos.findIndex((p) => p.id === newPano);
             if (idx !== -1) setActiveIdx(idx);
           } else {
-            const pov = viewerRef.current.getPov();
+            const pov = sv.getPov();
             if (pov) {
               const headingVal = (pov.heading + 360) % 360;
               setCurrentHeading(headingVal);
@@ -1167,11 +1196,11 @@ function ConnectionsPage() {
         prevActiveIdRef.current = active.id;
       }
     }
-  }, [active?.id, active?.file_url, mapsReady, tour?.type]);
+  }, [active?.id, active?.file_url, mapsReady, tour?.type, previewMode]);
 
   // Native Marzipano 3D Hotspots Sync (Zero lag, Zero 3D drift during 360 image rotation)
   useEffect(() => {
-    if (tour?.type !== "custom" || !active || !marzSceneRef.current) {
+    if ((tour?.type !== "custom" && !previewMode) || !active || !marzSceneRef.current) {
       setPortalContainers([]);
       return;
     }
@@ -1201,7 +1230,14 @@ function ConnectionsPage() {
         if (c.metadata) meta = JSON.parse(c.metadata);
       } catch {}
 
-      const targetYawDeg = (c.heading + 360) % 360;
+      let targetHeading = c.heading;
+      const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
+      if (active && targetPhoto && (targetHeading === null || targetHeading === undefined)) {
+        const calcH = calcHeading(active, targetPhoto);
+        if (calcH !== null) targetHeading = calcH;
+      }
+
+      const targetYawDeg = ((targetHeading || 0) + 360) % 360;
       const yawRad = (targetYawDeg * Math.PI) / 180;
       const pitchDeg = meta.pitch ?? c.pitch ?? -10;
       const pitchRad = (pitchDeg * Math.PI) / 180;
@@ -1227,7 +1263,7 @@ function ConnectionsPage() {
     });
 
     setPortalContainers(newPortals);
-  }, [active?.id, active?.heading, conns, photos, tour?.type]);
+  }, [active?.id, active?.heading, conns, photos, tour?.type, previewMode]);
 
   const handleStartMarzipanoDrag = (
     e: React.PointerEvent | React.MouseEvent,
@@ -2541,49 +2577,99 @@ function ConnectionsPage() {
     return list;
   }, [islands, photos]);
 
+  if (previewMode && (loading || !tour || photos.length === 0 || (!mapsReady && tour?.type !== "custom"))) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#070b14] flex flex-col items-center justify-center gap-4 text-white font-sans select-none px-4 text-center">
+        <div className="relative flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full border-4 border-slate-700 border-t-[#0277bd] animate-spin" />
+          <Navigation className="absolute h-5 w-5 text-sky-400 animate-pulse" />
+        </div>
+        <div>
+          <h2 className="text-base font-extrabold tracking-wide text-slate-100">
+            {tour?.name || "Loading Street View Tour Preview..."}
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            {tour?.type === "custom"
+              ? "Preparing 360° virtual tour panoramas"
+              : "Initializing Google Maps Street View navigation & 360° panoramas"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (previewMode) {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col">
-        {/* Floating Header */}
-        <div className="absolute top-4 left-4 z-20 flex items-center gap-3 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2 text-white shadow-2xl">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></div>
-          <div>
-            <h1 className="text-sm font-black tracking-wider uppercase">
-              {tour?.name || "Virtual Tour Preview"}
-            </h1>
-            <p className="text-[10px] text-white/50">
-              Viewing active scene: {active?.filename || "Scene"}
-            </p>
+      <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden select-none">
+        {/* Floating Top Header */}
+        <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-20 flex items-center justify-between gap-2 pointer-events-none">
+          <div className="flex items-center gap-2.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-white shadow-2xl pointer-events-auto max-w-[70%] sm:max-w-md">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-xs sm:text-sm font-black tracking-wider uppercase truncate">
+                {tour?.name || "Virtual Tour Preview"}
+              </h1>
+              <p className="text-[10px] text-white/60 truncate">
+                {photos.length > 0
+                  ? `Scene ${(activeIdx ?? 0) + 1} of ${photos.length}: ${active?.filename || "Scene"}`
+                  : "Preview Mode"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast.success("Preview link copied to clipboard!");
+                }
+              }}
+              className="h-8 px-2.5 sm:px-3 bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/15 rounded-xl text-white text-xs font-bold shadow-2xl flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer"
+              title="Copy preview link to share with client"
+            >
+              <Share2 className="h-3.5 w-3.5 text-sky-400" />
+              <span className="hidden sm:inline">Share Preview</span>
+            </button>
+
+            <button
+              onClick={fullscreenPano}
+              className="h-8 w-8 bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/15 rounded-xl text-white flex items-center justify-center shadow-2xl transition-transform active:scale-95 cursor-pointer"
+              title="Toggle Fullscreen"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+              onClick={() => window.close()}
+              className="h-8 px-2.5 sm:px-3 bg-red-600/90 hover:bg-red-600 backdrop-blur-md border border-red-500/30 rounded-xl text-white text-xs font-bold shadow-2xl flex items-center gap-1 transition-transform active:scale-95 cursor-pointer"
+              title="Close Preview"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Close</span>
+            </button>
           </div>
         </div>
 
         {/* Floating Level Selector */}
-        <div className="absolute top-20 left-4 z-20 flex flex-col gap-1.5">
-          <div className="text-[10px] text-white/40 uppercase font-black tracking-widest pl-1">
-            Floor / Level
-          </div>
-
-          <div className="relative text-left">
-            <button
-              onClick={() => setLevelDropdownOpen(!levelDropdownOpen)}
-              className="min-w-[160px] bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2 text-white text-xs font-bold shadow-2xl flex items-center justify-between gap-2 transition-all duration-200 active:scale-98"
-            >
-              <span>{activeFloorName}</span>
-              <span
-                className={`transform transition-transform duration-200 text-[10px] ${levelDropdownOpen ? "rotate-180" : ""}`}
+        {previewFloors.length > 1 && (
+          <div className="absolute top-16 left-3 sm:left-4 z-20 flex flex-col gap-1">
+            <div className="relative text-left">
+              <button
+                onClick={() => setLevelDropdownOpen(!levelDropdownOpen)}
+                className="min-w-[140px] bg-black/70 hover:bg-black/90 backdrop-blur-md border border-white/10 rounded-xl px-3 py-1.5 text-white text-xs font-bold shadow-2xl flex items-center justify-between gap-2 transition-transform active:scale-98 cursor-pointer"
               >
-                ▼
-              </span>
-            </button>
+                <span>{activeFloorName}</span>
+                <span
+                  className={`transform transition-transform duration-200 text-[10px] ${levelDropdownOpen ? "rotate-180" : ""}`}
+                >
+                  ▼
+                </span>
+              </button>
 
-            {levelDropdownOpen && (
-              <div className="absolute left-0 mt-1.5 w-full bg-black/80 backdrop-blur-md border border-white/10 rounded-xl py-1.5 shadow-2xl flex flex-col gap-0.5 z-30 max-h-[220px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                {previewFloors.length === 0 ? (
-                  <div className="px-3 py-1.5 text-[11px] text-white/40 italic">
-                    No levels created
-                  </div>
-                ) : (
-                  previewFloors.map((floor) => {
+              {levelDropdownOpen && (
+                <div className="absolute left-0 mt-1.5 w-full bg-black/90 backdrop-blur-md border border-white/10 rounded-xl py-1 shadow-2xl flex flex-col gap-0.5 z-30 max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  {previewFloors.map((floor) => {
                     const isSelected = activeIslandId === floor.id;
                     return (
                       <button
@@ -2592,66 +2678,33 @@ function ConnectionsPage() {
                           handleExpandIsland(floor.id);
                           setLevelDropdownOpen(false);
                         }}
-                        className={`text-left px-3 py-2 text-xs font-semibold w-full transition-colors flex items-center justify-between ${
+                        className={`text-left px-3 py-1.5 text-xs font-semibold w-full transition-colors flex items-center justify-between cursor-pointer ${
                           isSelected
                             ? "bg-emerald-500/20 text-emerald-400 border-l-2 border-emerald-500"
                             : "text-white/80 hover:bg-white/10 hover:text-white"
                         }`}
                       >
-                        <span>{floor.name}</span>
+                        <span className="truncate">{floor.name}</span>
                         {isSelected && <span className="text-emerald-400 text-[10px]">✓</span>}
                       </button>
                     );
-                  })
-                )}
-              </div>
-            )}
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Standalone Street View Panorama Viewer */}
-        <div className="flex-1 relative bg-black">
-          <div ref={panoRef} className="absolute inset-0" />
+        {/* 360 Panorama Viewer Container */}
+        <div className="flex-1 relative w-full h-full bg-black">
+          <div ref={panoRef} className="absolute inset-0 w-full h-full" />
           {!active && (
             <div className="absolute inset-0 flex items-center justify-center text-white/70 text-sm">
               Select a scene to preview
             </div>
           )}
 
-          {/* Zoom & Fullscreen Controls */}
-          <div className="absolute right-4 top-4 flex flex-col gap-2 z-20">
-            <button
-              onClick={fullscreenPano}
-              className="h-9 w-9 bg-black/60 hover:bg-black/80 text-white rounded-xl shadow flex items-center justify-center backdrop-blur border border-white/10 transition-transform active:scale-95"
-              title="Toggle Fullscreen"
-            >
-              <Maximize2 className="h-4.5 w-4.5" />
-            </button>
-            <button
-              onClick={() => zoomPano(-10)}
-              className="h-9 w-9 bg-black/60 hover:bg-black/80 text-white rounded-xl shadow flex items-center justify-center backdrop-blur border border-white/10 transition-transform active:scale-95 mt-2"
-              title="Zoom In"
-            >
-              <ZoomIn className="h-4.5 w-4.5" />
-            </button>
-            <button
-              onClick={() => zoomPano(10)}
-              className="h-9 w-9 bg-black/60 hover:bg-black/80 text-white rounded-xl shadow flex items-center justify-center backdrop-blur border border-white/10 transition-transform active:scale-95"
-              title="Zoom Out"
-            >
-              <ZoomOut className="h-4.5 w-4.5" />
-            </button>
-          </div>
-
-          {/* Compass Radar */}
-          <div className="absolute bottom-4 right-4 h-16 w-16 rounded-full bg-black/70 border-2 border-white/30 flex items-center justify-center shadow-lg backdrop-blur z-20">
-            <Navigation
-              className="h-8 w-8 text-red-500 fill-red-500 drop-shadow"
-              style={{ transform: `rotate(${-currentGeographicHeading}deg)` }}
-            />
-          </div>
-
-          {/* Connected hotspots — 3D projected to match builder positions exactly (custom tours only) */}
+          {/* Connected hotspots overlay for Custom Tours */}
           {tour?.type === "custom" &&
             active &&
             (() => {
@@ -2685,12 +2738,10 @@ function ConnectionsPage() {
                       style={{ left: x, top: y, transform: "translate(-50%, -50%)" }}
                     >
                       <button
-                        className={`flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-95 ${
-                          iconType === "info" ? "cursor-help" : "cursor-pointer"
-                        }`}
+                        className={`flex flex-col items-center gap-1 group transition-transform hover:scale-110 active:scale-95 cursor-pointer`}
                         onClick={() => {
                           if (iconType === "info") {
-                            setPreviewInfoContent(meta.info_content || "No information provided.");
+                            setPreviewInfoContent(meta.info_content || meta.label || "No information provided.");
                           } else {
                             const idx = photos.findIndex((p) => p.id === c.to_photo_id);
                             if (idx !== -1) setActiveIdx(idx);
@@ -2702,25 +2753,25 @@ function ConnectionsPage() {
                         }
                       >
                         <div
-                          className={`w-12 h-12 rounded-full flex items-center justify-center border-2 border-white shadow-2xl transition-colors ${
+                          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 border-white shadow-2xl transition-colors ${
                             iconType === "info"
                               ? "bg-sky-600 hover:bg-sky-500"
                               : "bg-[#0277bd] hover:bg-[#0288d1]"
                           }`}
                         >
-                          {iconType === "door" && <span className="text-xl">🚪</span>}
-                          {iconType === "arrow" && <ArrowUp className="h-6 w-6 text-white" />}
-                          {iconType === "double-arrow" && <span className="text-xl">⇡</span>}
-                          {iconType === "chevron" && <span className="text-xl">⏫</span>}
-                          {iconType === "info" && <Info className="h-6 w-6 text-white" />}
-                          {iconType === "help" && <HelpCircle className="h-6 w-6 text-white" />}
-                          {iconType === "cart" && <span className="text-xl">🛒</span>}
-                          {iconType === "pin" && <MapPin className="h-6 w-6 text-white" />}
-                          {iconType === "camera" && <Camera className="h-6 w-6 text-white" />}
-                          {iconType === "eye" && <Eye className="h-6 w-6 text-white" />}
+                          {iconType === "door" && <span className="text-lg sm:text-xl">🚪</span>}
+                          {iconType === "arrow" && <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
+                          {iconType === "double-arrow" && <span className="text-lg sm:text-xl">⇡</span>}
+                          {iconType === "chevron" && <span className="text-lg sm:text-xl">⏫</span>}
+                          {iconType === "info" && <Info className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
+                          {iconType === "help" && <HelpCircle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
+                          {iconType === "cart" && <span className="text-lg sm:text-xl">🛒</span>}
+                          {iconType === "pin" && <MapPin className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
+                          {iconType === "camera" && <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
+                          {iconType === "eye" && <Eye className="h-5 w-5 sm:h-6 sm:w-6 text-white" />}
                         </div>
                         {labelText && (
-                          <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10 shadow whitespace-nowrap max-w-[140px] truncate">
+                          <span className="bg-slate-900/90 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded-md border border-white/10 shadow whitespace-nowrap max-w-[120px] truncate">
                             {labelText}
                           </span>
                         )}
@@ -2730,14 +2781,14 @@ function ConnectionsPage() {
                 });
             })()}
 
-          {/* Info hotspot content popup */}
-          {tour?.type === "custom" && previewInfoContent !== null && (
+          {/* Info hotspot content modal */}
+          {previewInfoContent !== null && (
             <div
-              className="absolute inset-0 z-30 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 z-30 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
               onClick={() => setPreviewInfoContent(null)}
             >
               <div
-                className="bg-slate-900/95 border border-white/20 text-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95 duration-200"
+                className="bg-slate-900/95 border border-white/20 text-white rounded-2xl shadow-2xl p-5 max-w-sm w-full animate-in zoom-in-95 duration-150"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -2749,7 +2800,7 @@ function ConnectionsPage() {
                   </div>
                   <button
                     onClick={() => setPreviewInfoContent(null)}
-                    className="text-white/50 hover:text-white transition-colors p-1 rounded"
+                    className="text-white/50 hover:text-white transition-colors p-1 rounded cursor-pointer"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -2758,16 +2809,45 @@ function ConnectionsPage() {
               </div>
             </div>
           )}
-        </div>
 
-        {/* Floating Close Button */}
-        <div className="absolute bottom-4 left-4 z-20">
-          <Button
-            onClick={() => window.close()}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-2xl transition-all duration-200 hover:scale-102"
-          >
-            <X className="h-4 w-4" /> Close Preview
-          </Button>
+          {/* Bottom Scene Thumbnail Drawer for instant scene switching on mobile & laptop */}
+          {photos.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 max-w-[92vw] sm:max-w-xl bg-black/75 backdrop-blur-md border border-white/15 rounded-2xl p-1.5 shadow-2xl flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              {photos.map((p, idx) => {
+                const isActive = activeIdx === idx;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setActiveIdx(idx);
+                      if (viewerRef.current && typeof viewerRef.current.setPano === "function") {
+                        viewerRef.current.setPano(p.id);
+                      }
+                    }}
+                    className={`relative shrink-0 rounded-xl overflow-hidden border-2 transition-all cursor-pointer group ${
+                      isActive
+                        ? "border-sky-400 ring-2 ring-sky-400/40 scale-105"
+                        : "border-white/20 opacity-70 hover:opacity-100 hover:border-white/50"
+                    }`}
+                    style={{ width: 56, height: 40 }}
+                    title={`Go to scene: ${p.filename || `Scene ${idx + 1}`}`}
+                  >
+                    <img
+                      src={p.file_url}
+                      alt={p.filename || `Scene ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-0.5">
+                      <span className="text-[9px] font-black text-white px-1 leading-tight truncate">
+                        {idx + 1}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     );

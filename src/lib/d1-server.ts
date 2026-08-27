@@ -91,7 +91,17 @@ export const runD1Query = createServerFn({ method: "POST" })
         payload.table === "coupons" &&
         payload.action === "select";
 
-      const isPublicQuery = isUsernameCheck || isPublicCouponCheck;
+      const isPublicTourPreviewCheck =
+        payload.action === "select" &&
+        (
+          (payload.table === "tours" && payload.filters?.some((f: any) => f.column === "id" || f.column === "tours.id")) ||
+          (payload.table === "photos" && payload.filters?.some((f: any) => f.column === "tour_id" || f.column === "photos.tour_id" || f.column === "id" || f.column === "photos.id")) ||
+          (payload.table === "connections" && payload.filters?.some((f: any) => f.column === "tour_id" || f.column === "connections.tour_id")) ||
+          (payload.table === "islands" && payload.filters?.some((f: any) => f.column === "tour_id" || f.column === "islands.tour_id")) ||
+          (payload.table === "constellations" && payload.filters?.some((f: any) => f.column === "tour_id" || f.column === "constellations.tour_id"))
+        );
+
+      const isPublicQuery = isUsernameCheck || isPublicCouponCheck || isPublicTourPreviewCheck;
 
       let user: any = null;
       let userId: string | null = null;
@@ -145,6 +155,9 @@ export const runD1Query = createServerFn({ method: "POST" })
           table === "whatsapp_proofs"
         ) {
           // Public content tables — no user_id scoping needed, skip
+        } else if (isPublicTourPreviewCheck) {
+          // Public tour preview select for tours, photos, connections, islands, constellations
+          // Scoped strictly by id or tour_id from the query filters
         } else {
           if (userId) {
             clauses.push(`${table}.user_id = ?`);
