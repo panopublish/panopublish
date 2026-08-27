@@ -915,17 +915,31 @@ function ConnectionsPage() {
         tiles: {
           tileSize: new window.google.maps.Size(2048, 1024),
           worldSize: new window.google.maps.Size(2048, 1024),
-          centerHeading: 0,
-          getTileUrl: (_pano: string, _zoom: number, tileX: number, tileY: number) => {
-            if (tileX === 0 && tileY === 0) {
-              return p.file_url;
-            }
-            return null;
-          },
+          centerHeading: (p.heading || 0),
+          getTileUrl: () => p.file_url,
         },
       };
     };
   }, []);
+
+  // Fast Image Preloader for instant scene switching without black screens
+  useEffect(() => {
+    if (!previewMode || photos.length === 0) return;
+    if (active?.file_url) {
+      const img = new Image();
+      img.src = active.file_url;
+    }
+    if (active) {
+      const activeConns = conns.filter((c) => c.from_photo_id === active.id);
+      activeConns.forEach((c) => {
+        const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
+        if (targetPhoto?.file_url) {
+          const img = new Image();
+          img.src = targetPhoto.file_url;
+        }
+      });
+    }
+  }, [previewMode, active?.id, photos, conns]);
 
   // 360 Panorama Main Viewer (Custom Tour Engine & Google StreetView)
   useEffect(() => {
@@ -1090,6 +1104,7 @@ function ConnectionsPage() {
         const panoOptions: any = {
           visible: true,
           pano: active.id,
+          pov: { heading: 0, pitch: 0, zoom: 0 },
           zoomControl: true,
           panControl: !isMobile,
           addressControl: false,
@@ -1106,6 +1121,13 @@ function ConnectionsPage() {
         const sv = new window.google.maps.StreetViewPanorama(panoRef.current, panoOptions);
         viewerRef.current = sv;
         prevActiveIdRef.current = active.id;
+
+        // Force viewport layout calculation to eliminate 0x0 WebGL black screen
+        setTimeout(() => {
+          if (viewerRef.current && window.google?.maps?.event) {
+            window.google.maps.event.trigger(viewerRef.current, "resize");
+          }
+        }, 100);
 
         let povDebounceTimer: any = null;
         sv.addListener("pov_changed", () => {
@@ -1157,14 +1179,14 @@ function ConnectionsPage() {
               sv.setPov({
                 heading: targetPovHeading,
                 pitch: currentPov?.pitch ?? 0,
-                zoom: currentPov?.zoom ?? 1,
+                zoom: currentPov?.zoom ?? 0,
               });
               lastHeadingRef.current = targetPovHeading;
               setCurrentHeading(targetPovHeading);
               setCurrentPov({
                 heading: targetPovHeading,
                 pitch: currentPov?.pitch ?? 0,
-                zoom: currentPov?.zoom ?? 1,
+                zoom: currentPov?.zoom ?? 0,
               });
             }
 
@@ -1178,20 +1200,26 @@ function ConnectionsPage() {
               setCurrentPov({
                 heading: headingVal,
                 pitch: pov.pitch ?? 0,
-                zoom: pov.zoom ?? 1,
+                zoom: pov.zoom ?? 0,
               });
               lastHeadingRef.current = headingVal;
             }
           }
         });
       } else {
-        const prevId = prevActiveIdRef.current;
         const currentId = active.id;
         const viewerPano = viewerRef.current.getPano();
 
         if (viewerPano !== currentId) {
           viewerRef.current.setPano(active.id);
         }
+
+        viewerRef.current.setVisible(true);
+        setTimeout(() => {
+          if (viewerRef.current && window.google?.maps?.event) {
+            window.google.maps.event.trigger(viewerRef.current, "resize");
+          }
+        }, 50);
 
         prevActiveIdRef.current = active.id;
       }
