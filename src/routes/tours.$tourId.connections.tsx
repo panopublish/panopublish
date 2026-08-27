@@ -887,16 +887,16 @@ function ConnectionsPage() {
       const activeConns = connsRef.current.filter((c) => c.from_photo_id === panoId);
       const links = activeConns.map((c) => {
         const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
-        let targetHeading = c.heading;
-        if ((targetHeading === null || targetHeading === undefined) && p && targetPhoto) {
+        let dynamicHeading = c.heading;
+        if (p && targetPhoto) {
           const calcH = calcHeading(p, targetPhoto);
           if (calcH !== null) {
-            targetHeading = calcH;
+            dynamicHeading = calcH;
           }
         }
         return {
           description: targetPhoto?.filename || "Scene",
-          heading: targetHeading !== null && targetHeading !== undefined ? ((targetHeading % 360) + 360) % 360 : 0,
+          heading: (dynamicHeading - (p.heading || 0) + 360) % 360,
           pano: c.to_photo_id,
         };
       });
@@ -913,9 +913,9 @@ function ConnectionsPage() {
         links: links,
         copyright: "PanoPublish",
         tiles: {
-          tileSize: new window.google.maps.Size(2048, 1024),
-          worldSize: new window.google.maps.Size(2048, 1024),
-          centerHeading: (p.heading || 0),
+          tileSize: new window.google.maps.Size(4096, 2048),
+          worldSize: new window.google.maps.Size(4096, 2048),
+          centerHeading: 0,
           getTileUrl: () => p.file_url,
         },
       };
