@@ -887,16 +887,16 @@ function ConnectionsPage() {
       const activeConns = connsRef.current.filter((c) => c.from_photo_id === panoId);
       const links = activeConns.map((c) => {
         const targetPhoto = photosRef.current.find((x) => x.id === c.to_photo_id);
-        let dynamicHeading = c.heading;
-        if (p && targetPhoto) {
+        let targetHeading = c.heading;
+        if ((targetHeading === null || targetHeading === undefined) && p && targetPhoto) {
           const calcH = calcHeading(p, targetPhoto);
           if (calcH !== null) {
-            dynamicHeading = calcH;
+            targetHeading = calcH;
           }
         }
         return {
           description: targetPhoto?.filename || "Scene",
-          heading: (((dynamicHeading ?? 0) - (p.heading || 0) + 360) % 360),
+          heading: targetHeading !== null && targetHeading !== undefined ? ((targetHeading % 360) + 360) % 360 : 0,
           pano: c.to_photo_id,
         };
       });
