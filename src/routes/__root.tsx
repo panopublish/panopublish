@@ -89,7 +89,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "shortcut icon", href: "/favicon.ico" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "stylesheet", href: appCss },
-      // Performance hints — Pannellum/Marzipano CDN moved to tour-specific routes only
+      // Performance hints — Google Maps & Fonts preconnect
+      { rel: "preconnect", href: "https://maps.googleapis.com" },
+      { rel: "preconnect", href: "https://maps.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "dns-prefetch", href: "https://maps.googleapis.com" },
+      { rel: "dns-prefetch", href: "https://maps.gstatic.com" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },

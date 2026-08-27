@@ -2628,7 +2628,7 @@ function ConnectionsPage() {
 
   if (previewMode) {
     return (
-      <div className="fixed inset-0 z-50 bg-black flex flex-col overflow-hidden select-none">
+      <div className="fixed inset-0 min-h-[100dvh] z-50 bg-black flex flex-col overflow-hidden select-none">
         {/* Floating Top Header */}
         <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-20 flex items-center justify-between gap-2 pointer-events-none">
           <div className="flex items-center gap-2.5 bg-black/70 backdrop-blur-md border border-white/10 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 text-white shadow-2xl pointer-events-auto max-w-[70%] sm:max-w-md">
