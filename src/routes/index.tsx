@@ -291,7 +291,7 @@ function Landing() {
             <div className="aspect-video w-full rounded-xl bg-slate-950 overflow-hidden relative shadow-inner">
               <iframe
                 className="w-full h-full border-0"
-                src="https://www.youtube-nocookie.com/embed/N2N5zLbF9gw?rel=0"
+                src="https://www.youtube-nocookie.com/embed/AxjAXSAf_u8?rel=0"
                 title="PanoPublish Tutorial — 360° Virtual Tour & Google Street View Publishing"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
