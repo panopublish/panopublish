@@ -174,7 +174,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
-import { useEffect } from "react";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
