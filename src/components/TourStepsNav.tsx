@@ -76,9 +76,9 @@ export function TourStepsNav({
 
   return (
     <>
-      <div className="flex flex-col items-center mt-4 mb-4">
+      <div className="flex flex-col items-center mt-[-8px] mb-1.5 shrink-0">
         {/* Main Tabs */}
-        <div className="bg-[#e4e9ee] rounded-b-full px-8 py-2 flex items-center shadow-inner mt-[-16px]">
+        <div className="bg-[#e4e9ee] rounded-b-2xl px-5 py-1 flex items-center shadow-xs">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             const Icon = tab.icon;
@@ -86,11 +86,11 @@ export function TourStepsNav({
               <Link
                 key={tab.id}
                 to={tab.to}
-                className={`flex items-center gap-2 px-6 py-2 font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold transition-colors ${
                   isActive ? "text-[#0277bd]" : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {tab.label}
               </Link>
             );
@@ -98,7 +98,7 @@ export function TourStepsNav({
         </div>
 
         {/* Floating Action Bar */}
-        <div className="bg-[#0277bd] text-white rounded-full px-6 py-2 flex items-center gap-6 mt-4 shadow-md">
+        <div className="bg-[#0277bd] text-white rounded-full px-4 py-1 flex items-center gap-4 mt-1 shadow-sm">
           <button
             onClick={async () => {
               if (onSave) {
@@ -107,10 +107,10 @@ export function TourStepsNav({
                 toast.success("Tour saved successfully!");
               }
             }}
-            className="hover:text-gray-200 transition-colors cursor-pointer"
+            className="hover:text-gray-200 transition-colors cursor-pointer p-0.5"
             title="Save"
           >
-            <Save className="h-5 w-5" />
+            <Save className="h-4 w-4" />
           </button>
           {effectiveTourType !== "custom" && (
             <button
@@ -121,10 +121,10 @@ export function TourStepsNav({
                   navigate({ to: "/tours/$tourId/publish/", params: { tourId } });
                 }
               }}
-              className="hover:text-gray-200 transition-colors cursor-pointer"
+              className="hover:text-gray-200 transition-colors cursor-pointer p-0.5"
               title="Nadir"
             >
-              <Compass className="h-5 w-5" />
+              <Compass className="h-4 w-4" />
             </button>
           )}
           {effectiveTourType !== "custom" && (
@@ -138,10 +138,10 @@ export function TourStepsNav({
                   toast.success("Opening preview in a new tab!");
                 }
               }}
-              className="hover:text-gray-200 transition-colors cursor-pointer"
+              className="hover:text-gray-200 transition-colors cursor-pointer p-0.5"
               title="Share Preview"
             >
-              <Share2 className="h-5 w-5" />
+              <Share2 className="h-4 w-4" />
             </button>
           )}
           <button
@@ -152,20 +152,20 @@ export function TourStepsNav({
                 navigate({ to: "/tours/" });
               }
             }}
-            className="hover:text-gray-200 transition-colors cursor-pointer"
+            className="hover:text-gray-200 transition-colors cursor-pointer p-0.5"
             title="Exit"
           >
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
 
         {/* Info Bar - Google Maps/Constellation help (only for gmaps tours) */}
         {effectiveTourType !== "custom" && (
-          <div className="w-full max-w-4xl bg-[#e3f2fd] text-[#0277bd] text-sm py-2 px-4 mt-4 rounded-md flex justify-center items-center gap-2">
+          <div className="w-full max-w-2xl bg-[#e3f2fd] text-[#0277bd] text-[11px] py-1 px-3 mt-1 rounded-md flex justify-center items-center gap-1.5 shadow-xs">
             <span>We've updated constellations.</span>
             <button
               onClick={() => setShowHelp(true)}
-              className="font-semibold underline flex items-center gap-1 hover:text-[#01579b]"
+              className="font-bold underline flex items-center gap-1 hover:text-[#01579b]"
             >
               Need help ?
             </button>

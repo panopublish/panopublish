@@ -122,51 +122,59 @@ export function AppShell({
             </Button>
           </div>
         )}
-        <header className="bg-background border-b">
-          <div className="flex items-center gap-3 px-4 md:px-8 py-3">
-            <Link to="/dashboard/" className="md:hidden">
-              <Logo logoClassName="h-7 w-7 text-primary" className="text-base font-bold" />
-            </Link>
-            <div className="flex-1 max-w-lg relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                id="global-search"
-                placeholder="Search clients & tours… (Ctrl+K)"
-                className="w-full rounded-md border bg-card pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            {trialDaysLeft !== null && (
-              <Link
-                to="/settings/"
-                className="hidden sm:inline-flex items-center rounded-full bg-warning/20 text-warning-foreground px-3 py-1 text-xs font-medium"
-              >
-                Trial: {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left
+        <header className="bg-background border-b shrink-0">
+          <div className="flex items-center justify-between gap-3 px-3 md:px-4 py-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Link to="/dashboard/" className="md:hidden shrink-0">
+                <Logo logoClassName="h-7 w-7 text-primary" className="text-base font-bold" />
               </Link>
-            )}
-          </div>
-          {(title || breadcrumbs?.length) && (
-            <div className="px-4 md:px-8 pb-4">
-              {breadcrumbs?.length ? (
-                <nav className="text-xs text-muted-foreground mb-1">
-                  {breadcrumbs.map((c, i) => (
-                    <span key={i}>
-                      {c.to ? (
-                        <Link to={c.to} className="hover:text-foreground">
-                          {c.label}
-                        </Link>
-                      ) : (
-                        c.label
-                      )}
-                      {i < breadcrumbs.length - 1 && <span className="mx-1.5">/</span>}
-                    </span>
-                  ))}
-                </nav>
-              ) : null}
-              {title && <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>}
+              
+              {/* Breadcrumbs / Page Title (Compact inline) */}
+              {(title || breadcrumbs?.length) && (
+                <div className="flex items-center gap-2 min-w-0">
+                  {breadcrumbs?.length ? (
+                    <nav className="text-xs text-muted-foreground flex items-center truncate">
+                      {breadcrumbs.map((c, i) => (
+                        <span key={i} className="flex items-center">
+                          {c.to ? (
+                            <Link to={c.to} className="hover:text-foreground font-medium truncate max-w-[140px]">
+                              {c.label}
+                            </Link>
+                          ) : (
+                            <span className="text-foreground font-semibold truncate max-w-[180px]">{c.label}</span>
+                          )}
+                          {i < breadcrumbs.length - 1 && <span className="mx-1 text-slate-300">/</span>}
+                        </span>
+                      ))}
+                    </nav>
+                  ) : title ? (
+                    <h1 className="text-sm font-bold tracking-tight text-foreground truncate">{title}</h1>
+                  ) : null}
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-48 sm:w-64 relative hidden sm:block">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <input
+                  id="global-search"
+                  placeholder="Search… (Ctrl+K)"
+                  className="w-full rounded-lg border bg-card pl-8 pr-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-primary h-8"
+                />
+              </div>
+              {trialDaysLeft !== null && (
+                <Link
+                  to="/settings/"
+                  className="inline-flex items-center rounded-full bg-warning/20 text-warning-foreground px-2.5 py-0.5 text-xs font-semibold hover:bg-warning/30 transition-colors shrink-0"
+                >
+                  Trial: {trialDaysLeft}d left
+                </Link>
+              )}
+            </div>
+          </div>
         </header>
-        <div className="px-4 md:px-8 py-6">{children}</div>
+        <div className="px-2 sm:px-3 py-2 flex-1 w-full max-w-[1920px] mx-auto flex flex-col min-h-0">{children}</div>
       </main>
       <WhatsAppButton />
     </div>

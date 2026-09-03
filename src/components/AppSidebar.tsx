@@ -26,7 +26,8 @@ export function AppSidebar() {
   const { signOut, user, impersonatorSession, stopImpersonation } = useAuth();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(() => {
-    return localStorage.getItem("sidebar_collapsed") === "true";
+    const saved = localStorage.getItem("sidebar_collapsed");
+    return saved !== null ? saved === "true" : true; // Default collapsed like TourBuilder
   });
 
   const toggleCollapse = () => {
@@ -42,26 +43,26 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "hidden md:flex h-screen sticky top-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-16" : "w-60",
+        "hidden md:flex h-screen sticky top-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out z-30 shrink-0",
+        isCollapsed ? "w-14" : "w-60",
       )}
     >
       <div
         className={cn(
-          "flex border-b py-4",
+          "flex border-b py-3",
           isCollapsed
-            ? "flex-col items-center gap-3 px-2"
-            : "flex-row items-center justify-between px-5",
+            ? "flex-col items-center gap-2 px-1"
+            : "flex-row items-center justify-between px-4",
         )}
       >
         <div className="flex items-center gap-2 overflow-hidden">
-          <Logo logoClassName="h-9 w-9 text-primary" iconOnly />
+          <Logo logoClassName="h-8 w-8 text-primary shrink-0" iconOnly />
           {!isCollapsed && (
             <div className="animate-fade-in whitespace-nowrap">
-              <div className="font-bold tracking-tight text-foreground leading-none">
+              <div className="font-bold tracking-tight text-foreground leading-none text-sm">
                 PanoPublish
               </div>
-              <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-1">
+              <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">
                 Made in India
               </div>
             </div>
@@ -70,40 +71,45 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent shrink-0"
+          className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent shrink-0"
           onClick={toggleCollapse}
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
         </Button>
       </div>
 
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-2 space-y-1.5">
         {items.map((it) => {
           const active = path === it.to || path.startsWith(it.to + "/");
           return (
-            <Link
-              key={it.to}
-              to={it.to}
-              className={cn(
-                "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-                isCollapsed ? "justify-center px-0 h-10" : "gap-3",
-                active
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent",
+            <div key={it.to} className="relative group">
+              <Link
+                to={it.to}
+                className={cn(
+                  "flex items-center rounded-lg px-2.5 py-2 text-xs font-medium transition-all duration-200",
+                  isCollapsed ? "justify-center px-0 h-9 w-9 mx-auto" : "gap-3",
+                  active
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent",
+                )}
+              >
+                <it.icon className="h-4 w-4 shrink-0" />
+                {!isCollapsed && (
+                  <span className="animate-fade-in whitespace-nowrap">{it.label}</span>
+                )}
+              </Link>
+              {isCollapsed && (
+                <div className="absolute left-full ml-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap border border-slate-700">
+                  {it.label}
+                </div>
               )}
-              title={isCollapsed ? it.label : undefined}
-            >
-              <it.icon className="h-4 w-4 shrink-0" />
-              {!isCollapsed && (
-                <span className="animate-fade-in whitespace-nowrap">{it.label}</span>
-              )}
-            </Link>
+            </div>
           );
         })}
       </nav>
 
-      <div className="p-3 border-t space-y-1.5">
+      <div className="p-2 border-t space-y-1">
         {impersonatorSession && (
           <div className="mb-2">
             {!isCollapsed && (
@@ -116,7 +122,7 @@ export function AppSidebar() {
               size="sm"
               className={cn(
                 "w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold transition-all duration-200 shadow-sm",
-                isCollapsed ? "justify-center px-0 h-10" : "justify-start text-xs",
+                isCollapsed ? "justify-center px-0 h-9 w-9 mx-auto" : "justify-start text-xs h-8",
               )}
               onClick={stopImpersonation}
               title="Exit Impersonation & Return to Admin"
@@ -135,22 +141,28 @@ export function AppSidebar() {
             </div>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn(
-            "w-full transition-all duration-200",
-            isCollapsed ? "justify-center px-0 h-10" : "justify-start",
+        <div className="relative group">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "w-full transition-all duration-200",
+              isCollapsed ? "justify-center px-0 h-9 w-9 mx-auto" : "justify-start text-xs h-8",
+            )}
+            onClick={async () => {
+              await signOut();
+              navigate({ to: "/" });
+            }}
+          >
+            <LogOut className={cn("h-4 w-4 shrink-0", !isCollapsed && "mr-2")} />
+            {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Sign out</span>}
+          </Button>
+          {isCollapsed && (
+            <div className="absolute left-full ml-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-slate-900 text-white text-xs font-semibold rounded-md shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap border border-slate-700">
+              Sign out ({user?.email})
+            </div>
           )}
-          onClick={async () => {
-            await signOut();
-            navigate({ to: "/" });
-          }}
-          title={isCollapsed ? "Sign out" : undefined}
-        >
-          <LogOut className={cn("h-4 w-4 shrink-0", !isCollapsed && "mr-2")} />
-          {!isCollapsed && <span className="animate-fade-in whitespace-nowrap">Sign out</span>}
-        </Button>
+        </div>
       </div>
     </aside>
   );

@@ -2972,9 +2972,9 @@ function ConnectionsPage() {
       />
 
       {tour?.type === "custom" ? (
-        <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 items-start animate-in fade-in duration-200">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-3 items-start animate-in fade-in duration-200">
           {/* LEFT COLUMN: Panoramas / Scenes List */}
-          <div className="rounded-2xl border bg-card flex flex-col h-[750px] overflow-hidden shadow-sm">
+          <div className="rounded-2xl border bg-card flex flex-col h-[calc(100vh-125px)] min-h-[560px] max-h-[960px] overflow-hidden shadow-sm">
             <div className="bg-slate-900 text-white p-3.5 border-b border-slate-800 flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
@@ -3059,7 +3059,7 @@ function ConnectionsPage() {
           </div>
 
           {/* RIGHT COLUMN: 360° Panorama Viewer + Interactive Hotspot Builder */}
-          <div className="rounded-2xl border bg-card flex flex-col h-[750px] overflow-hidden shadow-sm relative">
+          <div className="rounded-2xl border bg-card flex flex-col h-[calc(100vh-125px)] min-h-[560px] max-h-[960px] overflow-hidden shadow-sm relative">
             {/* Top Toolbar */}
             <div className="bg-slate-900 text-white p-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
               <div className="flex items-center gap-2">
@@ -3585,11 +3585,11 @@ function ConnectionsPage() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-[28fr_44fr_28fr] gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[23fr_54fr_23fr] xl:grid-cols-[21fr_58fr_21fr] 2xl:grid-cols-[20fr_60fr_20fr] gap-2.5 h-[calc(100vh-125px)] min-h-[560px] max-h-[960px]">
           {/* LEFT PANEL */}
-          <div className="rounded-xl border bg-card flex flex-col h-[700px]">
+          <div className="rounded-xl border bg-card flex flex-col h-full overflow-hidden shadow-xs">
           {/* Mini map */}
-          <div className="relative h-[250px] flex-shrink-0 bg-muted overflow-hidden">
+          <div className="relative h-[200px] flex-shrink-0 bg-muted overflow-hidden">
             <div ref={mapDivRef} className="w-full h-full" />
             {!MAPS_KEY && (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground p-3 text-center">
@@ -3935,7 +3935,7 @@ function ConnectionsPage() {
         </div>
 
         {/* CENTER PANEL */}
-        <div className="rounded-xl border bg-card overflow-hidden flex flex-col h-[700px]">
+        <div className="rounded-xl border bg-card overflow-hidden flex flex-col h-full shadow-xs">
           <div className="bg-[#689f38] text-white px-3 py-1.5 text-xs flex items-center justify-between shadow z-10">
             <span ref={headingBadgeRef} className="font-mono font-medium">H: {displayHeading}</span>
             <button
@@ -4100,8 +4100,8 @@ function ConnectionsPage() {
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="rounded-xl border bg-card overflow-hidden flex flex-col h-[700px]">
-          <div className="h-[200px] bg-black relative flex-shrink-0">
+        <div className="rounded-xl border bg-card overflow-hidden flex flex-col h-full shadow-xs">
+          <div className="h-[185px] bg-black relative flex-shrink-0">
             {rightPendingTo || active ? (
               <>
                 <div ref={rightPanoRef} className="w-full h-full" />
