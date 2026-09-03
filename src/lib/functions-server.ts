@@ -856,36 +856,45 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
         if (user_id) {
           const db = getBinding("DB");
           if (db) {
-            const planTourLimits: Record<string, number> = {
-              basic: 5,
-              pro: 25,
-              agency: 9999,
+            const planAmounts: Record<string, number> = {
+              basic: 499,
+              pro: 1499,
+              agency: 2999,
             };
-            const trialEndsAt = new Date(Date.now() + 30 * 86400000).toISOString();
             const planLower = plan_name?.toLowerCase() || "basic";
-            const tourLimit = planTourLimits[planLower] ?? 5;
+            const amountInr = planAmounts[planLower] ?? 499;
+            const nowIso = new Date().toISOString();
+            const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
 
-            // Upsert subscription record
+            // Mark any previous active subscriptions for this user as cancelled
+            try {
+              await db
+                .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE user_id = ? AND status = 'active'")
+                .bind(user_id)
+                .run();
+            } catch (ignoreErr) {
+              console.warn("Could not cancel existing subscriptions:", ignoreErr);
+            }
+
+            // Insert new active subscription record matching D1 schema
             await db.prepare(`
-              INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, current_period_end)
-              VALUES (?, ?, ?, 'active', ?, ?)
-              ON CONFLICT(user_id) DO UPDATE SET
-                plan = excluded.plan,
-                status = 'active',
-                razorpay_subscription_id = excluded.razorpay_subscription_id,
-                current_period_end = excluded.current_period_end
+              INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at)
+              VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?)
             `).bind(
               crypto.randomUUID(),
               user_id,
               planLower,
-              razorpay_subscription_id,
-              trialEndsAt,
+              razorpay_subscription_id || null,
+              nowIso,
+              periodEndIso,
+              amountInr,
+              nowIso,
             ).run();
 
-            // Update profile plan
+            // Update profile plan & reset billing cycle tour usage count
             await db.prepare(`
-              UPDATE profiles SET plan = ?, trial_ends_at = ?, tour_limit = ? WHERE id = ?
-            `).bind(planLower, trialEndsAt, tourLimit, user_id).run();
+              UPDATE profiles SET plan = ?, trial_ends_at = ?, billing_cycle_tours_used = 0 WHERE id = ?
+            `).bind(planLower, periodEndIso, user_id).run();
           }
         }
 

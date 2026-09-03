@@ -448,6 +448,12 @@ function SettingsPage() {
       } as any);
 
       if (error) throw error;
+
+      await supabase
+        .from("subscriptions")
+        .update({ status: "cancelled" })
+        .eq("user_id", user?.id);
+
       toast.success("Subscription cancelled successfully.", { id: tid });
       loadProfile();
     } catch (err: any) {
