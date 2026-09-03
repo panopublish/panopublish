@@ -29,6 +29,7 @@ import {
   Droplets,
   ArrowRight,
   FolderOpen,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
@@ -537,6 +538,20 @@ function TourDetail() {
     } catch (err: any) {
       toast.error("Failed to reassign scene: " + err.message);
     }
+  };
+
+  const handleSortPhotosByFilename = (direction: "asc" | "desc") => {
+    setPhotos((prev) => {
+      const sorted = [...prev].sort((a, b) => {
+        const nameA = a.filename || a.file_url || "";
+        const nameB = b.filename || b.file_url || "";
+        return direction === "asc"
+          ? nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
+          : nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: "base" });
+      });
+      return sorted;
+    });
+    toast.success(`Sorted scenes ${direction === "asc" ? "A → Z" : "Z → A"}`);
   };
 
   const onPickFiles = async (files: FileList | null, islandId?: string) => {

@@ -35,6 +35,8 @@ import {
   Pause,
   Sparkles,
   Lock,
+  AlertCircle,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
