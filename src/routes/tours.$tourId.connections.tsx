@@ -3589,7 +3589,7 @@ function ConnectionsPage() {
           {/* LEFT PANEL */}
           <div className="rounded-xl border bg-card flex flex-col h-full overflow-hidden shadow-xs">
           {/* Mini map */}
-          <div className="relative h-[200px] flex-shrink-0 bg-muted overflow-hidden">
+          <div className="relative h-[54%] min-h-[280px] flex-shrink-0 bg-muted overflow-hidden">
             <div ref={mapDivRef} className="w-full h-full" />
             {!MAPS_KEY && (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground p-3 text-center">
@@ -3821,7 +3821,7 @@ function ConnectionsPage() {
                     </div>
 
                     {isOpen && (
-                      <div className="p-2 space-y-2 bg-slate-50/70 border-t border-slate-100">
+                      <div className="p-1.5 grid grid-cols-2 gap-1.5 bg-slate-50/70 border-t border-slate-100">
                         {connectedIslandPhotos.map((p) => {
                           const idx = photos.findIndex((x) => x.id === p.id);
                           const isActive = idx === activeIdx;
@@ -3835,7 +3835,7 @@ function ConnectionsPage() {
                                   : "border-slate-200 hover:border-slate-300 shadow-xs hover:shadow-sm"
                               }`}
                             >
-                              <div className="aspect-[16/9] relative bg-slate-200 w-full overflow-hidden">
+                              <div className="aspect-[4/3] relative bg-slate-200 w-full overflow-hidden">
                                 <LazyThumbnail
                                   src={p.file_url}
                                   alt=""
@@ -3844,7 +3844,7 @@ function ConnectionsPage() {
                                 />
 
                                 {/* Left side node index identifier */}
-                                <div className="absolute top-2 left-2 rounded-lg bg-slate-900/90 text-white font-extrabold px-2 py-0.5 text-xs shadow-md border border-slate-700/50 z-20">
+                                <div className="absolute top-1.5 left-1.5 rounded bg-slate-900/90 text-white font-extrabold px-1.5 py-0.2 text-[10px] shadow-md border border-slate-700/50 z-20">
                                   {idx}
                                 </div>
 
@@ -3854,59 +3854,42 @@ function ConnectionsPage() {
                                     e.stopPropagation();
                                     removeAllConnections(p.id);
                                   }}
-                                  className="absolute top-2 right-2 h-7 w-7 rounded-lg bg-red-500 hover:bg-red-600 active:scale-95 text-white flex items-center justify-center transition-all duration-200 shadow-md z-20 cursor-pointer"
+                                  className="absolute top-1.5 right-1.5 h-6 w-6 rounded-md bg-red-500 hover:bg-red-600 active:scale-95 text-white flex items-center justify-center transition-all duration-200 shadow-md z-20 cursor-pointer"
                                   title="Remove Scene from Connections (-)"
                                 >
-                                  <Minus className="h-4.5 w-4.5 stroke-[2.5]" />
+                                  <Minus className="h-3.5 w-3.5 stroke-[2.5]" />
                                 </button>
 
                                 {/* GPS warning */}
                                 {(p.latitude == null || p.latitude === 0) && (
-                                  <div className="absolute bottom-2 left-2 rounded bg-amber-500 text-white font-bold px-2 py-0.5 text-[9px] flex items-center gap-1.5 shadow border border-amber-400">
-                                    <AlertTriangle className="h-3 w-3 animate-bounce" /> NO GPS
+                                  <div className="absolute bottom-1.5 left-1.5 rounded bg-amber-500 text-white font-bold px-1.5 py-0.2 text-[8px] flex items-center gap-1 shadow border border-amber-400">
+                                    <AlertTriangle className="h-2.5 w-2.5 animate-bounce" /> NO GPS
                                   </div>
                                 )}
 
                                 {/* Active Pulse overlay */}
                                 {isActive && (
-                                  <div className="absolute bottom-2 right-2 rounded bg-orange-600 text-white font-black px-2 py-0.5 text-[9px] flex items-center gap-1 shadow border border-orange-500 tracking-wider uppercase animate-pulse">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>{" "}
+                                  <div className="absolute bottom-1.5 right-1.5 rounded bg-orange-600 text-white font-black px-1.5 py-0.2 text-[8px] flex items-center gap-0.5 shadow border border-orange-500 tracking-wider uppercase">
                                     ACTIVE
                                   </div>
                                 )}
                               </div>
 
-                              {/* Dropdown controls inside scene card */}
+                              {/* Compact floor tag & delete button */}
                               <div
-                                className="p-2 border-t border-slate-100 bg-white flex items-center justify-between gap-1.5"
+                                className="p-1 border-t border-slate-100 bg-white flex items-center justify-between text-[9px] text-slate-500"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold min-w-0">
-                                  <span className="uppercase">Floor:</span>
-                                  <select
-                                    value={p.island_id || "unassigned"}
-                                    onChange={async (e) => {
-                                      const val =
-                                        e.target.value === "unassigned" ? null : e.target.value;
-                                      await handleReassignIsland(p.id, val);
-                                    }}
-                                    className="text-[10px] bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 outline-none font-bold text-slate-700 cursor-pointer transition-colors max-w-[110px]"
-                                  >
-                                    <option value="unassigned">Unassigned</option>
-                                    {islands.map((i) => (
-                                      <option key={i.id} value={i.id}>
-                                        {i.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
+                                <span className="truncate max-w-[80px] font-bold text-slate-600">
+                                  {p.filename || `Scene ${idx}`}
+                                </span>
                                 <button
                                   type="button"
                                   onClick={() => handleDeletePhoto(p.id)}
-                                  className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer shrink-0"
+                                  className="p-0.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors cursor-pointer shrink-0"
                                   title="Delete scene"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Trash2 className="h-3 w-3" />
                                 </button>
                               </div>
                             </div>

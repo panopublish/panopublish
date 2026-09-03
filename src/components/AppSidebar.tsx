@@ -27,12 +27,22 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar_collapsed");
-    return saved !== null ? saved === "true" : true; // Default collapsed like TourBuilder
+    return saved !== null ? saved === "true" : true; // Default collapsed icon-only view like TourBuilder
   });
+
+  useEffect(() => {
+    if (path.includes("/connections")) {
+      const touched = sessionStorage.getItem("connections_sidebar_touched");
+      if (!touched && !isCollapsed) {
+        setIsCollapsed(true);
+      }
+    }
+  }, [path]);
 
   const toggleCollapse = () => {
     const nextState = !isCollapsed;
     setIsCollapsed(nextState);
+    sessionStorage.setItem("connections_sidebar_touched", "true");
     localStorage.setItem("sidebar_collapsed", String(nextState));
     // Trigger window resize event so that Google Maps, Pannellum, etc. recalculate sizing
     setTimeout(() => {
