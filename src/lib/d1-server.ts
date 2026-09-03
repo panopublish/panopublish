@@ -548,7 +548,7 @@ export const adminAddUser = createServerFn({ method: "POST" })
         username,
         companyName || "",
         plan || "trial",
-        new Date(Date.now() + 14 * 86400000).toISOString()
+        (plan && plan !== "trial") ? new Date(Date.now() + 30 * 86400000).toISOString() : new Date(Date.now() + 7 * 86400000).toISOString()
       ).run();
 
       return { data: { success: true, id }, error: null };

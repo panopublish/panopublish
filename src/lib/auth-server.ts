@@ -256,7 +256,7 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
         meta.first_name,
         meta.last_name,
         "trial",
-        new Date(Date.now() + 14 * 86400000).toISOString()
+        new Date(Date.now() + 7 * 86400000).toISOString()
       ).run();
 
       // 3. Delete from pending registrations

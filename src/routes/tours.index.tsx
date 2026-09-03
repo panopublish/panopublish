@@ -66,9 +66,20 @@ function ToursPage() {
       ]);
 
       if (tourRes.error) throw tourRes.error;
-      if (profRes.data) setProfile(profRes.data);
-
       const tList = (tourRes.data as any[]) ?? [];
+      const publishedCount = tList.filter((t) => t.status === "published").length;
+
+      if (profRes.data) {
+        if (profRes.data.billing_cycle_tours_used !== publishedCount) {
+          supabase
+            .from("profiles")
+            .update({ billing_cycle_tours_used: publishedCount })
+            .eq("id", user.id);
+          profRes.data.billing_cycle_tours_used = publishedCount;
+        }
+        setProfile(profRes.data);
+      }
+
       setTours(tList);
       if (typeof window !== "undefined") {
         tList.forEach((t) => {
@@ -179,6 +190,14 @@ function ToursPage() {
       const { error } = await supabase.from("tours").delete().eq("id", id);
       if (error) throw error;
 
+      // Decrement / re-sync billing_cycle_tours_used to remaining published tours
+      const remainingTours = (tours ?? []).filter((t) => t.id !== id);
+      const remainingPublished = remainingTours.filter((t) => t.status === "published").length;
+      await supabase
+        .from("profiles")
+        .update({ billing_cycle_tours_used: remainingPublished })
+        .eq("id", user?.id);
+
       toast.success("Tour deleted and storage cleared!", { id: tid });
       load();
     } catch (err: any) {
@@ -236,10 +255,16 @@ function ToursPage() {
     isTrialUser &&
     ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
       (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
-  const totalLimit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
-  const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
-  const usedPublished = profile?.billing_cycle_tours_used ?? 0;
-  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
+  const isPaidPlanExpired =
+    !isTrialUser &&
+    !!profile?.trial_ends_at &&
+    new Date(profile.trial_ends_at).getTime() < Date.now();
+  const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+  const totalLimit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
+  const currentPublishedCount = (tours ?? []).filter((t) => t.status === "published").length;
+  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - currentPublishedCount);
   const hasCredits = isAdmin || remainingCredits > 0;
 
   return (

@@ -123,15 +123,31 @@ function CreateTour() {
 
         if (profErr) throw profErr;
 
-        const { count, error: countErr } = await supabase
-          .from("tours")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", userId);
+        const [{ count: totalCount, error: countErr }, { count: pubCount }] = await Promise.all([
+          supabase
+            .from("tours")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userId),
+          supabase
+            .from("tours")
+            .select("*", { count: "exact", head: true })
+            .eq("user_id", userId)
+            .eq("status", "published"),
+        ]);
 
         if (countErr) throw countErr;
 
+        const published = pubCount ?? 0;
+        if (prof && prof.billing_cycle_tours_used !== published) {
+          supabase
+            .from("profiles")
+            .update({ billing_cycle_tours_used: published })
+            .eq("id", userId);
+          prof.billing_cycle_tours_used = published;
+        }
+
         setProfile(prof);
-        setTourCount(count ?? 0);
+        setTourCount(published);
       } catch (err) {
         console.error("Error checking limits:", err);
       } finally {
@@ -379,15 +395,23 @@ function CreateTour() {
       isTrialUser &&
       ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
         (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
-    const totalLimit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
-    const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
-    const usedPublished = profile?.billing_cycle_tours_used ?? 0;
+    const isPaidPlanExpired =
+      !isTrialUser &&
+      !!profile?.trial_ends_at &&
+      new Date(profile.trial_ends_at).getTime() < Date.now();
+    const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+    const totalLimit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+    const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
+    const usedPublished = profile?.billing_cycle_tours_used ?? tourCount ?? 0;
     const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
 
     if (!isAdmin && remainingCredits <= 0) {
       toast.error(
-        isTrialExpired
-          ? "Your 7-day free trial has expired. Please upgrade to a paid plan in Settings to create and publish tours."
+        isPlanExpired
+          ? isTrialUser
+            ? "Your 7-day free trial has expired. Please upgrade to a paid plan in Settings to create and publish tours."
+            : "Your 30-day subscription billing cycle has expired. Please renew your plan in Settings to create and publish tours."
           : `You have 0 credits remaining on your ${profile?.plan || "trial"} plan. Please upgrade your subscription to a paid plan in Settings to create and publish more tours.`
       );
       setSaving(false);
@@ -490,9 +514,15 @@ function CreateTour() {
     isTrialUser &&
     ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
       (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
-  const limit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
-  const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
-  const usedPublished = profile?.billing_cycle_tours_used ?? 0;
+  const isPaidPlanExpired =
+    !isTrialUser &&
+    !!profile?.trial_ends_at &&
+    new Date(profile.trial_ends_at).getTime() < Date.now();
+  const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+  const limit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
+  const usedPublished = profile?.billing_cycle_tours_used ?? tourCount ?? 0;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
   const isLimitReached = !isAdmin && remainingCredits <= 0;
 

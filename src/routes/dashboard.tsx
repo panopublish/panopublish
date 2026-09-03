@@ -158,8 +158,8 @@ function Dashboard() {
         userProfile.onboarding_dismissed = true;
       }
 
-      // Self-heal: Sync billing_cycle_tours_used with actual published tours if it was 0
-      if (userProfile && (userProfile.billing_cycle_tours_used == null || userProfile.billing_cycle_tours_used < publishedCount)) {
+      // Self-heal: Sync billing_cycle_tours_used with actual published tours
+      if (userProfile && userProfile.billing_cycle_tours_used !== publishedCount) {
         await supabase
           .from("profiles")
           .update({ billing_cycle_tours_used: publishedCount })
@@ -217,9 +217,15 @@ function Dashboard() {
     isTrialUser &&
     ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
       (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
-  const limit = isAdmin ? 9999 : isTrialExpired ? 0 : (planLimit[profile?.plan ?? "trial"] ?? 1);
-  const totalAllowance = isTrialExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
-  const tourCount = profile?.billing_cycle_tours_used ?? 0;
+  const isPaidPlanExpired =
+    !isTrialUser &&
+    !!profile?.trial_ends_at &&
+    new Date(profile.trial_ends_at).getTime() < Date.now();
+  const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+  const limit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimit[profile?.plan ?? "trial"] ?? 1);
+  const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
+  const tourCount = stats?.published ?? profile?.billing_cycle_tours_used ?? 0;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - tourCount);
   const hasCredits = isAdmin || remainingCredits > 0;
   const usagePct = limit > 0 ? Math.min(100, (tourCount / limit) * 100) : 100;

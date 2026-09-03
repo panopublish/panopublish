@@ -433,18 +433,25 @@ function AdminDashboard() {
       isTrialUser &&
       ((p.trial_ends_at && new Date(p.trial_ends_at).getTime() < Date.now()) ||
         (p.created_at && Date.now() - new Date(p.created_at).getTime() > 7 * 86400000));
-    const totalLimit = isAdminUser ? 9999 : isTrialExpired ? 0 : (planLimits[p.plan] ?? 1);
-    const totalAllowance = isTrialExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
+    const isPaidPlanExpired =
+      !isTrialUser &&
+      !!p.trial_ends_at &&
+      new Date(p.trial_ends_at).getTime() < Date.now();
+    const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+    const userPublishedCount = tours.filter((t) => t.user_id === p.id && t.status === "published").length;
+    const totalLimit = isAdminUser ? 9999 : isPlanExpired ? 0 : (planLimits[p.plan] ?? 1);
+    const totalAllowance = isPlanExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
     const activeCredits =
       isAdminUser
         ? 9999
-        : Math.max(0, totalAllowance - (p.billing_cycle_tours_used ?? 0));
+        : Math.max(0, totalAllowance - userPublishedCount);
 
     setEditingProfile(p);
     setProfileForm({
       plan: p.plan,
       credits: activeCredits,
-      billing_cycle_tours_used: p.billing_cycle_tours_used ?? 0,
+      billing_cycle_tours_used: userPublishedCount,
     });
   };
 
@@ -725,18 +732,24 @@ function AdminDashboard() {
                                       isTrialUser &&
                                       ((p.trial_ends_at && new Date(p.trial_ends_at).getTime() < Date.now()) ||
                                         (p.created_at && Date.now() - new Date(p.created_at).getTime() > 7 * 86400000));
-                                    const totalLimit = isAdminUser ? 9999 : isTrialExpired ? 0 : (planLimits[p.plan] ?? 1);
-                                    const totalAllowance = isTrialExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
+                                    const isPaidPlanExpired =
+                                      !isTrialUser &&
+                                      !!p.trial_ends_at &&
+                                      new Date(p.trial_ends_at).getTime() < Date.now();
+                                    const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+                                    const totalLimit = isAdminUser ? 9999 : isPlanExpired ? 0 : (planLimits[p.plan] ?? 1);
+                                    const totalAllowance = isPlanExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
                                     const remainingCredits =
                                       isAdminUser
                                         ? 9999
-                                        : Math.max(0, totalAllowance - (p.billing_cycle_tours_used ?? 0));
+                                        : Math.max(0, totalAllowance - userPublishedCount);
                                     return (
                                       <div className="text-[11px] mt-1.5 font-bold">
                                         {isAdminUser ? (
                                           <span className="text-emerald-600 font-extrabold">Credits: 9999 (Admin)</span>
-                                        ) : isTrialExpired ? (
-                                          <span className="text-red-500 font-extrabold">Credits: 0 left (Expired)</span>
+                                        ) : isPlanExpired ? (
+                                          <span className="text-red-500 font-extrabold">Credits: 0 left ({isTrialUser ? "Trial Expired" : "Plan Expired"})</span>
                                         ) : (
                                           <span className="text-slate-500">
                                             Credits:{" "}

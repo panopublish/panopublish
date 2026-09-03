@@ -28,14 +28,22 @@ export function AppShell({
     if (!user) return;
     supabase
       .from("profiles")
-      .select("plan,trial_ends_at")
+      .select("plan,trial_ends_at,created_at")
       .eq("id", user.id)
       .maybeSingle()
       .then(({ data }: any) => {
-        if (data?.plan === "trial" && data.trial_ends_at) {
-          const ms = new Date(data.trial_ends_at).getTime() - Date.now();
-          setTrialDaysLeft(Math.max(0, Math.ceil(ms / 86400000)));
-        } else setTrialDaysLeft(null);
+        if (data?.plan === "trial") {
+          const endsAt = data.trial_ends_at
+            ? Math.min(new Date(data.trial_ends_at).getTime(), data.created_at ? new Date(data.created_at).getTime() + 7 * 86400000 : Date.now() + 7 * 86400000)
+            : data.created_at
+            ? new Date(data.created_at).getTime() + 7 * 86400000
+            : Date.now() + 7 * 86400000;
+          const ms = endsAt - Date.now();
+          const days = Math.max(0, Math.min(7, Math.ceil(ms / 86400000)));
+          setTrialDaysLeft(days);
+        } else {
+          setTrialDaysLeft(null);
+        }
       });
   }, [user]);
 
