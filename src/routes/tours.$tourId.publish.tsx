@@ -82,6 +82,42 @@ import { processNadirClientSide } from "@/lib/nadir-processor";
 
 import { SEO } from "@/components/SEO";
 
+function PublishErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error("Publish route error:", error);
+  return (
+    <AppShell title="Publish Tour" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Publish" }]}>
+      <div className="flex flex-col items-center justify-center min-h-[500px] p-8 text-center bg-white rounded-2xl border m-4 shadow-sm">
+        <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4 shadow-sm">
+          <AlertCircle className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Publishing Workspace Loading Error</h2>
+        <p className="text-sm text-gray-500 max-w-md mb-6">
+          We encountered an issue loading tour publishing details. Please try reloading the page.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            onClick={() => {
+              if (typeof window !== "undefined") window.location.reload();
+              else reset();
+            }}
+            className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold shadow"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" /> Reload Page
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (typeof window !== "undefined") window.history.back();
+            }}
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
 export const Route = createFileRoute("/tours/$tourId/publish")({
   head: () => ({
     meta: [
@@ -90,6 +126,7 @@ export const Route = createFileRoute("/tours/$tourId/publish")({
     ],
   }),
   component: PublishPage,
+  errorComponent: PublishErrorComponent,
 });
 
 type Photo = {

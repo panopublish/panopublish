@@ -34,8 +34,26 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
-  const router = useRouter();
+  console.error("Root ErrorComponent caught error:", error);
+
+  // Auto-reload on deployment chunk load errors
+  const errorMessage = error?.message || "";
+  const isChunkError =
+    errorMessage.includes("Failed to fetch dynamically imported module") ||
+    errorMessage.includes("Importing a module script failed") ||
+    errorMessage.includes("error loading dynamically imported module");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && isChunkError) {
+      const reloadKey = "pp_chunk_reload_ts";
+      const lastReload = sessionStorage.getItem(reloadKey);
+      const now = Date.now();
+      if (!lastReload || now - Number(lastReload) > 10000) {
+        sessionStorage.setItem(reloadKey, String(now));
+        window.location.reload();
+      }
+    }
+  }, [isChunkError]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -49,8 +67,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
-              router.invalidate();
-              reset();
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              } else {
+                reset();
+              }
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
@@ -156,6 +177,25 @@ import { useEffect } from "react";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Auto-reload on Vite chunk preload errors after production deployments
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handlePreloadError = (event: Event) => {
+      console.warn("Vite chunk preload error detected, auto-reloading...", event);
+      const reloadKey = "pp_chunk_preload_reload_ts";
+      const lastReload = sessionStorage.getItem(reloadKey);
+      const now = Date.now();
+      if (!lastReload || now - Number(lastReload) > 10000) {
+        sessionStorage.setItem(reloadKey, String(now));
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener("vite:preloadError", handlePreloadError);
+    return () => window.removeEventListener("vite:preloadError", handlePreloadError);
+  }, []);
 
   // Inject Microsoft Clarity after hydration — non-blocking, does not affect LCP/FID
   useEffect(() => {

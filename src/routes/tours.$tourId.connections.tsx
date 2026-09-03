@@ -184,6 +184,42 @@ const renderHotspotIcon = (type: string, className = "h-5 w-5") => {
   }
 };
 
+function ConnectionsErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error("Connections route error:", error);
+  return (
+    <AppShell title="Build Connections" breadcrumbs={[{ label: "Tours", to: "/tours" }, { label: "Connections" }]}>
+      <div className="flex flex-col items-center justify-center min-h-[500px] p-8 text-center bg-white rounded-2xl border m-4 shadow-sm">
+        <div className="w-16 h-16 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4 shadow-sm">
+          <AlertTriangle className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Connection Editor Temporary Issue</h2>
+        <p className="text-sm text-gray-500 max-w-md mb-6">
+          We encountered a temporary issue initializing the 360° tour viewer or loading tour scenes.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            onClick={() => {
+              if (typeof window !== "undefined") window.location.reload();
+              else reset();
+            }}
+            className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold shadow"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" /> Reload Editor
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (typeof window !== "undefined") window.history.back();
+            }}
+          >
+            Go Back
+          </Button>
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
 export const Route = createFileRoute("/tours/$tourId/connections")({
   head: () => ({
     meta: [
@@ -209,6 +245,7 @@ export const Route = createFileRoute("/tours/$tourId/connections")({
     ],
   }),
   component: ConnectionsPage,
+  errorComponent: ConnectionsErrorComponent,
 });
 
 
