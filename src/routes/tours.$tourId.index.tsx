@@ -671,7 +671,7 @@ function TourDetail() {
       console.warn("Fast thumbnail generation skipped:", thumbGenErr);
     }
 
-    const { error: dbErr } = await supabase.from("photos").insert({
+    let { error: dbErr } = await supabase.from("photos").insert({
       user_id: user.id,
       tour_id: tourId,
       island_id: islandId,
@@ -688,6 +688,26 @@ function TourDetail() {
       pitch: meta.pitch,
       roll: meta.roll,
     });
+
+    // Resilient fallback: If server database table has not added thumbnail columns yet, retry basic insert
+    if (dbErr && (dbErr.message?.includes("thumbnail") || dbErr.message?.includes("no column named"))) {
+      const retryRes = await supabase.from("photos").insert({
+        user_id: user.id,
+        tour_id: tourId,
+        island_id: islandId,
+        file_path: path,
+        file_url: pub.publicUrl,
+        filename: file.name,
+        size_bytes: file.size,
+        status: "uploaded",
+        latitude: meta.latitude && meta.latitude !== 0 ? meta.latitude : tour?.latitude || null,
+        longitude: meta.longitude && meta.longitude !== 0 ? meta.longitude : tour?.longitude || null,
+        heading: meta.heading,
+        pitch: meta.pitch,
+        roll: meta.roll,
+      });
+      dbErr = retryRes.error;
+    }
 
     if (dbErr) throw dbErr;
 

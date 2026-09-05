@@ -120,6 +120,14 @@ export const runD1Query = createServerFn({ method: "POST" })
 
     const { table, action } = payload;
 
+    // Self-healing schema migration for photos table if new columns are missing in D1
+    if (table === "photos") {
+      try {
+        await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_url TEXT").run().catch(() => {});
+        await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_path TEXT").run().catch(() => {});
+      } catch (_) {}
+    }
+
     // Build the query and parameter bindings
     let sql = "";
     const params: any[] = [];
@@ -444,10 +452,35 @@ export const runD1Query = createServerFn({ method: "POST" })
         const placeholders = keys.map(() => "?").join(", ");
 
         sql = `INSERT INTO ${table} (${keys.join(", ")}) VALUES (${placeholders})`;
-        await db
-          .prepare(sql)
-          .bind(...values)
-          .run();
+        try {
+          await db
+            .prepare(sql)
+            .bind(...values)
+            .run();
+        } catch (insertErr: any) {
+          if (insertErr?.message?.includes("no column named")) {
+            // Attempt auto-migration and fallback by removing non-existent columns
+            if (table === "photos") {
+              await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_url TEXT").run().catch(() => {});
+              await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_path TEXT").run().catch(() => {});
+            }
+            // Retry once after migration
+            try {
+              await db.prepare(sql).bind(...values).run();
+            } catch {
+              // Strip thumbnail fields and retry as last resort to never break upload
+              delete cleanedRow.thumbnail_url;
+              delete cleanedRow.thumbnail_path;
+              const fallbackKeys = Object.keys(cleanedRow);
+              const fallbackValues = Object.values(cleanedRow);
+              const fallbackPlaceholders = fallbackKeys.map(() => "?").join(", ");
+              const fallbackSql = `INSERT INTO ${table} (${fallbackKeys.join(", ")}) VALUES (${fallbackPlaceholders})`;
+              await db.prepare(fallbackSql).bind(...fallbackValues).run();
+            }
+          } else {
+            throw insertErr;
+          }
+        }
         insertedRows.push(cleanedRow);
       }
 
