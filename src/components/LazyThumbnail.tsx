@@ -5,6 +5,7 @@ const loadedUrlsCache = new Set<string>();
 
 interface LazyThumbnailProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   src: string;
+  fallbackSrc?: string;
   alt?: string;
   className?: string;
   aspectRatio?: string;
@@ -13,19 +14,30 @@ interface LazyThumbnailProps extends React.ImgHTMLAttributes<HTMLImageElement> {
 
 export function LazyThumbnail({
   src,
+  fallbackSrc,
   alt = "",
   className = "",
   aspectRatio = "aspect-square",
   fallbackIcon,
   ...props
 }: LazyThumbnailProps) {
+  const [currentSrc, setCurrentSrc] = useState(src);
   const [isInView, setIsInView] = useState(() => loadedUrlsCache.has(src));
   const [isLoaded, setIsLoaded] = useState(() => loadedUrlsCache.has(src));
   const [hasError, setHasError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setCurrentSrc(src);
+    setHasError(false);
     if (loadedUrlsCache.has(src)) {
+      setIsInView(true);
+      setIsLoaded(true);
+    }
+  }, [src]);
+
+  useEffect(() => {
+    if (loadedUrlsCache.has(currentSrc)) {
       setIsInView(true);
       setIsLoaded(true);
       return;
@@ -51,14 +63,21 @@ export function LazyThumbnail({
     return () => {
       observer.disconnect();
     };
-  }, [src]);
+  }, [currentSrc]);
 
   const handleLoad = () => {
-    loadedUrlsCache.add(src);
+    loadedUrlsCache.add(currentSrc);
     setIsLoaded(true);
   };
 
   const handleError = () => {
+    // If thumbnail fails and fallbackSrc is available, try fallbackSrc before giving up
+    if (fallbackSrc && currentSrc !== fallbackSrc) {
+      setCurrentSrc(fallbackSrc);
+      setIsLoaded(false);
+      setHasError(false);
+      return;
+    }
     setHasError(true);
     setIsLoaded(true);
   };
@@ -85,7 +104,7 @@ export function LazyThumbnail({
       {/* Lazy-loaded Image */}
       {isInView && (
         <img
-          src={src}
+          src={currentSrc}
           alt={alt}
           loading="lazy"
           decoding="async"

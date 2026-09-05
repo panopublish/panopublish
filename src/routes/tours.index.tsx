@@ -371,6 +371,7 @@ function ToursPage() {
                     {thumbUrl ? (
                       <LazyThumbnail
                         src={thumbUrl}
+                        fallbackSrc={firstPhoto?.file_url}
                         alt={t.name || "Tour preview"}
                         aspectRatio="w-full h-full"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

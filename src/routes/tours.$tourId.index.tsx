@@ -1026,6 +1026,7 @@ function TourDetail() {
                         >
                           <LazyThumbnail
                             src={p.thumbnail_url || p.file_url}
+                            fallbackSrc={p.file_url}
                             alt={p.filename ?? "Photo"}
                             aspectRatio="aspect-square"
                             className="group-hover:scale-105 transition-transform"
