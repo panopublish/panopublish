@@ -99,6 +99,8 @@ CREATE TABLE IF NOT EXISTS photos (
   streetview_photo_id TEXT,
   streetview_share_link TEXT,
   streetview_status TEXT DEFAULT 'NOT_PUBLISHED',
+  thumbnail_url TEXT,
+  thumbnail_path TEXT,
   order_index INTEGER NOT NULL DEFAULT 0,
   view_count INTEGER DEFAULT 0,
   uploaded_at TEXT DEFAULT (datetime('now'))

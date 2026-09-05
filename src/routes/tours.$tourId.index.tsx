@@ -18,6 +18,7 @@ import {
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { SceneViewerModal } from "@/components/SceneViewerModal";
 import { LazyThumbnail } from "@/components/LazyThumbnail";
+import { createPanoramaThumbnailBlob } from "@/lib/thumbnail";
 import {
   Plus,
   Trash2,
@@ -132,6 +133,8 @@ type Photo = {
   id: string;
   file_url: string;
   file_path: string;
+  thumbnail_url?: string | null;
+  thumbnail_path?: string | null;
   filename: string | null;
   size_bytes: number | null;
   status: Status;
@@ -631,6 +634,8 @@ function TourDetail() {
     );
 
     const path = `${user.id}/${tourId}/${islandId ?? "custom"}/${Date.now()}-${file.name}`;
+    const cleanBaseName = file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const thumbPath = `${user.id}/${tourId}/${islandId ?? "custom"}/${Date.now()}-thumb-${cleanBaseName}.webp`;
 
     const { error: upErr } = await supabase.storage.from("tour-photos").upload(path, file, {
       contentType: file.type || "image/jpeg",
@@ -652,12 +657,28 @@ function TourDetail() {
     const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(path);
     const meta = await extractPhotoMetadata(file);
 
+    let thumbUrl: string | null = null;
+    try {
+      const thumbBlob = await createPanoramaThumbnailBlob(file);
+      const { error: thumbErr } = await supabase.storage.from("tour-photos").upload(thumbPath, thumbBlob, {
+        contentType: "image/webp",
+      });
+      if (!thumbErr) {
+        const { data: thumbPub } = supabase.storage.from("tour-photos").getPublicUrl(thumbPath);
+        thumbUrl = thumbPub?.publicUrl || null;
+      }
+    } catch (thumbGenErr) {
+      console.warn("Fast thumbnail generation skipped:", thumbGenErr);
+    }
+
     const { error: dbErr } = await supabase.from("photos").insert({
       user_id: user.id,
       tour_id: tourId,
       island_id: islandId,
       file_path: path,
       file_url: pub.publicUrl,
+      thumbnail_path: thumbUrl ? thumbPath : null,
+      thumbnail_url: thumbUrl,
       filename: file.name,
       size_bytes: file.size,
       status: "uploaded",
@@ -679,8 +700,9 @@ function TourDetail() {
     if (!confirm("Delete this photo?")) return;
     try {
       await supabase.from("connections").delete().or(`from_photo_id.eq.${p.id},to_photo_id.eq.${p.id}`);
-      if (p.file_path) {
-        await supabase.storage.from("tour-photos").remove([p.file_path]);
+      const filesToRemove = [p.file_path, p.thumbnail_path].filter(Boolean) as string[];
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from("tour-photos").remove(filesToRemove);
       }
       const { error } = await supabase.from("photos").delete().eq("id", p.id);
       if (error) throw error;
@@ -713,6 +735,8 @@ function TourDetail() {
     if (!user || !editingPhoto) return;
 
     const newPath = `${user.id}/${tourId}/${editingPhoto.island_id ?? "custom"}/${Date.now()}-blurred-${editingPhoto.filename || "scene.jpg"}`;
+    const cleanBase = (editingPhoto.filename || "scene.jpg").replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const newThumbPath = `${user.id}/${tourId}/${editingPhoto.island_id ?? "custom"}/${Date.now()}-thumb-blurred-${cleanBase}.webp`;
 
     const { error: upErr } = await supabase.storage
       .from("tour-photos")
@@ -722,12 +746,32 @@ function TourDetail() {
 
     const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(newPath);
 
+    let newThumbUrl: string | null = null;
+    try {
+      const thumbBlob = await createPanoramaThumbnailBlob(blob);
+      const { error: thumbErr } = await supabase.storage.from("tour-photos").upload(newThumbPath, thumbBlob, {
+        contentType: "image/webp",
+      });
+      if (!thumbErr) {
+        const { data: thumbPub } = supabase.storage.from("tour-photos").getPublicUrl(newThumbPath);
+        newThumbUrl = thumbPub?.publicUrl || null;
+      }
+    } catch (e) {
+      console.warn("Blur thumbnail generation skipped:", e);
+    }
+
+    const updateData: any = {
+      file_path: newPath,
+      file_url: pub.publicUrl,
+    };
+    if (newThumbUrl) {
+      updateData.thumbnail_url = newThumbUrl;
+      updateData.thumbnail_path = newThumbPath;
+    }
+
     const { error: dbErr } = await supabase
       .from("photos")
-      .update({
-        file_path: newPath,
-        file_url: pub.publicUrl,
-      })
+      .update(updateData)
       .eq("id", editingPhoto.id);
 
     if (dbErr) throw dbErr;
@@ -961,7 +1005,7 @@ function TourDetail() {
                           className={`relative aspect-square rounded-xl border bg-gray-100 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg ${dragOverPhotoId === p.id ? "ring-2 ring-[#0277bd] ring-offset-2" : ""}`}
                         >
                           <LazyThumbnail
-                            src={p.file_url}
+                            src={p.thumbnail_url || p.file_url}
                             alt={p.filename ?? "Photo"}
                             aspectRatio="aspect-square"
                             className="group-hover:scale-105 transition-transform"

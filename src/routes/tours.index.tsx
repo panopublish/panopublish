@@ -8,6 +8,7 @@ import { Plus, Search, Trash2, Pencil, Share2, ListFilter, Map, Lock } from "luc
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
+import { LazyThumbnail } from "@/components/LazyThumbnail";
 
 import { SEO } from "@/components/SEO";
 
@@ -97,7 +98,7 @@ function ToursPage() {
         const [photoRes, connRes] = await Promise.all([
           supabase
             .from("photos")
-            .select("id,tour_id,file_url,streetview_status,streetview_photo_id")
+            .select("id,tour_id,file_url,thumbnail_url,streetview_status,streetview_photo_id")
             .in("tour_id", ids),
           supabase.from("connections").select("id,tour_id").in("tour_id", ids),
         ]);
@@ -352,7 +353,7 @@ function ToursPage() {
           <div className="bg-white rounded-xl border shadow-sm divide-y divide-gray-100">
             {sortedTours.map((t) => {
               const firstPhoto = photos.find((p) => p.tour_id === t.id);
-              const thumbUrl = firstPhoto?.file_url;
+              const thumbUrl = (firstPhoto as any)?.thumbnail_url || firstPhoto?.file_url;
               const hasConnections = connections.some((c) => c.tour_id === t.id);
               const tourPhotos = photos.filter((p) => p.tour_id === t.id);
               const isPublished =
@@ -368,10 +369,12 @@ function ToursPage() {
                   {/* Thumbnail */}
                   <div className="w-36 h-20 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0 relative group shadow-sm">
                     {thumbUrl ? (
-                      <img
+                      <LazyThumbnail
                         src={thumbUrl}
-                        alt=""
+                        alt={t.name || "Tour preview"}
+                        aspectRatio="w-full h-full"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        fallbackIcon={<Map className="h-6 w-6 text-[#0277bd]/30" />}
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-[#0277bd]/10 to-[#8bc34a]/10 flex items-center justify-center">
