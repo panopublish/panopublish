@@ -359,6 +359,42 @@ function RichTextRenderer({ content }: { content: string }) {
         const trimmed = block.trim();
         if (!trimmed) return null;
 
+        // Handle subheadings: starting with '### ' or '#### '
+        if (trimmed.startsWith('### ')) {
+          const lines = trimmed.split('\n');
+          const heading = lines[0].replace(/^###\s*/, '');
+          const rest = lines.slice(1).join('\n').trim();
+          return (
+            <div key={idx} className="space-y-3">
+              <h3 className="text-lg md:text-xl font-bold font-serif text-slate-900 pt-3 pb-1">
+                {parseInlineFormatting(heading)}
+              </h3>
+              {rest && (
+                <p className="whitespace-pre-line leading-relaxed">
+                  {parseInlineFormatting(rest)}
+                </p>
+              )}
+            </div>
+          );
+        }
+        if (trimmed.startsWith('#### ')) {
+          const lines = trimmed.split('\n');
+          const heading = lines[0].replace(/^####\s*/, '');
+          const rest = lines.slice(1).join('\n').trim();
+          return (
+            <div key={idx} className="space-y-2">
+              <h4 className="text-base md:text-lg font-semibold font-serif text-slate-800 pt-2 pb-1">
+                {parseInlineFormatting(heading)}
+              </h4>
+              {rest && (
+                <p className="whitespace-pre-line leading-relaxed">
+                  {parseInlineFormatting(rest)}
+                </p>
+              )}
+            </div>
+          );
+        }
+
         // Handle blockquotes: starting with '>'
         if (trimmed.startsWith('>')) {
           const rawText = trimmed.replace(/^>\s*/, '');
@@ -372,8 +408,63 @@ function RichTextRenderer({ content }: { content: string }) {
           );
         }
 
-        // Handle bullet lists: paragraph containing lines that start with '-' or '*'
+        // Handle Markdown Tables
         const lines = trimmed.split('\n');
+        const isTable = lines.length >= 3 && lines[0].includes('|') && lines[1].includes('---');
+        if (isTable) {
+          const headerLine = lines[0];
+          const headers = headerLine.split('|').map(c => c.trim()).filter((_, i, arr) => i !== 0 && i !== arr.length - 1);
+          const bodyLines = lines.slice(2);
+          const rows = bodyLines
+            .filter(l => l.trim().length > 0 && l.includes('|'))
+            .map(l => l.split('|').map(c => c.trim()).filter((_, i, arr) => i !== 0 && i !== arr.length - 1));
+
+          return (
+            <div key={idx} className="overflow-x-auto my-6 border border-slate-200 rounded-2xl shadow-xs">
+              <table className="w-full text-left text-xs md:text-sm border-collapse">
+                <thead className="bg-slate-100/90 text-slate-900 font-semibold border-b border-slate-200">
+                  <tr>
+                    {headers.map((h, hIdx) => (
+                      <th key={hIdx} className="py-3.5 px-4 text-left border-r border-slate-200 last:border-r-0 font-bold">
+                        {parseInlineFormatting(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {rows.map((row, rIdx) => (
+                    <tr key={rIdx} className={rIdx % 2 === 1 ? "bg-slate-50/60 hover:bg-slate-100/40" : "hover:bg-slate-50/40"}>
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="py-3 px-4 border-r border-slate-100 last:border-r-0 text-slate-700 leading-relaxed">
+                          {parseInlineFormatting(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+
+        // Handle numbered lists: paragraph containing lines that start with '1. ', '2. ', etc.
+        const isNumberedList = lines.every(line => /^\d+\.\s/.test(line.trim()));
+        if (isNumberedList && lines.length > 0) {
+          return (
+            <ol key={idx} className="list-decimal pl-5 space-y-2 my-4 text-muted-foreground">
+              {lines.map((line, lineIdx) => {
+                const cleanLine = line.trim().replace(/^\d+\.\s*/, '');
+                return (
+                  <li key={lineIdx} className="leading-relaxed">
+                    {parseInlineFormatting(cleanLine)}
+                  </li>
+                );
+              })}
+            </ol>
+          );
+        }
+
+        // Handle bullet lists: paragraph containing lines that start with '-' or '*'
         const isList = lines.every(line => {
           const l = line.trim();
           return l.startsWith('-') || l.startsWith('*');
@@ -396,7 +487,7 @@ function RichTextRenderer({ content }: { content: string }) {
 
         // Handle regular paragraph
         return (
-          <p key={idx} className="whitespace-pre-line">
+          <p key={idx} className="whitespace-pre-line leading-relaxed">
             {parseInlineFormatting(trimmed)}
           </p>
         );
@@ -406,13 +497,40 @@ function RichTextRenderer({ content }: { content: string }) {
 }
 
 function parseInlineFormatting(text: string) {
-  const parts = text.split(/(\*\*.*?\*\*)/g);
+  const parts = text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
         <strong key={i} className="font-semibold text-foreground">
           {part.slice(2, -2)}
         </strong>
+      );
+    }
+    if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
+      const closeBracket = part.indexOf('](');
+      const label = part.slice(1, closeBracket);
+      const url = part.slice(closeBracket + 2, -1);
+      if (url.startsWith('/')) {
+        return (
+          <Link
+            key={i}
+            to={url}
+            className="text-primary hover:text-primary-glow font-medium underline underline-offset-2 transition-colors"
+          >
+            {label}
+          </Link>
+        );
+      }
+      return (
+        <a
+          key={i}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:text-primary-glow font-medium underline underline-offset-2 transition-colors"
+        >
+          {label}
+        </a>
       );
     }
     return part;
