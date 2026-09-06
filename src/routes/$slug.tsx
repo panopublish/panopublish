@@ -236,9 +236,7 @@ function SeoPage() {
                     <div className="h-1 w-12 bg-primary rounded" />
                   </div>
                   <div className="space-y-4">
-                    <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
-                      {section.content}
-                    </p>
+                    <RichTextRenderer content={section.content} />
                     {section.listItems && (
                       <ul className="grid gap-3 pt-2">
                         {section.listItems.map((item, itemIdx) => (
@@ -246,7 +244,7 @@ function SeoPage() {
                             <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
                               <Check className="h-3 w-3" />
                             </span>
-                            <span>{item}</span>
+                            <span>{parseInlineFormatting(item)}</span>
                           </li>
                         ))}
                       </ul>
@@ -523,7 +521,7 @@ function SeoPage() {
                     >
                       <div className="overflow-hidden">
                         <p className="text-muted-foreground text-xs md:text-sm leading-relaxed pb-4 pr-4">
-                          {faq.answer}
+                          {parseInlineFormatting(faq.answer)}
                         </p>
                       </div>
                     </div>
@@ -586,4 +584,191 @@ function SeoPage() {
       <PublicFooter />
     </div>
   );
+}
+
+function RichTextRenderer({ content }: { content: string }) {
+  const blocks = content.split('\n\n');
+
+  return (
+    <div className="space-y-4 text-muted-foreground text-sm md:text-base leading-relaxed">
+      {blocks.map((block, idx) => {
+        const trimmed = block.trim();
+        if (!trimmed) return null;
+
+        // Handle subheadings: starting with '### ' or '#### '
+        if (trimmed.startsWith('### ')) {
+          const lines = trimmed.split('\n');
+          const heading = lines[0].replace(/^###\s*/, '');
+          const rest = lines.slice(1).join('\n').trim();
+          return (
+            <div key={idx} className="space-y-3">
+              <h3 className="text-lg md:text-xl font-bold font-serif text-slate-900 pt-3 pb-1">
+                {parseInlineFormatting(heading)}
+              </h3>
+              {rest && (
+                <p className="whitespace-pre-line leading-relaxed">
+                  {parseInlineFormatting(rest)}
+                </p>
+              )}
+            </div>
+          );
+        }
+        if (trimmed.startsWith('#### ')) {
+          const lines = trimmed.split('\n');
+          const heading = lines[0].replace(/^####\s*/, '');
+          const rest = lines.slice(1).join('\n').trim();
+          return (
+            <div key={idx} className="space-y-2">
+              <h4 className="text-base md:text-lg font-semibold font-serif text-slate-800 pt-2 pb-1">
+                {parseInlineFormatting(heading)}
+              </h4>
+              {rest && (
+                <p className="whitespace-pre-line leading-relaxed">
+                  {parseInlineFormatting(rest)}
+                </p>
+              )}
+            </div>
+          );
+        }
+
+        // Handle blockquotes: starting with '>'
+        if (trimmed.startsWith('>')) {
+          const rawText = trimmed.replace(/^>\s*/, '');
+          return (
+            <blockquote
+              key={idx}
+              className="border-l-4 border-primary pl-4 py-2.5 my-4 italic text-foreground/80 bg-slate-50/50 rounded-r-lg"
+            >
+              {parseInlineFormatting(rawText)}
+            </blockquote>
+          );
+        }
+
+        // Handle Markdown Tables
+        const lines = trimmed.split('\n');
+        const isTable = lines.length >= 3 && lines[0].includes('|') && lines[1].includes('---');
+        if (isTable) {
+          const headerLine = lines[0];
+          const headers = headerLine.split('|').map(c => c.trim()).filter((_, i, arr) => i !== 0 && i !== arr.length - 1);
+          const bodyLines = lines.slice(2);
+          const rows = bodyLines
+            .filter(l => l.trim().length > 0 && l.includes('|'))
+            .map(l => l.split('|').map(c => c.trim()).filter((_, i, arr) => i !== 0 && i !== arr.length - 1));
+
+          return (
+            <div key={idx} className="overflow-x-auto my-6 border border-slate-200 rounded-2xl shadow-xs">
+              <table className="w-full text-left text-xs md:text-sm border-collapse">
+                <thead className="bg-slate-100/90 text-slate-900 font-semibold border-b border-slate-200">
+                  <tr>
+                    {headers.map((h, hIdx) => (
+                      <th key={hIdx} className="py-3.5 px-4 text-left border-r border-slate-200 last:border-r-0 font-bold">
+                        {parseInlineFormatting(h)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {rows.map((row, rIdx) => (
+                    <tr key={rIdx} className={rIdx % 2 === 1 ? "bg-slate-50/60 hover:bg-slate-100/40" : "hover:bg-slate-50/40"}>
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="py-3 px-4 border-r border-slate-100 last:border-r-0 text-slate-700 leading-relaxed">
+                          {parseInlineFormatting(cell)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+
+        // Handle numbered lists: paragraph containing lines that start with '1. ', '2. ', etc.
+        const isNumberedList = lines.every(line => /^\d+\.\s/.test(line.trim()));
+        if (isNumberedList && lines.length > 0) {
+          return (
+            <ol key={idx} className="list-decimal pl-5 space-y-2 my-4 text-muted-foreground">
+              {lines.map((line, lineIdx) => {
+                const cleanLine = line.trim().replace(/^\d+\.\s*/, '');
+                return (
+                  <li key={lineIdx} className="leading-relaxed">
+                    {parseInlineFormatting(cleanLine)}
+                  </li>
+                );
+              })}
+            </ol>
+          );
+        }
+
+        // Handle bullet lists: paragraph containing lines that start with '-' or '*'
+        const isList = lines.every(line => {
+          const l = line.trim();
+          return l.startsWith('-') || l.startsWith('*');
+        });
+
+        if (isList && lines.length > 0) {
+          return (
+            <ul key={idx} className="list-disc pl-5 space-y-2 my-4 text-muted-foreground">
+              {lines.map((line, lineIdx) => {
+                const cleanLine = line.trim().replace(/^[-*]\s*/, '');
+                return (
+                  <li key={lineIdx} className="leading-relaxed">
+                    {parseInlineFormatting(cleanLine)}
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        }
+
+        // Handle regular paragraph
+        return (
+          <p key={idx} className="whitespace-pre-line leading-relaxed">
+            {parseInlineFormatting(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function parseInlineFormatting(text: string) {
+  const parts = text.split(/(\*\*.*?\*\*|\[.*?\]\(.*?\))/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="font-semibold text-foreground">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
+      const closeBracket = part.indexOf('](');
+      const label = part.slice(1, closeBracket);
+      const url = part.slice(closeBracket + 2, -1);
+      if (url.startsWith('/')) {
+        return (
+          <Link
+            key={i}
+            to={url}
+            className="text-primary hover:text-primary-glow font-medium underline underline-offset-2 transition-colors"
+          >
+            {label}
+          </Link>
+        );
+      }
+      return (
+        <a
+          key={i}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary hover:text-primary-glow font-medium underline underline-offset-2 transition-colors"
+        >
+          {label}
+        </a>
+      );
+    }
+    return part;
+  });
 }
