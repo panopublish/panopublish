@@ -559,7 +559,7 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "GoThru Alternative in 2026: GoThru vs PanoPublish",
     "subheading": "A fair, comprehensive comparison of features, pricing, Google Street View workflows, and client management for 360° photographers and agencies.",
     "introText": "Looking for a GoThru alternative? Compare GoThru and PanoPublish for 360° virtual tours, Google Street View publishing, panorama management, branding, client workflows, and pricing. Whether you are an independent photographer capturing local businesses or a digital marketing agency scaling virtual tours across India, this guide provides an honest, side-by-side evaluation to help you choose the right platform for your business.",
-    "image": "/robot_beach_upload.webp",
+    "image": "/gothru-alternative.webp",
     "comparisonTable": {
       "competitorName": "GoThru",
       "headers": [
