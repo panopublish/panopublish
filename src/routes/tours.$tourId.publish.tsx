@@ -170,6 +170,44 @@ const getFunctionErrorMessage = async (error: any): Promise<string> => {
   return error.message || "Edge Function returned a non-2xx status code";
 };
 
+function uploadBlobToGoogleWithProgress(
+  uploadUrl: string,
+  blob: Blob,
+  token: string,
+  onProgress?: (pct: number) => void,
+  timeoutMs = 90000,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", uploadUrl);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("Content-Type", "image/jpeg");
+    xhr.timeout = timeoutMs;
+
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) {
+          const pct = Math.min(99, Math.round((e.loaded / e.total) * 100));
+          onProgress(pct);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error(`Direct Google upload failed (${xhr.status}): ${xhr.responseText || xhr.statusText}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error("Network error during direct upload to Google"));
+    xhr.ontimeout = () => reject(new Error("Upload to Google timed out (90s). Retrying..."));
+
+    xhr.send(blob);
+  });
+}
+
 function PublishPage() {
   const { tourId } = Route.useParams();
   const { user } = useAuth();
@@ -205,6 +243,7 @@ function PublishPage() {
     total: number;
     step: "idle" | "processing" | "encoding" | "uploading" | "connecting" | "success" | "failed";
     message: string;
+    uploadPct?: number;
   } | null>(null);
   const [profile, setProfile] = useState<{
     plan: string;
@@ -817,20 +856,20 @@ function PublishPage() {
 
             const uploadUrl = startData.uploadUrl;
 
-            // Step 2b: Upload processed image directly to Google's uploadUrl from browser (CORS enabled)
-            const uploadRes = await fetch(uploadUrl, {
-              method: "POST",
-              body: processedBlob,
-              headers: {
-                Authorization: `Bearer ${freshToken}`,
-                "Content-Type": "image/jpeg",
+            // Step 2b: Upload processed image directly to Google's uploadUrl with real-time percentage
+            await uploadBlobToGoogleWithProgress(
+              uploadUrl,
+              processedBlob,
+              freshToken,
+              (uploadPct) => {
+                setPublishProgress({
+                  current: alreadyDone + photoIndex - 1,
+                  total: photoList.length,
+                  step: "uploading",
+                  message: `Uploading scene ${alreadyDone + photoIndex} of ${photoList.length} (${uploadPct}%)...`,
+                });
               },
-            });
-
-            if (!uploadRes.ok) {
-              const text = await uploadRes.text();
-              throw new Error(`Direct Google upload failed (${uploadRes.status}): ${text}`);
-            }
+            );
 
             // Step 2c: Register photo metadata and link scene
             const { data: createData, error: createError } = await supabase.functions.invoke(
@@ -1124,19 +1163,21 @@ function PublishPage() {
 
           const uploadUrl = startData.uploadUrl;
 
-          const uploadRes = await fetch(uploadUrl, {
-            method: "POST",
-            body: processedBlob,
-            headers: {
-              Authorization: `Bearer ${freshToken}`,
-              "Content-Type": "image/jpeg",
+          // Upload image directly to Google with live progress percentage
+          await uploadBlobToGoogleWithProgress(
+            uploadUrl,
+            processedBlob,
+            freshToken,
+            (uploadPct) => {
+              setPublishProgress({
+                current: 0,
+                total: 1,
+                step: "uploading",
+                uploadPct,
+                message: `Uploading ${photoToPublish.filename || "scene"} (${uploadPct}%)...`,
+              });
             },
-          });
-
-          if (!uploadRes.ok) {
-            const text = await uploadRes.text();
-            throw new Error(`Direct Google upload failed (${uploadRes.status}): ${text}`);
-          }
+          );
 
           const { data: createData, error: createError } = await supabase.functions.invoke(
             "streetview-publish",
@@ -2365,33 +2406,43 @@ function PublishPage() {
 
             <div className="grid md:grid-cols-2 gap-6 items-center">
               <div className="space-y-4">
-                {publishProgress && (
-                  <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 shadow-inner animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                        {publishProgress.step === "connecting"
-                          ? "Finalizing"
-                          : `Scene ${publishProgress.current} of ${publishProgress.total}`}
-                      </span>
-                      <span className="text-xs font-black text-blue-600">
-                        {Math.round((publishProgress.current / (publishProgress.total || 1)) * 100)}%
-                      </span>
+                {publishProgress && (() => {
+                  const isConnecting = publishProgress.step === "connecting";
+                  const displaySceneNum = Math.min(publishProgress.total, publishProgress.current + 1);
+                  const currentUploadPct = publishProgress.uploadPct || 0;
+                  const total = publishProgress.total || 1;
+                  const calculatedPct = isConnecting
+                    ? 98
+                    : Math.min(99, Math.round(((publishProgress.current + currentUploadPct / 100) / total) * 100));
+
+                  return (
+                    <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 shadow-inner animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                          {isConnecting
+                            ? "Finalizing & Linking"
+                            : `Scene ${displaySceneNum} of ${publishProgress.total}`}
+                        </span>
+                        <span className="text-xs font-black text-blue-600">
+                          {calculatedPct}%
+                        </span>
+                      </div>
+                      {/* Premium Progress Bar */}
+                      <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5 border border-blue-100/30">
+                        <div
+                          className="h-full bg-[#0277bd] rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-[#0277bd] to-blue-400"
+                          style={{
+                            width: `${calculatedPct}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
+                        <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin shrink-0" />
+                        <span className="truncate">{publishProgress.message}</span>
+                      </div>
                     </div>
-                    {/* Premium Progress Bar */}
-                    <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5 border border-blue-100/30">
-                      <div
-                        className="h-full bg-[#0277bd] rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-[#0277bd] to-blue-400"
-                        style={{
-                          width: `${(publishProgress.current / (publishProgress.total || 1)) * 100}%`,
-                        }}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
-                      <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin" />
-                      <span className="truncate">{publishProgress.message}</span>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
                 {(() => {
                   const pendingPhotosCount = photos.filter(
                     (p) => !p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED"
