@@ -733,19 +733,42 @@ function PublishPage() {
           message: `Processing scene ${alreadyDone + photoIndex} of ${photoList.length} in browser...`,
         });
 
-        let processedBlob: Blob;
-        try {
-          processedBlob = await processNadirClientSide(
-            photo.file_url,
-            nadirType,
-            size,
-            pos,
-            tour?.nadir_logo_url,
-          );
-        } catch (procErr: any) {
-          console.warn("Nadir processing fallback to original:", procErr);
-          const rawRes = await fetch(photo.file_url);
-          processedBlob = await rawRes.blob();
+        let processedBlob: Blob | null = null;
+        for (let fetchAttempt = 1; fetchAttempt <= 3; fetchAttempt++) {
+          try {
+            processedBlob = await processNadirClientSide(
+              photo.file_url,
+              nadirType,
+              size,
+              pos,
+              tour?.nadir_logo_url,
+            );
+            break;
+          } catch (procErr: any) {
+            console.warn(`Nadir processing attempt ${fetchAttempt} fallback to original:`, procErr);
+            try {
+              const rawRes = await fetch(photo.file_url);
+              if (rawRes.ok) {
+                processedBlob = await rawRes.blob();
+                break;
+              }
+            } catch (rawErr) {
+              if (fetchAttempt < 3) await new Promise((r) => setTimeout(r, 1000));
+            }
+          }
+        }
+
+        if (!processedBlob) {
+          failedCount++;
+          toast.error(`Scene ${alreadyDone + photoIndex} failed: Could not fetch image file.`);
+          try {
+            await supabase
+              .from("photos")
+              .update({ streetview_status: "FAILED" } as any)
+              .eq("id", photo.id);
+          } catch {}
+          photoIndex++;
+          continue;
         }
 
         // 2. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh
@@ -758,6 +781,15 @@ function PublishPage() {
 
         let success = false;
         let lastErrorMsg = "";
+
+        const targetLat =
+          typeof photo.latitude === "number" && !isNaN(photo.latitude) && photo.latitude !== 0
+            ? photo.latitude
+            : (tour?.latitude ?? 23.02463);
+        const targetLng =
+          typeof photo.longitude === "number" && !isNaN(photo.longitude) && photo.longitude !== 0
+            ? photo.longitude
+            : (tour?.longitude ?? 72.56436);
 
         for (let attempt = 1; attempt <= 6; attempt++) {
           try {
@@ -808,8 +840,8 @@ function PublishPage() {
                   action: "create_photo",
                   access_token: freshToken,
                   uploadUrl,
-                  latitude: photo.latitude || tour?.latitude,
-                  longitude: photo.longitude || tour?.longitude,
+                  latitude: targetLat,
+                  longitude: targetLng,
                   heading: photo.heading || 0,
                   pitch: photo.pitch || 0,
                   roll: photo.roll || 0,
@@ -843,9 +875,9 @@ function PublishPage() {
             if (attempt < 6) {
               const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
               const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
-              if (!isQuota && !is503) {
-                await new Promise((r) => setTimeout(r, attempt * 2500));
-              }
+              const isRateLimit = isQuota || is503;
+              const delayMs = isRateLimit ? attempt * 4000 : attempt * 1500;
+              await new Promise((r) => setTimeout(r, delayMs));
             }
           }
         }
@@ -881,6 +913,8 @@ function PublishPage() {
                     .update({
                       file_url: pubData.publicUrl,
                       file_path: publishedPath,
+                      latitude: targetLat,
+                      longitude: targetLng,
                     } as any)
                     .eq("id", photo.id);
                 }
@@ -963,6 +997,205 @@ function PublishPage() {
     } catch (e: any) {
       console.error("Publishing error:", e);
       toast.error("Publishing stopped: " + e.message);
+    } finally {
+      setPublishing(false);
+      setPublishProgress(null);
+    }
+  };
+
+  const publishSinglePhoto = async (photoToPublish: Photo) => {
+    if (!accessToken) {
+      toast.error("Please connect your Google Account first.");
+      return;
+    }
+
+    setPublishing(true);
+    await saveNadirSettings(nadirType, size, pos);
+
+    const getFreshToken = async (): Promise<string | null> => {
+      try {
+        const { data, error } = await supabase.functions.invoke("google-oauth", {
+          body: { action: "get_valid_token", user_id: user?.id },
+        });
+        if (!error && data?.access_token) {
+          setAccessToken(data.access_token);
+          return data.access_token;
+        }
+      } catch (e) {
+        console.error("Failed to refresh token:", e);
+      }
+      return accessToken || null;
+    };
+
+    let freshToken = (await getFreshToken()) || accessToken;
+    if (!freshToken) {
+      toast.error("Not connected to Google");
+      setPublishing(false);
+      return;
+    }
+
+    setPublishProgress({
+      current: 0,
+      total: 1,
+      step: "processing",
+      message: `Processing ${photoToPublish.filename || "scene"} in browser...`,
+    });
+
+    try {
+      let level = undefined;
+      if (photoToPublish.island_id) {
+        const island = islands.find((i) => i.id === photoToPublish.island_id);
+        if (island?.is_level && island.level_name) {
+          level = {
+            number: island.level_number ?? 0,
+            name: island.level_name.toString().toUpperCase().slice(0, 3),
+          };
+        }
+      }
+
+      let processedBlob: Blob | null = null;
+      for (let fetchAttempt = 1; fetchAttempt <= 3; fetchAttempt++) {
+        try {
+          processedBlob = await processNadirClientSide(
+            photoToPublish.file_url,
+            nadirType,
+            size,
+            pos,
+            tour?.nadir_logo_url,
+          );
+          break;
+        } catch (procErr: any) {
+          try {
+            const rawRes = await fetch(photoToPublish.file_url);
+            if (rawRes.ok) {
+              processedBlob = await rawRes.blob();
+              break;
+            }
+          } catch {
+            if (fetchAttempt < 3) await new Promise((r) => setTimeout(r, 1000));
+          }
+        }
+      }
+
+      if (!processedBlob) {
+        throw new Error("Could not fetch scene image file");
+      }
+
+      setPublishProgress({
+        current: 0,
+        total: 1,
+        step: "uploading",
+        message: `Uploading ${photoToPublish.filename || "scene"} to Google Maps...`,
+      });
+
+      const targetLat =
+        typeof photoToPublish.latitude === "number" && !isNaN(photoToPublish.latitude) && photoToPublish.latitude !== 0
+          ? photoToPublish.latitude
+          : (tour?.latitude ?? 23.02463);
+      const targetLng =
+        typeof photoToPublish.longitude === "number" && !isNaN(photoToPublish.longitude) && photoToPublish.longitude !== 0
+          ? photoToPublish.longitude
+          : (tour?.longitude ?? 72.56436);
+
+      let success = false;
+      let lastErrorMsg = "";
+
+      for (let attempt = 1; attempt <= 6; attempt++) {
+        try {
+          if (attempt > 1) {
+            const refreshed = await getFreshToken();
+            if (refreshed) freshToken = refreshed;
+          }
+
+          const { data: startData, error: startError } = await supabase.functions.invoke(
+            "streetview-publish",
+            {
+              body: {
+                action: "start_upload",
+                access_token: freshToken,
+              },
+            },
+          );
+
+          if (startError || !startData?.uploadUrl) {
+            const errMsg = (await getFunctionErrorMessage(startError)) || startData?.error || "Failed to start upload";
+            throw new Error(errMsg);
+          }
+
+          const uploadUrl = startData.uploadUrl;
+
+          const uploadRes = await fetch(uploadUrl, {
+            method: "POST",
+            body: processedBlob,
+            headers: {
+              Authorization: `Bearer ${freshToken}`,
+              "Content-Type": "image/jpeg",
+            },
+          });
+
+          if (!uploadRes.ok) {
+            const text = await uploadRes.text();
+            throw new Error(`Direct Google upload failed (${uploadRes.status}): ${text}`);
+          }
+
+          const { data: createData, error: createError } = await supabase.functions.invoke(
+            "streetview-publish",
+            {
+              body: {
+                action: "create_photo",
+                access_token: freshToken,
+                uploadUrl,
+                latitude: targetLat,
+                longitude: targetLng,
+                heading: photoToPublish.heading || 0,
+                pitch: photoToPublish.pitch || 0,
+                roll: photoToPublish.roll || 0,
+                captureTime: photoToPublish.capture_time || new Date().toISOString(),
+                placeId: tour?.google_place_id,
+                supabase_photo_id: photoToPublish.id,
+                level,
+              },
+            },
+          );
+
+          if (createError) {
+            const errMsg = await getFunctionErrorMessage(createError);
+            throw new Error(errMsg);
+          }
+
+          if (createData?.error || createData?.success === false) {
+            throw new Error(createData.error || "Failed to create photo");
+          }
+
+          success = true;
+          break;
+        } catch (uploadErr: any) {
+          lastErrorMsg = uploadErr.message || "Upload error";
+          if (attempt < 6) {
+            const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
+            const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
+            const isRateLimit = isQuota || is503;
+            const delayMs = isRateLimit ? attempt * 4000 : attempt * 1500;
+            await new Promise((r) => setTimeout(r, delayMs));
+          }
+        }
+      }
+
+      if (!success) {
+        throw new Error(lastErrorMsg);
+      }
+
+      toast.success(`${photoToPublish.filename || "Scene"} published to Google Maps!`);
+      load();
+    } catch (e: any) {
+      console.error("Single scene publish error:", e);
+      toast.error(`Failed to publish scene: ${e.message}`);
+      try {
+        await supabase
+          .from("photos")
+          .update({ streetview_status: "FAILED" } as any)
+          .eq("id", photoToPublish.id);
+      } catch {}
     } finally {
       setPublishing(false);
       setPublishProgress(null);
@@ -2159,17 +2392,30 @@ function PublishPage() {
                     </div>
                   </div>
                 )}
-                <Button
-                  size="lg"
-                  className="w-full bg-[#0277bd] hover:bg-[#01579b]"
-                  disabled={publishing || photos.length === 0}
-                  onClick={handlePublishClick}
-                >
-                  <Send className="h-5 w-5 mr-2" />
-                  {publishing
-                    ? "Publishing…"
-                    : `Publish ${photos.filter((p) => !p.streetview_status || p.streetview_status === "NOT_PUBLISHED").length} scene(s)`}
-                </Button>
+                {(() => {
+                  const pendingPhotosCount = photos.filter(
+                    (p) => !p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED"
+                  ).length;
+                  const failedPhotosCount = photos.filter((p) => p.streetview_status === "FAILED").length;
+
+                  return (
+                    <Button
+                      size="lg"
+                      className="w-full bg-[#0277bd] hover:bg-[#01579b]"
+                      disabled={publishing || photos.length === 0 || pendingPhotosCount === 0}
+                      onClick={handlePublishClick}
+                    >
+                      <Send className="h-5 w-5 mr-2" />
+                      {publishing
+                        ? "Publishing…"
+                        : pendingPhotosCount === 0
+                          ? "All Scenes Published"
+                          : failedPhotosCount > 0
+                            ? `Publish / Retry ${pendingPhotosCount} scene(s)`
+                            : `Publish ${pendingPhotosCount} scene(s)`}
+                    </Button>
+                  );
+                })()}
                 {photos.some(
                   (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
                 ) && (
@@ -2267,9 +2513,20 @@ function PublishPage() {
                         )}
                       </div>
                     ) : p.streetview_status === "FAILED" ? (
-                      <span className="text-red-600 font-semibold text-xs flex items-center gap-1">
-                        <XIcon className="h-4 w-4" /> FAILED
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-600 font-semibold text-xs flex items-center gap-1">
+                          <XIcon className="h-4 w-4" /> FAILED
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={publishing}
+                          onClick={() => publishSinglePhoto(p)}
+                          className="h-6 px-2 text-[11px] font-bold border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer rounded"
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" /> Retry
+                        </Button>
+                      </div>
                     ) : (
                       <span className="text-gray-400 font-semibold text-xs">NOT PUBLISHED</span>
                     )}
