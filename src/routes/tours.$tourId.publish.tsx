@@ -81,6 +81,7 @@ const MUSIC_PRESETS = [
 ];
 
 import { processNadirClientSide } from "@/lib/nadir-processor";
+import { ensureGPanoXmpBlob } from "@/lib/xmp-injector";
 
 import { SEO } from "@/components/SEO";
 
@@ -810,6 +811,17 @@ function PublishPage() {
           continue;
         }
 
+        // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
+        try {
+          processedBlob = await ensureGPanoXmpBlob(processedBlob, {
+            heading: photo.heading || 0,
+            pitch: photo.pitch || 0,
+            roll: photo.roll || 0,
+          });
+        } catch (xmpErr) {
+          console.warn(`Could not inject XMP for scene ${photo.filename || photo.id}:`, xmpErr);
+        }
+
         // 2. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh
         setPublishProgress({
           current: alreadyDone + photoIndex - 1,
@@ -1118,6 +1130,17 @@ function PublishPage() {
 
       if (!processedBlob) {
         throw new Error("Could not fetch scene image file");
+      }
+
+      // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
+      try {
+        processedBlob = await ensureGPanoXmpBlob(processedBlob, {
+          heading: photoToPublish.heading || 0,
+          pitch: photoToPublish.pitch || 0,
+          roll: photoToPublish.roll || 0,
+        });
+      } catch (xmpErr) {
+        console.warn(`Could not inject XMP for single scene:`, xmpErr);
       }
 
       setPublishProgress({
