@@ -21,6 +21,7 @@ export interface SeoPageData {
   dateModified?: string;
   readTime?: string;
   image?: string;
+  imageMobile?: string;
   comparisonTable?: {
     competitorName: string;
     headers: string[];
@@ -970,7 +971,8 @@ export const seoPages: Record<string, SeoPageData> = {
     "heading": "Matterport Alternative in 2026: PanoPublish vs Matterport",
     "subheading": "Looking for a Matterport alternative focused on 360° tours and Google Maps publishing?",
     "introText": "Matterport is the industry standard for 3D digital twins, spatial scanning, and architectural modeling. If you need dollhouse views, BIM files, and millimeter-level point clouds, Matterport is built for that workflow. But if your primary goal is publishing interactive 360° virtual tours, updating Google Street View listings, and managing client walkthroughs with straightforward INR pricing and standard 360 camera hardware, PanoPublish offers a lightweight, dedicated alternative.",
-    "image": "/robot_beach_upload.webp",
+    "image": "/matterport-alternative.webp",
+    "imageMobile": "/matterport-alternative-mobile.webp",
     "comparisonTable": {
       "competitorName": "Matterport",
       "headers": [

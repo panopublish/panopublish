@@ -205,16 +205,25 @@ function SeoPage() {
             </div>
 
             {page.image && (
-              <div className="mt-10 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl w-full relative aspect-[16/9] max-h-[400px]">
-                <img
-                  src={page.image}
-                  alt={`${page.heading} — ${page.primaryKeyword}`}
-                  width={800}
-                  height={450}
-                  loading="eager"
-                  fetchPriority="high"
-                  className="w-full h-full object-cover object-center"
-                />
+              <div className="mt-8 md:mt-10 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl w-full max-w-4xl mx-auto relative aspect-[16/9] bg-slate-900/50">
+                <picture className="w-full h-full block">
+                  {page.imageMobile && (
+                    <source
+                      media="(max-width: 640px)"
+                      srcSet={page.imageMobile}
+                      type="image/webp"
+                    />
+                  )}
+                  <img
+                    src={page.image}
+                    alt={`${page.heading} — ${page.primaryKeyword}`}
+                    width={1280}
+                    height={720}
+                    loading="eager"
+                    fetchPriority="high"
+                    className="w-full h-full object-cover object-center"
+                  />
+                </picture>
               </div>
             )}
           </div>
