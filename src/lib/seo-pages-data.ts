@@ -963,71 +963,206 @@ export const seoPages: Record<string, SeoPageData> = {
   "matterport-alternative": {
     "slug": "matterport-alternative",
     "type": "comparison",
-    "title": "Matterport Alternative for 360° Tours & Street View — PanoPublish",
-    "description": "Looking for a Matterport alternative? PanoPublish offers flat INR pricing from ₹499/mo, unlimited Google Street View publishing with no $14.99 export fees, and any-camera support.",
+    "title": "Matterport Alternative in 2026: PanoPublish vs Matterport",
+    "description": "Comparing Matterport and PanoPublish for 360° virtual tours and Google Street View publishing. Understand features, pricing models, and key differences.",
     "primaryKeyword": "matterport alternative",
     "category": "Alternatives",
-    "heading": "Matterport Alternative for Indian Photographers 2026",
-    "subheading": "Stop paying $14.99 per export. Publish unlimited tours in INR.",
-    "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
+    "heading": "Matterport Alternative in 2026: PanoPublish vs Matterport",
+    "subheading": "Looking for a Matterport alternative focused on 360° tours and Google Maps publishing?",
+    "introText": "Matterport is the industry standard for 3D digital twins, spatial scanning, and architectural modeling. If you need dollhouse views, BIM files, and millimeter-level point clouds, Matterport is built for that workflow. But if your primary goal is publishing interactive 360° virtual tours, updating Google Street View listings, and managing client walkthroughs with straightforward INR pricing and standard 360 camera hardware, PanoPublish offers a lightweight, dedicated alternative.",
     "image": "/robot_beach_upload.webp",
     "comparisonTable": {
-      "competitorName": "matterport",
+      "competitorName": "Matterport",
       "headers": [
         "Feature",
         "PanoPublish",
-        "matterport"
+        "Matterport"
       ],
       "rows": [
         {
-          "feature": "Base Price",
-          "panopublish": "₹499/mo (INR flat)",
-          "competitor": "$20/mo (USD only)",
+          "feature": "Primary Focus",
+          "panopublish": "Spherical 360° photo virtual tours & Google Maps publishing",
+          "competitor": "3D digital twins, spatial mesh capture & architectural modeling",
           "isHighlight": true
         },
         {
-          "feature": "Google Maps Exports",
-          "panopublish": "Unlimited (Included)",
-          "competitor": "$14.99 add-on fee",
+          "feature": "Pricing Model",
+          "panopublish": "Flat monthly INR plans (₹499 to ₹2,999/mo)",
+          "competitor": "Active Space-based tiers (Free, Starter, Pro, Business, Enterprise) in USD",
           "isHighlight": true
         },
         {
-          "feature": "Local Billing & UPI",
-          "panopublish": "Yes (Razorpay)",
-          "competitor": "No (Stripe Forex only)"
+          "feature": "Google Street View Publishing",
+          "panopublish": "Included across all plans (no per-publish fee)",
+          "competitor": "Available on applicable plans (Mobile, Starter, Pro, Business, Enterprise)",
+          "isHighlight": true
+        },
+        {
+          "feature": "Hardware Support",
+          "panopublish": "Any standard 360 camera (Ricoh Theta, Insta360, GoPro, DSLR)",
+          "competitor": "iOS, Android, supported 360 cameras, and Matterport Pro series"
+        },
+        {
+          "feature": "3D Dollhouse & Spatial Mesh",
+          "panopublish": "Not applicable (spherical panorama viewer)",
+          "competitor": "Yes (automated 3D mesh & dollhouse models)"
+        },
+        {
+          "feature": "In-Model Measurement Tool",
+          "panopublish": "Not supported",
+          "competitor": "Yes (built-in measurement tool across plans)"
+        },
+        {
+          "feature": "AI Property Intelligence & Defurnish",
+          "panopublish": "Not supported",
+          "competitor": "Yes (automated room labels, dimensions, descriptions, AI defurnish)"
+        },
+        {
+          "feature": "CAD, BIM & E57 Technical Exports",
+          "panopublish": "Not applicable (panoramic photography workflow)",
+          "competitor": "Yes (add-on files with Pro-grade cameras on eligible plans)"
+        },
+        {
+          "feature": "Custom Nadir Branding",
+          "panopublish": "Yes (custom logo nadir disk & tripod blur)",
+          "competitor": "Plan-dependent (business cards, quick links & tags)"
+        },
+        {
+          "feature": "Billing & Local Currency",
+          "panopublish": "Indian Rupee (INR) via UPI, NetBanking, Cards & GST invoices",
+          "competitor": "US Dollar (USD) international billing via credit card",
+          "isHighlight": true
         }
       ]
     },
     "sections": [
       {
-        "title": "The Real Cost of Matterport for Indian Photographers",
-        "content": "Matterport is the most recognized name in 3D virtual tours globally. But for Indian photographers and agencies, using Matterport commercially carries a set of hidden costs that make it one of the most expensive virtual tour solutions available.\n\nFirst, Matterport requires its own proprietary hardware. The Matterport Pro3 camera costs approximately $5,995 USD (≈₹4,99,000) at international prices. Older Pro2 models are available secondhand for around $1,200–$1,800 (≈₹1,00,000–₹1,50,000). By contrast, PanoPublish works with any 360 camera — including the Ricoh Theta Z1 (≈₹90,000) and Insta360 X5 (≈₹65,000) — which can each pay for themselves within 2–3 client shoots.\n\nSecond, Matterport's subscription costs are high in USD. The Professional plan costs $65/month (≈₹5,400/month) for up to 25 active spaces. The Business plan runs $130/month (≈₹10,800/month). Both plans are billed in USD, incurring forex markup and TCS implications for Indian businesses.\n\nThird — and most critical for Google Maps publishing — Matterport charges a separate $14.99 fee per Google Street View export. This means every time you publish a client's space to their Google Business Profile, you pay approximately ₹1,250 per publish in addition to the monthly subscription. For an agency publishing 20 properties per month, this adds ₹25,000/month in per-export fees alone.\n\nPanoPublish comparison: ₹499/month flat (Basic) or ₹1,499/month (Agency), with unlimited Google Maps uploads at no additional charge. Works with any 360 camera you already own.",
+        "title": "Quick Answer: Which Platform Should You Choose?",
+        "content": "Choosing between Matterport and PanoPublish comes down to what you are delivering to your clients.\n\nChoose Matterport if you need true 3D spatial models, architectural point clouds, CAD or BIM file exports, precise in-model millimeter measurements, or complex facility management digital twins. Matterport is an all-in-one spatial computing platform designed for architecture, engineering, construction (AEC), and enterprise facilities.\n\nChoose PanoPublish if you are a photographer, real estate marketer, or digital agency looking to publish interactive 360° virtual tours and connect them directly to Google Street View. PanoPublish focuses strictly on fast photo capture, equirectangular panoramas from any standard 360 camera, custom nadir branding, and transparent Indian Rupee (INR) billing via UPI without international currency markup.",
         "listItems": [
-          "Hardware Cost: Matterport Pro3 costs ≈₹5,00,000 vs. any 360 camera with PanoPublish.",
-          "Monthly Fee: Matterport charges $65–130/mo (≈₹5,400–10,800) in USD with forex markup.",
-          "Per-Export Fee: Matterport charges $14.99 (≈₹1,250) per Google Street View publish.",
-          "Agency Math: 20 monthly publishes on Matterport = ₹25,000 in export fees alone."
+          "Pick Matterport for 3D dollhouse views, point clouds, BIM/CAD files, and architectural measurement tools.",
+          "Pick PanoPublish for fast 360° photo walkthroughs, direct Google Street View publishing, and transparent INR billing.",
+          "Both platforms support common 360 cameras; Matterport also supports mobile phones and specialized LiDAR hardware.",
+          "Evaluate your deliverables: do your clients need an engineering digital twin or an interactive photographic walkthrough?"
         ]
       },
       {
-        "title": "What Indian Photographers Gain by Switching to PanoPublish",
-        "content": "Switching from Matterport to a 360 photography workflow with PanoPublish removes hardware lock-in and eliminates per-export fees — resulting in dramatically lower operational costs for Indian agencies.\n\nAny-Camera Compatibility: PanoPublish accepts equirectangular JPEG panoramas from any 360 camera. You are not locked into a proprietary scanning device. Ricoh Theta Z1, Theta X, Insta360 X5, GoPro MAX, and DSLR panoramic rigs all produce compatible files.\n\nFaster Capture Workflow: Matterport's 3D scanning process requires walking a camera mount slowly through a space, with each scanning position taking 15–90 seconds. Scanning a 10-room property typically takes 1.5–2 hours. By contrast, a 360 photo shoot with a Ricoh Theta Z1 or Insta360 X5 completes the same property in 20–30 minutes — allowing photographers to complete 3–4 shoots per day instead of one.\n\nSuperior Photographic Quality: For luxury real estate, hotel interiors, and restaurant ambiance photography — where visual quality determines conversion rates — 360 HDR photography from a dual 1-inch sensor camera like the Ricoh Theta Z1 outperforms Matterport's mesh-rendered imagery.\n\nFlat INR Billing: PanoPublish bills ₹499/month (Basic) or ₹1,499/month (Agency) via Razorpay with UPI, NetBanking, and all major Indian cards. GST invoices are auto-generated. No forex markup, no per-export fees.",
+        "title": "What Matterport Does Exceptionally Well",
+        "content": "Matterport is widely recognized as a global leader in spatial capture and 3D digital twins. It provides advanced capabilities that standalone 360 photo tools do not attempt to replicate:\n\n1. True 3D Digital Twins & Dollhouse Views: Matterport processes scan data into textured 3D geometric meshes. Viewers can pull back to view a full cutaway \"dollhouse\" perspective of a building, rotate the structure in 3D, and transition seamlessly between floors.\n\n2. Built-In Spatial Measurements: Because Matterport calculates dimensional depth, users can measure walls, doorways, ceiling heights, and floor areas directly inside the browser player across all subscription tiers.\n\n3. Property Intelligence & AI Automation: Matterport automatically identifies rooms, calculates square footage, generates automated room descriptions, and offers an AI Defurnish tool to visualize spaces without clutter.\n\n4. Architectural & Engineering Add-Ons: For AEC professionals, Matterport offers downloadable technical deliverables, including Schematic Floor Plans, MatterPak technical bundles (.OBJ mesh and point clouds), BIM files (Autodesk Revit), CAD files, and high-density E57 point clouds.\n\n5. Enterprise Syndication & Governance: Matterport provides deep enterprise administrative consoles, team folder permissions, SSO/SAML security, and direct syndication to portals like Homes.com, LoopNet, and Apartments.com.",
         "listItems": [
-          "Zero Per-Export Fees: Unlimited Google Street View publishes included in flat monthly plan.",
-          "3x Faster Capture: Complete 360 shoots in 20–30 min vs. 1.5–2 hours for Matterport 3D scan.",
-          "Any-Camera Support: Works with Ricoh Theta Z1, Insta360 X5, GoPro MAX, or DSLR rigs.",
-          "INR Billing via UPI: No forex markup, auto GST invoices, and Razorpay payment gateway."
+          "Interactive 3D dollhouse views and floor-to-floor spatial navigation.",
+          "Accurate browser-based measurement tool for interior dimensions.",
+          "Automated room labeling, square-footage reporting, and AI-assisted defurnishing.",
+          "Professional AEC deliverables: Schematic floor plans, MatterPak (.OBJ), CAD, and BIM files.",
+          "Enterprise-grade user management, audit logs, and major portal syndication."
+        ]
+      },
+      {
+        "title": "What PanoPublish Does Differently",
+        "content": "While Matterport excels at complex 3D spatial modeling, many photographers, marketing agencies, and local businesses do not need geometric meshes or CAD files. They need an agile, cost-effective way to deliver high-resolution 360° walkthroughs and publish them to Google Maps.\n\n1. Rapid On-Site Capture: A full 3D spatial scan often requires taking dozens of scan points at tight intervals, which can take 1 to 2 hours for an average commercial property. With standard 360 photography (using cameras like the Ricoh Theta Z1 or Insta360 X4/X5), a photographer captures an entire property in 15 to 30 minutes, enabling 3 to 5 client shoots in a single day.\n\n2. Direct Google Street View Publishing: PanoPublish provides an intuitive browser-based workflow to align panoramas, configure EXIF GPS coordinates, set compass headings, connect navigation nodes, and publish directly to Google Maps and Google Business Profiles with zero per-export fees.\n\n3. Freedom from Hardware Constraints: PanoPublish accepts standard equirectangular 2:1 JPEG panoramas from any camera system—including Ricoh Theta, Insta360, GoPro MAX, Trisio Lite2, or custom DSLR panoramic bracket setups. You are never locked into proprietary hardware.\n\n4. Built-In Nadir Tripod Branding: Cleanly replace visible light stands and tripod legs with custom circular logo disks or automatic blur patches right in your browser before publishing.\n\n5. Local Indian Rupee Billing: PanoPublish is built for Indian creators and agencies with flat monthly pricing starting at ₹499/month, instant UPI and NetBanking payment support, and official GST-compliant tax invoices.",
+        "listItems": [
+          "Lightweight 360° walkthroughs optimized for fast browser and mobile viewing.",
+          "15–30 minute on-site capture times for standard residential and retail properties.",
+          "Included Google Street View publishing across all subscription plans.",
+          "Integrated nadir tripod editor for custom agency and client logo disks.",
+          "Zero foreign exchange markup, flat INR plans, and automated GST invoices."
+        ]
+      },
+      {
+        "title": "Understanding Matterport's Pricing Model",
+        "content": "Matterport's subscription structure is based on Active Spaces and user seat allocations across five distinct tiers:\n\n• Free Plan: Includes 1 Active Space and 2 user seats. Designed for personal exploration and trying the platform with mobile phones or supported 360 cameras.\n\n• Starter Plan: Offers 5 to 20 Active Spaces and 3 user seats. Tailored for individual photographers and small operators capturing standard spaces.\n\n• Professional Plan: Configurable from 20 to 150 Active Spaces and 10 user seats. Designed for active professionals and small commercial teams.\n\n• Business Plan: Configurable from 100 to 300 Active Spaces and 50 user seats. Built for established agencies and mid-sized enterprises requiring multi-user collaboration and team management.\n\n• Enterprise Plan: Custom Active Spaces, flexible user seats, advanced admin consoles, single sign-on (SSO), and custom enterprise integrations.\n\nAn \"Active Space\" in Matterport is a 3D model that can be actively viewed, edited, published, or shared. When an account reaches its Active Space limit, older spaces can be archived to free up capacity, with a set number of reactivations included monthly depending on the plan tier.\n\nFor official and up-to-date pricing details, visit Matterport's official plans page at https://matterport.com/plans and their comprehensive feature matrix at https://matterport.com/var/anderson-tech.",
+        "listItems": [
+          "Five tiered subscription plans: Free, Starter, Professional, Business, and Enterprise.",
+          "Plans scale by Active Space limits (from 1 on Free to hundreds on Business and Enterprise).",
+          "User seats scale from 2 users on Free to 50 on Business and custom counts on Enterprise.",
+          "Archiving system allows users to store inactive models and reactivate them as needed.",
+          "Matterport charges in US Dollars (USD), which may incur bank forex conversion fees for Indian buyers."
+        ]
+      },
+      {
+        "title": "PanoPublish Pricing & Indian Rupee Billing",
+        "content": "PanoPublish offers simple, flat Indian Rupee (INR) monthly subscriptions designed to give photographers and agencies predictable operational costs:\n\n• Basic Plan (₹499/month): Up to 5 active tours, 30 photos per tour, standard nadir tripod blur editor, and direct Google Street View publishing with email support.\n\n• Pro Plan (₹1,499/month): Up to 20 active tours, 200 photos per tour, 3 team logins, custom tours with 1-click converter, custom logo nadir branding, and priority WhatsApp support.\n\n• Agency Plan (₹2,999/month): Up to 50 active tours, unlimited photos, 10 team logins, white-label client presentation links, and dedicated account management.\n\nEvery PanoPublish subscription includes a 7-day free trial without requiring credit card information. Payments are processed securely via Razorpay with support for instant UPI (Google Pay, PhonePe, Paytm), NetBanking across all major Indian banks, and domestic debit/credit cards. Every billing cycle generates a GST-compliant tax invoice so registered Indian businesses can claim Input Tax Credit (ITC).",
+        "listItems": [
+          "Basic Plan: ₹499/mo for up to 5 active tours and 30 photos per tour.",
+          "Pro Plan: ₹1,499/mo for up to 20 active tours, 200 photos per tour, and custom nadir branding.",
+          "Agency Plan: ₹2,999/mo for up to 50 active tours, unlimited photos, and white-label client links.",
+          "7-day full-featured free trial with no credit card required.",
+          "Direct UPI, NetBanking, and domestic card checkout with automated GST tax invoices."
+        ]
+      },
+      {
+        "title": "Publishing to Google Street View: Workflow & Comparison",
+        "content": "Publishing 360° walkthroughs to Google Maps is one of the most effective ways for businesses to improve visibility on Google Search and Google Maps listings. While both platforms provide pathways to publish to Street View, their models and workflows differ:\n\nIn PanoPublish, publishing to Google Street View is a primary core feature included across all subscription tiers with zero per-publish fees. You upload your equirectangular panoramas, verify GPS coordinates and compass headings on an interactive map, connect adjacent nodes with visual arrows, and submit directly to Google Maps via official Street View APIs.\n\nIn Matterport, Google Street View publishing is supported as a feature on applicable subscription tiers (available with mobile capture on the Free tier, and supported across Starter, Professional, Business, and Enterprise plans). Users should note that while Matterport originally introduced a $14.99 per-space fee in an official 2018 announcement, publishing capabilities and add-on terms are governed by your specific active plan and account agreement. For the latest terms, refer directly to Matterport's official plan comparison.\n\nFor high-volume Google Street View contributors and local SEO agencies publishing multiple client locations every month, PanoPublish provides a dedicated, flat-rate workflow with no per-space publishing surcharges.",
+        "listItems": [
+          "PanoPublish includes unlimited Google Street View publishing in every standard subscription plan.",
+          "Matterport supports Google Street View publishing on applicable plan tiers.",
+          "Historical $14.99 per-space fee dates back to a 2018 Matterport announcement; current terms depend on your active plan.",
+          "PanoPublish features browser-based EXIF GPS alignment, compass heading adjustment, and blue-line path verification.",
+          "Publishing 360° imagery gives potential customers an interactive way to explore commercial spaces on Google Maps."
+        ]
+      },
+      {
+        "title": "Hardware Flexibility: From Smartphones to Pro Cameras",
+        "content": "Hardware compatibility is an important factor when deciding which platform fits your operational workflow:\n\nMatterport supports capture across multiple hardware categories:\n1. Matterport for Mobile: Capture spaces using recent iOS and Android smartphones and tablets.\n2. Supported 360 Cameras: Connect popular consumer and prosumer 360 cameras, such as Insta360 and Ricoh Theta models.\n3. Matterport Pro Series: Proprietary hardware like the Matterport Pro2 and Matterport Pro3 LiDAR camera, which capture high-accuracy 3D point clouds and measurements for large commercial or outdoor environments.\n\nPanoPublish operates on an open-hardware model:\nPanoPublish does not require any specific hardware or companion capture app. Any camera or panoramic bracket setup that outputs standard equirectangular 2:1 JPEG images is 100% compatible. Whether you shoot with a Ricoh Theta Z1, Theta X, Insta360 X3/X4/X5, GoPro MAX, Trisio Lite2, or a high-end DSLR/mirrorless camera on a panoramic tripod head with bracketed HDR stitching in PTGui, your photos can be uploaded directly into PanoPublish.\n\nThis open approach allows photographers to use existing gear, select the ideal camera for each budget, and avoid single-vendor hardware dependency.",
+        "listItems": [
+          "Matterport supports smartphones (iOS/Android), certified 360 cameras, and its proprietary Pro2 and Pro3 LiDAR cameras.",
+          "PanoPublish accepts standard equirectangular JPEGs from any 360 camera or DSLR panoramic stitching rig.",
+          "Use your existing Ricoh Theta, Insta360, GoPro, or DSLR equipment without mandatory hardware upgrades.",
+          "High-end panoramic photography with dual 1-inch sensor cameras or DSLRs delivers excellent photographic dynamic range."
+        ]
+      },
+      {
+        "title": "Real Estate & Commercial Use Cases",
+        "content": "Understanding the practical requirements of your clients will help determine the right solution for each project:\n\n• Residential Real Estate & Rental Listings: In competitive residential markets, speed to market and high-volume photography are essential. PanoPublish enables photographers to shoot a 3-bedroom home in 20 minutes, upload to PanoPublish, apply a branded nadir patch, and deliver a sharable virtual tour link the same day.\n\n• Commercial Architecture & Facilities Management: When architects, general contractors, or facilities directors require exact spatial dimensions, structural point clouds, or BIM models for renovation, Matterport's 3D mesh modeling and downloadable CAD files are uniquely suited to the task.\n\n• Restaurants, Hotels & Retail Showrooms: Hospitality and retail businesses prioritize discovery on Google Search and Google Maps. PanoPublish allows creators to publish immersive blue-line walkthroughs directly to the business's Google Business Profile, allowing prospective diners and guests to tour the venue before booking.\n\n• Marketing Agencies & Local Guides: Agencies managing 360 photography retainers for dozens of local businesses benefit from PanoPublish's predictable INR billing, multi-user logins, and white-label client links.",
+        "listItems": [
+          "Residential Real Estate: Rapid 20-minute turnaround and same-day client delivery with PanoPublish.",
+          "AEC & Construction: Detailed 3D mesh models, BIM files, and CAD deliverables with Matterport.",
+          "Hospitality & Retail: Direct Google Street View integration for restaurants, hotels, and gyms with PanoPublish.",
+          "Agencies & Photographers: Predictable monthly overhead and GST-compliant billing in INR."
+        ]
+      },
+      {
+        "title": "Who Should Choose Matterport vs Who Should Choose PanoPublish?",
+        "content": "To make an informed decision, review this straightforward checklist based on your business requirements:\n\nChoose Matterport if:\n• You need interactive 3D dollhouse models and 3D geometric meshes.\n• Your clients require downloadable CAD, BIM (Revit), or E57 point cloud files.\n• You need in-browser measurement tools to verify architectural dimensions.\n• You manage large enterprise facilities requiring single sign-on (SSO) and complex team governance.\n• You want automated property intelligence reports and AI-powered space defurnishing.\n\nChoose PanoPublish if:\n• Your primary deliverable is interactive 360° virtual tours and Google Maps publishing.\n• You want to publish to Google Street View with no per-publish export fees.\n• You prefer transparent Indian Rupee (INR) pricing starting at ₹499/mo with UPI and GST tax invoices.\n• You want the freedom to shoot with any standard 360 camera or DSLR panoramic rig.\n• You need custom nadir branding (logo disk or blur) to present polished tours to your clients.",
+        "listItems": [
+          "Choose Matterport for 3D digital twins, BIM/CAD workflows, and architectural measurements.",
+          "Choose PanoPublish for 360° photo walkthroughs, Google Street View publishing, and flat INR pricing.",
+          "Both solutions serve important, distinct segments of the immersive spatial industry.",
+          "Select the platform that aligns with your specific client deliverables and operating budget."
+        ]
+      },
+      {
+        "title": "Official Sources & Verification",
+        "content": "We believe in complete transparency and factual accuracy when comparing software platforms. Competitor features, pricing plans, and policies evolve over time. We encourage readers to review official documentation directly:\n\n1. Matterport Subscription Plans & Pricing:\nOfficial pricing tiers, Active Space allowances, and user limits are available at https://matterport.com/plans\n\n2. Matterport Complete Plan & Feature Matrix:\nA comprehensive side-by-side comparison of features across Free, Starter, Professional, Business, and Enterprise plans is available at https://matterport.com/var/anderson-tech\n\n3. Matterport Platform Overview:\nOfficial platform information, capture hardware compatibility, and digital twin technology overview can be found at https://go.matterport.com/V2S_SignUp.html\n\n4. Matterport Google Street View Announcement (Historical Reference):\nMatterport's original 2018 public announcement detailing Google Street View integration and its introductory publishing fee can be reviewed at https://matterport.com/blog/update-publishing-google-street-view\n\n5. PanoPublish Pricing & Plans:\nReview PanoPublish's transparent Indian Rupee plans and start a 7-day free trial at https://panopublish.com/pricing/",
+        "listItems": [
+          "Matterport Plans: https://matterport.com/plans",
+          "Matterport Feature Comparison: https://matterport.com/var/anderson-tech",
+          "Matterport Platform Overview: https://go.matterport.com/V2S_SignUp.html",
+          "Matterport Street View Historical Post: https://matterport.com/blog/update-publishing-google-street-view",
+          "PanoPublish Plans & Free Trial: https://panopublish.com/pricing/"
         ]
       }
     ],
     "faqs": [
       {
-        "question": "Is the matterport alternative setup automated?",
-        "answer": "Yes, PanoPublish uses standard API endpoints to automate path mapping and node configurations based on EXIF GPS metadata."
+        "question": "Does Matterport charge $14.99 per Google Street View export?",
+        "answer": "Matterport originally announced a $14.99 per-space fee for publishing to Google Street View in a 2018 blog post. On current official plan comparison pages, Google Street View publishing is listed as a feature on applicable tiers (marked as available with mobile capture on Free, and supported across Starter, Professional, Business, and Enterprise plans). Because publishing terms and add-on pricing can vary by active plan agreement, we recommend checking your current Matterport account settings or matterport.com/plans for the latest terms. In comparison, PanoPublish includes Google Street View publishing across all INR plans with zero per-publish fees."
       },
       {
-        "question": "Are there any per-publish fees?",
-        "answer": "No. Unlike Matterport which charges $14.99 per Street View upload, PanoPublish provides unlimited Google Maps uploads under our flat pricing."
+        "question": "Can I use my existing 360 camera with both platforms?",
+        "answer": "Yes. Both platforms support common 360 cameras like Ricoh Theta and Insta360 models. Matterport also supports smartphone capture via Matterport for Mobile as well as its proprietary Pro2 and Pro3 LiDAR cameras. PanoPublish operates on an open-format basis, accepting standard equirectangular 2:1 JPEG panoramas from any 360 camera, GoPro, or stitched DSLR setup without requiring proprietary apps or hardware."
+      },
+      {
+        "question": "Does PanoPublish offer 3D dollhouse views or BIM files?",
+        "answer": "No. PanoPublish focuses strictly on spherical 360° photo walkthroughs, interactive node-to-node navigation, custom nadir branding, and direct Google Street View publishing. If your project requires 3D geometric meshes, dollhouse views, spatial point clouds, or BIM/CAD architectural deliverables, Matterport is the specialized solution for those needs."
+      },
+      {
+        "question": "How does PanoPublish billing work for Indian businesses?",
+        "answer": "PanoPublish bills in Indian Rupees (INR) starting at ₹499/month. We support instant UPI payments (Google Pay, PhonePe, Paytm), NetBanking across all major Indian banks, and domestic debit/credit cards via Razorpay. Every transaction automatically generates a GST-compliant tax invoice so registered Indian businesses can claim Input Tax Credit (ITC)."
+      },
+      {
+        "question": "How fast is the on-site capture process between the two workflows?",
+        "answer": "Capturing standard 360° photos with cameras like the Ricoh Theta Z1 or Insta360 X4/X5 typically takes 15 to 30 minutes for an average commercial property, as each panoramic shot takes only a few seconds. Full 3D spatial scanning often requires significantly more capture positions spaced closer together, which can take 1 to 2 hours for a similar property."
       }
     ]
   },
