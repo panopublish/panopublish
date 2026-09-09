@@ -35,18 +35,55 @@ import { waLink, formatDateIN } from "@/lib/format";
 
 import { SEO } from "@/components/SEO";
 
+type TabId = "basic" | "branding" | "billing" | "access" | "support";
+
+interface SettingsSearch {
+  tab?: string;
+}
+
 export const Route = createFileRoute("/settings")({
+  validateSearch: (search: Record<string, unknown>): SettingsSearch => {
+    return {
+      tab: typeof search.tab === "string" ? search.tab : undefined,
+    };
+  },
   head: () => ({
     meta: [{ title: "Settings — PanoPublish" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: SettingsPage,
 });
 
-type TabId = "basic" | "branding" | "billing" | "access" | "support";
-
 function SettingsPage() {
   const { user, session } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>("basic");
+  const search = Route.useSearch();
+
+  const validTabs: TabId[] = ["basic", "branding", "billing", "access", "support"];
+
+  const getInitialTab = (): TabId => {
+    const sTab = search?.tab as TabId | undefined;
+    if (sTab && validTabs.includes(sTab)) {
+      return sTab;
+    }
+    if (typeof window !== "undefined") {
+      const urlTab = new URLSearchParams(window.location.search).get("tab") as TabId | null;
+      if (urlTab && validTabs.includes(urlTab)) {
+        return urlTab;
+      }
+    }
+    return "basic";
+  };
+
+  const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
+
+  // Sync tab whenever search param or URL query changes
+  useEffect(() => {
+    const sTab = search?.tab as TabId | undefined;
+    const urlTab = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("tab") as TabId | null) : null;
+    const targetTab = (sTab && validTabs.includes(sTab)) ? sTab : (urlTab && validTabs.includes(urlTab)) ? urlTab : null;
+    if (targetTab) {
+      setActiveTab(targetTab);
+    }
+  }, [search?.tab]);
 
   // Profile State
   const [profile, setProfile] = useState<any>(null);
@@ -491,7 +528,15 @@ function SettingsPage() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabId)}
+                onClick={() => {
+                  const newTab = tab.id as TabId;
+                  setActiveTab(newTab);
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("tab", newTab);
+                    window.history.replaceState({}, "", url.toString());
+                  }
+                }}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
                   isActive
                     ? "bg-[#0277bd] text-white shadow-md shadow-[#0277bd]/20 scale-102"
