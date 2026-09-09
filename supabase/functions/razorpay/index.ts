@@ -32,6 +32,31 @@ async function verifySignature(
   const signatureArray = Array.from(new Uint8Array(signatureBuffer));
   const computedSignature = signatureArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
+// HMAC-SHA256 signature verification for one-time orders
+async function verifyOrderSignature(
+  orderId: string,
+  paymentId: string,
+  signature: string,
+  secret: string,
+): Promise<boolean> {
+  const text = `${orderId}|${paymentId}`;
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(text);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    keyData,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+
+  const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+  const computedSignature = signatureArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+
   return computedSignature === signature;
 }
 
@@ -244,6 +269,131 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (action === "create_order") {
+      const { credits_count, user_id } = payload;
+      const count = Number(credits_count);
+      if (!count || count <= 0) {
+        throw new Error("Invalid credits count");
+      }
+
+      // Verify user has an active paid plan
+      const { data: userProfile, error: profErr } = await supabaseClient
+        .from("profiles")
+        .select("plan, credits")
+        .eq("id", user_id)
+        .single();
+
+      if (profErr || !userProfile) {
+        throw new Error("User profile not found");
+      }
+
+      if (userProfile.plan === "trial") {
+        throw new Error("Pay as you go extra credits are exclusive to active paid subscribers. Please upgrade your plan first.");
+      }
+
+      const pricePerCredit = 100; // ₹100 INR per credit
+      const totalAmountInPaise = count * pricePerCredit * 100;
+
+      const orderRes = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: totalAmountInPaise,
+          currency: "INR",
+          receipt: `credit_${user_id.slice(0, 8)}_${Date.now()}`,
+          notes: {
+            user_id,
+            credits_count: count,
+            type: "pay_as_you_go",
+          },
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok) {
+        throw new Error(orderData.error?.description || "Failed to create Razorpay order");
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          order_id: orderData.id,
+          amount: totalAmountInPaise,
+          currency: "INR",
+          credits_count: count,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (action === "verify_order_payment") {
+      const {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        credits_count,
+        user_id,
+      } = payload;
+
+      const count = Number(credits_count);
+      if (!count || count <= 0) throw new Error("Invalid credits count");
+
+      const isValid = await verifyOrderSignature(
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+        keySecret,
+      );
+
+      if (!isValid) {
+        throw new Error("Invalid Razorpay payment signature.");
+      }
+
+      // Fetch current profile to calculate new credits
+      const { data: userProfile, error: pErr } = await supabaseClient
+        .from("profiles")
+        .select("plan, credits")
+        .eq("id", user_id)
+        .single();
+
+      if (pErr || !userProfile) throw new Error("User profile not found");
+
+      const basePlanLimits: Record<string, number> = { basic: 5, pro: 20, agency: 50 };
+      const baseLimit = basePlanLimits[userProfile.plan] ?? 5;
+      const currentAllowance = Math.max(userProfile.credits ?? 0, baseLimit);
+      const newCredits = currentAllowance + count;
+
+      const { error: updateErr } = await supabaseClient
+        .from("profiles")
+        .update({
+          credits: newCredits,
+        })
+        .eq("id", user_id);
+
+      if (updateErr) throw updateErr;
+
+      // Log into subscriptions / payment history table
+      await supabaseClient.from("subscriptions").insert({
+        user_id,
+        plan: "pay_as_you_go",
+        status: "active",
+        razorpay_subscription_id: razorpay_payment_id,
+        amount_inr: count * 100,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          new_credits: newCredits,
+          added_credits: count,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {

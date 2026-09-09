@@ -901,6 +901,119 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
         return { success: true };
       }
 
+      // ── Create One-time Order (Pay as you go credits) ───────────────────
+      if (payload.action === "create_order") {
+        const { credits_count, user_id } = payload;
+        const count = Number(credits_count);
+        if (!count || count <= 0) throw new Error("Invalid credits count");
+
+        const totalAmountInPaise = count * 100 * 100; // ₹100/credit
+
+        const res = await fetch("https://api.razorpay.com/v1/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify({
+            amount: totalAmountInPaise,
+            currency: "INR",
+            receipt: `credit_${(user_id || "").slice(0, 8)}_${Date.now()}`,
+            notes: {
+              user_id: user_id || "",
+              credits_count: count,
+              type: "pay_as_you_go",
+            },
+          }),
+        });
+
+        const data: any = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error?.description || "Failed to create Razorpay order");
+        }
+
+        return {
+          success: true,
+          order_id: data.id,
+          amount: totalAmountInPaise,
+          currency: "INR",
+          credits_count: count,
+        };
+      }
+
+      // ── Verify One-time Order Payment ────────────────────────────────────
+      if (payload.action === "verify_order_payment") {
+        const {
+          razorpay_order_id,
+          razorpay_payment_id,
+          razorpay_signature,
+          credits_count,
+          user_id,
+        } = payload;
+
+        const count = Number(credits_count);
+        if (!count || count <= 0) throw new Error("Invalid credits count");
+
+        const message = `${razorpay_order_id}|${razorpay_payment_id}`;
+        const encoder = new TextEncoder();
+        const keyData = encoder.encode(keySecret);
+        const msgData = encoder.encode(message);
+
+        const cryptoKey = await crypto.subtle.importKey(
+          "raw",
+          keyData,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"],
+        );
+        const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, msgData);
+        const computedSignature = Array.from(new Uint8Array(signatureBuffer))
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+
+        if (computedSignature !== razorpay_signature) {
+          throw new Error("Signature verification failed: payment signature mismatch");
+        }
+
+        if (user_id) {
+          const db = getBinding("DB");
+          if (db) {
+            const userRow: any = await db
+              .prepare("SELECT plan, credits FROM profiles WHERE id = ?")
+              .bind(user_id)
+              .first();
+
+            const basePlanLimits: Record<string, number> = { basic: 5, pro: 20, agency: 50 };
+            const baseLimit = basePlanLimits[userRow?.plan] ?? 5;
+            const currentAllowance = Math.max(userRow?.credits ?? 0, baseLimit);
+            const newCredits = currentAllowance + count;
+
+            await db
+              .prepare("UPDATE profiles SET credits = ? WHERE id = ?")
+              .bind(newCredits, user_id)
+              .run();
+
+            const nowIso = new Date().toISOString();
+            await db.prepare(`
+              INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at)
+              VALUES (?, ?, 'pay_as_you_go', 'active', ?, ?, ?, ?, ?)
+            `).bind(
+              crypto.randomUUID(),
+              user_id,
+              razorpay_payment_id || null,
+              nowIso,
+              nowIso,
+              count * 100,
+              nowIso,
+            ).run();
+
+            return { success: true, new_credits: newCredits, added_credits: count };
+          }
+        }
+
+        return { success: true };
+      }
+
       throw new Error(`Unknown razorpay action: ${payload.action}`);
     } catch (err: any) {
       console.error("Razorpay Server Function error:", err);

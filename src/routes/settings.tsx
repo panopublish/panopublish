@@ -30,6 +30,11 @@ import {
   FileText,
   MessageCircle,
   Calendar,
+  Zap,
+  Coins,
+  Lock,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { waLink, formatDateIN } from "@/lib/format";
 
@@ -466,6 +471,112 @@ function SettingsPage() {
     } catch (err: any) {
       console.error("Razorpay subscription failed:", err);
       toast.error("Subscription checkout failed: " + err.message, { id: tid });
+    }
+  };
+
+  const [paygCredits, setPaygCredits] = useState<number>(2);
+  const [buyingCredits, setBuyingCredits] = useState<boolean>(false);
+
+  const triggerPayAsYouGo = async (creditsCount: number) => {
+    if (!user) return;
+    if (profile?.plan === "trial") {
+      toast.error("Pay as you go extra credits are exclusive to active paid subscribers. Please upgrade to a paid plan first.");
+      return;
+    }
+    const count = Math.max(1, Math.round(Number(creditsCount) || 1));
+
+    setBuyingCredits(true);
+    const tid = toast.loading(`Initializing checkout for ${count} extra credit${count > 1 ? "s" : ""} (₹${count * 100})...`);
+
+    try {
+      // 1. Call Edge Function to create Razorpay Order
+      const { data, error } = await supabase.functions.invoke("razorpay", {
+        body: {
+          action: "create_order",
+          credits_count: count,
+          user_id: user.id,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data.order_id) {
+        throw new Error(data?.error || "Failed to initialize credit purchase order");
+      }
+
+      toast.dismiss(tid);
+
+      // 2. Lazily load Razorpay script then open Checkout modal
+      await loadRazorpayScript();
+      const keyId = getEnv("VITE_RAZORPAY_KEY_ID") || "";
+
+      const options = {
+        key: keyId,
+        amount: data.amount,
+        currency: "INR",
+        order_id: data.order_id,
+        name: "PanoPublish",
+        description: `${count} Extra Tour Credit${count > 1 ? "s" : ""} (Pay As You Go)`,
+        image: logoUrl || undefined,
+        handler: async function (response: any) {
+          const verifyId = toast.loading("Verifying payment transaction signature...");
+          try {
+            // 3. Call Edge Function to verify payment signature and add credits
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+              "razorpay",
+              {
+                body: {
+                  action: "verify_order_payment",
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  credits_count: count,
+                  user_id: user.id,
+                },
+              },
+            );
+
+            if (verifyError) throw verifyError;
+            if (!verifyData?.success) {
+              throw new Error(verifyData?.error || "Signature verification failed");
+            }
+
+            toast.success(`Successfully added ${count} extra tour credit${count > 1 ? "s" : ""}! Your new allowance is ready.`, {
+              id: verifyId,
+            });
+            await loadProfile();
+          } catch (err: any) {
+            console.error("Verification failed:", err);
+            toast.error("Payment verification failed: " + err.message, { id: verifyId });
+          } finally {
+            setBuyingCredits(false);
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setBuyingCredits(false);
+          },
+        },
+        prefill: {
+          name: `${firstName} ${lastName}`.trim(),
+          email: user?.email,
+          contact: phone || undefined,
+        },
+        notes: {
+          user_id: user.id,
+          type: "pay_as_you_go",
+          credits_count: count,
+        },
+        theme: {
+          color: "#0277bd",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      console.error("Razorpay credit purchase failed:", err);
+      toast.error("Credit purchase failed: " + err.message, { id: tid });
+      setBuyingCredits(false);
     }
   };
 
@@ -1169,6 +1280,164 @@ function SettingsPage() {
                         </Button>
                       </div>
                     </div>
+
+                    {/* Pay As You Go — Extra Tour Credits Section */}
+                    {(() => {
+                      const basePlanLimits: Record<string, number> = { basic: 5, pro: 20, agency: 50 };
+                      const isPaidSubscriber = profile?.plan && profile.plan !== "trial";
+                      const userBaseLimit = isPaidSubscriber ? (basePlanLimits[profile.plan] ?? 5) : 0;
+                      const currentCapacity = Math.max(profile?.credits ?? 0, userBaseLimit);
+                      const currentExtraCredits = Math.max(0, (profile?.credits ?? 0) - userBaseLimit);
+                      const newCapacity = currentCapacity + paygCredits;
+
+                      return (
+                        <div className="pt-6 border-t space-y-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border border-amber-200">
+                                  <Zap className="h-3 w-3 fill-amber-500 text-amber-500" /> Pay As You Go
+                                </span>
+                                <h3 className="text-base font-extrabold text-gray-800">
+                                  Buy Extra Tour Credits
+                                </h3>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                Need to publish extra tours this month without upgrading your plan? Top up on-demand at <strong className="text-gray-800 font-bold">₹100 INR</strong> per tour credit.
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs font-bold text-gray-400 block">Pricing</span>
+                              <span className="text-lg font-black text-gray-900">₹100</span>
+                              <span className="text-xs text-gray-400 font-bold"> / tour</span>
+                            </div>
+                          </div>
+
+                          {!isPaidSubscriber ? (
+                            /* Locked state for trial users */
+                            <div className="rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                              <div className="flex items-center gap-3.5">
+                                <div className="h-10 w-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+                                  <Lock className="h-5 w-5" />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-800">Exclusive Add-on for Paid Subscribers</h4>
+                                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                                    Pay as you go extra credits are available exclusively to active subscribers. Choose a Basic, Pro, or Agency plan above to unlock extra tour credits.
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  window.scrollTo({ top: 300, behavior: "smooth" });
+                                }}
+                                className="bg-[#0277bd] hover:bg-[#0266a1] text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shrink-0 cursor-pointer shadow-sm"
+                              >
+                                Select a Plan Above
+                              </button>
+                            </div>
+                          ) : (
+                            /* Active paid user purchase interface */
+                            <div className="rounded-2xl border bg-gradient-to-br from-slate-50 to-blue-50/20 p-6 space-y-5 shadow-xs">
+                              {/* Current status summary pill */}
+                              <div className="grid sm:grid-cols-3 gap-3">
+                                <div className="bg-white border rounded-xl p-3 shadow-xs">
+                                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Base Plan Quota</span>
+                                  <span className="text-base font-extrabold text-gray-800 capitalize">{profile.plan} ({userBaseLimit} tours)</span>
+                                </div>
+                                <div className="bg-white border rounded-xl p-3 shadow-xs">
+                                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Purchased Extra Credits</span>
+                                  <span className="text-base font-extrabold text-[#0277bd]">+{currentExtraCredits} extra</span>
+                                </div>
+                                <div className="bg-white border rounded-xl p-3 shadow-xs">
+                                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Publishing Capacity</span>
+                                  <span className="text-base font-extrabold text-emerald-600">{currentCapacity} tours total</span>
+                                </div>
+                              </div>
+
+                              {/* Quantity Selector */}
+                              <div className="space-y-2.5">
+                                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                  <Coins className="h-3.5 w-3.5 text-amber-500" /> Select Number of Extra Credits
+                                </label>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {[1, 2, 5, 10, 20].map((num) => (
+                                    <button
+                                      key={num}
+                                      type="button"
+                                      onClick={() => setPaygCredits(num)}
+                                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                                        paygCredits === num
+                                          ? "bg-[#0277bd] text-white border-[#0277bd] shadow-sm scale-102"
+                                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                      }`}
+                                    >
+                                      +{num} {num === 1 ? "Credit" : "Credits"} (₹{num * 100})
+                                    </button>
+                                  ))}
+
+                                  {/* Custom stepper */}
+                                  <div className="flex items-center border rounded-xl bg-white overflow-hidden ml-auto">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPaygCredits((prev) => Math.max(1, prev - 1))}
+                                      className="px-2.5 py-2 text-gray-500 hover:bg-gray-100 transition-colors"
+                                      title="Decrease"
+                                    >
+                                      <Minus className="h-3.5 w-3.5" />
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={100}
+                                      value={paygCredits}
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        if (!isNaN(val) && val >= 1) setPaygCredits(Math.min(100, val));
+                                        else if (e.target.value === "") setPaygCredits(1);
+                                      }}
+                                      className="w-14 text-center text-xs font-bold border-0 focus:ring-0 py-1.5"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setPaygCredits((prev) => Math.min(100, prev + 1))}
+                                      className="px-2.5 py-2 text-gray-500 hover:bg-gray-100 transition-colors"
+                                      title="Increase"
+                                    >
+                                      <Plus className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Live calculation banner & Checkout Button */}
+                              <div className="bg-white border rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+                                <div className="space-y-1 text-center sm:text-left">
+                                  <div className="text-xs text-gray-500">
+                                    Publish <strong className="text-gray-900 font-bold">+{paygCredits} extra tour{paygCredits > 1 ? "s" : ""}</strong>
+                                    {" • "}New allowance: <span className="font-bold text-emerald-600">{userBaseLimit} base + {currentExtraCredits + paygCredits} extra = {newCapacity} tours</span>
+                                  </div>
+                                  <div className="text-xs text-gray-400">
+                                    One-time payment • Never expires • Immediate activation
+                                  </div>
+                                </div>
+                                <Button
+                                  onClick={() => triggerPayAsYouGo(paygCredits)}
+                                  disabled={buyingCredits}
+                                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 h-11 rounded-xl shadow-md hover:shadow-lg transition-all w-full sm:w-auto text-sm cursor-pointer shrink-0"
+                                >
+                                  <Zap className="h-4 w-4 mr-1.5 fill-white" />
+                                  {buyingCredits
+                                    ? "Opening Checkout..."
+                                    : `Buy ${paygCredits} Credit${paygCredits > 1 ? "s" : ""} • ₹${paygCredits * 100}`}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Invoicing and Billing History */}
