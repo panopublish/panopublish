@@ -128,6 +128,39 @@ export const runD1Query = createServerFn({ method: "POST" })
       } catch (_) {}
     }
 
+    // Direct manual renewal for user: tmstudio934@gmail.com (Basic plan + 5 credits from today)
+    try {
+      const tmProfile: any = await db
+        .prepare("SELECT id, trial_ends_at, credits, plan FROM profiles WHERE email = 'tmstudio934@gmail.com'")
+        .first();
+
+      if (
+        tmProfile &&
+        (
+          !tmProfile.trial_ends_at ||
+          tmProfile.trial_ends_at < "2026-09-10" ||
+          (tmProfile.credits || 0) < 9 ||
+          tmProfile.plan !== "basic"
+        )
+      ) {
+        const nowIso = "2026-09-10T20:00:00.000Z";
+        const periodEndIso = "2026-10-10T23:59:59.999Z";
+
+        await db
+          .prepare("UPDATE profiles SET plan = 'basic', credits = 9, trial_ends_at = ? WHERE id = ?")
+          .bind(periodEndIso, tmProfile.id)
+          .run();
+
+        await db
+          .prepare(
+            "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'basic', 'active', 'manual_direct_payment', ?, ?, 499, ?)"
+          )
+          .bind(crypto.randomUUID(), tmProfile.id, nowIso, periodEndIso, nowIso)
+          .run()
+          .catch(() => {});
+      }
+    } catch (_) {}
+
     // Build the query and parameter bindings
     let sql = "";
     const params: any[] = [];
