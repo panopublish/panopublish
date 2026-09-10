@@ -121,12 +121,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://panopublish.com/cloudpano-alternative/</loc>
-    <lastmod>2026-09-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://panopublish.com/matterport-alternative/</loc>
     <lastmod>2026-09-10</lastmod>
     <changefreq>weekly</changefreq>
@@ -1112,6 +1106,12 @@
   </url>
   <url>
     <loc>https://panopublish.com/tourbuilder-alternative-india/</loc>
+    <lastmod>2026-09-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://panopublish.com/cloudpano-alternative/</loc>
     <lastmod>2026-09-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
