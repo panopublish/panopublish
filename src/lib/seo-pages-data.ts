@@ -3,6 +3,8 @@ import { cluster1VirtualTourSoftwarePages } from "./cluster1-virtual-tour-softwa
 import { cluster2GoogleStreetViewPages } from "./cluster2-google-street-view-data";
 import { cluster3_360PhotographyPages } from "./cluster3-360-photography-data";
 import { cluster4_IndustrySolutionsPages } from "./cluster4-industry-solutions-data";
+import { panoeeAlternativeData } from "./panoee-alternative-data";
+import { tourbuilderAlternativeIndiaData } from "./tourbuilder-alternative-data";
 
 export interface SeoPageData {
   slug: string;
@@ -442,158 +444,8 @@ export const seoPages: Record<string, SeoPageData> = {
       }
     ]
   },
-  "panoee-alternative": {
-    "slug": "panoee-alternative",
-    "type": "comparison",
-    "title": "Panoee Alternative for 360° Virtual Tours — PanoPublish",
-    "description": "Discover PanoPublish as the top Panoee alternative. Enjoy direct Google Street View API sync, browser-based nadir logo overlay, and flat INR pricing with UPI.",
-    "primaryKeyword": "panoee alternative",
-    "category": "Alternatives",
-    "heading": "Panoee Alternative for Photographers & Agencies",
-    "subheading": "Avoid USD billing surcharges and enjoy automated Google Maps publishing with Indian support.",
-    "introText": "Looking for a reliable Panoee alternative? Discover how PanoPublish provides automated 360 photo connections, custom nadir logo disk branding, and direct Google Maps Street View publishing starting at ₹499/month.",
-    "image": "/blog_panoee_alternative.webp",
-    "comparisonTable": {
-      "competitorName": "Panoee",
-      "headers": [
-        "Feature",
-        "PanoPublish",
-        "Panoee"
-      ],
-      "rows": [
-        {
-          "feature": "Base Price",
-          "panopublish": "₹499/mo (INR flat)",
-          "competitor": "$18/mo (USD Forex)",
-          "isHighlight": true
-        },
-        {
-          "feature": "Google Street View API",
-          "panopublish": "Direct Automated Sync",
-          "competitor": "Manual Export / Fee",
-          "isHighlight": true
-        },
-        {
-          "feature": "Local Indian Payments",
-          "panopublish": "Yes (UPI, Razorpay)",
-          "competitor": "No (Stripe Forex only)"
-        },
-        {
-          "feature": "Nadir Logo Overlay",
-          "panopublish": "Automated Nadir Disk",
-          "competitor": "Manual Photoshop"
-        },
-        {
-          "feature": "Support Channel",
-          "panopublish": "WhatsApp & Email (IST)",
-          "competitor": "Ticket System (US/EU)"
-        }
-      ]
-    },
-    "sections": [
-      {
-        "title": "Why Indian Photographers Switch from Panoee",
-        "content": "Panoee is a French-developed virtual tour platform used globally by photographers who need a clean drag-and-drop interface. For most creators outside India, it works adequately. However, Indian 360 photographers face three compounding problems when using Panoee for commercial client work.\n\nThe first problem is currency and billing. Panoee charges in US Dollars (starting at approximately $18/month for the Pro tier). When Indian photographers pay via an international credit or debit card, they face a 2–3.5% forex conversion markup plus a potential TCS deduction on foreign remittances. Over a 12-month subscription, this can add ₹800–₹2,000 in hidden currency overhead compared to a flat INR plan. PanoPublish charges a flat ₹499/month billed in Indian Rupees via Razorpay, supporting UPI, NetBanking, and all major Indian debit/credit cards — with automatic GST invoices attached to every billing cycle.\n\nThe second problem is Google Street View publishing. Panoee does not offer direct OAuth2 integration with the Google Street View Publish API. Photographers must export panoramas manually and use a separate Street View app or third-party tool to publish to Google Maps — adding 30–90 minutes of extra workflow per client project. PanoPublish integrates directly with Google's official Publish API: connect your Google account once, and publish unlimited 360 photo sequences to any linked Google Place card in one click.\n\nThe third problem is support timezone. Panoee's support team operates on European business hours (CET/CEST). When an Indian photographer encounters a publishing error before a client deadline, they often wait 12–18 hours for a response. PanoPublish's support team responds via WhatsApp and email during IST hours — typically within 2 hours on business days.",
-        "listItems": [
-          "USD Billing: Panoee charges in USD, adding 2–3.5% forex markup for Indian card payments.",
-          "Manual Google Maps Export: Panoee requires a separate Street View app — no direct API sync.",
-          "EU Timezone Support: Panoee responds 12–18 hours later for Indian client deadline issues.",
-          "No UPI Payments: Panoee does not accept UPI, RuPay, or Indian NetBanking."
-        ]
-      },
-      {
-        "title": "PanoPublish Feature Advantages Over Panoee",
-        "content": "Switching from Panoee to PanoPublish gives Indian virtual tour agencies features specifically designed for the Indian market and Google Maps publishing workflow.\n\nAutomated Nadir Logo Overlay: Panoee's nadir branding requires photographers to pre-edit each panorama in Photoshop before uploading. PanoPublish handles this entirely in the browser: upload your 360 JPEG, select your logo file (512x512px transparent PNG), and the platform automatically composites the disk over the nadir zone. This saves 10–15 minutes of Photoshop time per panorama on high-volume client projects.\n\nMulti-Floor Level Organizer: For hotel, school, and real estate projects with multiple floors, PanoPublish's Level and Island organizer groups panoramas by floor level. Each level loads independently, keeping mobile GPU memory usage below 80MB even for large 50+ scene walkthroughs. Panoee does not offer a native floor-level organizer.\n\nClient Reviewer Workspaces: PanoPublish generates private review links that let clients inspect a tour, leave comments on specific nodes, and approve nadir disk graphics before publishing — all without needing a PanoPublish account.\n\nDirect Google Maps Integration: PanoPublish routes 360 photo sequences directly to Google Maps via the official Street View Publish API. Once published, tours appear on the business's Google Business Profile card within 24–48 hours. Unlike Panoee's manual export workflow, PanoPublish handles GPS coordinate alignment, compass yaw validation, and path stitching automatically.",
-        "listItems": [
-          "Browser-Based Nadir Overlay: Automated logo disk overlays — no Photoshop pre-editing required.",
-          "Multi-Floor Level Organizer: Group 50+ panoramas by floor for low mobile GPU memory usage.",
-          "Client Review Links: Private approval links with node-level comments for client sign-off.",
-          "Direct Google Maps API: One-click publish to Google Business Profile with auto GPS alignment."
-        ]
-      }
-    ],
-    "faqs": [
-      {
-        "question": "Why choose PanoPublish over Panoee for Indian businesses?",
-        "answer": "PanoPublish offers flat INR pricing starting at ₹499/mo via Razorpay (supporting UPI and Indian cards), direct WhatsApp support in IST, and native Google Street View publishing without forex surcharges."
-      },
-      {
-        "question": "Can I migrate my existing 360 panoramas from Panoee?",
-        "answer": "Yes. Simply download your equirectangular 360 JPEG files and upload them to PanoPublish. Our automated EXIF parser will read GPS coordinates and orientation automatically."
-      }
-    ]
-  },
-  "tourbuilder-alternative-india": {
-    "slug": "tourbuilder-alternative-india",
-    "type": "comparison",
-    "title": "TourBuilder Alternative for Indian Photographers — PanoPublish",
-    "description": "Compare TourBuilder vs PanoPublish. Direct Google Street View API sync, flat ₹499/mo INR billing via UPI, and fast WhatsApp support during IST hours.",
-    "primaryKeyword": "tourbuilder alternative",
-    "category": "Alternatives",
-    "heading": "TourBuilder Alternative India 2026",
-    "subheading": "Why Indian photographers switch from TourBuilder: flat \u20b9499/mo INR billing, direct Google Street View API, and WhatsApp support in IST business hours.",
-    "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "image": "/robot_beach_upload.webp",
-    "comparisonTable": {
-      "competitorName": "tourbuilder",
-      "headers": [
-        "Feature",
-        "PanoPublish",
-        "tourbuilder"
-      ],
-      "rows": [
-        {
-          "feature": "Base Price",
-          "panopublish": "₹499/mo (INR flat)",
-          "competitor": "$20/mo (USD only)",
-          "isHighlight": true
-        },
-        {
-          "feature": "Google Maps Exports",
-          "panopublish": "Unlimited (Included)",
-          "competitor": "$14.99 add-on fee",
-          "isHighlight": true
-        },
-        {
-          "feature": "Local Billing & UPI",
-          "panopublish": "Yes (Razorpay)",
-          "competitor": "No (Stripe Forex only)"
-        }
-      ]
-    },
-    "sections": [
-      {
-        "title": "Why TourBuilder Falls Short for Indian 360 Photographers",
-        "content": "TourBuilder is a New Zealand-developed virtual tour platform primarily serving real estate photographers in Oceania and North America. While its feature set covers the basics of 360 tour creation, Indian photographers encounter several friction points that affect day-to-day commercial workflows.\n\nBilling in USD is the most immediate issue. TourBuilder charges subscription fees in US Dollars (approximately $20/month on the Starter plan). Indian photographers paying via international credit cards face a 2–3% forex markup on every billing cycle, plus the complexity of tracking foreign currency expenses for GST filing. Over 12 months, this adds roughly ₹1,400–₹2,400 in unnecessary overhead per subscription. PanoPublish charges ₹499/month flat, billed via Razorpay with UPI, NetBanking, and Indian card support. GST invoices are issued automatically each billing cycle for easy business accounting.\n\nGoogle Street View publishing is TourBuilder's second limitation. The platform does not provide direct OAuth2 integration with the Google Street View Publish API. Photographers must export finished panoramas from TourBuilder and then manually upload them through a separate Google Street View App or API tool — adding significant manual effort per client project. For busy agencies completing 4–6 projects per week, this extra step becomes a meaningful time drain. PanoPublish handles Street View publishing in one click: connect your Google Business account once, select the target Place, and publish all photos in the sequence automatically.\n\nWhatsApp support during Indian business hours is the third gap. TourBuilder's support operates from New Zealand time (NZST), which is 6.5–7.5 hours ahead of IST. When Indian photographers hit a publishing error or billing issue during their working day, TourBuilder support is often unavailable until late evening IST. PanoPublish's team operates on IST and responds to WhatsApp messages and emails within 2 hours during business hours.",
-        "listItems": [
-          "USD Billing: TourBuilder charges in USD, adding 2–3% forex markup for Indian card payments.",
-          "No Direct Street View API: TourBuilder requires separate manual export to Google Maps.",
-          "NZ Timezone Support: TourBuilder responds 6.5–7.5 hours delayed relative to IST.",
-          "No UPI Support: TourBuilder does not support UPI, RuPay, or Indian NetBanking payments."
-        ]
-      },
-      {
-        "title": "Migrating from TourBuilder to PanoPublish: What Changes",
-        "content": "Switching from TourBuilder to PanoPublish is straightforward because both platforms work with standard 2:1 equirectangular JPEG panoramas. Your existing 360 photo assets remain fully compatible.\n\nMigration Steps: Download all your equirectangular JPEG files from TourBuilder (the platform allows bulk export). Upload them to PanoPublish using drag-and-drop. The EXIF parser automatically reads GPS coordinates, PoseHeadingDegrees (compass heading), and altitude tags embedded by your 360 camera. For panoramas without GPS (shot indoors with manual positioning), use PanoPublish's integrated map editor to pin each photo to its exact physical location.\n\nWhat You Gain: Once migrated, you unlock PanoPublish's browser-based nadir logo overlay tool (no Photoshop required), the multi-floor Level and Island organizer for hotel and real estate projects, client reviewer workspaces with private approval links, and one-click Google Street View publishing with zero per-upload fees — all accessible from any web browser without installing desktop software.\n\nAgency Pricing: PanoPublish's Agency plan (₹1,499/month) adds CNAME white-label hosting, allowing you to deliver client tours via your custom subdomain (e.g., tours.youragency.in). The plan also includes multi-client workspace management, letting you organize separate client accounts with individual billing histories and asset libraries. Indian agencies managing 5+ active clients typically recover the agency plan cost within a single client project.",
-        "listItems": [
-          "Compatible File Format: Your existing equirectangular JPEG panoramas migrate without conversion.",
-          "Automatic EXIF Parsing: GPS and compass data read automatically from all major 360 cameras.",
-          "CNAME White-Label Hosting: Agency plan delivers tours via your custom branded subdomain.",
-          "Multi-Client Workspaces: Organize separate client accounts, assets, and billing histories."
-        ]
-      }
-    ],
-    "faqs": [
-      {
-        "question": "Is the tourbuilder alternative setup automated?",
-        "answer": "Yes, PanoPublish uses standard API endpoints to automate path mapping and node configurations based on EXIF GPS metadata."
-      },
-      {
-        "question": "Are there any per-publish fees?",
-        "answer": "No. Unlike Matterport which charges $14.99 per Street View upload, PanoPublish provides unlimited Google Maps uploads under our flat pricing."
-      }
-    ]
-  },
+  "panoee-alternative": panoeeAlternativeData,
+  "tourbuilder-alternative-india": tourbuilderAlternativeIndiaData,
   "gothru-alternative": {
     "slug": "gothru-alternative",
     "type": "comparison",
