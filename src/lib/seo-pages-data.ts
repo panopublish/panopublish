@@ -25,6 +25,7 @@ export interface SeoPageData {
   readTime?: string;
   image?: string;
   imageMobile?: string;
+  imageAlt?: string;
   comparisonTable?: {
     competitorName: string;
     headers: string[];
@@ -385,7 +386,8 @@ PanoPublish is built natively for transparent domestic billing:
     "introText": "When travelers in India search for hotels, resorts, or destination wedding venues on Google Search and Google Maps, visual transparency often tips the balance between booking and bouncing. Static photographs can conceal tight bathroom layouts, obstructed window views, or awkward floor plans. Publishing a verified Google Street View walkthrough connects prospective guests directly to your physical property—allowing them to step inside your lobby, walk through deluxe rooms, inspect banquet capacities, and explore outdoor amenities before reserving.",
     "datePublished": "2026-07-26",
     "dateModified": "2026-09-10",
-    "image": "/robot_beach_upload.webp",
+    "image": "/google-street-view-hotels-india-360-photography.webp",
+    "imageAlt": "Professional 360 camera on a tripod capturing an elegant Indian hotel lobby for Google Street View",
     "comparisonTable": null,
     "sections": [
       {
@@ -3641,7 +3643,8 @@ All plans are billed in Indian Rupees via [Razorpay](/pricing/) with UPI AutoPay
     "introText": "If you are purchasing a 360 camera specifically for Google Street View and commercial virtual tour photography, headline megapixel counts tell only part of the story. A camera boasting 72 megapixels on tiny 1/2-inch smartphone sensors will often produce muddy, noise-ridden shadow detail inside dim restaurants, while a 23-megapixel camera with dual 1-inch sensors captures crisp architectural contrast and rich dynamic range. In this practical 2026 buyer's guide, we evaluate the five best 360 camera options for Google Street View photographers and agency creators based on optical fidelity, workflow speed, and commercial return.",
     "datePublished": "2026-07-26",
     "dateModified": "2026-09-10",
-    "image": "/blog-camera.webp",
+    "image": "/360-cameras-google-street-view-photographers-2026.webp",
+    "imageAlt": "Professional 360 cameras and accessories arranged on a table for Google Street View photography",
     "comparisonTable": null,
     "sections": [
       {

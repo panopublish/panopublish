@@ -64,7 +64,7 @@ function BlogPost() {
         "url": `https://panopublish.com${page.image}`,
         "width": "800",
         "height": "450",
-        "caption": page.heading,
+        "caption": page.imageAlt || page.heading,
       });
     }
 
@@ -184,7 +184,7 @@ function BlogPost() {
             <div className="rounded-3xl overflow-hidden border shadow-sm aspect-video max-h-[380px] w-full relative">
               <img
                 src={page.image}
-                alt={`${page.heading} — ${page.primaryKeyword}`}
+                alt={page.imageAlt || `${page.heading} — ${page.primaryKeyword}`}
                 width={800}
                 height={450}
                 loading="eager"

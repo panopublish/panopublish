@@ -402,7 +402,8 @@ export const cluster1VirtualTourSoftwarePages: Record<string, SeoPageData> = {
     "date": "July 26, 2026",
     "dateModified": "2026-09-10",
     "readTime": "16 min read",
-    "image": "/blog-vs.webp",
+    "image": "/virtual-tour-software-comparison-2026.webp",
+    "imageAlt": "Creative studio workstation comparing 360-degree virtual tour software workflows across dual monitors",
     "sections": [
       {
         "title": "The Short Answer: Which Virtual Tour Software Fits Your Workflow?",

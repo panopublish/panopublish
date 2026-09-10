@@ -129,7 +129,7 @@ function SeoPage() {
         "url": `https://panopublish.com${page.image}`,
         "width": "800",
         "height": "450",
-        "caption": page.heading,
+        "caption": page.imageAlt || page.heading,
       });
     }
 
@@ -224,7 +224,7 @@ function SeoPage() {
                   )}
                   <img
                     src={page.image}
-                    alt={`${page.heading} — ${page.primaryKeyword}`}
+                    alt={page.imageAlt || `${page.heading} — ${page.primaryKeyword}`}
                     width={1280}
                     height={720}
                     loading="eager"

@@ -308,7 +308,8 @@ export const cluster3_360PhotographyPages: Record<string, SeoPageData> = {
     "date": "July 26, 2026",
     "dateModified": "2026-09-10",
     "readTime": "14 min read",
-    "image": "/blog-ptgui-stitching.webp",
+    "image": "/ptgui-360-panorama-stitching-tutorial.webp",
+    "imageAlt": "Professional photography workstation with a panoramic camera setup and 360-degree panorama stitching workflow on monitor",
     "sections": [
       {
         "title": "When Does PTGui Pro Make Sense?",
@@ -724,7 +725,8 @@ With PanoPublish’s flat monthly subscriptions (from ₹499/mo Basic to ₹2,99
     "date": "July 26, 2026",
     "dateModified": "2026-09-10",
     "readTime": "12 min read",
-    "image": "/blog-ptgui-stitching.webp",
+    "image": "/nodal-point-calibration-panoramic-photography.webp",
+    "imageAlt": "Panoramic camera mounted on a nodal rail during no-parallax entrance pupil calibration setup",
     "sections": [
       {
         "title": "Clarifying Terminology: Nodal Point vs. Entrance Pupil",
