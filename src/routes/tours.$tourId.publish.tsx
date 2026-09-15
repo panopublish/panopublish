@@ -250,6 +250,8 @@ function PublishPage() {
     plan: string;
     billing_cycle_tours_used: number;
     credits?: number;
+    trial_ends_at?: string | null;
+    created_at?: string | null;
   } | null>(null);
 
   // Push to Custom Tour state
@@ -500,7 +502,7 @@ function PublishPage() {
     try {
       const { data: p } = await supabase
         .from("profiles")
-        .select("plan, billing_cycle_tours_used, credits")
+        .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
         .eq("id", user.id)
         .maybeSingle();
       if (p) {
@@ -524,13 +526,29 @@ function PublishPage() {
     const isAdmin =
       user?.email === "vista360gtp@gmail.com" ||
       user?.email === "er.prashantyadav37@gmail.com";
-    const limit = isAdmin ? 9999 : (planLimit[profile?.plan ?? "trial"] ?? 1);
+    const isTrialUser = (profile?.plan ?? "trial") === "trial";
+    const isTrialExpired =
+      isTrialUser &&
+      ((profile?.trial_ends_at && new Date(profile.trial_ends_at).getTime() < Date.now()) ||
+        (profile?.created_at && Date.now() - new Date(profile.created_at).getTime() > 7 * 86400000));
+    const isPaidPlanExpired =
+      !isTrialUser &&
+      !!profile?.trial_ends_at &&
+      new Date(profile.trial_ends_at).getTime() < Date.now();
+    const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
+    const baseLimit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimit[profile?.plan ?? "trial"] ?? 1);
+    const totalAllowance = isAdmin ? 9999 : isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, baseLimit);
     const used = profile?.billing_cycle_tours_used ?? 0;
     const isAlreadyPublished = tour?.has_been_published ?? false;
 
-    if (!isAlreadyPublished && used >= limit) {
+    if (!isAlreadyPublished && !isAdmin && used >= totalAllowance) {
       toast.error(
-        `Publishing limit reached! You have used ${used}/${limit === 9999 ? "∞" : limit} tours on your ${profile?.plan || "trial"} plan. Please upgrade your subscription in Settings to publish more tours.`,
+        isPlanExpired
+          ? isTrialUser
+            ? "Your 7-day free trial has expired. Please upgrade to a paid plan in Settings to create and publish tours."
+            : "Your 30-day subscription billing cycle has expired. Please renew your plan in Settings to create and publish tours."
+          : `Publishing limit reached! You have used ${used}/${totalAllowance === 9999 ? "∞" : totalAllowance} tours on your ${profile?.plan || "trial"} plan. Please upgrade your subscription or buy extra credits in Settings to publish more tours.`,
       );
       return;
     }
