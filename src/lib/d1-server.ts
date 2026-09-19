@@ -827,4 +827,216 @@ export const adminCleanOrphanedStorage = createServerFn({ method: "POST" })
     }
   });
 
+export const adminSendMarketingEmail = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const {
+        token,
+        recipients, // Array<{ email: string; name?: string }>
+        subject,
+        headline,
+        bodyText,
+        ctaText,
+        ctaUrl,
+        fromName,
+        fromEmail,
+      } = ctx.data;
+
+      // 1. Verify caller is admin
+      const caller = await getUserFromToken(token);
+      if (!checkIsAdmin(caller)) {
+        throw new Error("Access denied. Admin access only.");
+      }
+
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        throw new Error("No recipients specified");
+      }
+
+      if (!subject || !subject.trim()) {
+        throw new Error("Subject line is required");
+      }
+
+      const resendKey = getEnv("RESEND_API_KEY");
+      if (!resendKey) {
+        throw new Error("RESEND_API_KEY is not configured on the server");
+      }
+
+      const senderDisplayName = (fromName || "PanoPublish").trim();
+      const senderAddress = (fromEmail || "noreply@panopublish.com").trim();
+      const fromHeader = `${senderDisplayName} <${senderAddress}>`;
+
+      const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+      let totalSent = 0;
+      let totalFailed = 0;
+      const failedEmails: { email: string; reason: string }[] = [];
+
+      for (let i = 0; i < recipients.length; i++) {
+        const item = recipients[i];
+        const email = (item?.email || "").trim().toLowerCase();
+        const rawName = (item?.name || "").trim();
+        const firstName = rawName ? rawName.split(" ")[0] : "";
+        const displayName = firstName || "there";
+
+        if (!email || !email.includes("@")) {
+          totalFailed++;
+          failedEmails.push({ email: email || "(empty)", reason: "Invalid email" });
+          continue;
+        }
+
+        // Interpolate variables
+        const personalSubject = subject
+          .replace(/\{\{name\}\}/gi, displayName)
+          .replace(/\{\{email\}\}/gi, email);
+
+        const personalHeadline = (headline || "")
+          .replace(/\{\{name\}\}/gi, displayName)
+          .replace(/\{\{email\}\}/gi, email);
+
+        // Convert body text paragraphs to HTML if plain text
+        let formattedBody = (bodyText || "")
+          .replace(/\{\{name\}\}/gi, displayName)
+          .replace(/\{\{email\}\}/gi, email);
+
+        if (!/<[a-z][\s\S]*>/i.test(formattedBody)) {
+          formattedBody = formattedBody
+            .split(/\n\s*\n/)
+            .map((para: string) => `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #334155;">${para.replace(/\n/g, "<br/>")}</p>`)
+            .join("");
+        }
+
+        const ctaButtonHtml = ctaText && ctaUrl
+          ? `
+            <div style="margin: 28px 0; text-align: center;">
+              <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background-color: #0277bd; color: #ffffff; font-weight: 700; font-size: 15px; text-decoration: none; padding: 14px 28px; border-radius: 12px; box-shadow: 0 4px 12px rgba(2, 119, 189, 0.25);">
+                ${ctaText}
+              </a>
+            </div>
+          `
+          : "";
+
+        const emailHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${personalSubject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);" cellspacing="0" cellpadding="0" border="0">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="padding: 28px 36px 20px 36px; border-bottom: 1px solid #f1f5f9; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td>
+                    <div style="display: inline-block; font-size: 20px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">
+                      Pano<span style="color: #38bdf8;">Publish</span>
+                    </div>
+                    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;">
+                      Virtual Tours for Google Street View
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 36px 36px 28px 36px;">
+              ${personalHeadline ? `<h1 style="margin: 0 0 20px 0; font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3;">${personalHeadline}</h1>` : ""}
+              
+              <div style="font-size: 15px; line-height: 1.6; color: #334155;">
+                ${formattedBody}
+              </div>
+
+              ${ctaButtonHtml}
+
+              <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #64748b;">
+                Best regards,<br>
+                <strong style="color: #0f172a;">The PanoPublish Team</strong><br>
+                <a href="https://panopublish.com" style="color: #0277bd; text-decoration: none; font-weight: 600;">panopublish.com</a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer with Unsubscribe notice -->
+          <tr>
+            <td style="padding: 24px 36px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; line-height: 1.6; text-align: center;">
+              <p style="margin: 0 0 8px 0;">
+                You received this update because you are a registered user of PanoPublish.
+              </p>
+              <p style="margin: 0;">
+                Need help? Contact us at <a href="mailto:support@panopublish.com" style="color: #64748b; text-decoration: underline;">support@panopublish.com</a> &bull; 
+                To unsubscribe from updates, reply to this email with "Unsubscribe".
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+        `.trim();
+
+        // Throttle 500ms between calls to respect Resend's 2 req/sec rate limit
+        if (i > 0) {
+          await sleep(500);
+        }
+
+        try {
+          const res = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${resendKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: fromHeader,
+              to: [email],
+              subject: personalSubject,
+              html: emailHtml,
+            }),
+          });
+
+          if (res.ok || res.status === 200 || res.status === 201) {
+            totalSent++;
+          } else {
+            const errText = await res.text();
+            console.error(`[BROADCAST EMAIL] Failed for ${email}: ${res.status} ${errText}`);
+            totalFailed++;
+            failedEmails.push({ email, reason: `${res.status}: ${errText.slice(0, 100)}` });
+          }
+        } catch (err: any) {
+          console.error(`[BROADCAST EMAIL] Exception for ${email}:`, err);
+          totalFailed++;
+          failedEmails.push({ email, reason: err.message || "Network error" });
+        }
+      }
+
+      return {
+        data: {
+          success: true,
+          totalSent,
+          totalFailed,
+          failedEmails,
+        },
+        error: null,
+      };
+    } catch (err: any) {
+      console.error("adminSendMarketingEmail error:", err);
+      return { error: { message: err.message || "Failed to send marketing emails" } };
+    }
+  });
+
+
 
