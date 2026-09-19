@@ -5,7 +5,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, ShieldAlert, ArrowLeft } from "lucide-react";
+import { Search, ShieldAlert, ArrowLeft, Menu } from "lucide-react";
 import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 
@@ -23,6 +23,7 @@ export function AppShell({
   const { loading, user, impersonatorSession, stopImpersonation } = useAuth();
   const navigate = useNavigate();
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -95,7 +96,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen flex bg-background">
-      <AppSidebar />
+      <AppSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
       <main className="flex-1 min-w-0 flex flex-col">
         {impersonatorSession && (
           <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-slate-950 px-4 py-2.5 shadow-md flex items-center justify-between gap-3 sticky top-0 z-50 border-b border-amber-600/30">
@@ -123,8 +124,19 @@ export function AppShell({
           </div>
         )}
         <header className="bg-background border-b shrink-0">
-          <div className="flex items-center justify-between gap-3 px-3 md:px-4 py-2">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2.5 px-3 md:px-4 py-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {/* Mobile Sidebar Hamburger Button (Mobile view only) */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden h-8 w-8 text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-lg shrink-0 cursor-pointer"
+                onClick={() => setMobileSidebarOpen(true)}
+                aria-label="Open sidebar navigation"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+
               <Link to="/dashboard/" className="md:hidden shrink-0">
                 <Logo logoClassName="h-7 w-7 text-primary" className="text-base font-bold" />
               </Link>
