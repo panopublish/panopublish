@@ -10,6 +10,7 @@ function getPublicRoutes() {
   const panoeeFilePath = path.join(__dirname, 'src/lib/panoee-alternative-data.ts');
   const tourbuilderFilePath = path.join(__dirname, 'src/lib/tourbuilder-alternative-data.ts');
   const cloudpanoFilePath = path.join(__dirname, 'src/lib/cloudpano-alternative-data.ts');
+  const hyderabadFilePath = path.join(__dirname, 'src/lib/hyderabad-tour-data.ts');
   const authorsFilePath = path.join(__dirname, 'src/lib/authors-data.ts');
   const caseStudiesFilePath = path.join(__dirname, 'src/lib/case-studies-data.ts');
 
@@ -20,7 +21,8 @@ function getPublicRoutes() {
     (fs.existsSync(cluster4FilePath) ? fs.readFileSync(cluster4FilePath, 'utf8') : '') + '\n' +
     (fs.existsSync(panoeeFilePath) ? fs.readFileSync(panoeeFilePath, 'utf8') : '') + '\n' +
     (fs.existsSync(tourbuilderFilePath) ? fs.readFileSync(tourbuilderFilePath, 'utf8') : '') + '\n' +
-    (fs.existsSync(cloudpanoFilePath) ? fs.readFileSync(cloudpanoFilePath, 'utf8') : '');
+    (fs.existsSync(cloudpanoFilePath) ? fs.readFileSync(cloudpanoFilePath, 'utf8') : '') + '\n' +
+    (fs.existsSync(hyderabadFilePath) ? fs.readFileSync(hyderabadFilePath, 'utf8') : '');
 
   // Match slug and type from seo-pages-data.ts (supports TS objects and JSON formatting)
   const regex = /"?slug"?:?\s*["']([^"']+)["'][\s\S]*?"?type"?:?\s*["']([^"']+)["']/g;

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { waLink } from "@/lib/format";
+import { HyderabadTourLanding } from "@/components/HyderabadTourLanding";
 
 export const Route = createFileRoute("/$slug")({
   loader: ({ params }) => {
@@ -46,6 +47,11 @@ export const Route = createFileRoute("/$slug")({
 
 function SeoPage() {
   const page = Route.useLoaderData();
+
+  if (page.slug === "google-maps-360-tour-hyderabad") {
+    return <HyderabadTourLanding page={page} />;
+  }
+
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Generate breadcrumbs for SEO

@@ -6,6 +6,7 @@ import { cluster4_IndustrySolutionsPages } from "./cluster4-industry-solutions-d
 import { panoeeAlternativeData } from "./panoee-alternative-data";
 import { tourbuilderAlternativeIndiaData } from "./tourbuilder-alternative-data";
 import { cloudpanoAlternativeData } from "./cloudpano-alternative-data";
+import { hyderabadTourData } from "./hyderabad-tour-data";
 
 export interface SeoPageData {
   slug: string;
@@ -1459,50 +1460,7 @@ All plans are billed in Indian Rupees via [Razorpay](/pricing/) with UPI AutoPay
       }
     ]
   },
-  "google-maps-360-tour-hyderabad": {
-    "slug": "google-maps-360-tour-hyderabad",
-    "type": "city",
-    "title": "360 Virtual Tour & Street View Services in Hyderabad",
-    "description": "Professional 360 degree virtual tour hosting and Google Street View publishing in Hyderabad. Localized INR billing, fast nadir blurring.",
-    "primaryKeyword": "virtual tour software hyderabad",
-    "category": "Cities",
-    "heading": "Virtual Tour Software in Hyderabad",
-    "subheading": "Optimize local business listings and showcase properties in Hyderabad.",
-    "introText": "Are you looking to optimize your virtual tour publishing? Learn how PanoPublish helps you configure high-resolution 360 photo paths, add branded nadir logo disks, and publish directly to Google Maps using our flat INR pricing.",
-    "cityName": "Hyderabad",
-    "image": "/robot_beach_upload.webp",
-    "comparisonTable": null,
-    "sections": [
-      {
-        "title": "Key Features and Technical Specifications",
-        "content": "To build a seamless virtual walkthrough, you must understand the visual geometry of equirectangular coordinates. When you mount your 360 camera (such as a Ricoh Theta Z1 or Insta360 X4) on a light stand, you must ensure the lens node aligns exactly with average human eye level (roughly 1.5 meters from ground level). Keeping this height consistent across all captured rooms prevents visual jar when viewers navigate node connections. When positioning panoramas, walk in a direct line of sight between adjacent nodes, keeping spacing spans strictly between 3 to 5 meters (10 to 15 feet). This spacing threshold is critical because Google Maps' automated blue line stitching engine relies on close proximity coordinates to connect neighboring equirectangular spheres. If you space panoramas too far apart (e.g. 10 meters), the path links will break, and the Google Place card listing will display separate disconnected photos instead of a contiguous tour. After capturing the panoramic frames, the next step involves EXIF metadata auditing. PanoPublish features a browser-based parser that automatically reads PoseHeadingDegrees (compass direction relative to true North), latitude, longitude, and altitude headers directly from uploaded equirectangular JPEGs. If your camera lacks built-in GPS, you must locate the exact physical spot on PanoPublish's integrated map editor and define the compass heading yaw manually. Setting correct yaw offsets is essential to ensure that when a visitor clicks an arrow pointing forward, the viewer transitions logically to the next spatial coordinate instead of turning the camera backward. Prior to export, you must configure EXIF headers like GPano:UsePanoramaViewer=True, which instructs client-side WebGL players to render the flat 2:1 JPEG in a spherical projection space. Managing large commercial projects—like office complexes, schools, or multi-room hotels—requires segregating files by layout level. PanoPublish features a custom Level and Island organizer, which groups panoramas by floor level. This structures the page code into separate logical zones, reducing the initial bundle asset sizes and preventing performance lag on visitor mobile browsers. Standard mobile browsers throttled by low graphics card specifications can crash if forced to load high-resolution 16K equirectangular textures simultaneously. PanoPublish resolves this by loading image tiles dynamically on demand, keeping peak GPU memory consumption below 80MB. This optimization is particularly beneficial when displaying complex real estate listing walkthroughs containing over 50 scenes.",
-        "listItems": [
-          "Verify node distances are exactly 3 to 5 meters for Google Maps API path alignment.",
-          "Process equirectangular JPEGs under 50MB to maintain responsive loading speeds.",
-          "Place custom circular logo disk templates (512x512px transparent PNG) over tripods."
-        ]
-      },
-      {
-        "title": "Workflow Integration and Business Case",
-        "content": "Local business listings with virtual tours receive up to 35% more click-throughs and profile views on Google Maps [VERIFY]. When local customers search for gyms, restaurants, hotels, or schools, Google's local algorithm prioritizes complete profiles that showcase real interior layouts. Publishing a connected 360 walkthrough directly to your Google Business Profile page acts as a trust signal, increasing user dwell time and profile click rates. This engagement signals quality to Google's ranking systems, helping your business rank higher in local search maps. Commercial real estate developers use virtual tours to secure leases and close transactions. Immersive walkthroughs let out-of-city and NRI buyers inspect property layouts, check building amenities, and verify construction details remotely. To manage client reviews, PanoPublish provides shared reviewer workspaces. You can generate custom private links for developers to inspect visual nodes, request alignment changes, or approve nadir logo disk graphics before publishing, streamlining client approval workflows. When evaluating virtual tour hosting alternatives, creators analyze storage capacities and pricing plans. Many platforms charge in US Dollars (USD), leading to high forex card fees for Indian creators. PanoPublish offers flat INR pricing starting at ₹499/month with UPI payment support. Additionally, unlike Matterport which charges an add-on export fee of $14.99 per Google Street View upload, PanoPublish provides unlimited Maps uploads under our flat monthly plans, saving creators thousands of rupees in operational costs.",
-        "listItems": [
-          "Configure custom subdomain CNAME records mapping to PanoPublish secure hosting.",
-          "Use multi-client workspaces to manage separate branches or broker listings.",
-          "Generate unbranded virtual tour links compliant with regional MLS portals."
-        ]
-      }
-    ],
-    "faqs": [
-      {
-        "question": "Is the virtual tour software hyderabad setup automated?",
-        "answer": "Yes, PanoPublish uses standard API endpoints to automate path mapping and node configurations based on EXIF GPS metadata."
-      },
-      {
-        "question": "Are there any per-publish fees?",
-        "answer": "No. Unlike Matterport which charges $14.99 per Street View upload, PanoPublish provides unlimited Google Maps uploads under our flat pricing."
-      }
-    ]
-  },
+  "google-maps-360-tour-hyderabad": hyderabadTourData,
   "virtual-tour-publishing-software-chennai": {
     "slug": "virtual-tour-publishing-software-chennai",
     "type": "city",
