@@ -97,7 +97,7 @@ function BlogPost() {
         : "https://panopublish.com/og-image.webp",
       "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": `https://panopublish.com/blog/${page.slug}`,
+        "@id": `https://panopublish.com/blog/${page.slug}/`,
       },
       "inLanguage": "en-IN",
       "keywords": page.primaryKeyword,

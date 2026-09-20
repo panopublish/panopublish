@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
 import { seoPages } from "@/lib/seo-pages-data";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
@@ -32,6 +32,13 @@ export const Route = createFileRoute("/$slug")({
     const page = seoPages[slug];
     if (!page) {
       throw notFound();
+    }
+    if (page.type === "blog") {
+      throw redirect({
+        to: "/blog/$slug/",
+        params: { slug: page.slug },
+        statusCode: 301,
+      });
     }
     return page;
   },

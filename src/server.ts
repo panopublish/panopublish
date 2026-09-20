@@ -125,6 +125,25 @@ export default {
         }
       }
 
+      // Enforce permanent 301 trailing slash redirect for all web pages (GET requests)
+      // Excludes: root '/', static files with extensions (.css, .js, .png, etc.), /api/, and /auth/
+      if (
+        request.method === "GET" &&
+        !url.pathname.endsWith("/") &&
+        !url.pathname.startsWith("/api/") &&
+        !url.pathname.startsWith("/auth/") &&
+        !/\.[a-zA-Z0-9]+$/.test(url.pathname)
+      ) {
+        url.pathname = `${url.pathname}/`;
+        return new Response(null, {
+          status: 301,
+          headers: {
+            Location: url.toString(),
+            "Cache-Control": "public, max-age=86400",
+          },
+        });
+      }
+
       // Intercept file downloads from R2
       if (url.pathname.startsWith("/api/files/")) {
         if (request.method === "OPTIONS") {
