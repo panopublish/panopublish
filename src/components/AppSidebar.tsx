@@ -251,7 +251,7 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
               {/* Admin Console link if user is admin */}
               {(user?.email === "vista360gtp@gmail.com" || user?.email === "er.prashantyadav37@gmail.com") && (
                 <Link
-                  to="/admin"
+                  to="/admin/"
                   onClick={onMobileClose}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors mt-3 border border-blue-200/60 bg-blue-50/50 text-[#0277bd]",

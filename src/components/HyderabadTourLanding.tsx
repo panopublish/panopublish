@@ -1287,10 +1287,10 @@ export function HyderabadTourLanding({ page }: { page: SeoPageData }) {
               Related PanoPublish Resources & Guides
             </h3>
             <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-xs md:text-sm">
-              <Link to="/google-street-view-publishing/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <Link to="/$slug/" params={{ slug: "google-street-view-publishing" }} className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 Google Street View Publishing
               </Link>
-              <Link to="/360-virtual-tour-publishing-platform/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <Link to="/$slug/" params={{ slug: "360-virtual-tour-publishing-platform" }} className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 360 Virtual Tour Platform
               </Link>
               <Link to="/pricing/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
@@ -1299,16 +1299,16 @@ export function HyderabadTourLanding({ page }: { page: SeoPageData }) {
               <Link to="/case-studies/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 Real Business Case Studies
               </Link>
-              <Link to="/matterport-alternative/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <Link to="/$slug/" params={{ slug: "matterport-alternative" }} className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 Matterport Alternative Guide
               </Link>
-              <Link to="/cloudpano-alternative/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <Link to="/$slug/" params={{ slug: "cloudpano-alternative" }} className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 CloudPano Alternative Guide
               </Link>
-              <Link to="/tourbuilder-alternative-india/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <Link to="/$slug/" params={{ slug: "tourbuilder-alternative-india" }} className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 TourBuilder India Alternative
               </Link>
-              <Link to="/gothru-alternative/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <Link to="/$slug/" params={{ slug: "gothru-alternative" }} className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 GoThru Alternative Guide
               </Link>
               <Link to="/faq/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
@@ -1317,9 +1317,9 @@ export function HyderabadTourLanding({ page }: { page: SeoPageData }) {
               <Link to="/contact/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 Contact & WhatsApp Support
               </Link>
-              <Link to="/authors/prashant-kumar/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
+              <a href="/authors/prashant-kumar/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 Author: Prashant Kumar
-              </Link>
+              </a>
               <Link to="/signup/" className="p-3.5 rounded-xl border border-slate-200 hover:border-primary/50 hover:bg-slate-50 transition-colors font-medium text-slate-800">
                 Start Free Trial
               </Link>
@@ -1339,19 +1339,19 @@ export function HyderabadTourLanding({ page }: { page: SeoPageData }) {
                   Author & Technical Reviewer
                 </div>
                 <h4 className="text-lg font-bold font-serif text-slate-900">
-                  <Link to="/authors/prashant-kumar/" className="hover:text-primary transition-colors">
+                  <a href="/authors/prashant-kumar/" className="hover:text-primary transition-colors">
                     Prashant Kumar
-                  </Link>
+                  </a>
                 </h4>
                 <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
                   Founder of PanoPublish and Google Street View specialist with hands-on experience helping Indian businesses and 360° photographers publish connected virtual tours to Google Maps.
                 </p>
               </div>
-              <Link to="/authors/prashant-kumar/">
+              <a href="/authors/prashant-kumar/">
                 <Button variant="outline" size="sm" className="shrink-0 text-xs">
                   View Author Profile <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         </section>
