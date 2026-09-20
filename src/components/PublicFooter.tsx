@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, MapPin } from "lucide-react";
 import { waLink } from "@/lib/format";
 
 export function PublicFooter() {
@@ -24,33 +24,34 @@ export function PublicFooter() {
   ];
 
   const cityLinks = [
-    { name: "Mumbai 360 Tours", url: "/google-street-view-publishing-mumbai/" },
-    { name: "Delhi 360 Tours", url: "/360-virtual-tour-software-delhi/" },
-    { name: "Bangalore 360 Tours", url: "/street-view-tour-publishing-bangalore/" },
-    { name: "Ahmedabad 360 Tours", url: "/360-tour-publishing-ahmedabad/" },
-    { name: "Hyderabad 360 Tours", url: "/google-maps-360-tour-hyderabad/" },
-    { name: "Chennai 360 Tours", url: "/virtual-tour-publishing-software-chennai/" },
-    { name: "Pune 360 Tours", url: "/street-view-photographer-software-pune/" },
-    { name: "Jaipur 360 Tours", url: "/360-photography-publishing-jaipur/" },
-    { name: "Kolkata 360 Tours", url: "/google-street-view-tour-kolkata/" },
-    { name: "Surat 360 Tours", url: "/virtual-tour-software-surat/" },
-    { name: "Gurugram 360 Tours", url: "/google-maps-360-tour-gurugram/" },
-    { name: "Noida 360 Tours", url: "/google-maps-360-tour-noida/" },
-    { name: "Lucknow 360 Tours", url: "/google-maps-360-tour-lucknow/" },
-    { name: "Kochi 360 Tours", url: "/google-maps-360-tour-kochi/" },
-    { name: "Indore 360 Tours", url: "/google-maps-360-tour-indore/" },
-    { name: "Chandigarh 360 Tours", url: "/google-maps-360-tour-chandigarh/" },
-    { name: "Coimbatore 360 Tours", url: "/google-maps-360-tour-coimbatore/" },
-    { name: "Nagpur 360 Tours", url: "/google-maps-360-tour-nagpur/" },
-    { name: "Vadodara 360 Tours", url: "/google-maps-360-tour-vadodara/" },
-    { name: "Visakhapatnam 360 Tours", url: "/google-maps-360-tour-visakhapatnam/" },
+    { name: "Mumbai", state: "Maharashtra", url: "/google-street-view-publishing-mumbai/" },
+    { name: "Delhi NCR", state: "Delhi", url: "/360-virtual-tour-software-delhi/" },
+    { name: "Bengaluru", state: "Karnataka", url: "/street-view-tour-publishing-bangalore/" },
+    { name: "Ahmedabad", state: "Gujarat", url: "/360-tour-publishing-ahmedabad/" },
+    { name: "Hyderabad", state: "Telangana", url: "/google-maps-360-tour-hyderabad/" },
+    { name: "Chennai", state: "Tamil Nadu", url: "/virtual-tour-publishing-software-chennai/" },
+    { name: "Pune", state: "Maharashtra", url: "/street-view-photographer-software-pune/" },
+    { name: "Jaipur", state: "Rajasthan", url: "/360-photography-publishing-jaipur/" },
+    { name: "Kolkata", state: "West Bengal", url: "/google-street-view-tour-kolkata/" },
+    { name: "Surat", state: "Gujarat", url: "/virtual-tour-software-surat/" },
+    { name: "Gurugram", state: "Haryana", url: "/google-maps-360-tour-gurugram/" },
+    { name: "Noida", state: "Uttar Pradesh", url: "/google-maps-360-tour-noida/" },
+    { name: "Lucknow", state: "Uttar Pradesh", url: "/google-maps-360-tour-lucknow/" },
+    { name: "Kochi", state: "Kerala", url: "/google-maps-360-tour-kochi/" },
+    { name: "Indore", state: "Madhya Pradesh", url: "/google-maps-360-tour-indore/" },
+    { name: "Chandigarh", state: "Punjab / HR", url: "/google-maps-360-tour-chandigarh/" },
+    { name: "Coimbatore", state: "Tamil Nadu", url: "/google-maps-360-tour-coimbatore/" },
+    { name: "Nagpur", state: "Maharashtra", url: "/google-maps-360-tour-nagpur/" },
+    { name: "Vadodara", state: "Gujarat", url: "/google-maps-360-tour-vadodara/" },
+    { name: "Visakhapatnam", state: "Andhra Pradesh", url: "/google-maps-360-tour-visakhapatnam/" },
   ];
 
   return (
     <footer className="border-t bg-card pt-16 pb-12">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 border-b pb-12">
-          {/* Brand block */}
+        {/* Primary Navigation Grid: 4 Balanced Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 border-b pb-12">
+          {/* Brand block (2 columns on desktop) */}
           <div className="lg:col-span-2 space-y-4">
             <a href="/">
               <Logo logoClassName="text-primary h-8 w-8" className="text-xl font-bold" />
@@ -146,22 +147,6 @@ export function PublicFooter() {
             </ul>
           </div>
 
-          {/* Cities block */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-4">
-              Cities
-            </h4>
-            <ul className="space-y-2 text-xs">
-              {cityLinks.map((link) => (
-                <li key={link.url}>
-                  <a href={link.url} className="text-muted-foreground hover:text-primary transition-colors">
-                    {link.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {/* Resources block */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-4">
@@ -214,6 +199,42 @@ export function PublicFooter() {
                 </a>
               </li>
             </ul>
+          </div>
+        </div>
+
+        {/* Dedicated Regional Section: 360° Virtual Tours Across Major Indian Cities */}
+        <div className="pt-10 pb-8 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2">
+              <span className="h-6 w-6 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <MapPin className="h-3.5 w-3.5" />
+              </span>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                360° Virtual Tours Across Major Indian Cities
+              </h4>
+            </div>
+            <span className="text-[11px] text-muted-foreground">
+              Google Maps Street View Publishing in 20 Top Commercial Hubs
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-y-2.5 gap-x-6 text-xs">
+            {cityLinks.map((city) => (
+              <a
+                key={city.url}
+                href={city.url}
+                title={`Google Maps 360° Virtual Tour in ${city.name} (${city.state})`}
+                className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 py-0.5 group"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-300 group-hover:bg-primary transition-colors shrink-0" />
+                <span className="group-hover:translate-x-0.5 transition-transform font-medium truncate">
+                  {city.name}
+                </span>
+                <span className="text-[10px] text-muted-foreground/60 hidden xl:inline shrink-0">
+                  ({city.state})
+                </span>
+              </a>
+            ))}
           </div>
         </div>
 
