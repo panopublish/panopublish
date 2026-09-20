@@ -11,6 +11,7 @@ function getPublicRoutes() {
   const tourbuilderFilePath = path.join(__dirname, 'src/lib/tourbuilder-alternative-data.ts');
   const cloudpanoFilePath = path.join(__dirname, 'src/lib/cloudpano-alternative-data.ts');
   const hyderabadFilePath = path.join(__dirname, 'src/lib/hyderabad-tour-data.ts');
+  const indiaCityToursFilePath = path.join(__dirname, 'src/lib/india-city-tours-data.ts');
   const authorsFilePath = path.join(__dirname, 'src/lib/authors-data.ts');
   const caseStudiesFilePath = path.join(__dirname, 'src/lib/case-studies-data.ts');
 
@@ -27,6 +28,7 @@ function getPublicRoutes() {
   // Match slug and type from seo-pages-data.ts (supports TS objects and JSON formatting)
   const regex = /"?slug"?:?\s*["']([^"']+)["'][\s\S]*?"?type"?:?\s*["']([^"']+)["']/g;
   let match;
+  const seenPaths = new Set();
   const dynamicPages = [];
 
   while ((match = regex.exec(content)) !== null) {
@@ -36,11 +38,14 @@ function getPublicRoutes() {
     if (type === 'blog') {
       routePath = `/blog/${slug}/`;
     }
-    dynamicPages.push({
-      slug,
-      type,
-      path: routePath
-    });
+    if (!seenPaths.has(routePath)) {
+      seenPaths.add(routePath);
+      dynamicPages.push({
+        slug,
+        type,
+        path: routePath
+      });
+    }
   }
 
   // Add Authors routes from authors-data.ts
@@ -49,11 +54,15 @@ function getPublicRoutes() {
     const authorSlugRegex = /"?slug"?:?\s*["']([^"']+)["']/g;
     let authorMatch;
     while ((authorMatch = authorSlugRegex.exec(authorsContent)) !== null) {
-      dynamicPages.push({
-        slug: authorMatch[1],
-        type: 'author',
-        path: `/authors/${authorMatch[1]}/`
-      });
+      const authorPath = `/authors/${authorMatch[1]}/`;
+      if (!seenPaths.has(authorPath)) {
+        seenPaths.add(authorPath);
+        dynamicPages.push({
+          slug: authorMatch[1],
+          type: 'author',
+          path: authorPath
+        });
+      }
     }
   }
 
@@ -63,11 +72,35 @@ function getPublicRoutes() {
     const csSlugRegex = /\n\s*slug:\s*["']([^"']+)["']/g;
     let csMatch;
     while ((csMatch = csSlugRegex.exec(caseStudiesContent)) !== null) {
-      dynamicPages.push({
-        slug: csMatch[1],
-        type: 'case-study',
-        path: `/case-studies/${csMatch[1]}/`
-      });
+      const csPath = `/case-studies/${csMatch[1]}/`;
+      if (!seenPaths.has(csPath)) {
+        seenPaths.add(csPath);
+        dynamicPages.push({
+          slug: csMatch[1],
+          type: 'case-study',
+          path: csPath
+        });
+      }
+    }
+  }
+
+  // Add 20 Indian City Tour routes from india-city-tours-data.ts
+  if (fs.existsSync(indiaCityToursFilePath)) {
+    try {
+      const { indiaCityToursData } = require('./src/lib/india-city-tours-data.ts');
+      for (const citySlug of Object.keys(indiaCityToursData)) {
+        const cityPath = `/${citySlug}/`;
+        if (!seenPaths.has(cityPath)) {
+          seenPaths.add(cityPath);
+          dynamicPages.push({
+            slug: citySlug,
+            type: 'city',
+            path: cityPath
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Could not require india-city-tours-data.ts:', e.message);
     }
   }
 

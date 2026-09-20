@@ -7,6 +7,7 @@ import { panoeeAlternativeData } from "./panoee-alternative-data";
 import { tourbuilderAlternativeIndiaData } from "./tourbuilder-alternative-data";
 import { cloudpanoAlternativeData } from "./cloudpano-alternative-data";
 import { hyderabadTourData } from "./hyderabad-tour-data";
+import { indiaCityToursData } from "./india-city-tours-data";
 
 export interface SeoPageData {
   slug: string;
@@ -5244,6 +5245,7 @@ Object.assign(seoPages, cluster1VirtualTourSoftwarePages);
 Object.assign(seoPages, cluster2GoogleStreetViewPages);
 Object.assign(seoPages, cluster3_360PhotographyPages);
 Object.assign(seoPages, cluster4_IndustrySolutionsPages);
+Object.assign(seoPages, indiaCityToursData);
 
 // Dynamically generate deep, rich and reader-friendly blog content for all blogs if sections not already set
 Object.keys(seoPages).forEach((key) => {

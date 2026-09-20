@@ -24,16 +24,26 @@ export function PublicFooter() {
   ];
 
   const cityLinks = [
-    { name: "Mumbai Local SEO", url: "/google-street-view-publishing-mumbai/" },
+    { name: "Mumbai 360 Tours", url: "/google-street-view-publishing-mumbai/" },
     { name: "Delhi 360 Tours", url: "/360-virtual-tour-software-delhi/" },
-    { name: "Bangalore Tour Publishing", url: "/street-view-tour-publishing-bangalore/" },
-    { name: "Ahmedabad 360 Publishing", url: "/360-tour-publishing-ahmedabad/" },
-    { name: "Hyderabad Google Maps Tours", url: "/google-maps-360-tour-hyderabad/" },
-    { name: "Chennai Virtual Tour Software", url: "/virtual-tour-publishing-software-chennai/" },
-    { name: "Pune Photographer Software", url: "/street-view-photographer-software-pune/" },
-    { name: "Jaipur 360 Photography", url: "/360-photography-publishing-jaipur/" },
-    { name: "Kolkata Street View Tours", url: "/google-street-view-tour-kolkata/" },
-    { name: "Surat Virtual Tour Software", url: "/virtual-tour-software-surat/" },
+    { name: "Bangalore 360 Tours", url: "/street-view-tour-publishing-bangalore/" },
+    { name: "Ahmedabad 360 Tours", url: "/360-tour-publishing-ahmedabad/" },
+    { name: "Hyderabad 360 Tours", url: "/google-maps-360-tour-hyderabad/" },
+    { name: "Chennai 360 Tours", url: "/virtual-tour-publishing-software-chennai/" },
+    { name: "Pune 360 Tours", url: "/street-view-photographer-software-pune/" },
+    { name: "Jaipur 360 Tours", url: "/360-photography-publishing-jaipur/" },
+    { name: "Kolkata 360 Tours", url: "/google-street-view-tour-kolkata/" },
+    { name: "Surat 360 Tours", url: "/virtual-tour-software-surat/" },
+    { name: "Gurugram 360 Tours", url: "/google-maps-360-tour-gurugram/" },
+    { name: "Noida 360 Tours", url: "/google-maps-360-tour-noida/" },
+    { name: "Lucknow 360 Tours", url: "/google-maps-360-tour-lucknow/" },
+    { name: "Kochi 360 Tours", url: "/google-maps-360-tour-kochi/" },
+    { name: "Indore 360 Tours", url: "/google-maps-360-tour-indore/" },
+    { name: "Chandigarh 360 Tours", url: "/google-maps-360-tour-chandigarh/" },
+    { name: "Coimbatore 360 Tours", url: "/google-maps-360-tour-coimbatore/" },
+    { name: "Nagpur 360 Tours", url: "/google-maps-360-tour-nagpur/" },
+    { name: "Vadodara 360 Tours", url: "/google-maps-360-tour-vadodara/" },
+    { name: "Visakhapatnam 360 Tours", url: "/google-maps-360-tour-visakhapatnam/" },
   ];
 
   return (
