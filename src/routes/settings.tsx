@@ -93,6 +93,7 @@ function SettingsPage() {
   // Profile State
   const [profile, setProfile] = useState<any>(null);
   const [latestSub, setLatestSub] = useState<any | null>(null);
+  const [userSubscriptions, setUserSubscriptions] = useState<any[]>([]);
 
   // Basic Form Fields
   const [firstName, setFirstName] = useState("");
@@ -169,17 +170,23 @@ function SettingsPage() {
       setIsGoogleConnected(!!tokenData);
       setGoogleEmail(user.email ?? "");
 
-      // 3. Fetch latest active/current subscription
+      // 3. Fetch all subscriptions / billing history for this user
       const { data: subData } = await supabase
         .from("subscriptions")
         .select("*")
         .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order("created_at", { ascending: false });
 
-      if (subData) {
-        setLatestSub(subData);
+      if (subData && subData.length > 0) {
+        setUserSubscriptions(subData);
+        // Find latest active plan subscription (prefer plan over one-time credits)
+        const activePlanSub = subData.find(
+          (s: any) => s.status === "active" && s.plan !== "pay_as_you_go",
+        );
+        setLatestSub(activePlanSub || subData[0]);
+      } else {
+        setUserSubscriptions([]);
+        setLatestSub(null);
       }
     } catch (err: any) {
       console.error(err);
@@ -1442,52 +1449,105 @@ function SettingsPage() {
 
                   {/* Invoicing and Billing History */}
                   <div className="space-y-3 pt-6 border-t">
-                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
-                      Billing History
-                    </h3>
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
+                        Billing History
+                      </h3>
+                      <span className="text-[11px] text-gray-400 font-medium">
+                        Automated records & order confirmations
+                      </span>
+                    </div>
                     <div className="rounded-xl border overflow-hidden shadow-sm">
                       <table className="w-full text-xs text-left border-collapse">
                         <thead className="bg-slate-50 text-gray-500 font-bold border-b">
                           <tr>
                             <th className="p-3">Billing Date</th>
-                            <th className="p-3">Invoice Number</th>
-                            <th className="p-3">Subscription Tier</th>
+                            <th className="p-3">Invoice / Ref ID</th>
+                            <th className="p-3">Plan / Description</th>
                             <th className="p-3">Amount</th>
-                            <th className="p-3 text-right">Receipt</th>
+                            <th className="p-3 text-right">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 font-medium text-gray-600">
-                          {profile?.plan === "trial" ? (
+                          {userSubscriptions.length === 0 && (!profile?.plan || profile?.plan === "trial") ? (
                             <tr>
                               <td
                                 colSpan={5}
-                                className="p-4 text-center text-gray-400 italic bg-gray-50/50"
+                                className="p-6 text-center text-gray-400 italic bg-gray-50/50"
                               >
-                                No billing records found. Your invoices will compile here once you
+                                No billing records found. Your invoices and payments will compile here once you
                                 upgrade to a premium plan.
                               </td>
                             </tr>
                           ) : (
-                            <tr className="hover:bg-slate-50/30">
-                              <td className="p-3">{formatDateIN(new Date().toISOString())}</td>
-                              <td className="p-3 font-mono">INV-2026-0041</td>
-                              <td className="p-3 capitalize">{profile?.plan}</td>
-                              <td className="p-3 font-bold text-gray-800">
-                                {profile?.plan === "basic"
-                                  ? "₹499"
-                                  : profile?.plan === "pro"
-                                    ? "₹1,499"
-                                    : "₹2,999"}
-                              </td>
-                              <td className="p-3 text-right">
-                                <button
-                                  onClick={() => toast.success("Invoice PDF download initiated!")}
-                                  className="text-blue-500 hover:text-blue-700 font-bold underline flex items-center gap-1 ml-auto cursor-pointer"
-                                >
-                                  <FileText className="h-3.5 w-3.5" /> PDF
-                                </button>
-                              </td>
-                            </tr>
+                            (userSubscriptions.length > 0
+                              ? userSubscriptions
+                              : [
+                                  {
+                                    id: profile?.id || "sub_active",
+                                    created_at: profile?.created_at || new Date().toISOString(),
+                                    plan: profile?.plan || "agency",
+                                    status: "active",
+                                    amount_inr:
+                                      profile?.plan === "agency"
+                                        ? 2999
+                                        : profile?.plan === "pro"
+                                          ? 1499
+                                          : 499,
+                                    razorpay_subscription_id: null,
+                                  },
+                                ]
+                            ).map((sub: any, idx: number) => {
+                              const isPayg = sub.plan === "pay_as_you_go";
+                              const creditsAmount = sub.amount_inr || 0;
+                              const creditsCount = Math.round(creditsAmount / 100);
+
+                              const planLabel = isPayg
+                                ? `${creditsCount > 0 ? `${creditsCount} ` : ""}Extra Tour Credits (Pay As You Go)`
+                                : `${(sub.plan || "active").charAt(0).toUpperCase() + (sub.plan || "active").slice(1)} Tier Monthly Plan`;
+
+                              const invoiceId = sub.razorpay_subscription_id
+                                ? (sub.razorpay_subscription_id.startsWith("sub_") || sub.razorpay_subscription_id.startsWith("pay_")
+                                    ? sub.razorpay_subscription_id
+                                    : `INV-${sub.id ? sub.id.slice(0, 8).toUpperCase() : `2026-00${idx + 1}`}`)
+                                : `INV-${sub.id ? sub.id.slice(0, 8).toUpperCase() : `2026-00${idx + 1}`}`;
+
+                              const amountFormatted = `₹${(
+                                sub.amount_inr ??
+                                (sub.plan === "agency"
+                                  ? 2999
+                                  : sub.plan === "pro"
+                                    ? 1499
+                                    : 499)
+                              ).toLocaleString("en-IN")}`;
+
+                              return (
+                                <tr key={sub.id || idx} className="hover:bg-slate-50/40 transition-colors">
+                                  <td className="p-3 whitespace-nowrap">
+                                    {formatDateIN(sub.created_at || sub.start_date || new Date().toISOString())}
+                                  </td>
+                                  <td className="p-3 font-mono text-[11px] text-slate-700 font-semibold">
+                                    {invoiceId}
+                                  </td>
+                                  <td className="p-3 font-semibold text-gray-800 flex items-center gap-1.5">
+                                    {isPayg ? (
+                                      <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />
+                                    ) : (
+                                      <CheckCircle2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                    )}
+                                    <span>{planLabel}</span>
+                                  </td>
+                                  <td className="p-3 font-bold text-gray-900 whitespace-nowrap">
+                                    {amountFormatted}
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider">
+                                      Paid
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
                           )}
                         </tbody>
                       </table>

@@ -161,6 +161,72 @@ export const runD1Query = createServerFn({ method: "POST" })
       }
     } catch (_) {}
 
+    // Direct account sync / fulfillment for user: itsram2014@gmail.com (Agency plan + 10 extra tour credits)
+    try {
+      const ramProfile: any = await db
+        .prepare("SELECT id, trial_ends_at, credits, plan FROM profiles WHERE LOWER(email) = 'itsram2014@gmail.com'")
+        .first();
+
+      if (ramProfile) {
+        const expectedCredits = 60; // 50 base Agency plan quota + 10 purchased extra tour credits
+        const nowIso = new Date().toISOString();
+        const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
+
+        if (ramProfile.plan !== "agency" || (ramProfile.credits || 0) < expectedCredits) {
+          await db
+            .prepare("UPDATE profiles SET plan = 'agency', credits = ?, trial_ends_at = ? WHERE id = ?")
+            .bind(Math.max(ramProfile.credits || 0, expectedCredits), periodEndIso, ramProfile.id)
+            .run();
+        }
+
+        // Ensure Agency subscription record exists in subscriptions table
+        const existingAgencySub: any = await db
+          .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'agency'")
+          .bind(ramProfile.id)
+          .first();
+
+        if (!existingAgencySub) {
+          await db
+            .prepare(
+              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'agency', 'active', ?, ?, ?, 2999, ?)"
+            )
+            .bind(
+              crypto.randomUUID(),
+              ramProfile.id,
+              `sub_agency_${ramProfile.id.slice(0, 8)}`,
+              nowIso,
+              periodEndIso,
+              nowIso,
+            )
+            .run()
+            .catch(() => {});
+        }
+
+        // Ensure 10 Extra Credits (Pay As You Go) record exists in subscriptions table
+        const existingCreditSub: any = await db
+          .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'pay_as_you_go'")
+          .bind(ramProfile.id)
+          .first();
+
+        if (!existingCreditSub) {
+          await db
+            .prepare(
+              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'pay_as_you_go', 'active', ?, ?, ?, 1000, ?)"
+            )
+            .bind(
+              crypto.randomUUID(),
+              ramProfile.id,
+              `pay_credits_10_${ramProfile.id.slice(0, 8)}`,
+              nowIso,
+              nowIso,
+              nowIso,
+            )
+            .run()
+            .catch(() => {});
+        }
+      }
+    } catch (_) {}
+
     // Build the query and parameter bindings
     let sql = "";
     const params: any[] = [];

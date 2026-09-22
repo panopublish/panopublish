@@ -711,6 +711,26 @@ function AdminDashboard() {
       if (error) {
         toast.error("Failed to update profile: " + error.message);
       } else {
+        // Record subscription in subscriptions table if plan changed to paid
+        if (profileForm.plan !== editingProfile.plan && profileForm.plan !== "trial") {
+          const planPrices: Record<string, number> = { basic: 499, pro: 1499, agency: 2999 };
+          const nowIso = new Date().toISOString();
+          const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
+          await supabase
+            .from("subscriptions")
+            .insert({
+              id: crypto.randomUUID(),
+              user_id: editingProfile.id,
+              plan: profileForm.plan,
+              status: "active",
+              razorpay_subscription_id: `admin_grant_${editingProfile.id.slice(0, 8)}`,
+              start_date: nowIso,
+              end_date: periodEndIso,
+              amount_inr: planPrices[profileForm.plan] || 0,
+            })
+            .catch(() => {});
+        }
+
         toast.success("User profile updated successfully!");
         setEditingProfile(null);
         loadData();
