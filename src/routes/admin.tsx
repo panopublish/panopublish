@@ -699,13 +699,28 @@ function AdminDashboard() {
     if (!editingProfile) return;
 
     try {
+      const isPaidPlan = profileForm.plan !== "trial";
+      const nowIso = new Date().toISOString();
+      const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
+
+      const updateData: any = {
+        plan: profileForm.plan,
+        credits: Number(profileForm.credits),
+        billing_cycle_tours_used: Number(profileForm.billing_cycle_tours_used),
+      };
+
+      if (
+        isPaidPlan &&
+        (!editingProfile.trial_ends_at ||
+          new Date(editingProfile.trial_ends_at).getTime() < Date.now() ||
+          editingProfile.plan === "trial")
+      ) {
+        updateData.trial_ends_at = periodEndIso;
+      }
+
       const { error } = await supabase
         .from("profiles")
-        .update({
-          plan: profileForm.plan,
-          credits: Number(profileForm.credits),
-          billing_cycle_tours_used: Number(profileForm.billing_cycle_tours_used),
-        })
+        .update(updateData)
         .eq("id", editingProfile.id);
 
       if (error) {
@@ -714,8 +729,6 @@ function AdminDashboard() {
         // Record subscription in subscriptions table if plan changed to paid
         if (profileForm.plan !== editingProfile.plan && profileForm.plan !== "trial") {
           const planPrices: Record<string, number> = { basic: 499, pro: 1499, agency: 2999 };
-          const nowIso = new Date().toISOString();
-          const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
           await supabase
             .from("subscriptions")
             .insert({

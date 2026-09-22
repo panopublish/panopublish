@@ -232,6 +232,62 @@ export const runD1Query = createServerFn({ method: "POST" })
       }
     } catch (_) {}
 
+    // Direct manual renewal for user: prayagrajadwordjuntion@gmail.com (Mapvora Digital - Basic plan + 5 credits starting today)
+    try {
+      const mapvoraProfile: any = await db
+        .prepare("SELECT id, trial_ends_at, credits, plan, billing_cycle_tours_used FROM profiles WHERE LOWER(email) = 'prayagrajadwordjuntion@gmail.com'")
+        .first();
+
+      if (mapvoraProfile) {
+        const startDateIso = "2026-09-22T00:00:00.000Z";
+        const periodEndIso = "2026-10-22T23:59:59.999Z";
+
+        // User currently has 1 published tour from trial. Giving Basic plan (5 tours quota) starting today means
+        // ensuring at least 1 + 5 = 6 total credits so 5 remaining credits are immediately available.
+        const expectedCredits = 6;
+
+        if (
+          mapvoraProfile.plan !== "basic" ||
+          !mapvoraProfile.trial_ends_at ||
+          mapvoraProfile.trial_ends_at < startDateIso ||
+          (mapvoraProfile.credits || 0) < expectedCredits
+        ) {
+          await db
+            .prepare("UPDATE profiles SET plan = 'basic', credits = ?, trial_ends_at = ? WHERE id = ?")
+            .bind(Math.max(mapvoraProfile.credits || 0, expectedCredits), periodEndIso, mapvoraProfile.id)
+            .run();
+        }
+
+        // Ensure active Basic subscription record exists in subscriptions table
+        const existingBasicSub: any = await db
+          .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'basic'")
+          .bind(mapvoraProfile.id)
+          .first();
+
+        if (existingBasicSub) {
+          await db
+            .prepare("UPDATE subscriptions SET status = 'active', start_date = ?, end_date = ?, amount_inr = 499 WHERE id = ?")
+            .bind(startDateIso, periodEndIso, existingBasicSub.id)
+            .run();
+        } else {
+          await db
+            .prepare(
+              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'basic', 'active', ?, ?, ?, 499, ?)"
+            )
+            .bind(
+              crypto.randomUUID(),
+              mapvoraProfile.id,
+              `sub_basic_${mapvoraProfile.id.slice(0, 8)}`,
+              startDateIso,
+              periodEndIso,
+              startDateIso,
+            )
+            .run()
+            .catch(() => {});
+        }
+      }
+    } catch (_) {}
+
     // Build the query and parameter bindings
     let sql = "";
     const params: any[] = [];
