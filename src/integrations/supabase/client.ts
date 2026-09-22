@@ -142,6 +142,23 @@ class D1QueryBuilder {
     }
   }
 
+  catch(onrejected?: (reason: any) => any) {
+    return this.then(undefined, onrejected);
+  }
+
+  finally(onfinally?: (() => void) | undefined | null) {
+    return this.then(
+      async (val) => {
+        if (onfinally) await onfinally();
+        return val;
+      },
+      async (err) => {
+        if (onfinally) await onfinally();
+        throw err;
+      }
+    );
+  }
+
   async execute() {
     const session = await getOrRefreshSession();
     const token = session?.access_token || "";

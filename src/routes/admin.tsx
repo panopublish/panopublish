@@ -165,8 +165,7 @@ function AdminDashboard() {
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [profileForm, setProfileForm] = useState({
     plan: "trial",
-    credits: 0,
-    billing_cycle_tours_used: 0,
+    extraCredits: 0,
   });
 
   // Form State: Coupon Code
@@ -665,32 +664,13 @@ function AdminDashboard() {
 
   // Open Edit Profile Dialog
   const handleOpenEditProfile = (p: Profile) => {
-    const isAdminUser =
-      p.email === "er.prashantyadav37@gmail.com" || p.email === "vista360gtp@gmail.com";
-    const isTrialUser = (p.plan ?? "trial") === "trial";
-    const isTrialExpired =
-      isTrialUser &&
-      ((p.trial_ends_at && new Date(p.trial_ends_at).getTime() < Date.now()) ||
-        (p.created_at && Date.now() - new Date(p.created_at).getTime() > 7 * 86400000));
-    const isPaidPlanExpired =
-      !isTrialUser &&
-      !!p.trial_ends_at &&
-      new Date(p.trial_ends_at).getTime() < Date.now();
-    const isPlanExpired = isTrialExpired || isPaidPlanExpired;
-
-    const cycleUsed = p.billing_cycle_tours_used ?? 0;
-    const totalLimit = isAdminUser ? 9999 : isPlanExpired ? 0 : (planLimits[p.plan] ?? 1);
-    const totalAllowance = isPlanExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
-    const activeCredits =
-      isAdminUser
-        ? 9999
-        : Math.max(0, totalAllowance - cycleUsed);
+    const basePlanLimit = planLimits[p.plan] ?? 1;
+    const currentExtraCredits = Math.max(0, (p.credits ?? basePlanLimit) - basePlanLimit);
 
     setEditingProfile(p);
     setProfileForm({
       plan: p.plan,
-      credits: activeCredits,
-      billing_cycle_tours_used: cycleUsed,
+      extraCredits: currentExtraCredits,
     });
   };
 
@@ -702,14 +682,19 @@ function AdminDashboard() {
       const isPaidPlan = profileForm.plan !== "trial";
       const nowIso = new Date().toISOString();
       const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
+      const baseLimit = planLimits[profileForm.plan] ?? 1;
+      const totalCredits = baseLimit + Math.max(0, Number(profileForm.extraCredits) || 0);
 
       const updateData: any = {
         plan: profileForm.plan,
-        credits: Number(profileForm.credits),
-        billing_cycle_tours_used: Number(profileForm.billing_cycle_tours_used),
+        credits: totalCredits,
       };
 
-      if (
+      // Reset billing cycle usage to 0 and extend validity when upgrading or renewing paid plan
+      if (profileForm.plan !== editingProfile.plan && isPaidPlan) {
+        updateData.billing_cycle_tours_used = 0;
+        updateData.trial_ends_at = periodEndIso;
+      } else if (
         isPaidPlan &&
         (!editingProfile.trial_ends_at ||
           new Date(editingProfile.trial_ends_at).getTime() < Date.now() ||
@@ -727,24 +712,25 @@ function AdminDashboard() {
         toast.error("Failed to update profile: " + error.message);
       } else {
         // Record subscription in subscriptions table if plan changed to paid
-        if (profileForm.plan !== editingProfile.plan && profileForm.plan !== "trial") {
+        if (profileForm.plan !== editingProfile.plan && isPaidPlan) {
           const planPrices: Record<string, number> = { basic: 499, pro: 1499, agency: 2999 };
-          await supabase
-            .from("subscriptions")
-            .insert({
-              id: crypto.randomUUID(),
-              user_id: editingProfile.id,
-              plan: profileForm.plan,
-              status: "active",
-              razorpay_subscription_id: `admin_grant_${editingProfile.id.slice(0, 8)}`,
-              start_date: nowIso,
-              end_date: periodEndIso,
-              amount_inr: planPrices[profileForm.plan] || 0,
-            })
-            .catch(() => {});
+          try {
+            await supabase
+              .from("subscriptions")
+              .insert({
+                id: crypto.randomUUID(),
+                user_id: editingProfile.id,
+                plan: profileForm.plan,
+                status: "active",
+                razorpay_subscription_id: `admin_grant_${editingProfile.id.slice(0, 8)}`,
+                start_date: nowIso,
+                end_date: periodEndIso,
+                amount_inr: planPrices[profileForm.plan] || 0,
+              });
+          } catch (_) {}
         }
 
-        toast.success("User profile updated successfully!");
+        toast.success("User plan and credits updated successfully!");
         setEditingProfile(null);
         loadData();
       }
@@ -1997,22 +1983,30 @@ function AdminDashboard() {
           <DialogContent className="rounded-2xl max-w-md">
             <DialogHeader>
               <DialogTitle className="text-lg font-black text-slate-800">
-                Modify Subscription Limits
+                Update Plan & Credits
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4 py-3">
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                <div className="text-xs font-bold text-slate-400 uppercase">Target Account</div>
-                <div className="text-sm font-bold text-slate-800 mt-0.5">
-                  {editingProfile.name || "Unnamed"}
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center justify-between">
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Account</div>
+                  <div className="text-sm font-bold text-slate-800 mt-0.5">
+                    {editingProfile.name || "Unnamed"}
+                  </div>
+                  <div className="text-xs font-mono text-slate-500">{editingProfile.email}</div>
                 </div>
-                <div className="text-xs font-mono text-slate-500">{editingProfile.email}</div>
+                <div className="text-right">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current</div>
+                  <span className="text-xs font-black uppercase text-[#0277bd] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 mt-1 inline-block">
+                    {editingProfile.plan}
+                  </span>
+                </div>
               </div>
 
               {/* Plan dropdown */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500">Subscription Plan</Label>
+                <Label className="text-xs font-bold text-slate-600">Subscription Plan</Label>
                 <Select
                   value={profileForm.plan}
                   onValueChange={(val) => setProfileForm((prev) => ({ ...prev, plan: val }))}
@@ -2021,41 +2015,41 @@ function AdminDashboard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="trial">Trial</SelectItem>
-                    <SelectItem value="basic">Basic</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="agency">Agency</SelectItem>
+                    <SelectItem value="trial">Trial (1 tour quota)</SelectItem>
+                    <SelectItem value="basic">Basic Plan (5 tours/mo)</SelectItem>
+                    <SelectItem value="pro">Pro Plan (20 tours/mo)</SelectItem>
+                    <SelectItem value="agency">Agency Plan (50 tours/mo)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Credits input */}
+              {/* Extra Credits input */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500">Available Credits</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-600">Extra Credits</Label>
+                  <span className="text-[11px] text-slate-400 font-medium">Bonus / Pay As You Go</span>
+                </div>
                 <Input
                   type="number"
-                  value={profileForm.credits}
-                  onChange={(e) =>
-                    setProfileForm((prev) => ({ ...prev, credits: Number(e.target.value) }))
-                  }
-                  className="rounded-xl border-slate-200"
-                />
-              </div>
-
-              {/* Tours limit / used counter */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-slate-500">Billing Cycle Tours Used</Label>
-                <Input
-                  type="number"
-                  value={profileForm.billing_cycle_tours_used}
+                  min={0}
+                  value={profileForm.extraCredits}
                   onChange={(e) =>
                     setProfileForm((prev) => ({
                       ...prev,
-                      billing_cycle_tours_used: Number(e.target.value),
+                      extraCredits: Math.max(0, parseInt(e.target.value, 10) || 0),
                     }))
                   }
-                  className="rounded-xl border-slate-200"
+                  className="rounded-xl border-slate-200 font-semibold"
+                  placeholder="0"
                 />
+              </div>
+
+              {/* Live allowance pill */}
+              <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 text-xs flex items-center justify-between">
+                <span className="text-slate-600 font-medium">Total Publishing Allowance:</span>
+                <span className="font-extrabold text-[#0277bd]">
+                  {(planLimits[profileForm.plan] ?? 1)} base + {Number(profileForm.extraCredits) || 0} extra = {(planLimits[profileForm.plan] ?? 1) + (Number(profileForm.extraCredits) || 0)} tours
+                </span>
               </div>
             </div>
 
@@ -2069,9 +2063,9 @@ function AdminDashboard() {
               </Button>
               <Button
                 onClick={handleSaveProfile}
-                className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl px-5"
+                className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl px-5 cursor-pointer"
               >
-                Save Limits
+                Save Plan & Credits
               </Button>
             </DialogFooter>
           </DialogContent>
