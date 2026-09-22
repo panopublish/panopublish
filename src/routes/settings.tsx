@@ -179,11 +179,14 @@ function SettingsPage() {
 
       if (subData && subData.length > 0) {
         setUserSubscriptions(subData);
-        // Find latest active plan subscription (prefer plan over one-time credits)
+        // Find latest active plan subscription first, or any recurring plan subscription (e.g. cancelled)
         const activePlanSub = subData.find(
           (s: any) => s.status === "active" && s.plan !== "pay_as_you_go",
         );
-        setLatestSub(activePlanSub || subData[0]);
+        const anyPlanSub = subData.find(
+          (s: any) => s.plan !== "pay_as_you_go",
+        );
+        setLatestSub(activePlanSub || anyPlanSub || subData[0]);
       } else {
         setUserSubscriptions([]);
         setLatestSub(null);
@@ -1058,65 +1061,113 @@ function SettingsPage() {
                   return formatDateIN(d);
                 };
 
-                return (
-                  <div className="space-y-8">
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800">Billing & Subscription</h2>
-                      <p className="text-xs text-gray-400 mt-1">
-                        Manage your active plans, billing history, invoicing details, and upgrade
-                        securely.
-                      </p>
-                    </div>
+                  const isSubCancelled =
+                    latestSub?.status === "cancelled" ||
+                    (profile?.plan !== "trial" &&
+                      latestSub?.end_date &&
+                      new Date(latestSub.end_date).getTime() < Date.now());
 
-                    {/* Current plan status board */}
-                    <div className="bg-[#f0f9ff] border border-blue-100 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  return (
+                    <div className="space-y-8">
                       <div>
-                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-1">
-                          Active Plan
-                        </span>
-                        <div className="text-2xl font-extrabold text-blue-900 capitalize flex items-center gap-2">
-                          {profile?.plan ?? "trial"} Tier
-                          <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200">
-                            Active
+                        <h2 className="text-xl font-bold text-gray-800">Billing & Subscription</h2>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Manage your active plans, billing history, invoicing details, and upgrade
+                          securely.
+                        </p>
+                      </div>
+
+                      {/* Current plan status board */}
+                      <div
+                        className={`border rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all ${
+                          isSubCancelled
+                            ? "bg-amber-50/40 border-amber-200"
+                            : "bg-[#f0f9ff] border-blue-100"
+                        }`}
+                      >
+                        <div>
+                          <span
+                            className={`text-[10px] font-bold uppercase tracking-widest block mb-1 ${
+                              isSubCancelled ? "text-amber-600" : "text-blue-500"
+                            }`}
+                          >
+                            {isSubCancelled ? "Subscription Status" : "Active Plan"}
                           </span>
+                          <div
+                            className={`text-2xl font-extrabold capitalize flex items-center gap-2 ${
+                              isSubCancelled ? "text-slate-800" : "text-blue-900"
+                            }`}
+                          >
+                            {profile?.plan ?? "trial"} Tier
+                            {isSubCancelled ? (
+                              <span className="text-xs bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200 font-bold">
+                                Subscription Cancelled
+                              </span>
+                            ) : (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full border border-blue-200 font-bold">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          {profile?.plan === "trial" ? (
+                            <p className="text-xs text-blue-600 mt-1">
+                              Free Trial (1 tour, 15 photos max){" "}
+                              {profile?.trial_ends_at ? (
+                                <>
+                                  ends on <strong>{formatDateIN(profile.trial_ends_at)}</strong>
+                                </>
+                              ) : (
+                                <>valid for 7 days from signup</>
+                              )}
+                            </p>
+                          ) : isSubCancelled ? (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-600 font-medium mt-1.5">
+                              <span className="flex items-center gap-1 text-amber-800 font-semibold">
+                                <Calendar className="h-3.5 w-3.5 text-amber-600" />
+                                Cancelled — Access ended: <strong>{getRenewalDate()}</strong>
+                              </span>
+                              <span>•</span>
+                              <span className="text-amber-700 font-medium">Will not auto-renew</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-blue-700 font-medium mt-1.5">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                                Next Renewal Date: <strong>{getRenewalDate()}</strong>
+                              </span>
+                              <span>•</span>
+                              <span>Auto-renews monthly</span>
+                            </div>
+                          )}
                         </div>
-                        {profile?.plan === "trial" ? (
-                          <p className="text-xs text-blue-600 mt-1">
-                            Free Trial (1 tour, 15 photos max){" "}
-                            {profile?.trial_ends_at ? (
+                        {profile?.plan !== "trial" && (
+                          <div className="flex flex-col sm:items-end gap-1.5 w-full sm:w-auto">
+                            {isSubCancelled ? (
                               <>
-                                ends on <strong>{formatDateIN(profile.trial_ends_at)}</strong>
+                                <span className="inline-flex items-center px-3 py-1.5 rounded-xl bg-amber-100/80 text-amber-800 border border-amber-300 text-xs font-bold">
+                                  Cancelled (No Active Debits)
+                                </span>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  Ended on: <strong className="text-slate-800 font-bold">{getRenewalDate()}</strong>
+                                </span>
                               </>
                             ) : (
-                              <>valid for 7 days from signup</>
+                              <>
+                                <Button
+                                  variant="outline"
+                                  onClick={cancelSubscription}
+                                  className="border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold w-full sm:w-auto cursor-pointer"
+                                >
+                                  Cancel Subscription
+                                </Button>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  Renews / Expires on: <strong className="text-slate-800 font-bold">{getRenewalDate()}</strong>
+                                </span>
+                              </>
                             )}
-                          </p>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-blue-700 font-medium mt-1.5">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                              Next Renewal Date: <strong>{getRenewalDate()}</strong>
-                            </span>
-                            <span>•</span>
-                            <span>Auto-renews monthly</span>
                           </div>
                         )}
                       </div>
-                      {profile?.plan !== "trial" && (
-                        <div className="flex flex-col sm:items-end gap-1.5 w-full sm:w-auto">
-                          <Button
-                            variant="outline"
-                            onClick={cancelSubscription}
-                            className="border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold w-full sm:w-auto"
-                          >
-                            Cancel Subscription
-                          </Button>
-                          <span className="text-[11px] text-slate-500 font-medium">
-                            Renews / Expires on: <strong className="text-slate-800 font-bold">{getRenewalDate()}</strong>
-                          </span>
-                        </div>
-                      )}
-                    </div>
 
                     {/* Razorpay Plans Grid */}
                     <div className="space-y-4">
@@ -1162,14 +1213,14 @@ function SettingsPage() {
                         </div>
                         <Button
                           onClick={() => triggerRazorpaySimulate("Basic")}
-                          disabled={profile?.plan === "basic"}
+                          disabled={profile?.plan === "basic" && !isSubCancelled}
                           className={`w-full mt-5 font-bold ${
-                            profile?.plan === "basic"
+                            profile?.plan === "basic" && !isSubCancelled
                               ? "bg-gray-100 text-gray-400 cursor-default hover:bg-gray-100"
                               : "bg-[#0277bd] hover:bg-[#0266a1] text-white shadow-md"
                           }`}
                         >
-                          {profile?.plan === "basic" ? "Current Plan" : "Select Basic"}
+                          {profile?.plan === "basic" && !isSubCancelled ? "Current Plan" : "Select Basic"}
                         </Button>
                       </div>
 
@@ -1222,14 +1273,14 @@ function SettingsPage() {
                         </div>
                         <Button
                           onClick={() => triggerRazorpaySimulate("Pro")}
-                          disabled={profile?.plan === "pro"}
+                          disabled={profile?.plan === "pro" && !isSubCancelled}
                           className={`w-full mt-5 font-bold ${
-                            profile?.plan === "pro"
+                            profile?.plan === "pro" && !isSubCancelled
                               ? "bg-gray-100 text-gray-400 cursor-default hover:bg-gray-100"
                               : "bg-blue-500 hover:bg-blue-600 text-white shadow-md"
                           }`}
                         >
-                          {profile?.plan === "pro" ? "Current Plan" : "Select Pro Upgrade"}
+                          {profile?.plan === "pro" && !isSubCancelled ? "Current Plan" : "Select Pro Upgrade"}
                         </Button>
                       </div>
 
@@ -1276,14 +1327,18 @@ function SettingsPage() {
                         </div>
                         <Button
                           onClick={() => triggerRazorpaySimulate("Agency")}
-                          disabled={profile?.plan === "agency"}
+                          disabled={profile?.plan === "agency" && !isSubCancelled}
                           className={`w-full mt-5 font-bold ${
-                            profile?.plan === "agency"
+                            profile?.plan === "agency" && !isSubCancelled
                               ? "bg-gray-100 text-gray-400 cursor-default hover:bg-gray-100"
                               : "bg-[#0277bd] hover:bg-[#0266a1] text-white shadow-md"
                           }`}
                         >
-                          {profile?.plan === "agency" ? "Current Plan" : "Select Agency"}
+                          {profile?.plan === "agency" && !isSubCancelled
+                            ? "Current Plan"
+                            : isSubCancelled && profile?.plan === "agency"
+                              ? "Reactivate Agency"
+                              : "Select Agency"}
                         </Button>
                       </div>
                     </div>
@@ -1541,9 +1596,15 @@ function SettingsPage() {
                                     {amountFormatted}
                                   </td>
                                   <td className="p-3 text-right">
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider">
-                                      Paid
-                                    </span>
+                                    {sub.status === "cancelled" ? (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase tracking-wider">
+                                        Cancelled
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider">
+                                        Paid
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
                               );

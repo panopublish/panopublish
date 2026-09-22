@@ -161,42 +161,47 @@ export const runD1Query = createServerFn({ method: "POST" })
       }
     } catch (_) {}
 
-    // Direct account sync / fulfillment for user: itsram2014@gmail.com (Agency plan + 10 extra tour credits)
+    // Direct account sync / fulfillment for user: itsram2014@gmail.com (Agency plan cancelled + 10 extra tour credits)
     try {
       const ramProfile: any = await db
         .prepare("SELECT id, trial_ends_at, credits, plan FROM profiles WHERE LOWER(email) = 'itsram2014@gmail.com'")
         .first();
 
       if (ramProfile) {
-        const expectedCredits = 60; // 50 base Agency plan quota + 10 purchased extra tour credits
+        const cancelledDateIso = "2026-09-15T00:00:00.000Z";
+        const startDateIso = "2026-08-15T00:00:00.000Z";
         const nowIso = new Date().toISOString();
-        const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
 
-        if (ramProfile.plan !== "agency" || (ramProfile.credits || 0) < expectedCredits) {
-          await db
-            .prepare("UPDATE profiles SET plan = 'agency', credits = ?, trial_ends_at = ? WHERE id = ?")
-            .bind(Math.max(ramProfile.credits || 0, expectedCredits), periodEndIso, ramProfile.id)
-            .run();
-        }
+        // 10 extra tour credits purchased later
+        const extraCredits = 10;
+        await db
+          .prepare("UPDATE profiles SET plan = 'agency', credits = ?, trial_ends_at = ? WHERE id = ?")
+          .bind(Math.max(ramProfile.credits || 0, extraCredits), cancelledDateIso, ramProfile.id)
+          .run();
 
-        // Ensure Agency subscription record exists in subscriptions table
+        // Ensure Agency subscription record exists and is marked CANCELLED
         const existingAgencySub: any = await db
           .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'agency'")
           .bind(ramProfile.id)
           .first();
 
-        if (!existingAgencySub) {
+        if (existingAgencySub) {
+          await db
+            .prepare("UPDATE subscriptions SET status = 'cancelled', start_date = ?, end_date = ? WHERE id = ?")
+            .bind(startDateIso, cancelledDateIso, existingAgencySub.id)
+            .run();
+        } else {
           await db
             .prepare(
-              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'agency', 'active', ?, ?, ?, 2999, ?)"
+              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'agency', 'cancelled', ?, ?, ?, 2999, ?)"
             )
             .bind(
               crypto.randomUUID(),
               ramProfile.id,
               `sub_agency_${ramProfile.id.slice(0, 8)}`,
-              nowIso,
-              periodEndIso,
-              nowIso,
+              startDateIso,
+              cancelledDateIso,
+              startDateIso,
             )
             .run()
             .catch(() => {});
