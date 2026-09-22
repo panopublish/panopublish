@@ -678,19 +678,19 @@ function AdminDashboard() {
       new Date(p.trial_ends_at).getTime() < Date.now();
     const isPlanExpired = isTrialExpired || isPaidPlanExpired;
 
-    const userPublishedCount = tours.filter((t) => t.user_id === p.id && t.status === "published").length;
+    const cycleUsed = p.billing_cycle_tours_used ?? 0;
     const totalLimit = isAdminUser ? 9999 : isPlanExpired ? 0 : (planLimits[p.plan] ?? 1);
     const totalAllowance = isPlanExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
     const activeCredits =
       isAdminUser
         ? 9999
-        : Math.max(0, totalAllowance - userPublishedCount);
+        : Math.max(0, totalAllowance - cycleUsed);
 
     setEditingProfile(p);
     setProfileForm({
       plan: p.plan,
       credits: activeCredits,
-      billing_cycle_tours_used: userPublishedCount,
+      billing_cycle_tours_used: cycleUsed,
     });
   };
 
@@ -1055,10 +1055,11 @@ function AdminDashboard() {
 
                                     const totalLimit = isAdminUser ? 9999 : isPlanExpired ? 0 : (planLimits[p.plan] ?? 1);
                                     const totalAllowance = isPlanExpired ? 0 : Math.max(p.credits ?? 0, totalLimit);
+                                    const cycleUsed = p.billing_cycle_tours_used ?? 0;
                                     const remainingCredits =
                                       isAdminUser
                                         ? 9999
-                                        : Math.max(0, totalAllowance - userPublishedCount);
+                                        : Math.max(0, totalAllowance - cycleUsed);
                                     return (
                                       <div className="text-[11px] mt-1.5 font-bold">
                                         {isAdminUser ? (

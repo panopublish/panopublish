@@ -138,7 +138,7 @@ function CreateTour() {
         if (countErr) throw countErr;
 
         const published = pubCount ?? 0;
-        if (prof && prof.billing_cycle_tours_used !== published) {
+        if (prof && prof.plan === "trial" && (prof.billing_cycle_tours_used ?? 0) < published) {
           supabase
             .from("profiles")
             .update({ billing_cycle_tours_used: published })
@@ -403,7 +403,7 @@ function CreateTour() {
 
     const totalLimit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
     const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
-    const usedPublished = profile?.billing_cycle_tours_used ?? tourCount ?? 0;
+    const usedPublished = profile?.billing_cycle_tours_used ?? 0;
     const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
 
     if (!isAdmin && remainingCredits <= 0) {
@@ -522,7 +522,7 @@ function CreateTour() {
 
   const limit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
   const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, limit);
-  const usedPublished = profile?.billing_cycle_tours_used ?? tourCount ?? 0;
+  const usedPublished = profile?.billing_cycle_tours_used ?? 0;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - usedPublished);
   const isLimitReached = !isAdmin && remainingCredits <= 0;
 

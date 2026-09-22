@@ -71,7 +71,7 @@ function ToursPage() {
       const publishedCount = tList.filter((t) => t.status === "published").length;
 
       if (profRes.data) {
-        if (profRes.data.billing_cycle_tours_used !== publishedCount) {
+        if (profRes.data.plan === "trial" && (profRes.data.billing_cycle_tours_used ?? 0) < publishedCount) {
           supabase
             .from("profiles")
             .update({ billing_cycle_tours_used: publishedCount })

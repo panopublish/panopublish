@@ -242,19 +242,18 @@ export const runD1Query = createServerFn({ method: "POST" })
         const startDateIso = "2026-09-22T00:00:00.000Z";
         const periodEndIso = "2026-10-22T23:59:59.999Z";
 
-        // User currently has 1 published tour from trial. Giving Basic plan (5 tours quota) starting today means
-        // ensuring at least 1 + 5 = 6 total credits so 5 remaining credits are immediately available.
-        const expectedCredits = 6;
-
+        // User published 1 tour in trial. Now starting Basic plan (5 tours quota),
+        // billing_cycle_tours_used is 0 for this cycle, and credits is 5 (all 5 credits available).
         if (
           mapvoraProfile.plan !== "basic" ||
           !mapvoraProfile.trial_ends_at ||
           mapvoraProfile.trial_ends_at < startDateIso ||
-          (mapvoraProfile.credits || 0) < expectedCredits
+          mapvoraProfile.billing_cycle_tours_used !== 0 ||
+          mapvoraProfile.credits !== 5
         ) {
           await db
-            .prepare("UPDATE profiles SET plan = 'basic', credits = ?, trial_ends_at = ? WHERE id = ?")
-            .bind(Math.max(mapvoraProfile.credits || 0, expectedCredits), periodEndIso, mapvoraProfile.id)
+            .prepare("UPDATE profiles SET plan = 'basic', credits = 5, billing_cycle_tours_used = 0, trial_ends_at = ? WHERE id = ?")
+            .bind(periodEndIso, mapvoraProfile.id)
             .run();
         }
 
