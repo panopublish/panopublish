@@ -98,7 +98,7 @@ function ToursPage() {
         const [photoRes, connRes] = await Promise.all([
           supabase
             .from("photos")
-            .select("id,tour_id,file_url,thumbnail_url,streetview_status,streetview_photo_id")
+            .select("id,tour_id,thumbnail_url,streetview_status,streetview_photo_id")
             .in("tour_id", ids),
           supabase.from("connections").select("id,tour_id").in("tour_id", ids),
         ]);
@@ -353,7 +353,7 @@ function ToursPage() {
           <div className="bg-white rounded-xl border shadow-sm divide-y divide-gray-100">
             {sortedTours.map((t) => {
               const firstPhoto = photos.find((p) => p.tour_id === t.id);
-              const thumbUrl = (firstPhoto as any)?.thumbnail_url || firstPhoto?.file_url;
+              const thumbUrl = (firstPhoto as any)?.thumbnail_url || null;
               const hasConnections = connections.some((c) => c.tour_id === t.id);
               const tourPhotos = photos.filter((p) => p.tour_id === t.id);
               const isPublished =
@@ -371,7 +371,6 @@ function ToursPage() {
                     {thumbUrl ? (
                       <LazyThumbnail
                         src={thumbUrl}
-                        fallbackSrc={firstPhoto?.file_url}
                         alt={t.name || "Tour preview"}
                         aspectRatio="w-full h-full"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

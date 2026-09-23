@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { seoPages } from "@/lib/seo-pages-data";
+import type { SeoPageData } from "@/lib/seo-pages-data";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -10,6 +10,15 @@ import { Calendar, Clock, User, ArrowRight, BookOpen, MapPin, Search } from "luc
 import { useState, useMemo } from "react";
 
 export const Route = createFileRoute("/blog/")({
+  loader: async () => {
+    const { seoPages } = await import("@/lib/seo-pages-data");
+    const rawBlogs = Object.values(seoPages).filter((page) => page.type === "blog") as SeoPageData[];
+    const posts = rawBlogs.sort((a, b) => parseBlogDate(b.date) - parseBlogDate(a.date));
+    const cities = Object.values(seoPages)
+      .filter((p) => p.type === "city")
+      .map((c) => ({ slug: c.slug, cityName: (c as any).cityName || c.title }));
+    return Object.assign(posts, { cities });
+  },
   head: () => ({
     meta: [
       { title: "360° Virtual Tour & Google Street View Blog India — PanoPublish" },
@@ -60,14 +69,9 @@ function matchesCategory(blogCategory: string | undefined, blogTitle: string, se
 }
 
 function BlogIndex() {
+  const allBlogsSorted = Route.useLoaderData();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Extract all blogs from database and sort by date (Recently published first)
-  const allBlogsSorted = useMemo(() => {
-    const rawBlogs = Object.values(seoPages).filter((page) => page.type === "blog");
-    return rawBlogs.sort((a, b) => parseBlogDate(b.date) - parseBlogDate(a.date));
-  }, []);
 
   // Pick one blog as a featured article (e.g. how to publish or most recent)
   const featuredBlog = useMemo(() => {
@@ -308,8 +312,7 @@ function BlogIndex() {
               </div>
 
               <div className="flex flex-wrap gap-2.5 justify-center max-w-4xl mx-auto pt-4">
-                {Object.values(seoPages)
-                  .filter((p) => p.type === "city")
+                {(((allBlogsSorted as any).cities as { slug: string; cityName: string }[]) || [])
                   .map((city) => (
                     <Link
                       key={city.slug}

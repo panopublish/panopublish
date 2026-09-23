@@ -770,32 +770,13 @@ function PublishPage() {
         });
       }
 
-      for (const photo of toPublish) {
-        // Find if this photo belongs to a level island
-        let level = undefined;
-        if (photo.island_id) {
-          const island = islands.find((i) => i.id === photo.island_id);
-          if (island?.is_level && island.level_name) {
-            level = {
-              number: island.level_number ?? 0,
-              name: island.level_name.toString().toUpperCase().slice(0, 3),
-            };
-          }
-        }
-
-        // 1. Process image client-side to apply Nadir/Logo if needed
-        setPublishProgress({
-          current: alreadyDone + photoIndex - 1,
-          total: photoList.length,
-          step: "processing",
-          message: `Processing scene ${alreadyDone + photoIndex} of ${photoList.length} in browser...`,
-        });
-
+      // Helper to fetch, apply nadir client-side, and inject GPano XMP headers
+      const prepareSceneBlob = async (targetPhoto: any): Promise<Blob | null> => {
         let processedBlob: Blob | null = null;
         for (let fetchAttempt = 1; fetchAttempt <= 3; fetchAttempt++) {
           try {
             processedBlob = await processNadirClientSide(
-              photo.file_url,
+              targetPhoto.file_url,
               nadirType,
               size,
               pos,
@@ -805,7 +786,7 @@ function PublishPage() {
           } catch (procErr: any) {
             console.warn(`Nadir processing attempt ${fetchAttempt} fallback to original:`, procErr);
             try {
-              const rawRes = await fetch(photo.file_url);
+              const rawRes = await fetch(targetPhoto.file_url);
               if (rawRes.ok) {
                 processedBlob = await rawRes.blob();
                 break;
@@ -814,6 +795,57 @@ function PublishPage() {
               if (fetchAttempt < 3) await new Promise((r) => setTimeout(r, 1000));
             }
           }
+        }
+
+        if (!processedBlob) return null;
+
+        // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
+        try {
+          processedBlob = await ensureGPanoXmpBlob(processedBlob, {
+            heading: targetPhoto.heading || 0,
+            pitch: targetPhoto.pitch || 0,
+            roll: targetPhoto.roll || 0,
+          });
+        } catch (xmpErr) {
+          console.warn(`Could not inject XMP for scene ${targetPhoto.filename || targetPhoto.id}:`, xmpErr);
+        }
+
+        return processedBlob;
+      };
+
+      // Pipeline: pre-prepare the first scene blob
+      let nextBlobPromise: Promise<Blob | null> | null =
+        toPublish.length > 0 ? prepareSceneBlob(toPublish[0]) : null;
+
+      for (let i = 0; i < toPublish.length; i++) {
+        const photo = toPublish[i];
+        // Find if this photo belongs to a level island
+        let level = undefined;
+        if (photo.island_id) {
+          const island = islands.find((isl) => isl.id === photo.island_id);
+          if (island?.is_level && island.level_name) {
+            level = {
+              number: island.level_number ?? 0,
+              name: island.level_name.toString().toUpperCase().slice(0, 3),
+            };
+          }
+        }
+
+        setPublishProgress({
+          current: alreadyDone + photoIndex - 1,
+          total: photoList.length,
+          step: "processing",
+          message: `Preparing scene ${alreadyDone + photoIndex} of ${photoList.length}...`,
+        });
+
+        // Await the pre-prepared blob for this scene
+        let processedBlob = nextBlobPromise ? await nextBlobPromise : await prepareSceneBlob(photo);
+
+        // Pre-fetch and prepare the NEXT scene in parallel while current scene uploads to Google
+        if (i + 1 < toPublish.length) {
+          nextBlobPromise = prepareSceneBlob(toPublish[i + 1]);
+        } else {
+          nextBlobPromise = null;
         }
 
         if (!processedBlob) {
@@ -827,17 +859,6 @@ function PublishPage() {
           } catch {}
           photoIndex++;
           continue;
-        }
-
-        // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
-        try {
-          processedBlob = await ensureGPanoXmpBlob(processedBlob, {
-            heading: photo.heading || 0,
-            pitch: photo.pitch || 0,
-            roll: photo.roll || 0,
-          });
-        } catch (xmpErr) {
-          console.warn(`Could not inject XMP for scene ${photo.filename || photo.id}:`, xmpErr);
         }
 
         // 2. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh

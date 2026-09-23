@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, redirect } from "@tanstack/react-router";
-import { seoPages } from "@/lib/seo-pages-data";
+import type { SeoPageData } from "@/lib/seo-pages-data";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -27,8 +27,9 @@ import { HyderabadTourLanding } from "@/components/HyderabadTourLanding";
 import { CityTourLanding } from "@/components/CityTourLanding";
 
 export const Route = createFileRoute("/$slug")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const slug = params.slug;
+    const { seoPages } = await import("@/lib/seo-pages-data");
     const page = seoPages[slug];
     if (!page) {
       throw notFound();
@@ -37,10 +38,12 @@ export const Route = createFileRoute("/$slug")({
       throw redirect({
         to: "/blog/$slug/",
         params: { slug: page.slug },
-        statusCode: 301,
       });
     }
-    return page;
+    const cities = Object.values(seoPages)
+      .filter((p) => p.type === "city")
+      .map((c) => ({ slug: c.slug, cityName: (c as any).cityName || c.title }));
+    return Object.assign({}, page, { cities }) as SeoPageData & { cities: { slug: string; cityName: string }[] };
   },
   head: ({ loaderData }) => ({
     meta: loaderData
@@ -502,18 +505,16 @@ function SeoPage() {
                 Available in Top Indian Cities
               </h2>
               <div className="flex flex-wrap gap-2.5 justify-center max-w-3xl mx-auto">
-                {Object.values(seoPages)
-                  .filter((p) => p.type === "city")
-                  .map((city) => (
-                    <Link
-                      key={city.slug}
-                      to="/$slug/"
-                      params={{ slug: city.slug }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border hover:border-primary/20 text-xs font-semibold text-muted-foreground hover:text-primary transition-all bg-slate-50/50"
-                    >
-                      <MapPin className="h-3 w-3 text-primary" /> {city.cityName}
-                    </Link>
-                  ))}
+                {(page.cities || []).map((city) => (
+                  <Link
+                    key={city.slug}
+                    to="/$slug/"
+                    params={{ slug: city.slug }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border hover:border-primary/20 text-xs font-semibold text-muted-foreground hover:text-primary transition-all bg-slate-50/50"
+                  >
+                    <MapPin className="h-3 w-3 text-primary" /> {city.cityName}
+                  </Link>
+                ))}
               </div>
             </div>
           </section>

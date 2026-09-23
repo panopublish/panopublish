@@ -4,7 +4,7 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { getAuthor } from "@/lib/authors-data";
-import { seoPages } from "@/lib/seo-pages-data";
+import type { SeoPageData } from "@/lib/seo-pages-data";
 import { caseStudiesData } from "@/lib/case-studies-data";
 import {
   Linkedin,
@@ -18,12 +18,13 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/authors/$slug")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const author = getAuthor(params.slug);
     if (!author) throw notFound();
 
+    const { seoPages } = await import("@/lib/seo-pages-data");
     // Get blog posts authored by this person (match author name in seoPages)
-    const authoredBlogPosts = Object.values(seoPages)
+    const authoredBlogPosts = (Object.values(seoPages) as SeoPageData[])
       .filter(
         (p) =>
           p.type === "blog" &&

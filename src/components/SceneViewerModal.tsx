@@ -5,6 +5,7 @@ import { formatDateIN } from "@/lib/format";
 type Photo = {
   id: string;
   file_url: string;
+  thumbnail_url?: string | null;
   filename: string | null;
   size_bytes: number | null;
   latitude: number | null;
@@ -32,10 +33,15 @@ export function SceneViewerModal({
   const [index, setIndex] = useState(startIndex);
   const [tab, setTab] = useState<Tab>("flat");
   const [loading, setLoading] = useState(false);
+  const [fullLoaded, setFullLoaded] = useState(false);
   const panoRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<{ destroy: () => void } | null>(null);
 
   const photo = photos[index];
+
+  useEffect(() => {
+    setFullLoaded(false);
+  }, [photo?.id]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -181,13 +187,30 @@ export function SceneViewerModal({
 
         {/* Tab content */}
         {tab === "flat" && (
-          <img
-            src={photo.file_url}
-            alt={photo.filename ?? ""}
-            width={2048}
-            height={1024}
-            className="max-h-full max-w-full object-contain"
-          />
+          <div className="relative max-h-full max-w-full flex items-center justify-center">
+            {photo.thumbnail_url && !fullLoaded && (
+              <img
+                src={photo.thumbnail_url}
+                alt=""
+                className="max-h-full max-w-full object-contain filter blur-sm scale-102 transition-opacity duration-300 pointer-events-none"
+              />
+            )}
+            {!fullLoaded && !photo.thumbnail_url && (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary opacity-60" />
+              </div>
+            )}
+            <img
+              src={photo.file_url}
+              alt={photo.filename ?? ""}
+              width={2048}
+              height={1024}
+              onLoad={() => setFullLoaded(true)}
+              className={`max-h-full max-w-full object-contain transition-opacity duration-300 ${
+                fullLoaded ? "opacity-100" : photo.thumbnail_url ? "opacity-0 absolute inset-0 m-auto" : "opacity-0"
+              }`}
+            />
+          </div>
         )}
 
         {tab === "360" && (
@@ -202,8 +225,24 @@ export function SceneViewerModal({
         )}
 
         {tab === "raw" && (
-          <div className="relative max-h-full max-w-full">
-            <img src={photo.file_url} alt="" width={2048} height={1024} className="max-h-[80vh] max-w-full object-contain" />
+          <div className="relative max-h-full max-w-full flex items-center justify-center">
+            {photo.thumbnail_url && !fullLoaded && (
+              <img
+                src={photo.thumbnail_url}
+                alt=""
+                className="max-h-[80vh] max-w-full object-contain filter blur-sm scale-102 transition-opacity duration-300 pointer-events-none"
+              />
+            )}
+            <img
+              src={photo.file_url}
+              alt=""
+              width={2048}
+              height={1024}
+              onLoad={() => setFullLoaded(true)}
+              className={`max-h-[80vh] max-w-full object-contain transition-opacity duration-300 ${
+                fullLoaded ? "opacity-100" : photo.thumbnail_url ? "opacity-0 absolute inset-0 m-auto" : "opacity-0"
+              }`}
+            />
             <div className="absolute bottom-2 left-2 right-2 rounded-lg bg-foreground/80 text-background p-3 text-xs space-y-1">
               <div>
                 <span className="opacity-70">Filename:</span> {photo.filename ?? "—"}
@@ -229,7 +268,7 @@ export function SceneViewerModal({
         {tab === "google" && (
           <div className="text-center max-w-md p-6">
             <img
-              src={photo.file_url}
+              src={photo.thumbnail_url || photo.file_url}
               alt=""
               className="max-h-[50vh] mx-auto rounded-lg mb-4 opacity-80"
             />

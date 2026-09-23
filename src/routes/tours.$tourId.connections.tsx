@@ -254,6 +254,7 @@ const MAPS_KEY = getEnv("VITE_GOOGLE_MAPS_API_KEY");
 type Photo = {
   id: string;
   file_url: string;
+  thumbnail_url?: string | null;
   filename: string | null;
   latitude: number | null;
   longitude: number | null;
@@ -1522,10 +1523,15 @@ function ConnectionsPage() {
     };
   }, [photos, conns, active?.id]);
 
-  // Overlay Street View viewer
+  // Overlay Street View viewer (instantiated only when pending alignment is active)
   useEffect(() => {
     const pendingPhoto = photos.find((p) => p.id === pendingTo);
     if (!pendingPhoto || !overlayPanoRef.current || !mapsReady || !window.google?.maps) {
+      if (overlayViewerRef.current) {
+        try {
+          overlayViewerRef.current.setVisible(false);
+        } catch {}
+      }
       overlayViewerRef.current = null;
       overlayPanoContainerRef.current = null;
       return;
@@ -1565,6 +1571,7 @@ function ConnectionsPage() {
         },
       });
     } else {
+      overlayViewerRef.current.setVisible(true);
       overlayViewerRef.current.setPano(pendingPhoto.id);
     }
 
@@ -1577,12 +1584,36 @@ function ConnectionsPage() {
         overlayViewerRef.current.setPov({ heading: initialPixelHeading, pitch: 0 });
       }
     } catch {}
+
+    return () => {
+      if (overlayViewerRef.current) {
+        try {
+          overlayViewerRef.current.setVisible(false);
+        } catch {}
+      }
+    };
   }, [pendingTo, autoAlign, mapsReady, active]);
 
-  // Top-Right 360 viewer
+  // Top-Right 360 viewer (instantiated only for non-custom tours when right preview is active)
   useEffect(() => {
+    if (tour?.type === "custom") {
+      if (rightViewerRef.current) {
+        try {
+          rightViewerRef.current.setVisible(false);
+        } catch {}
+      }
+      rightViewerRef.current = null;
+      rightPanoContainerRef.current = null;
+      return;
+    }
+
     const previewPhoto = photos.find((p) => p.id === rightPendingTo) || active;
     if (!previewPhoto || !rightPanoRef.current || !mapsReady || !window.google?.maps) {
+      if (rightViewerRef.current) {
+        try {
+          rightViewerRef.current.setVisible(false);
+        } catch {}
+      }
       rightViewerRef.current = null;
       rightPanoContainerRef.current = null;
       return;
@@ -1622,9 +1653,18 @@ function ConnectionsPage() {
         },
       });
     } else {
+      rightViewerRef.current.setVisible(true);
       rightViewerRef.current.setPano(previewPhoto.id);
     }
-  }, [rightPendingTo, active?.id, mapsReady]);
+
+    return () => {
+      if (rightViewerRef.current) {
+        try {
+          rightViewerRef.current.setVisible(false);
+        } catch {}
+      }
+    };
+  }, [rightPendingTo, active?.id, mapsReady, tour?.type]);
 
   const handleOpenAddCustomHotspot = async () => {
     if (!active) {
@@ -3003,7 +3043,7 @@ function ConnectionsPage() {
                   >
                     <div className="w-16 h-12 rounded-lg bg-slate-200 overflow-hidden relative shrink-0 border border-slate-200">
                       <LazyThumbnail
-                        src={p.file_url}
+                        src={p.thumbnail_url || p.file_url}
                         alt=""
                         aspectRatio="aspect-auto"
                         className="group-hover:scale-105 transition-transform relative z-10"
@@ -3837,7 +3877,7 @@ function ConnectionsPage() {
                             >
                               <div className="aspect-[4/3] relative bg-slate-200 w-full overflow-hidden">
                                 <LazyThumbnail
-                                  src={p.file_url}
+                                  src={p.thumbnail_url || p.file_url}
                                   alt=""
                                   aspectRatio="aspect-auto"
                                   className="group-hover:scale-105 transition-transform relative z-10"
@@ -4265,7 +4305,7 @@ function ConnectionsPage() {
                                     }}
                                   >
                                     <LazyThumbnail
-                                      src={p.file_url}
+                                      src={p.thumbnail_url || p.file_url}
                                       alt=""
                                       aspectRatio="aspect-auto"
                                       className="group-hover:scale-105 transition-transform relative z-10"

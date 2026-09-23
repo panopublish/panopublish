@@ -31,6 +31,24 @@ function checkIsAdmin(user: any) {
   return user?.email && ADMIN_EMAILS.includes(user.email);
 }
 
+let indexesEnsured = false;
+async function ensureIndexes(db: any) {
+  if (indexesEnsured || !db) return;
+  indexesEnsured = true;
+  try {
+    if (typeof db.batch === "function") {
+      await db.batch([
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_connections_tour_id ON connections(tour_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_connections_from_photo ON connections(from_photo_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_connections_to_photo ON connections(to_photo_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_constellations_tour_id ON constellations(tour_id)"),
+      ]);
+    }
+  } catch (_) {}
+}
+
 async function getUserFromToken(token: string) {
   if (!token) {
     throw new Error("No session token provided");
@@ -118,174 +136,11 @@ export const runD1Query = createServerFn({ method: "POST" })
       return { data: null, error: { message: "Cloudflare D1 Database binding 'DB' is missing" } };
     }
 
-    const { table, action } = payload;
-
-    // Self-healing schema migration for photos table if new columns are missing in D1
-    if (table === "photos") {
-      try {
-        await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_url TEXT").run().catch(() => {});
-        await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_path TEXT").run().catch(() => {});
-      } catch (_) {}
+    if (!indexesEnsured) {
+      ensureIndexes(db);
     }
 
-    // Direct manual renewal for user: tmstudio934@gmail.com (Basic plan + 5 credits from today)
-    try {
-      const tmProfile: any = await db
-        .prepare("SELECT id, trial_ends_at, credits, plan FROM profiles WHERE email = 'tmstudio934@gmail.com'")
-        .first();
-
-      if (
-        tmProfile &&
-        (
-          !tmProfile.trial_ends_at ||
-          tmProfile.trial_ends_at < "2026-09-10" ||
-          (tmProfile.credits || 0) < 9 ||
-          tmProfile.plan !== "basic"
-        )
-      ) {
-        const nowIso = "2026-09-10T20:00:00.000Z";
-        const periodEndIso = "2026-10-10T23:59:59.999Z";
-
-        await db
-          .prepare("UPDATE profiles SET plan = 'basic', credits = 9, trial_ends_at = ? WHERE id = ?")
-          .bind(periodEndIso, tmProfile.id)
-          .run();
-
-        await db
-          .prepare(
-            "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'basic', 'active', 'manual_direct_payment', ?, ?, 499, ?)"
-          )
-          .bind(crypto.randomUUID(), tmProfile.id, nowIso, periodEndIso, nowIso)
-          .run()
-          .catch(() => {});
-      }
-    } catch (_) {}
-
-    // Direct account sync / fulfillment for user: itsram2014@gmail.com (Agency plan cancelled + 10 extra tour credits)
-    try {
-      const ramProfile: any = await db
-        .prepare("SELECT id, trial_ends_at, credits, plan FROM profiles WHERE LOWER(email) = 'itsram2014@gmail.com'")
-        .first();
-
-      if (ramProfile) {
-        const cancelledDateIso = "2026-09-15T00:00:00.000Z";
-        const startDateIso = "2026-08-15T00:00:00.000Z";
-        const nowIso = new Date().toISOString();
-
-        // 10 extra tour credits purchased later
-        const extraCredits = 10;
-        await db
-          .prepare("UPDATE profiles SET plan = 'agency', credits = ?, trial_ends_at = ? WHERE id = ?")
-          .bind(Math.max(ramProfile.credits || 0, extraCredits), cancelledDateIso, ramProfile.id)
-          .run();
-
-        // Ensure Agency subscription record exists and is marked CANCELLED
-        const existingAgencySub: any = await db
-          .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'agency'")
-          .bind(ramProfile.id)
-          .first();
-
-        if (existingAgencySub) {
-          await db
-            .prepare("UPDATE subscriptions SET status = 'cancelled', start_date = ?, end_date = ? WHERE id = ?")
-            .bind(startDateIso, cancelledDateIso, existingAgencySub.id)
-            .run();
-        } else {
-          await db
-            .prepare(
-              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'agency', 'cancelled', ?, ?, ?, 2999, ?)"
-            )
-            .bind(
-              crypto.randomUUID(),
-              ramProfile.id,
-              `sub_agency_${ramProfile.id.slice(0, 8)}`,
-              startDateIso,
-              cancelledDateIso,
-              startDateIso,
-            )
-            .run()
-            .catch(() => {});
-        }
-
-        // Ensure 10 Extra Credits (Pay As You Go) record exists in subscriptions table
-        const existingCreditSub: any = await db
-          .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'pay_as_you_go'")
-          .bind(ramProfile.id)
-          .first();
-
-        if (!existingCreditSub) {
-          await db
-            .prepare(
-              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'pay_as_you_go', 'active', ?, ?, ?, 1000, ?)"
-            )
-            .bind(
-              crypto.randomUUID(),
-              ramProfile.id,
-              `pay_credits_10_${ramProfile.id.slice(0, 8)}`,
-              nowIso,
-              nowIso,
-              nowIso,
-            )
-            .run()
-            .catch(() => {});
-        }
-      }
-    } catch (_) {}
-
-    // Direct manual renewal for user: prayagrajadwordjuntion@gmail.com (Mapvora Digital - Basic plan + 5 credits starting today)
-    try {
-      const mapvoraProfile: any = await db
-        .prepare("SELECT id, trial_ends_at, credits, plan, billing_cycle_tours_used FROM profiles WHERE LOWER(email) = 'prayagrajadwordjuntion@gmail.com'")
-        .first();
-
-      if (mapvoraProfile) {
-        const startDateIso = "2026-09-22T00:00:00.000Z";
-        const periodEndIso = "2026-10-22T23:59:59.999Z";
-
-        // User published 1 tour in trial. Now starting Basic plan (5 tours quota),
-        // billing_cycle_tours_used is 0 for this cycle, and credits is 5 (all 5 credits available).
-        if (
-          mapvoraProfile.plan !== "basic" ||
-          !mapvoraProfile.trial_ends_at ||
-          mapvoraProfile.trial_ends_at < startDateIso ||
-          mapvoraProfile.billing_cycle_tours_used !== 0 ||
-          mapvoraProfile.credits !== 5
-        ) {
-          await db
-            .prepare("UPDATE profiles SET plan = 'basic', credits = 5, billing_cycle_tours_used = 0, trial_ends_at = ? WHERE id = ?")
-            .bind(periodEndIso, mapvoraProfile.id)
-            .run();
-        }
-
-        // Ensure active Basic subscription record exists in subscriptions table
-        const existingBasicSub: any = await db
-          .prepare("SELECT id FROM subscriptions WHERE user_id = ? AND plan = 'basic'")
-          .bind(mapvoraProfile.id)
-          .first();
-
-        if (existingBasicSub) {
-          await db
-            .prepare("UPDATE subscriptions SET status = 'active', start_date = ?, end_date = ?, amount_inr = 499 WHERE id = ?")
-            .bind(startDateIso, periodEndIso, existingBasicSub.id)
-            .run();
-        } else {
-          await db
-            .prepare(
-              "INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at) VALUES (?, ?, 'basic', 'active', ?, ?, ?, 499, ?)"
-            )
-            .bind(
-              crypto.randomUUID(),
-              mapvoraProfile.id,
-              `sub_basic_${mapvoraProfile.id.slice(0, 8)}`,
-              startDateIso,
-              periodEndIso,
-              startDateIso,
-            )
-            .run()
-            .catch(() => {});
-        }
-      }
-    } catch (_) {}
+    const { table, action } = payload;
 
     // Build the query and parameter bindings
     let sql = "";

@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS photos (
 );
 CREATE INDEX IF NOT EXISTS idx_photos_tour_id ON photos(tour_id);
 CREATE INDEX IF NOT EXISTS idx_photos_island_id ON photos(island_id);
+CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id);
 
 -- Subscriptions
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -120,6 +121,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   amount_inr INTEGER,
   created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 
 -- Google Tokens
 CREATE TABLE IF NOT EXISTS google_tokens (
@@ -144,6 +146,9 @@ CREATE TABLE IF NOT EXISTS connections (
   metadata TEXT DEFAULT '{}',
   created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_connections_tour_id ON connections(tour_id);
+CREATE INDEX IF NOT EXISTS idx_connections_from_photo ON connections(from_photo_id);
+CREATE INDEX IF NOT EXISTS idx_connections_to_photo ON connections(to_photo_id);
 
 -- Constellations
 CREATE TABLE IF NOT EXISTS constellations (
@@ -153,6 +158,7 @@ CREATE TABLE IF NOT EXISTS constellations (
   name TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_constellations_tour_id ON constellations(tour_id);
 
 -- Coupons
 CREATE TABLE IF NOT EXISTS coupons (

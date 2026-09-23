@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { seoPages } from "@/lib/seo-pages-data";
+import type { SeoPageData } from "@/lib/seo-pages-data";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -16,8 +16,9 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/blog/$slug")({
-  loader: ({ params }) => {
+  loader: async ({ params }) => {
     const slug = params.slug;
+    const { seoPages } = await import("@/lib/seo-pages-data");
     const page = seoPages[slug];
     if (!page || page.type !== "blog") {
       throw notFound();
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/blog/$slug")({
       (p) => p.type === "blog" && p.slug !== slug && p.category === page.category
     );
     const related = allBlogPages.slice(0, 3);
-    return { page, related };
+    return { page: page as SeoPageData, related: related as SeoPageData[] };
   },
   head: ({ loaderData }) => ({
     meta: loaderData?.page

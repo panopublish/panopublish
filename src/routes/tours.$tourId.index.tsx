@@ -599,31 +599,43 @@ function TourDetail() {
 
     setUploads((prev) => [...prev, ...newUploads]);
 
-    for (let i = 0; i < fileList.length; i++) {
-      const file = fileList[i];
-      const uploadItem = newUploads[i];
+    const CONCURRENCY = 3;
+    let nextIndex = 0;
 
-      try {
-        if (file.size > MAX_BYTES) {
-          throw new Error(`File is too large (max 50MB)`);
+    const worker = async () => {
+      while (nextIndex < fileList.length) {
+        const i = nextIndex++;
+        const file = fileList[i];
+        const uploadItem = newUploads[i];
+
+        try {
+          if (file.size > MAX_BYTES) {
+            throw new Error(`File is too large (max 50MB)`);
+          }
+
+          const targetIsland = isCustomTour ? null : (islandId || (activeIsland !== "unassigned" ? activeIsland : null));
+          await uploadPhoto(file, targetIsland, uploadItem.id);
+        } catch (err: any) {
+          console.error("Upload failed for file:", file.name, err);
+          setUploads((prev) =>
+            prev.map((item) =>
+              item.id === uploadItem.id
+                ? { ...item, status: "failed", error: err.message || "Upload failed" }
+                : item,
+            ),
+          );
+          setTimeout(() => {
+            setUploads((prev) => prev.filter((item) => item.id !== uploadItem.id));
+          }, 5000);
         }
-
-        const targetIsland = isCustomTour ? null : (islandId || (activeIsland !== "unassigned" ? activeIsland : null));
-        await uploadPhoto(file, targetIsland, uploadItem.id);
-      } catch (err: any) {
-        console.error("Upload failed for file:", file.name, err);
-        setUploads((prev) =>
-          prev.map((item) =>
-            item.id === uploadItem.id
-              ? { ...item, status: "failed", error: err.message || "Upload failed" }
-              : item,
-          ),
-        );
-        setTimeout(() => {
-          setUploads((prev) => prev.filter((item) => item.id !== uploadItem.id));
-        }, 5000);
       }
-    }
+    };
+
+    const workerCount = Math.min(CONCURRENCY, fileList.length);
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+    // Authoritative single reload after the entire batch completes
+    load(false);
   };
 
   const uploadPhoto = async (file: File, islandId: string | null, uploadId: string) => {
@@ -671,7 +683,9 @@ function TourDetail() {
       console.warn("Fast thumbnail generation skipped:", thumbGenErr);
     }
 
-    let { error: dbErr } = await supabase.from("photos").insert({
+    const newPhotoId = crypto.randomUUID();
+    const photoRecord: any = {
+      id: newPhotoId,
       user_id: user.id,
       tour_id: tourId,
       island_id: islandId,
@@ -687,11 +701,14 @@ function TourDetail() {
       heading: meta.heading,
       pitch: meta.pitch,
       roll: meta.roll,
-    });
+    };
+
+    let { error: dbErr } = await supabase.from("photos").insert(photoRecord);
 
     // Resilient fallback: If server database table has not added thumbnail columns yet, retry basic insert
     if (dbErr && (dbErr.message?.includes("thumbnail") || dbErr.message?.includes("no column named"))) {
-      const retryRes = await supabase.from("photos").insert({
+      const retryRecord = {
+        id: newPhotoId,
         user_id: user.id,
         tour_id: tourId,
         island_id: islandId,
@@ -705,15 +722,29 @@ function TourDetail() {
         heading: meta.heading,
         pitch: meta.pitch,
         roll: meta.roll,
-      });
+      };
+      const retryRes = await supabase.from("photos").insert(retryRecord);
       dbErr = retryRes.error;
     }
 
     if (dbErr) throw dbErr;
 
+    // Optimistically update local photos and island counts without refetching entire tour
+    setPhotos((prev) => {
+      if (prev.some((p) => p.id === newPhotoId)) return prev;
+      return [...prev, photoRecord];
+    });
+
+    if (islandId) {
+      setIslands((prev) =>
+        prev.map((isl) =>
+          isl.id === islandId ? { ...isl, photo_count: (isl.photo_count || 0) + 1 } : isl,
+        ),
+      );
+    }
+
     setUploads((prev) => prev.filter((item) => item.id !== uploadId));
     toast.success(`${file.name} uploaded`);
-    load(false);
   };
 
   const deletePhoto = async (p: Photo) => {
@@ -1025,11 +1056,11 @@ function TourDetail() {
                           className={`relative aspect-square rounded-xl border bg-gray-100 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg ${dragOverPhotoId === p.id ? "ring-2 ring-[#0277bd] ring-offset-2" : ""}`}
                         >
                           <LazyThumbnail
-                            src={p.thumbnail_url || p.file_url}
-                            fallbackSrc={p.file_url}
+                            src={p.thumbnail_url || ""}
                             alt={p.filename ?? "Photo"}
                             aspectRatio="aspect-square"
                             className="group-hover:scale-105 transition-transform"
+                            fallbackIcon={<ImageIcon className="h-8 w-8 text-gray-400" />}
                           />
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
                           <div className="absolute top-2 left-2 rounded bg-black/70 text-white px-2 py-0.5 text-[11px] font-bold z-10">
