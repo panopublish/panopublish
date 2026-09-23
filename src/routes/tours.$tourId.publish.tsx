@@ -20,7 +20,9 @@ import {
   Send,
   CheckCheck,
   Check,
+  CheckCircle2,
   Clock,
+  Loader2,
   X as XIcon,
   Cloud,
   Upload as UploadIcon,
@@ -917,6 +919,7 @@ function PublishPage() {
                   current: alreadyDone + photoIndex - 1,
                   total: photoList.length,
                   step: "uploading",
+                  uploadPct,
                   message: `Uploading scene ${alreadyDone + photoIndex} of ${photoList.length} (${uploadPct}%)...`,
                 });
               },
@@ -1050,7 +1053,8 @@ function PublishPage() {
         current: photoList.length,
         total: photoList.length,
         step: "connecting",
-        message: "Updating connections and alignments on Google Maps...",
+        uploadPct: 92,
+        message: "Synchronizing Street View connections on Google Maps...",
       });
       toast.info("Updating connections and poses on Google Maps...");
 
@@ -1092,12 +1096,24 @@ function PublishPage() {
         );
       }
 
+      // ONLY 100% and successful once all connections are synced!
+      setPublishProgress({
+        current: photoList.length,
+        total: photoList.length,
+        step: "success",
+        uploadPct: 100,
+        message: "All scenes published & connections 100% synced on Google Maps!",
+      });
+
       if (failedCount > 0) {
         toast.warning(`Published ${photoList.length - failedCount} of ${photoList.length} scenes. ${failedCount} scenes failed.`);
       } else {
         toast.success(`All ${photoList.length} scene${photoList.length === 1 ? "" : "s"} published and connections linked on Google Maps!`);
       }
       load();
+
+      // Display the 100% full progress bar for 3 seconds before dismissing
+      await new Promise((r) => setTimeout(r, 3000));
     } catch (e: any) {
       console.error("Publishing error:", e);
       toast.error("Publishing stopped: " + e.message);
@@ -1402,7 +1418,17 @@ function PublishPage() {
         setTour((prev: any) => (prev ? { ...prev, streetview_connections_synced: true } : null));
       }
 
+      // Manual connection sync completed: show 100% full progress bar
+      setPublishProgress({
+        current: 100,
+        total: 100,
+        step: "success",
+        uploadPct: 100,
+        message: "Connections and alignments 100% updated on Google Maps!",
+      });
+
       toast.success("Connections and alignments updated successfully on Google Maps!");
+      await new Promise((r) => setTimeout(r, 2500));
     } catch (e: any) {
       console.error(e);
       toast.error("Failed to sync connections: " + e.message);
@@ -2501,38 +2527,110 @@ function PublishPage() {
             <div className="grid md:grid-cols-2 gap-6 items-center">
               <div className="space-y-4">
                 {publishProgress && (() => {
+                  const isSuccess = publishProgress.step === "success";
                   const isConnecting = publishProgress.step === "connecting";
+                  const isFailed = publishProgress.step === "failed";
                   const displaySceneNum = Math.min(publishProgress.total, publishProgress.current + 1);
                   const currentUploadPct = publishProgress.uploadPct || 0;
                   const total = publishProgress.total || 1;
-                  const calculatedPct = isConnecting
-                    ? 98
-                    : Math.min(99, Math.round(((publishProgress.current + currentUploadPct / 100) / total) * 100));
+
+                  // 0% -> 85%: Scene Uploads & Registrations
+                  // 85% -> 96%: Connecting and syncing Street View topology
+                  // 100%: Only when connection synchronization completes successfully!
+                  let calculatedPct = 0;
+                  if (isSuccess) {
+                    calculatedPct = 100;
+                  } else if (isConnecting) {
+                    calculatedPct = 95;
+                  } else {
+                    const sceneFraction = (publishProgress.current + (currentUploadPct / 100)) / total;
+                    calculatedPct = Math.min(88, Math.max(3, Math.round(sceneFraction * 85)));
+                  }
 
                   return (
-                    <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 shadow-inner animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
-                          {isConnecting
-                            ? "Finalizing & Linking"
-                            : `Scene ${displaySceneNum} of ${publishProgress.total}`}
+                    <div
+                      className={`rounded-2xl border p-4 shadow-sm transition-all duration-500 animate-in fade-in slide-in-from-bottom-2 ${
+                        isSuccess
+                          ? "border-emerald-300 bg-gradient-to-br from-emerald-50/90 via-green-50/50 to-white shadow-emerald-500/10"
+                          : isFailed
+                            ? "border-red-300 bg-red-50/70"
+                            : "border-sky-200 bg-gradient-to-br from-sky-50/80 via-blue-50/40 to-white shadow-blue-500/5"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                            isSuccess
+                              ? "text-emerald-700"
+                              : isFailed
+                                ? "text-red-700"
+                                : "text-[#0277bd]"
+                          }`}
+                        >
+                          {isSuccess ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in" />
+                              Publishing Complete
+                            </>
+                          ) : isConnecting ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0277bd]" />
+                              Syncing Connections to Google
+                            </>
+                          ) : (
+                            <>
+                              <UploadIcon className="h-3.5 w-3.5 text-[#0277bd]" />
+                              Publishing Scene {displaySceneNum} of {publishProgress.total}
+                            </>
+                          )}
                         </span>
-                        <span className="text-xs font-black text-blue-600">
+                        <span
+                          className={`text-sm font-black font-mono tracking-tight ${
+                            isSuccess ? "text-emerald-700" : "text-[#0277bd]"
+                          }`}
+                        >
                           {calculatedPct}%
                         </span>
                       </div>
-                      {/* Premium Progress Bar */}
-                      <div className="w-full h-2 bg-blue-100/50 rounded-full overflow-hidden mb-2.5 border border-blue-100/30">
+
+                      {/* Animated Progress Bar */}
+                      <div className="w-full h-3 bg-slate-200/80 rounded-full overflow-hidden mb-2.5 p-0.5 shadow-inner">
                         <div
-                          className="h-full bg-[#0277bd] rounded-full transition-all duration-300 ease-out bg-gradient-to-r from-[#0277bd] to-blue-400"
+                          className={`h-full rounded-full transition-all duration-500 ease-out relative overflow-hidden ${
+                            isSuccess
+                              ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 shadow-md shadow-emerald-500/25"
+                              : isFailed
+                                ? "bg-red-500"
+                                : "bg-gradient-to-r from-[#0277bd] via-[#0288d1] to-[#4fc3f7] shadow-sm shadow-blue-500/20"
+                          }`}
                           style={{
                             width: `${calculatedPct}%`,
                           }}
-                        />
+                        >
+                          {/* Animated Shimmer Bar Highlight */}
+                          {!isSuccess && !isFailed && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full animate-[shimmer_1.8s_infinite]" />
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
-                        <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin shrink-0" />
-                        <span className="truncate">{publishProgress.message}</span>
+
+                      <div className="flex items-center gap-2 text-xs font-semibold">
+                        {isSuccess ? (
+                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                            <span>All scenes published & connections 100% synced on Google Maps!</span>
+                          </div>
+                        ) : isFailed ? (
+                          <div className="flex items-center gap-1.5 text-red-700 font-medium">
+                            <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                            <span className="truncate">{publishProgress.message}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin shrink-0" />
+                            <span className="truncate">{publishProgress.message}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

@@ -543,18 +543,50 @@ function TourDetail() {
     }
   };
 
-  const handleSortPhotosByFilename = (direction: "asc" | "desc") => {
-    setPhotos((prev) => {
-      const sorted = [...prev].sort((a, b) => {
-        const nameA = a.filename || a.file_url || "";
-        const nameB = b.filename || b.file_url || "";
-        return direction === "asc"
-          ? nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
-          : nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: "base" });
-      });
-      return sorted;
+  const handleSortPhotosByFilename = async (direction: "asc" | "desc") => {
+    const photosToSort = (visiblePhotos && visiblePhotos.length > 0) ? visiblePhotos : photos;
+    if (photosToSort.length === 0) return;
+
+    const tid = toast.loading(`Sorting scenes ${direction === "asc" ? "A → Z" : "Z → A"}...`);
+
+    const sorted = [...photosToSort].sort((a, b) => {
+      const nameA = a.filename || a.file_url || "";
+      const nameB = b.filename || b.file_url || "";
+      return direction === "asc"
+        ? nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
+        : nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: "base" });
     });
-    toast.success(`Sorted scenes ${direction === "asc" ? "A → Z" : "Z → A"}`);
+
+    const idToOrder = new Map<string, number>();
+    sorted.forEach((p, idx) => {
+      idToOrder.set(p.id, idx);
+    });
+
+    const updatedPhotos = photos.map((p) => {
+      if (idToOrder.has(p.id)) {
+        return { ...p, order_index: idToOrder.get(p.id)! };
+      }
+      return p;
+    });
+
+    const sortedPhotos = [...updatedPhotos].sort((a, b) => {
+      if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
+      return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
+    });
+
+    setPhotos(sortedPhotos);
+
+    try {
+      await Promise.all(
+        sorted.map((p, idx) =>
+          supabase.from("photos").update({ order_index: idx }).eq("id", p.id)
+        ),
+      );
+      toast.success(`Scenes sorted & saved ${direction === "asc" ? "A → Z" : "Z → A"}!`, { id: tid });
+    } catch (err: any) {
+      console.error("Error saving sort order:", err);
+      toast.error(`Failed to save sort order: ${err.message}`, { id: tid });
+    }
   };
 
   const onPickFiles = async (files: FileList | null, islandId?: string) => {
@@ -861,47 +893,7 @@ function TourDetail() {
     load(false);
   };
 
-  const sortPhotosByName = async (direction: "asc" | "desc") => {
-    const photosToSort = isCustomTour ? photos : visiblePhotos;
-    if (photosToSort.length === 0) return;
-
-    const tid = toast.loading(`Sorting scenes by filename...`);
-
-    const sorted = [...photosToSort].sort((a, b) => {
-      const nameA = a.filename || "";
-      const nameB = b.filename || "";
-      return direction === "asc"
-        ? nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: "base" })
-        : nameB.localeCompare(nameA, undefined, { numeric: true, sensitivity: "base" });
-    });
-
-    const updatedPhotos = photos.map((p) => {
-      const sortedIdx = isCustomTour
-        ? sorted.findIndex((x) => x.id === p.id)
-        : p.island_id === activeIsland
-          ? sorted.findIndex((x) => x.id === p.id)
-          : (p.order_index ?? 0);
-      return { ...p, order_index: sortedIdx === -1 ? (p.order_index ?? 0) : sortedIdx };
-    });
-
-    const sortedPhotos = [...updatedPhotos].sort((a, b) => {
-      if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
-      return new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime();
-    });
-
-    setPhotos(sortedPhotos);
-
-    try {
-      await Promise.all(
-        sorted.map((p, idx) => supabase.from("photos").update({ order_index: idx }).eq("id", p.id)),
-      );
-      toast.success(`Scenes sorted successfully!`, { id: tid });
-    } catch (err: any) {
-      console.error("Error sorting photos:", err);
-      toast.error(`Failed to save sort order: ${err.message}`, { id: tid });
-      load(false);
-    }
-  };
+  const sortPhotosByName = handleSortPhotosByFilename;
 
   if (isLoading && !tour && !cachedType) {
     return (
