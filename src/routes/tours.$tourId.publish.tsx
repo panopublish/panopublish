@@ -962,6 +962,20 @@ function PublishPage() {
                 lastErrorMsg,
               );
             }
+            // Auto-heal non-360 photo error from Google by normalizing canvas to 2:1 equirectangular format
+            if (lastErrorMsg.toLowerCase().includes("not a 360 photo") && attempt === 1) {
+              try {
+                console.info(`Auto-normalizing Scene ${alreadyDone + photoIndex} to 2:1 equirectangular format...`);
+                processedBlob = await ensureGPanoXmpBlob(processedBlob, {
+                  heading: photo.heading || 0,
+                  pitch: photo.pitch || 0,
+                  roll: photo.roll || 0,
+                  forceNormalize: true,
+                });
+              } catch (healErr) {
+                console.warn("Could not auto-heal 360 metadata:", healErr);
+              }
+            }
             if (attempt < 6) {
               const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
               const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
@@ -978,7 +992,11 @@ function PublishPage() {
             `Scene ${alreadyDone + photoIndex} (${photo.filename || photo.id}) permanently failed:`,
             lastErrorMsg,
           );
-          toast.error(`Scene ${alreadyDone + photoIndex} failed: ${lastErrorMsg}`);
+          const isNot360 = lastErrorMsg.toLowerCase().includes("not a 360 photo");
+          const errorMsg = isNot360
+            ? `Scene ${alreadyDone + photoIndex} failed: Google rejected this image because it is not an equirectangular 360° photo (requires 2:1 aspect ratio). Please remove or replace Scene ${alreadyDone + photoIndex}.`
+            : `Scene ${alreadyDone + photoIndex} failed: ${lastErrorMsg}`;
+          toast.error(errorMsg, { duration: 9000 });
           try {
             await supabase
               .from("photos")
@@ -1270,6 +1288,20 @@ function PublishPage() {
           break;
         } catch (uploadErr: any) {
           lastErrorMsg = uploadErr.message || "Upload error";
+          // Auto-heal non-360 photo error from Google by normalizing canvas to 2:1 equirectangular format
+          if (lastErrorMsg.toLowerCase().includes("not a 360 photo") && attempt === 1) {
+            try {
+              console.info(`Auto-normalizing single scene to 2:1 equirectangular format...`);
+              processedBlob = await ensureGPanoXmpBlob(processedBlob, {
+                heading: photoToPublish.heading || 0,
+                pitch: photoToPublish.pitch || 0,
+                roll: photoToPublish.roll || 0,
+                forceNormalize: true,
+              });
+            } catch (healErr) {
+              console.warn("Could not auto-heal single scene 360 metadata:", healErr);
+            }
+          }
           if (attempt < 6) {
             const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
             const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
@@ -1288,7 +1320,11 @@ function PublishPage() {
       load();
     } catch (e: any) {
       console.error("Single scene publish error:", e);
-      toast.error(`Failed to publish scene: ${e.message}`);
+      const isNot360 = (e.message || "").toLowerCase().includes("not a 360 photo");
+      const errorMsg = isNot360
+        ? `Google rejected this image: It is not an equirectangular 360° photo (requires 2:1 aspect ratio). Please replace this photo.`
+        : `Failed to publish scene: ${e.message}`;
+      toast.error(errorMsg, { duration: 9000 });
       try {
         await supabase
           .from("photos")

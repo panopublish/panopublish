@@ -18,6 +18,7 @@ export interface GPanoMetadata {
   roll?: number;
   width?: number;
   height?: number;
+  forceNormalize?: boolean;
 }
 
 const XMP_HEADER = "http://ns.adobe.com/xap/1.0/\0";
@@ -174,7 +175,7 @@ function getImageDimensions(blob: Blob): Promise<{ width: number; height: number
 
 /**
  * Ensures an image Blob has valid Google Photo Sphere GPano XMP headers embedded.
- * If missing, it computes dimensions and injects the complete GPano XMP structure.
+ * If missing or if the aspect ratio is non-2:1, it normalizes to 2:1 and injects the complete GPano XMP structure.
  */
 export async function ensureGPanoXmpBlob(
   blob: Blob,
@@ -183,23 +184,30 @@ export async function ensureGPanoXmpBlob(
   const arrayBuffer = await blob.arrayBuffer();
   const bytes = new Uint8Array(arrayBuffer);
 
-  // Check if GPano is already present
-  if (hasGPanoMetadata(bytes)) {
-    return blob;
-  }
-
   // Get dimensions
   let width = options.width;
   let height = options.height;
 
   if (!width || !height) {
-    const dims = await getImageDimensions(blob);
-    width = dims.width;
-    height = dims.height;
+    try {
+      const dims = await getImageDimensions(blob);
+      width = dims.width;
+      height = dims.height;
+    } catch {
+      // Dimensions load error, continue with bytes inspection
+    }
   }
 
-  // If aspect ratio is significantly distorted, normalize to 2:1 canvas
-  if (width && height && Math.abs(width / height - 2.0) > 0.05) {
+  const isAspectRatio2To1 = width && height && Math.abs(width / height - 2.0) <= 0.02;
+  const alreadyHasGPano = hasGPanoMetadata(bytes);
+
+  // If already perfect 2:1 AND has GPano metadata, and forceNormalize is not requested:
+  if (!options.forceNormalize && isAspectRatio2To1 && alreadyHasGPano) {
+    return blob;
+  }
+
+  // If aspect ratio is not 2:1, or forceNormalize is requested: normalize to perfect 2:1 equirectangular canvas
+  if (width && height && (!isAspectRatio2To1 || options.forceNormalize)) {
     try {
       const normalizedBlob = await normalizeTo2To1Canvas(blob, width, height);
       const normBuffer = await normalizedBlob.arrayBuffer();
@@ -220,16 +228,24 @@ export async function ensureGPanoXmpBlob(
     }
   }
 
-  const injected = injectGPanoXmpBytes(
-    bytes,
-    width,
-    height,
-    options.heading || 0,
-    options.pitch || 0,
-    options.roll || 0
-  );
+  // Image is 2:1 but missing GPano XMP metadata: inject
+  if (width && height) {
+    try {
+      const injected = injectGPanoXmpBytes(
+        bytes,
+        width,
+        height,
+        options.heading || 0,
+        options.pitch || 0,
+        options.roll || 0
+      );
+      return new Blob([injected.buffer as any], { type: "image/jpeg" });
+    } catch (e) {
+      console.warn("Could not inject GPano XMP bytes:", e);
+    }
+  }
 
-  return new Blob([injected.buffer as any], { type: "image/jpeg" });
+  return blob;
 }
 
 /**
