@@ -2524,190 +2524,248 @@ function PublishPage() {
               })()}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 items-center">
-              <div className="space-y-4">
-                {publishProgress && (() => {
-                  const isSuccess = publishProgress.step === "success";
-                  const isConnecting = publishProgress.step === "connecting";
-                  const isFailed = publishProgress.step === "failed";
-                  const displaySceneNum = Math.min(publishProgress.total, publishProgress.current + 1);
-                  const currentUploadPct = publishProgress.uploadPct || 0;
-                  const total = publishProgress.total || 1;
+            {/* Unified Publishing & Google Maps Control Panel */}
+            <div className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-slate-50/70 to-slate-100/40 p-5 sm:p-6 space-y-4 shadow-xs">
+              {/* Progress Bar (Animated, shows during publish or sync) */}
+              {publishProgress && (() => {
+                const isSuccess = publishProgress.step === "success";
+                const isConnecting = publishProgress.step === "connecting";
+                const isFailed = publishProgress.step === "failed";
+                const displaySceneNum = Math.min(publishProgress.total, publishProgress.current + 1);
+                const currentUploadPct = publishProgress.uploadPct || 0;
+                const total = publishProgress.total || 1;
 
-                  // 0% -> 85%: Scene Uploads & Registrations
-                  // 85% -> 96%: Connecting and syncing Street View topology
-                  // 100%: Only when connection synchronization completes successfully!
-                  let calculatedPct = 0;
-                  if (isSuccess) {
-                    calculatedPct = 100;
-                  } else if (isConnecting) {
-                    calculatedPct = 95;
-                  } else {
-                    const sceneFraction = (publishProgress.current + (currentUploadPct / 100)) / total;
-                    calculatedPct = Math.min(88, Math.max(3, Math.round(sceneFraction * 85)));
-                  }
+                let calculatedPct = 0;
+                if (isSuccess) {
+                  calculatedPct = 100;
+                } else if (isConnecting) {
+                  calculatedPct = 95;
+                } else {
+                  const sceneFraction = (publishProgress.current + (currentUploadPct / 100)) / total;
+                  calculatedPct = Math.min(88, Math.max(3, Math.round(sceneFraction * 85)));
+                }
 
-                  return (
-                    <div
-                      className={`rounded-2xl border p-4 shadow-sm transition-all duration-500 animate-in fade-in slide-in-from-bottom-2 ${
-                        isSuccess
-                          ? "border-emerald-300 bg-gradient-to-br from-emerald-50/90 via-green-50/50 to-white shadow-emerald-500/10"
-                          : isFailed
-                            ? "border-red-300 bg-red-50/70"
-                            : "border-sky-200 bg-gradient-to-br from-sky-50/80 via-blue-50/40 to-white shadow-blue-500/5"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span
-                          className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
-                            isSuccess
-                              ? "text-emerald-700"
-                              : isFailed
-                                ? "text-red-700"
-                                : "text-[#0277bd]"
-                          }`}
-                        >
-                          {isSuccess ? (
-                            <>
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in" />
-                              Publishing Complete
-                            </>
-                          ) : isConnecting ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0277bd]" />
-                              Syncing Connections to Google
-                            </>
-                          ) : (
-                            <>
-                              <UploadIcon className="h-3.5 w-3.5 text-[#0277bd]" />
-                              Publishing Scene {displaySceneNum} of {publishProgress.total}
-                            </>
-                          )}
-                        </span>
-                        <span
-                          className={`text-sm font-black font-mono tracking-tight ${
-                            isSuccess ? "text-emerald-700" : "text-[#0277bd]"
-                          }`}
-                        >
-                          {calculatedPct}%
-                        </span>
-                      </div>
-
-                      {/* Animated Progress Bar */}
-                      <div className="w-full h-3 bg-slate-200/80 rounded-full overflow-hidden mb-2.5 p-0.5 shadow-inner">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ease-out relative overflow-hidden ${
-                            isSuccess
-                              ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 shadow-md shadow-emerald-500/25"
-                              : isFailed
-                                ? "bg-red-500"
-                                : "bg-gradient-to-r from-[#0277bd] via-[#0288d1] to-[#4fc3f7] shadow-sm shadow-blue-500/20"
-                          }`}
-                          style={{
-                            width: `${calculatedPct}%`,
-                          }}
-                        >
-                          {/* Animated Shimmer Bar Highlight */}
-                          {!isSuccess && !isFailed && (
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full animate-[shimmer_1.8s_infinite]" />
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-xs font-semibold">
+                return (
+                  <div
+                    className={`rounded-xl border p-4 shadow-sm transition-all duration-500 animate-in fade-in slide-in-from-bottom-2 ${
+                      isSuccess
+                        ? "border-emerald-300 bg-gradient-to-br from-emerald-50/90 via-green-50/50 to-white shadow-emerald-500/10"
+                        : isFailed
+                          ? "border-red-300 bg-red-50/70"
+                          : "border-sky-200 bg-gradient-to-br from-sky-50/90 via-blue-50/50 to-white shadow-blue-500/5"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span
+                        className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                          isSuccess
+                            ? "text-emerald-700"
+                            : isFailed
+                              ? "text-red-700"
+                              : "text-[#0277bd]"
+                        }`}
+                      >
                         {isSuccess ? (
-                          <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
-                            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                            <span>All scenes published & connections 100% synced on Google Maps!</span>
-                          </div>
-                        ) : isFailed ? (
-                          <div className="flex items-center gap-1.5 text-red-700 font-medium">
-                            <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-                            <span className="truncate">{publishProgress.message}</span>
-                          </div>
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 animate-in zoom-in" />
+                            Publishing Complete
+                          </>
+                        ) : isConnecting ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0277bd]" />
+                            Syncing Connections to Google Maps
+                          </>
                         ) : (
-                          <div className="flex items-center gap-2 text-slate-700">
-                            <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin shrink-0" />
-                            <span className="truncate">{publishProgress.message}</span>
-                          </div>
+                          <>
+                            <UploadIcon className="h-3.5 w-3.5 text-[#0277bd]" />
+                            Publishing Scene {displaySceneNum} of {publishProgress.total}
+                          </>
+                        )}
+                      </span>
+                      <span
+                        className={`text-sm font-black font-mono tracking-tight ${
+                          isSuccess ? "text-emerald-700" : "text-[#0277bd]"
+                        }`}
+                      >
+                        {calculatedPct}%
+                      </span>
+                    </div>
+
+                    {/* Animated Progress Bar */}
+                    <div className="w-full h-3 bg-slate-200/80 rounded-full overflow-hidden mb-2.5 p-0.5 shadow-inner">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ease-out relative overflow-hidden ${
+                          isSuccess
+                            ? "bg-gradient-to-r from-emerald-500 via-teal-500 to-green-500 shadow-md shadow-emerald-500/25"
+                            : isFailed
+                              ? "bg-red-500"
+                              : "bg-gradient-to-r from-[#0277bd] via-[#0288d1] to-[#4fc3f7] shadow-sm shadow-blue-500/20"
+                        }`}
+                        style={{
+                          width: `${calculatedPct}%`,
+                        }}
+                      >
+                        {!isSuccess && !isFailed && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/35 to-transparent -translate-x-full animate-[shimmer_1.8s_infinite]" />
                         )}
                       </div>
                     </div>
-                  );
-                })()}
+
+                    <div className="flex items-center gap-2 text-xs font-semibold">
+                      {isSuccess ? (
+                        <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
+                          <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span>All scenes published & connections 100% synced on Google Maps!</span>
+                        </div>
+                      ) : isFailed ? (
+                        <div className="flex items-center gap-1.5 text-red-700 font-medium">
+                          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                          <span className="truncate">{publishProgress.message}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-slate-700">
+                          <Clock className="h-3.5 w-3.5 text-[#0277bd] animate-spin shrink-0" />
+                          <span className="truncate">{publishProgress.message}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Status Header: Consolidated Overview */}
+              {(() => {
+                const isAllPublished = photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED");
+                const hasProcessing = photos.some((p) => p.streetview_status === "PROCESSING");
+                const publishedCount = photos.filter((p) => p.streetview_status === "PUBLISHED").length;
+
+                return (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+                    <div className="flex items-center gap-3.5">
+                      <div
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-2xs ${
+                          isAllPublished
+                            ? "bg-emerald-100 text-emerald-700"
+                            : hasProcessing
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-sky-100 text-[#0277bd]"
+                        }`}
+                      >
+                        {isAllPublished ? (
+                          <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+                        ) : hasProcessing ? (
+                          <Clock className="h-6 w-6 text-amber-600 animate-spin" />
+                        ) : (
+                          <Cloud className="h-6 w-6 text-[#0277bd]" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                          {isAllPublished ? (
+                            <>
+                              <span>All scenes are published on Google!</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                Live
+                              </span>
+                            </>
+                          ) : hasProcessing ? (
+                            <span>Street View scenes are processing on Google...</span>
+                          ) : publishedCount > 0 ? (
+                            <span>{publishedCount} of {photos.length} scenes published on Google</span>
+                          ) : (
+                            <span>Ready to publish {photos.length} scene{photos.length === 1 ? "" : "s"} to Google</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {isAllPublished
+                            ? "Your 360 scenes and connections are live on Google Maps & Street View."
+                            : hasProcessing
+                              ? "Google Street View processing may take up to 24 hours to appear publicly."
+                              : "Publish your 360 panorama scenes and connect them automatically on Google Street View."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Optional Status Sync button if scenes are processing */}
+                    {accessToken && hasProcessing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          const tid = toast.loading("Checking Google Street View status...");
+                          await load();
+                          toast.success("Status checked!", { id: tid });
+                        }}
+                        className="text-xs font-semibold shrink-0 gap-1.5 border-slate-200 hover:bg-slate-50 cursor-pointer h-9 px-3 rounded-lg"
+                      >
+                        <Clock className="h-3.5 w-3.5 text-[#0277bd]" />
+                        Sync Google Status
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons: Unified controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center flex-wrap gap-3 pt-1">
                 {(() => {
                   const pendingPhotosCount = photos.filter(
                     (p) => !p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED"
                   ).length;
                   const failedPhotosCount = photos.filter((p) => p.streetview_status === "FAILED").length;
+                  const isAllPublished = photos.length > 0 && pendingPhotosCount === 0;
 
                   return (
-                    <Button
-                      size="lg"
-                      className="w-full bg-[#0277bd] hover:bg-[#01579b]"
-                      disabled={publishing || photos.length === 0 || pendingPhotosCount === 0}
-                      onClick={handlePublishClick}
-                    >
-                      <Send className="h-5 w-5 mr-2" />
-                      {publishing
-                        ? "Publishing…"
-                        : pendingPhotosCount === 0
-                          ? "All Scenes Published"
-                          : failedPhotosCount > 0
-                            ? `Publish / Retry ${pendingPhotosCount} scene(s)`
-                            : `Publish ${pendingPhotosCount} scene(s)`}
-                    </Button>
+                    <>
+                      {isAllPublished ? (
+                        <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200">
+                          <CheckCheck className="h-4 w-4 text-emerald-600" />
+                          All {photos.length} Scenes Published
+                        </div>
+                      ) : (
+                        <Button
+                          size="lg"
+                          className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold text-xs h-10 px-5 rounded-xl shadow-xs cursor-pointer"
+                          disabled={publishing || photos.length === 0 || pendingPhotosCount === 0}
+                          onClick={handlePublishClick}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {publishing
+                            ? "Publishing…"
+                            : failedPhotosCount > 0
+                              ? `Publish / Retry ${pendingPhotosCount} scene(s)`
+                              : `Publish ${pendingPhotosCount} scene(s)`}
+                        </Button>
+                      )}
+                    </>
                   );
                 })()}
+
+                {/* Sync Connections button - always in the same unified toolbar */}
+                {accessToken && photos.some((p) => p.streetview_status === "PUBLISHED") && (
+                  <Button
+                    onClick={handleSyncConnections}
+                    disabled={publishing || syncingConnections}
+                    className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold text-xs h-10 px-4.5 rounded-xl shadow-xs flex items-center gap-2 cursor-pointer"
+                  >
+                    <Sparkles className="h-4 w-4 text-sky-200" />
+                    {syncingConnections ? "Syncing Connections..." : "Sync Connections to Google"}
+                  </Button>
+                )}
+
+                {/* Reset & Delete button - right-aligned for clarity */}
                 {photos.some(
                   (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
                 ) && (
                   <Button
                     variant="outline"
                     size="lg"
-                    className="w-full border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 mt-2 flex items-center justify-center"
-                    disabled={publishing}
+                    className="sm:ml-auto border-red-200 hover:bg-red-50 text-red-600 hover:text-red-700 font-bold text-xs h-10 px-4 rounded-xl flex items-center gap-2 cursor-pointer"
+                    disabled={publishing || syncingConnections}
                     onClick={resetPublishing}
                   >
-                    <Trash2 className="h-5 w-5 mr-2" />
+                    <Trash2 className="h-4 w-4 text-red-500" />
                     Reset & Delete from Google
-                  </Button>
-                )}
-              </div>
-
-              <div className="relative rounded-lg bg-gray-50 border flex flex-col items-center justify-center p-4 min-h-[8rem]">
-                <Cloud className="h-10 w-10 text-[#0277bd] mb-1 opacity-50" />
-                <div className="text-xs text-gray-500 font-semibold text-center mb-0.5">
-                  {photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED")
-                    ? "All scenes are published on Google!"
-                    : "Processing status will update automatically."}
-                </div>
-                <div className="text-[10px] text-gray-400 text-center mb-1 max-w-[280px]">
-                  {photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED")
-                    ? "Your 360 scenes are live on Google Maps & Street View."
-                    : "Street View processing may take up to 24 hours."}
-                </div>
-                {accessToken && photos.some((p) => p.streetview_status === "PROCESSING") && (
-                  <button
-                    onClick={async () => {
-                      const tid = toast.loading("Checking Google Street View status...");
-                      await load();
-                      toast.success("Status checked!", { id: tid });
-                    }}
-                    className="text-xs text-[#0277bd] hover:underline font-semibold flex items-center gap-1 cursor-pointer mt-1"
-                  >
-                    <Clock className="h-3.5 w-3.5" /> Sync Google Status
-                  </button>
-                )}
-                {accessToken && photos.some((p) => p.streetview_status === "PUBLISHED") && (
-                  <Button
-                    onClick={handleSyncConnections}
-                    disabled={syncingConnections}
-                    size="sm"
-                    className="mt-2 bg-[#0277bd] hover:bg-[#01579b] text-white text-xs font-bold h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {syncingConnections ? "Syncing Connections..." : "Sync Connections to Google"}
                   </Button>
                 )}
               </div>
