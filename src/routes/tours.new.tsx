@@ -123,31 +123,48 @@ function CreateTour() {
 
         if (profErr) throw profErr;
 
-        const [{ count: totalCount, error: countErr }, { count: pubCount }] = await Promise.all([
-          supabase
-            .from("tours")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", userId),
-          supabase
-            .from("tours")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", userId)
-            .eq("status", "published"),
-        ]);
+        const { data: userTours, error: tourErr } = await supabase
+          .from("tours")
+          .select("id, status, created_at, updated_at")
+          .eq("user_id", userId);
 
-        if (countErr) throw countErr;
+        if (tourErr) throw tourErr;
 
-        const published = pubCount ?? 0;
-        if (prof && prof.plan === "trial" && (prof.billing_cycle_tours_used ?? 0) < published) {
-          supabase
-            .from("profiles")
-            .update({ billing_cycle_tours_used: published })
-            .eq("id", userId);
-          prof.billing_cycle_tours_used = published;
+        const tList = (userTours as any[]) ?? [];
+        const published = tList.filter((t) => t.status === "published").length;
+
+        const isPaid = prof && prof.plan && prof.plan !== "trial";
+        const cycleStartMs = isPaid
+          ? prof.trial_ends_at
+            ? new Date(prof.trial_ends_at).getTime() - 30 * 86400000
+            : Date.now() - 30 * 86400000
+          : 0;
+        const currentCyclePub = isPaid
+          ? tList.filter(
+              (t) =>
+                t.status === "published" &&
+                new Date(t.updated_at || t.created_at).getTime() >= cycleStartMs,
+            ).length
+          : published;
+
+        if (prof) {
+          if (prof.plan === "trial" && (prof.billing_cycle_tours_used ?? 0) < published) {
+            supabase
+              .from("profiles")
+              .update({ billing_cycle_tours_used: published })
+              .eq("id", userId);
+            prof.billing_cycle_tours_used = published;
+          } else if (isPaid && (prof.billing_cycle_tours_used ?? 0) > currentCyclePub) {
+            supabase
+              .from("profiles")
+              .update({ billing_cycle_tours_used: currentCyclePub })
+              .eq("id", userId);
+            prof.billing_cycle_tours_used = currentCyclePub;
+          }
         }
 
         setProfile(prof);
-        setTourCount(published);
+        setTourCount(currentCyclePub);
       } catch (err) {
         console.error("Error checking limits:", err);
       } finally {

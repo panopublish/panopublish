@@ -71,12 +71,35 @@ function ToursPage() {
       const publishedCount = tList.filter((t) => t.status === "published").length;
 
       if (profRes.data) {
+        const isPaid = profRes.data.plan && profRes.data.plan !== "trial";
+        const cycleStartMs = isPaid
+          ? profRes.data.trial_ends_at
+            ? new Date(profRes.data.trial_ends_at).getTime() - 30 * 86400000
+            : Date.now() - 30 * 86400000
+          : 0;
+
+        // Count only tours that were published during this active billing cycle
+        const currentCyclePublished = isPaid
+          ? tList.filter(
+              (t) =>
+                t.status === "published" &&
+                new Date(t.updated_at || t.created_at).getTime() >= cycleStartMs,
+            ).length
+          : publishedCount;
+
         if (profRes.data.plan === "trial" && (profRes.data.billing_cycle_tours_used ?? 0) < publishedCount) {
           supabase
             .from("profiles")
             .update({ billing_cycle_tours_used: publishedCount })
             .eq("id", user.id);
           profRes.data.billing_cycle_tours_used = publishedCount;
+        } else if (isPaid && (profRes.data.billing_cycle_tours_used ?? 0) > currentCyclePublished) {
+          // Self-heal: ensure tours published during trial or past cycles do not falsely consume current paid plan credits
+          supabase
+            .from("profiles")
+            .update({ billing_cycle_tours_used: currentCyclePublished })
+            .eq("id", user.id);
+          profRes.data.billing_cycle_tours_used = currentCyclePublished;
         }
         setProfile(profRes.data);
       }
@@ -191,13 +214,16 @@ function ToursPage() {
       const { error } = await supabase.from("tours").delete().eq("id", id);
       if (error) throw error;
 
-      // Decrement / re-sync billing_cycle_tours_used to remaining published tours
-      const remainingTours = (tours ?? []).filter((t) => t.id !== id);
-      const remainingPublished = remainingTours.filter((t) => t.status === "published").length;
-      await supabase
-        .from("profiles")
-        .update({ billing_cycle_tours_used: remainingPublished })
-        .eq("id", user?.id);
+      // Decrement / re-sync billing_cycle_tours_used if a published tour is deleted
+      const deletedTour = (tours ?? []).find((t) => t.id === id);
+      if (deletedTour?.status === "published") {
+        const newUsed = Math.max(0, (profile?.billing_cycle_tours_used ?? 1) - 1);
+        await supabase
+          .from("profiles")
+          .update({ billing_cycle_tours_used: newUsed })
+          .eq("id", user?.id);
+        setProfile((prev) => (prev ? { ...prev, billing_cycle_tours_used: newUsed } : prev));
+      }
 
       toast.success("Tour deleted and storage cleared!", { id: tid });
       load();
@@ -264,8 +290,8 @@ function ToursPage() {
 
   const totalLimit = isAdmin ? 9999 : isPlanExpired ? 0 : (planLimits[profile?.plan ?? "trial"] ?? 1);
   const totalAllowance = isPlanExpired ? 0 : Math.max(profile?.credits ?? 0, totalLimit);
-  const currentPublishedCount = (tours ?? []).filter((t) => t.status === "published").length;
-  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - currentPublishedCount);
+  const cycleUsed = profile?.billing_cycle_tours_used ?? 0;
+  const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - cycleUsed);
   const hasCredits = isAdmin || remainingCredits > 0;
 
   return (

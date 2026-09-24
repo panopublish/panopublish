@@ -204,18 +204,37 @@ function Dashboard() {
         userProfile.onboarding_dismissed = true;
       }
 
-      // Self-heal: Only sync for free trial users if they published in trial
-      if (
-        userProfile &&
-        userProfile.plan === "trial" &&
-        (userProfile.billing_cycle_tours_used ?? 0) < publishedCount
-      ) {
-        await supabase
-          .from("profiles")
-          .update({ billing_cycle_tours_used: publishedCount })
-          .eq("id", user.id);
-        userProfile.billing_cycle_tours_used = publishedCount;
-        setProfile({ ...userProfile });
+      // Self-heal: Sync for trial users, or reset for paid users if old trial tours falsely inflated billing_cycle_tours_used
+      const isPaid = userProfile && userProfile.plan && userProfile.plan !== "trial";
+      const cycleStartMs = isPaid
+        ? userProfile.trial_ends_at
+          ? new Date(userProfile.trial_ends_at).getTime() - 30 * 86400000
+          : Date.now() - 30 * 86400000
+        : 0;
+      const currentCyclePublished = isPaid
+        ? tours.filter(
+            (x: any) =>
+              x.status === "published" &&
+              new Date(x.updated_at || x.created_at).getTime() >= cycleStartMs,
+          ).length
+        : publishedCount;
+
+      if (userProfile) {
+        if (userProfile.plan === "trial" && (userProfile.billing_cycle_tours_used ?? 0) < publishedCount) {
+          await supabase
+            .from("profiles")
+            .update({ billing_cycle_tours_used: publishedCount })
+            .eq("id", user.id);
+          userProfile.billing_cycle_tours_used = publishedCount;
+          setProfile({ ...userProfile });
+        } else if (isPaid && (userProfile.billing_cycle_tours_used ?? 0) > currentCyclePublished) {
+          await supabase
+            .from("profiles")
+            .update({ billing_cycle_tours_used: currentCyclePublished })
+            .eq("id", user.id);
+          userProfile.billing_cycle_tours_used = currentCyclePublished;
+          setProfile({ ...userProfile });
+        }
       }
 
       // Build quick thumbnail map

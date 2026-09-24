@@ -166,6 +166,7 @@ function AdminDashboard() {
   const [profileForm, setProfileForm] = useState({
     plan: "trial",
     extraCredits: 0,
+    billingCycleToursUsed: 0,
   });
 
   // Form State: Coupon Code
@@ -671,6 +672,7 @@ function AdminDashboard() {
     setProfileForm({
       plan: p.plan,
       extraCredits: currentExtraCredits,
+      billingCycleToursUsed: p.billing_cycle_tours_used ?? 0,
     });
   };
 
@@ -688,6 +690,7 @@ function AdminDashboard() {
       const updateData: any = {
         plan: profileForm.plan,
         credits: totalCredits,
+        billing_cycle_tours_used: Math.max(0, Number(profileForm.billingCycleToursUsed) || 0),
       };
 
       // Reset billing cycle usage to 0 and extend validity when upgrading or renewing paid plan
@@ -2037,6 +2040,27 @@ function AdminDashboard() {
                     setProfileForm((prev) => ({
                       ...prev,
                       extraCredits: Math.max(0, parseInt(e.target.value, 10) || 0),
+                    }))
+                  }
+                  className="rounded-xl border-slate-200 font-semibold"
+                  placeholder="0"
+                />
+              </div>
+
+              {/* Billing Cycle Tours Used input */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-600">Cycle Tours Used</Label>
+                  <span className="text-[11px] text-slate-400 font-medium">Quota consumed in current billing cycle</span>
+                </div>
+                <Input
+                  type="number"
+                  min={0}
+                  value={profileForm.billingCycleToursUsed}
+                  onChange={(e) =>
+                    setProfileForm((prev) => ({
+                      ...prev,
+                      billingCycleToursUsed: Math.max(0, parseInt(e.target.value, 10) || 0),
                     }))
                   }
                   className="rounded-xl border-slate-200 font-semibold"
