@@ -142,6 +142,23 @@ export const Route = createFileRoute("/")({
           "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Publish 360° tours to Google Maps with simple INR pricing.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://panopublish.com/" },
+      { property: "og:image", content: "https://panopublish.com/og-image.png" },
+      { property: "og:image:secure_url", content: "https://panopublish.com/og-image.png" },
+      { property: "og:image:type", content: "image/png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "PanoPublish — 360° Virtual Tours & Google Street View Publishing" },
+      { property: "og:site_name", content: "PanoPublish" },
+      { property: "og:locale", content: "en_IN" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "PanoPublish — 360° Virtual Tours & Google Street View Publishing" },
+      {
+        name: "twitter:description",
+        content:
+          "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses. Publish 360° tours to Google Maps with simple INR pricing.",
+      },
+      { name: "twitter:image", content: "https://panopublish.com/og-image.png" },
     ],
     links: [
       { rel: "preconnect", href: "https://www.youtube-nocookie.com" },

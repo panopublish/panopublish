@@ -31,7 +31,7 @@ export function SEO({
   title,
   description,
   canonical,
-  ogImage = "https://panopublish.com/og-image.webp",
+  ogImage = "https://panopublish.com/og-image.png",
   ogType = "website",
   noIndex = false,
   schema,
@@ -39,6 +39,12 @@ export function SEO({
 }: SEOProps) {
   const fullTitle = title.includes("PanoPublish") ? title : `${title} | PanoPublish`;
   const canonicalUrl = formatCanonicalUrl(canonical);
+
+  const ogImageType = ogImage.endsWith(".webp")
+    ? "image/webp"
+    : ogImage.endsWith(".jpg") || ogImage.endsWith(".jpeg")
+    ? "image/jpeg"
+    : "image/png";
 
   const breadcrumbSchema = breadcrumbs
     ? {
@@ -89,9 +95,10 @@ export function SEO({
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:image" content={ogImage} />
       <meta property="og:image:secure_url" content={ogImage} />
-      <meta property="og:image:type" content="image/png" />
+      <meta property="og:image:type" content={ogImageType} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={fullTitle} />
       <meta property="og:site_name" content="PanoPublish" />
       <meta property="og:locale" content="en_IN" />
 
