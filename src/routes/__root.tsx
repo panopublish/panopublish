@@ -104,6 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "robots", content: "index, follow" },
       { name: "google-site-verification", content: "google8601514a32a20709" },
+      { name: "p:domain_verify", content: "64fb6cfb0d9c84f5c2a5526eebfb0102" },
     ],
     links: [
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
