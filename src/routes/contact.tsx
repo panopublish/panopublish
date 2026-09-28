@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageCircle, Mail, MapPin, Clock, ArrowLeft, Send } from "lucide-react";
+import { MessageCircle, Mail, Clock, ArrowLeft, Send } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
@@ -117,24 +117,10 @@ function ContactUs() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <MapPin className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Registered Office</h4>
-                  <p className="text-sm mt-0.5 text-foreground leading-relaxed">
-                    <strong>PanoPublish Solutions</strong><br />
-                    5, Jay Ambe Nagar, Hatkeshwar,<br />
-                    Ahmedabad, Gujarat, 380026<br />
-                    India
-                  </p>
-                </div>
-              </div>
             </div>
 
             <div className="text-xs text-muted-foreground border-t pt-4">
-              Registered business inquiries will be acknowledged within 24 business hours.
+              Inquiries will be acknowledged within 24 business hours.
             </div>
           </div>
 
