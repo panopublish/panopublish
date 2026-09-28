@@ -97,9 +97,16 @@ function LocationPage() {
     (async () => {
       const { data } = await supabase
         .from("tours")
-        .select("name,address,google_place_id,cid,latitude,longitude")
+        .select("name,address,google_place_id,cid,latitude,longitude,storage_cleared")
         .eq("id", tourId)
         .maybeSingle();
+      if ((data as any)?.storage_cleared) {
+        toast.error("This tour's database images have been cleared. It is live on Google Street View and cannot be edited.");
+        if (typeof window !== "undefined") {
+          window.location.href = "/tours/";
+        }
+        return;
+      }
       if (data) {
         setTitle(data.name ?? "");
         setAddress(data.address ?? "");

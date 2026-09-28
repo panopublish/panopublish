@@ -218,7 +218,7 @@ function TourDetail() {
         supabase
           .from("tours")
           .select(
-            "id,name,status,type,address,google_place_url,client:clients(name),latitude,longitude",
+            "id,name,status,type,address,google_place_url,client:clients(name),latitude,longitude,storage_cleared",
           )
           .eq("id", tourId)
           .maybeSingle(),
@@ -228,6 +228,15 @@ function TourDetail() {
           .eq("id", user.id)
           .maybeSingle(),
       ]);
+
+      if ((t as any)?.storage_cleared) {
+        toast.error("This tour's database images have been cleared. It is live on Google Street View and cannot be edited.");
+        if (typeof window !== "undefined") {
+          window.location.href = "/tours/";
+        }
+        return;
+      }
+
       setTour(t as any);
       if (prof) setProfile(prof);
 

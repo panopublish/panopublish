@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS tours (
   longitude REAL,
   has_been_published BOOLEAN NOT NULL DEFAULT 0,
   streetview_connections_synced BOOLEAN NOT NULL DEFAULT 0,
+  storage_cleared BOOLEAN NOT NULL DEFAULT 0,
   custom_settings TEXT DEFAULT '{}',
   created_at TEXT DEFAULT (datetime('now'))
 );

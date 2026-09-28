@@ -398,6 +398,13 @@ function PublishPage() {
   const load = async () => {
     if (!user) return;
     const { data: t } = await supabase.from("tours").select("*").eq("id", tourId).maybeSingle();
+    if ((t as any)?.storage_cleared) {
+      toast.error("This tour's database images have been cleared. It is live on Google Street View and cannot be edited.");
+      if (typeof window !== "undefined") {
+        window.location.href = "/tours/";
+      }
+      return;
+    }
     setTour(t);
     if (t) {
       let fetchedNadirType =

@@ -593,7 +593,7 @@ function ConnectionsPage() {
           supabase
             .from("tours")
             .select(
-              "name,latitude,longitude,type,nadir_type,nadir_size,nadir_pos,nadir_logo_url,custom_settings",
+              "name,latitude,longitude,type,nadir_type,nadir_size,nadir_pos,nadir_logo_url,custom_settings,storage_cleared",
             )
             .eq("id", tourId)
             .maybeSingle(),
@@ -602,6 +602,15 @@ function ConnectionsPage() {
           supabase.from("constellations").select("id,name").eq("tour_id", tourId).order("created_at"),
           supabase.from("islands").select("*").eq("tour_id", tourId).order("order_index"),
         ]);
+
+      if ((t as any)?.storage_cleared) {
+        toast.error("This tour's database images have been cleared. It is live on Google Street View and cannot be edited.");
+        if (typeof window !== "undefined") {
+          window.location.href = "/tours/";
+        }
+        return;
+      }
+
       setTour(t as any);
       if (t?.custom_settings) {
         try {

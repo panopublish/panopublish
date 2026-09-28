@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, Trash2, Pencil, Share2, ListFilter, Map, Lock } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Share2, ListFilter, Map, Lock, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetViewStatus";
@@ -28,6 +28,7 @@ type Tour = {
   updated_at?: string;
   cid?: string | null;
   google_place_id?: string | null;
+  storage_cleared?: boolean | number | null;
   client?: { name: string } | null;
 };
 
@@ -57,7 +58,7 @@ function ToursPage() {
       const [tourRes, profRes] = await Promise.all([
         supabase
           .from("tours")
-          .select("id,name,status,type,created_at,cid,google_place_id,client:clients(name)")
+          .select("id,name,status,type,created_at,cid,google_place_id,storage_cleared,client:clients(name)")
           .eq("user_id", user.id),
         supabase
           .from("profiles")
@@ -133,7 +134,7 @@ function ToursPage() {
         // Self-healing check: Sync tour status based on photos (Google Street View tours only)
         let hasChanges = false;
         for (const t of tList) {
-          if (t.type === "custom") continue; // Skip custom tours
+          if (t.type === "custom" || t.storage_cleared) continue; // Skip custom and cleared tours
           const tPhotos = loadedPhotos.filter((p: any) => p.tour_id === t.id);
           if (tPhotos.length > 0) {
             const allSubmitted = tPhotos.every(
@@ -382,19 +383,44 @@ function ToursPage() {
               const thumbUrl = (firstPhoto as any)?.thumbnail_url || null;
               const hasConnections = connections.some((c) => c.tour_id === t.id);
               const tourPhotos = photos.filter((p) => p.tour_id === t.id);
+              const isCleared = Boolean(t.storage_cleared);
               const isPublished =
                 t.status === "published" ||
                 (tourPhotos.length > 0 &&
                   tourPhotos.every((p) => p.streetview_status === "PUBLISHED"));
 
+              const clearedHoverNote =
+                "This tour is deleted from PanoPublish database but it is available on google street view and can be viewed on this business profile";
+
+              const mapsUrl = t.cid
+                ? `https://www.google.com/maps?cid=${t.cid}`
+                : t.google_place_id
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name)}&query_place_id=${t.google_place_id}`
+                : null;
+
               return (
                 <div
                   key={t.id}
-                  className="p-4 flex flex-col sm:flex-row gap-4 items-center justify-between hover:bg-slate-50/50 transition-colors"
+                  className={`p-4 flex flex-col sm:flex-row gap-4 items-center justify-between transition-colors ${
+                    isCleared
+                      ? "bg-slate-50/80 border-l-4 border-l-slate-400 opacity-80"
+                      : "hover:bg-slate-50/50"
+                  }`}
+                  title={isCleared ? clearedHoverNote : undefined}
                 >
                   {/* Thumbnail */}
                   <div className="w-36 h-20 rounded-lg overflow-hidden border bg-gray-50 flex-shrink-0 relative group shadow-sm">
-                    {thumbUrl ? (
+                    {isCleared ? (
+                      <div
+                        className="w-full h-full bg-slate-200/90 flex flex-col items-center justify-center p-2 text-center select-none"
+                        title={clearedHoverNote}
+                      >
+                        <Map className="h-5 w-5 text-slate-400 mb-1" />
+                        <span className="text-[9px] font-black uppercase text-slate-500 tracking-wider">
+                          Street View Only
+                        </span>
+                      </div>
+                    ) : thumbUrl ? (
                       <LazyThumbnail
                         src={thumbUrl}
                         alt={t.name || "Tour preview"}
@@ -411,46 +437,95 @@ function ToursPage() {
 
                   {/* Tour Meta and Buttons */}
                   <div className="flex-1 min-w-0 pr-2 text-center sm:text-left">
-                    <h3 className="font-bold text-[#0277bd] text-sm truncate hover:underline">
-                      <Link to="/tours/$tourId/" params={{ tourId: t.id }}>
+                    {isCleared ? (
+                      <h3
+                        className="font-bold text-slate-600 text-sm truncate cursor-not-allowed select-none"
+                        title={clearedHoverNote}
+                      >
                         {t.name}
-                      </Link>
-                    </h3>
-                    <p className="text-[11px] text-gray-500 mt-1 flex items-center justify-center sm:justify-start gap-1 font-medium">
-                      CID:{" "}
-                      <code className="bg-gray-100 border border-gray-200 px-1 py-0.2 rounded text-[10px] text-gray-700 font-mono">
-                        {t.cid || "—"}
-                      </code>
-                    </p>
+                      </h3>
+                    ) : (
+                      <h3 className="font-bold text-[#0277bd] text-sm truncate hover:underline">
+                        <Link to="/tours/$tourId/" params={{ tourId: t.id }}>
+                          {t.name}
+                        </Link>
+                      </h3>
+                    )}
+
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mt-1">
+                      <p className="text-[11px] text-gray-500 flex items-center gap-1 font-medium">
+                        CID:{" "}
+                        <code className="bg-gray-100 border border-gray-200 px-1 py-0.2 rounded text-[10px] text-gray-700 font-mono">
+                          {t.cid || "—"}
+                        </code>
+                      </p>
+
+                      {isCleared && (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 border border-amber-200 text-amber-800 cursor-help"
+                          title={clearedHoverNote}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                          Database Cleared • Live on Street View
+                        </span>
+                      )}
+                    </div>
 
                     {/* Buttons Row */}
                     <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-3">
-                      <Link to="/tours/$tourId/" params={{ tourId: t.id }}>
-                        <Button className="bg-[#f05a28] hover:bg-[#d94e1f] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
-                          <Pencil className="h-3.5 w-3.5" /> Edit
-                        </Button>
-                      </Link>
-
-                      {t.type !== "custom" &&
-                        (hasConnections ? (
-                          <a
-                            href={`/tours/${t.id}/connections?preview=true`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
-                              <Share2 className="h-3.5 w-3.5" /> Share Preview
-                            </Button>
-                          </a>
-                        ) : (
+                      {isCleared ? (
+                        <>
                           <Button
                             disabled
-                            className="bg-gray-200 text-gray-400 border border-gray-300/40 font-bold h-8 px-4 text-xs rounded cursor-not-allowed gap-1 shadow-none"
-                            title="Add connections in the map editor first to enable preview"
+                            className="bg-slate-200 text-slate-400 border border-slate-300 font-bold h-8 px-4 text-xs rounded cursor-not-allowed shadow-none gap-1"
+                            title={clearedHoverNote}
                           >
-                            <Share2 className="h-3.5 w-3.5" /> Share Preview
+                            <Lock className="h-3.5 w-3.5" /> Database Cleared
                           </Button>
-                        ))}
+
+                          {mapsUrl && (
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="View this business profile and published Street View photos on Google Maps"
+                            >
+                              <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-3 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
+                                <ExternalLink className="h-3.5 w-3.5" /> View on Google Maps
+                              </Button>
+                            </a>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Link to="/tours/$tourId/" params={{ tourId: t.id }}>
+                            <Button className="bg-[#f05a28] hover:bg-[#d94e1f] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
+                              <Pencil className="h-3.5 w-3.5" /> Edit
+                            </Button>
+                          </Link>
+
+                          {t.type !== "custom" &&
+                            (hasConnections ? (
+                              <a
+                                href={`/tours/${t.id}/connections?preview=true`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-4 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
+                                  <Share2 className="h-3.5 w-3.5" /> Share Preview
+                                </Button>
+                              </a>
+                            ) : (
+                              <Button
+                                disabled
+                                className="bg-gray-200 text-gray-400 border border-gray-300/40 font-bold h-8 px-4 text-xs rounded cursor-not-allowed gap-1 shadow-none"
+                                title="Add connections in the map editor first to enable preview"
+                              >
+                                <Share2 className="h-3.5 w-3.5" /> Share Preview
+                              </Button>
+                            ))}
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -472,11 +547,19 @@ function ToursPage() {
                   <div className="flex items-center gap-6">
                     <div
                       className={`h-4.5 w-4.5 rounded-full shadow border-2 border-white ${
-                        isPublished
+                        isCleared
+                          ? "bg-[#8bc34a] ring-2 ring-amber-400"
+                          : isPublished
                           ? "bg-[#8bc34a] shadow-[0_0_8px_#8bc34a]"
                           : "bg-[#f44336] shadow-[0_0_8px_#f44336]"
                       }`}
-                      title={isPublished ? "Published on Google Maps" : "Unpublished / Draft"}
+                      title={
+                        isCleared
+                          ? "Live on Google Street View (PanoPublish image storage cleared)"
+                          : isPublished
+                          ? "Published on Google Maps"
+                          : "Unpublished / Draft"
+                      }
                     />
 
                     <Button

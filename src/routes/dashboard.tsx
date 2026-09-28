@@ -69,6 +69,7 @@ type RecentTour = {
   created_at?: string;
   cid?: string;
   google_place_id?: string;
+  storage_cleared?: boolean | number | null;
   client?: { name: string } | null;
 };
 
@@ -115,7 +116,7 @@ function Dashboard() {
           .eq("user_id", user.id),
         supabase
           .from("tours")
-          .select("id,name,status,type,created_at,cid,google_place_id,client:clients(name)")
+          .select("id,name,status,type,created_at,cid,google_place_id,storage_cleared,client:clients(name)")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
@@ -170,7 +171,7 @@ function Dashboard() {
 
       // Self-healing check: Sync tour status based on photos
       for (const tour of tours) {
-        if (tour.type === "custom") continue; // Skip custom tours
+        if (tour.type === "custom" || (tour as any).storage_cleared) continue; // Skip custom and cleared tours
         const tPhotos = photos.filter((p: any) => p.tour_id === tour.id);
         if (tPhotos.length > 0) {
           const allSubmitted = tPhotos.every(
@@ -758,18 +759,38 @@ function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentTours.map((tour) => {
               const thumbUrl = thumbnails[tour.id];
+              const isCleared = Boolean(tour.storage_cleared);
               const isPublished = tour.status === "published";
               const isProcessing = tour.status === "processing";
               const isRejected = tour.status === "rejected";
 
+              const clearedHoverNote =
+                "This tour is deleted from PanoPublish database but it is available on google street view and can be viewed on this business profile";
+
+              const mapsUrl = tour.cid
+                ? `https://www.google.com/maps?cid=${tour.cid}`
+                : tour.google_place_id
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tour.name)}&query_place_id=${tour.google_place_id}`
+                : null;
+
               return (
                 <div
                   key={tour.id}
-                  className="rounded-2xl border border-border/70 bg-card overflow-hidden shadow-xs hover:shadow-md hover:border-primary/40 transition-all duration-200 flex flex-col group"
+                  className={`rounded-2xl border bg-card overflow-hidden shadow-xs transition-all duration-200 flex flex-col group ${
+                    isCleared
+                      ? "border-slate-200 bg-slate-50/70 opacity-80 cursor-not-allowed select-none"
+                      : "border-border/70 hover:shadow-md hover:border-primary/40"
+                  }`}
+                  title={isCleared ? clearedHoverNote : undefined}
                 >
                   {/* Tour Thumbnail / Visual Header */}
                   <div className="relative h-36 w-full bg-slate-900 overflow-hidden">
-                    {thumbUrl ? (
+                    {isCleared ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-200/90 text-slate-500 p-4 text-center">
+                        <Map className="h-7 w-7 text-slate-400 mb-1" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Street View Only</span>
+                      </div>
+                    ) : thumbUrl ? (
                       <img
                         src={thumbUrl}
                         alt={tour.name}
@@ -785,7 +806,11 @@ function Dashboard() {
 
                     {/* Status Badge Overlay */}
                     <div className="absolute top-2.5 left-2.5">
-                      {isPublished ? (
+                      {isCleared ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-700/90 text-white shadow-sm backdrop-blur-xs">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Street View Active
+                        </span>
+                      ) : isPublished ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/90 text-white shadow-sm backdrop-blur-xs">
                           <CheckCircle2 className="h-3 w-3" /> Published
                         </span>
@@ -807,7 +832,7 @@ function Dashboard() {
                     {/* Tour Type Badge */}
                     <div className="absolute top-2.5 right-2.5">
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black/60 text-white backdrop-blur-xs">
-                        {tour.type === "custom" ? "Custom 360" : "Street View"}
+                        {isCleared ? "DB Cleared" : tour.type === "custom" ? "Custom 360" : "Street View"}
                       </span>
                     </div>
                   </div>
@@ -815,12 +840,22 @@ function Dashboard() {
                   {/* Tour Meta */}
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <div>
-                      <h3 className="font-bold text-foreground text-sm truncate group-hover:text-primary transition-colors" title={tour.name}>
+                      <h3
+                        className={`font-bold text-sm truncate ${
+                          isCleared ? "text-slate-600" : "text-foreground group-hover:text-primary transition-colors"
+                        }`}
+                        title={isCleared ? clearedHoverNote : tour.name}
+                      >
                         {tour.name}
                       </h3>
                       <p className="text-xs text-muted-foreground mt-0.5 truncate">
                         {tour.client?.name ? `Client: ${tour.client.name}` : "No client assigned"}
                       </p>
+                      {isCleared && (
+                        <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 mt-1.5 inline-block">
+                          DB Cleared • Live on Google Maps
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-border/50 flex items-center justify-between gap-2">
@@ -829,22 +864,44 @@ function Dashboard() {
                       </span>
 
                       <div className="flex items-center gap-1.5">
-                        {isPublished && tour.cid && (
-                          <a
-                            href={`https://www.google.com/maps?cid=${tour.cid}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
-                            title="View live on Google Maps"
-                          >
-                            <Globe className="h-3.5 w-3.5" />
-                          </a>
+                        {isCleared ? (
+                          <>
+                            {mapsUrl && (
+                              <a
+                                href={mapsUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline flex items-center gap-1 p-1 rounded-md"
+                                title="View on Google Maps"
+                              >
+                                <Globe className="h-3.5 w-3.5" />
+                                <span className="text-[11px] font-semibold">Maps</span>
+                              </a>
+                            )}
+                            <Button size="sm" variant="outline" disabled className="h-7 text-xs font-semibold px-2.5 bg-slate-100 text-slate-400 cursor-not-allowed">
+                              <Lock className="h-3 w-3 mr-1" /> Cleared
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {isPublished && tour.cid && (
+                              <a
+                                href={`https://www.google.com/maps?cid=${tour.cid}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted transition-colors"
+                                title="View live on Google Maps"
+                              >
+                                <Globe className="h-3.5 w-3.5" />
+                              </a>
+                            )}
+                            <Link to="/tours/$tourId/" params={{ tourId: tour.id }}>
+                              <Button size="sm" variant="outline" className="h-7 text-xs font-semibold px-2.5">
+                                Edit Tour
+                              </Button>
+                            </Link>
+                          </>
                         )}
-                        <Link to="/tours/$tourId/" params={{ tourId: tour.id }}>
-                          <Button size="sm" variant="outline" className="h-7 text-xs font-semibold px-2.5">
-                            Edit Tour
-                          </Button>
-                        </Link>
                       </div>
                     </div>
                   </div>

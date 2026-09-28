@@ -13,6 +13,7 @@ import {
   adminDeleteUser,
   adminImpersonateUser,
   adminCleanOrphanedStorage,
+  adminPurgeUserTourStorage,
   adminSendMarketingEmail,
 } from "@/lib/d1-server";
 import {
@@ -50,6 +51,7 @@ import {
   Ticket,
   LogIn,
   HardDrive,
+  Database,
   Loader2,
   Mail,
   Send,
@@ -160,6 +162,10 @@ function AdminDashboard() {
   // Impersonation State
   const [impersonateTarget, setImpersonateTarget] = useState<Profile | null>(null);
   const [impersonating, setImpersonating] = useState(false);
+
+  // Storage Purge State
+  const [purgeTarget, setPurgeTarget] = useState<Profile | null>(null);
+  const [purging, setPurging] = useState(false);
 
   // Modal / Form State: Edit Profile
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -639,6 +645,40 @@ function AdminDashboard() {
     }
   };
 
+  // Purge User Storage handler
+  const handleConfirmPurgeStorage = async () => {
+    if (!purgeTarget) return;
+    setPurging(true);
+    const tid = toast.loading(`Purging images for ${purgeTarget.name || purgeTarget.email}...`);
+    try {
+      const res = await adminPurgeUserTourStorage({
+        data: {
+          token: session?.access_token || "",
+          targetUserId: purgeTarget.id,
+        },
+      });
+
+      if (res?.error) {
+        toast.error("Failed to purge storage: " + res.error.message, { id: tid });
+        setPurging(false);
+        return;
+      }
+
+      const { deletedFilesCount, deletedMb, toursUpdated } = res.data;
+      toast.success(
+        `Freed ${deletedMb} MB (${deletedFilesCount} files). Marked ${toursUpdated} tours as archived/cleared.`,
+        { id: tid, duration: 6000 }
+      );
+      setPurgeTarget(null);
+      setPurging(false);
+      loadData();
+    } catch (err: any) {
+      console.error("Purge storage error:", err);
+      toast.error("Purge error: " + err.message, { id: tid });
+      setPurging(false);
+    }
+  };
+
   // Delete/Revoke Coupon Code
   const handleDeleteCoupon = async (id: string, code: string) => {
     if (!confirm(`Delete or revoke coupon code "${code}"?`)) return;
@@ -1100,6 +1140,15 @@ function AdminDashboard() {
                                       title={`Log in as ${p.name || p.email} (Impersonate)`}
                                     >
                                       <LogIn className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => setPurgeTarget(p)}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="hover:bg-purple-50 text-purple-600 hover:text-purple-700 cursor-pointer rounded-xl"
+                                      title={`Purge Images & Database Photos for ${p.name || p.email} (Free Storage & Archive)`}
+                                    >
+                                      <Database className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       onClick={() => handleOpenEditProfile(p)}
@@ -2269,6 +2318,88 @@ function AdminDashboard() {
                   <>
                     <LogIn className="h-4 w-4" />
                     <span>Log in as {impersonateTarget.name ? impersonateTarget.name.split(" ")[0] : "User"}</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+
+      {/* Purge User Storage Confirmation Dialog */}
+      <Dialog
+        open={!!purgeTarget}
+        onOpenChange={(open) => !open && !purging && setPurgeTarget(null)}
+      >
+        {purgeTarget && (
+          <DialogContent className="rounded-2xl max-w-md bg-white">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-purple-100 text-purple-700">
+                  <Database className="h-5 w-5" />
+                </span>
+                Purge Image Storage & Archive Tours
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="py-3 space-y-3 text-sm">
+              <p className="text-slate-600">
+                You are about to purge all stored 360° images and database photos for{" "}
+                <strong className="text-slate-900 font-bold">{purgeTarget.name || purgeTarget.email}</strong>.
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1.5 text-xs text-slate-700">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">User Email:</span>
+                  <span className="font-bold text-slate-800">{purgeTarget.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">Account Plan:</span>
+                  <span className="font-bold uppercase text-slate-800">{purgeTarget.plan}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">User ID:</span>
+                  <span className="font-mono text-[11px] text-slate-500">{purgeTarget.id}</span>
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-purple-50 border border-purple-200/60 p-3 text-xs text-purple-900 space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5">
+                  <span>ℹ️</span> What this action does:
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[11px] text-purple-800">
+                  <li><strong>Frees 100% of R2 Storage:</strong> Deletes raw equirectangular panoramas and thumbnails.</li>
+                  <li><strong>Cleans Database Photos:</strong> Reclaims rows from the <code>photos</code> & <code>connections</code> tables.</li>
+                  <li><strong>Preserves Tour Names & Stats:</strong> All tours remain visible as greyed-out read-only records.</li>
+                  <li><strong>Maintains Client Counts:</strong> All client records remain intact.</li>
+                  <li><strong>Live on Street View:</strong> Published Google Street View tours remain active on Google Maps.</li>
+                </ul>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPurgeTarget(null)}
+                disabled={purging}
+                className="rounded-xl border-slate-200 cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmPurgeStorage}
+                disabled={purging}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow"
+              >
+                {purging ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Purging R2 Storage...</span>
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4" />
+                    <span>Confirm Purge & Archive</span>
                   </>
                 )}
               </Button>

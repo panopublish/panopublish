@@ -46,6 +46,9 @@ async function ensureIndexes(db: any) {
         db.prepare("CREATE INDEX IF NOT EXISTS idx_constellations_tour_id ON constellations(tour_id)"),
       ]);
     }
+    try {
+      await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
+    } catch (_) {}
   } catch (_) {}
 }
 
@@ -805,6 +808,85 @@ export const adminCleanOrphanedStorage = createServerFn({ method: "POST" })
     } catch (err: any) {
       console.error("adminCleanOrphanedStorage error:", err);
       return { error: { message: err.message || "Failed to clean orphaned storage" } };
+    }
+  });
+
+export const adminPurgeUserTourStorage = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const { token, targetUserId } = ctx.data;
+
+      // 1. Verify caller is admin
+      const caller = await getUserFromToken(token);
+      if (!checkIsAdmin(caller)) {
+        throw new Error("Access denied. Admin access only.");
+      }
+
+      if (!targetUserId) {
+        throw new Error("Target user ID is required");
+      }
+
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding missing");
+
+      const bucket = getBinding("BUCKET");
+      if (!bucket) throw new Error("Cloudflare R2 Bucket binding missing");
+
+      // 2. Clear all R2 image objects for this user
+      // All user assets are uploaded under prefix: `${targetUserId}/`
+      let deletedFilesCount = 0;
+      let deletedBytes = 0;
+      let truncated = true;
+      let cursor: string | undefined = undefined;
+
+      while (truncated) {
+        const list: any = await bucket.list({ prefix: `${targetUserId}/`, cursor });
+        const objects = list?.objects || [];
+        if (objects.length > 0) {
+          await Promise.all(
+            objects.map((obj: any) => {
+              deletedBytes += obj.size || 0;
+              return bucket.delete(obj.key);
+            })
+          );
+          deletedFilesCount += objects.length;
+        }
+        truncated = list?.truncated ?? false;
+        cursor = list?.cursor;
+      }
+
+      // 3. Mark all tours for this user as storage_cleared = 1 (preserve status and client_id)
+      const updateToursRes: any = await db
+        .prepare("UPDATE tours SET storage_cleared = 1 WHERE user_id = ?")
+        .bind(targetUserId)
+        .run();
+
+      // 4. Remove all connections for this user's tours
+      await db
+        .prepare("DELETE FROM connections WHERE tour_id IN (SELECT id FROM tours WHERE user_id = ?)")
+        .bind(targetUserId)
+        .run();
+
+      // 5. Delete all photo rows for this user from the photos table to reclaim database space
+      const deletePhotosRes: any = await db
+        .prepare("DELETE FROM photos WHERE user_id = ?")
+        .bind(targetUserId)
+        .run();
+
+      return {
+        data: {
+          success: true,
+          deletedFilesCount,
+          deletedBytes,
+          deletedMb: (deletedBytes / (1024 * 1024)).toFixed(2),
+          toursUpdated: updateToursRes?.meta?.changes || 0,
+        },
+        error: null,
+      };
+    } catch (err: any) {
+      console.error("adminPurgeUserTourStorage error:", err);
+      return { error: { message: err.message || "Failed to purge user storage" } };
     }
   });
 
