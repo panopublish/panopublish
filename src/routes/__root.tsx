@@ -175,6 +175,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
+import { useHeartbeat } from "@/hooks/useHeartbeat";
+
+function RootContent() {
+  useHeartbeat();
+  return (
+    <>
+      <Outlet />
+      <Toaster richColors position="top-right" />
+    </>
+  );
+}
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -216,8 +227,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <AuthProvider>
-          <Outlet />
-          <Toaster richColors position="top-right" />
+          <RootContent />
         </AuthProvider>
       </HelmetProvider>
     </QueryClientProvider>

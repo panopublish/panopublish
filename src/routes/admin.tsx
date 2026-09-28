@@ -64,6 +64,8 @@ import {
   UserX,
   X,
   AlertTriangle,
+  Radio,
+  Activity,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
@@ -90,8 +92,49 @@ type Profile = {
   credits: number;
   trial_ends_at: string | null;
   billing_cycle_tours_used: number;
+  last_seen_at?: string | null;
+  last_active_path?: string | null;
+  last_active_device?: string | null;
   created_at: string;
 };
+
+type ActivityStatus = "online" | "idle" | "recent" | "offline";
+
+function parseLastSeen(lastSeenAt: string | null | undefined): {
+  status: ActivityStatus;
+  label: string;
+  diffMins: number;
+} {
+  if (!lastSeenAt) {
+    return { status: "offline", label: "Never", diffMins: Infinity };
+  }
+  const isoStr =
+    lastSeenAt.includes("Z") || lastSeenAt.includes("+")
+      ? lastSeenAt
+      : lastSeenAt.replace(" ", "T") + "Z";
+  const time = new Date(isoStr).getTime();
+  if (isNaN(time)) {
+    return { status: "offline", label: "Never", diffMins: Infinity };
+  }
+  const diffMs = Math.max(0, Date.now() - time);
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 3) {
+    return { status: "online", label: "Online Now", diffMins };
+  }
+  if (diffMins < 15) {
+    return { status: "idle", label: `Idle (${diffMins}m ago)`, diffMins };
+  }
+  if (diffMins < 60) {
+    return { status: "recent", label: `${diffMins}m ago`, diffMins };
+  }
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) {
+    return { status: "offline", label: `${diffHours}h ago`, diffMins };
+  }
+  const diffDays = Math.floor(diffHours / 24);
+  return { status: "offline", label: `${diffDays}d ago`, diffMins };
+}
 
 type Subscription = {
   id: string;
@@ -133,6 +176,9 @@ function AdminDashboard() {
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
+  const [activityFilter, setActivityFilter] = useState<"all" | "online" | "idle" | "today" | "offline">("all");
+  const [sortBy, setSortBy] = useState<"online_first" | "newest">("online_first");
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const [activeTab, setActiveTab] = useState<"users" | "subscriptions" | "coupons" | "broadcast">("users");
 
   // Broadcast / Marketing Email State
@@ -262,8 +308,8 @@ function AdminDashboard() {
     }
   }, [user, authLoading, navigate, impersonatorSession]);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (showSpinner = true) => {
+    if (showSpinner) setLoading(true);
     try {
       const [profRes, subRes, tourRes, photoRes, clientRes, couponRes] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
@@ -290,11 +336,19 @@ function AdminDashboard() {
       setCoupons((couponRes.data as Coupon[]) ?? []);
     } catch (e: any) {
       console.error("Failed to load admin dashboard data:", e);
-      toast.error("Error loading dashboard data: " + e.message);
+      if (showSpinner) toast.error("Error loading dashboard data: " + e.message);
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 25000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   useEffect(() => {
     if (
@@ -799,18 +853,52 @@ function AdminDashboard() {
 
   const totalPublishedTours = tours.filter(isTourPublished).length;
 
+  const onlineUsers = profiles.filter(
+    (p) => parseLastSeen(p.last_seen_at).status === "online"
+  );
+  const idleUsers = profiles.filter(
+    (p) => parseLastSeen(p.last_seen_at).status === "idle"
+  );
+  const onlineUsersCount = onlineUsers.length;
+  const idleUsersCount = idleUsers.length;
+
   // Filtered Users List
-  const filteredProfiles = profiles.filter((p) => {
-    const matchesSearch =
-      (p.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredProfiles = profiles
+    .filter((p) => {
+      const matchesSearch =
+        (p.email || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.username || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.company_name || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesPlan = planFilter === "all" || p.plan === planFilter;
+      const matchesPlan = planFilter === "all" || p.plan === planFilter;
 
-    return matchesSearch && matchesPlan;
-  });
+      const act = parseLastSeen(p.last_seen_at);
+      const matchesActivity =
+        activityFilter === "all"
+          ? true
+          : activityFilter === "online"
+          ? act.status === "online"
+          : activityFilter === "idle"
+          ? act.status === "online" || act.status === "idle"
+          : activityFilter === "today"
+          ? act.diffMins < 1440
+          : act.status === "offline";
+
+      return matchesSearch && matchesPlan && matchesActivity;
+    })
+    .sort((a, b) => {
+      if (sortBy === "online_first") {
+        const order: Record<ActivityStatus, number> = { online: 0, idle: 1, recent: 2, offline: 3 };
+        const statA = order[parseLastSeen(a.last_seen_at).status];
+        const statB = order[parseLastSeen(b.last_seen_at).status];
+        if (statA !== statB) return statA - statB;
+        const timeA = a.last_seen_at ? new Date(a.last_seen_at).getTime() : 0;
+        const timeB = b.last_seen_at ? new Date(b.last_seen_at).getTime() : 0;
+        if (timeA !== timeB) return timeB - timeA;
+      }
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
 
   const filteredBroadcastProfiles = profiles.filter((p) => {
     if (!p.email) return false;
@@ -856,8 +944,24 @@ function AdminDashboard() {
                 <Plus className="h-4.5 w-4.5" />
                 Add User
               </Button>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl px-3 py-2 cursor-pointer shadow-sm hover:bg-slate-50 transition-all select-none">
+                <input
+                  type="checkbox"
+                  checked={autoRefresh}
+                  onChange={(e) => setAutoRefresh(e.target.checked)}
+                  className="rounded text-[#0277bd] focus:ring-[#0277bd] cursor-pointer"
+                />
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={`inline-block h-2 w-2 rounded-full ${
+                      autoRefresh ? "bg-emerald-500 animate-pulse" : "bg-slate-300"
+                    }`}
+                  />
+                  Live (25s)
+                </span>
+              </label>
               <Button
-                onClick={loadData}
+                onClick={() => loadData(true)}
                 disabled={loading}
                 variant="outline"
                 className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl shadow-sm flex items-center gap-2 cursor-pointer transition-all"
@@ -869,7 +973,28 @@ function AdminDashboard() {
           </div>
 
           {/* Premium Dashboard Metrics Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
+            <StatCard
+              icon={Radio}
+              label="Online Right Now"
+              value={
+                loading ? undefined : (
+                  <span className="flex items-center gap-2">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    {onlineUsersCount}
+                  </span>
+                )
+              }
+              subtext={
+                idleUsersCount > 0
+                  ? `${idleUsersCount} idle (15m)`
+                  : "Live active accounts"
+              }
+              accent="success"
+            />
             <StatCard
               icon={Users}
               label="Total Users"
@@ -926,13 +1051,19 @@ function AdminDashboard() {
               <div className="border bg-white rounded-2xl p-1.5 flex flex-wrap gap-2 shadow-sm">
                 <button
                   onClick={() => setActiveTab("users")}
-                  className={`flex-1 min-w-[120px] py-3 px-3 rounded-xl font-bold text-xs md:text-sm text-center transition-all duration-300 ${
+                  className={`flex-1 min-w-[140px] py-3 px-3 rounded-xl font-bold text-xs md:text-sm text-center transition-all duration-300 flex items-center justify-center gap-1.5 ${
                     activeTab === "users"
                       ? "bg-slate-900 text-white shadow-md"
                       : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                   }`}
                 >
-                  Active Users ({loading ? "..." : profiles.length})
+                  <span>Users ({loading ? "..." : profiles.length})</span>
+                  {onlineUsersCount > 0 && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white shadow-xs animate-pulse">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                      {onlineUsersCount} online
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => setActiveTab("subscriptions")}
@@ -982,7 +1113,7 @@ function AdminDashboard() {
                       />
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         onClick={() => {
                           const allValid = profiles
@@ -996,9 +1127,27 @@ function AdminDashboard() {
                         <Mail className="h-3.5 w-3.5" />
                         Marketing Email ({profiles.length})
                       </Button>
+
+                      {/* Online Activity Filter */}
+                      <Select
+                        value={activityFilter}
+                        onValueChange={(val: any) => setActivityFilter(val)}
+                      >
+                        <SelectTrigger className="w-[145px] bg-white border-slate-200 rounded-xl text-xs font-bold">
+                          <SelectValue placeholder="Activity filter" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Activity</SelectItem>
+                          <SelectItem value="online">🟢 Online Now ({onlineUsersCount})</SelectItem>
+                          <SelectItem value="idle">🟡 Online & Idle ({onlineUsersCount + idleUsersCount})</SelectItem>
+                          <SelectItem value="today">Active Today</SelectItem>
+                          <SelectItem value="offline">Offline</SelectItem>
+                        </SelectContent>
+                      </Select>
+
                       <Filter className="h-4 w-4 text-slate-400" />
                       <Select value={planFilter} onValueChange={setPlanFilter}>
-                        <SelectTrigger className="w-[130px] bg-white border-slate-200 rounded-xl text-xs font-bold">
+                        <SelectTrigger className="w-[120px] bg-white border-slate-200 rounded-xl text-xs font-bold">
                           <SelectValue placeholder="Plan filter" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1007,6 +1156,17 @@ function AdminDashboard() {
                           <SelectItem value="basic">Basic</SelectItem>
                           <SelectItem value="pro">Pro</SelectItem>
                           <SelectItem value="agency">Agency</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {/* Sort Order Filter */}
+                      <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                        <SelectTrigger className="w-[130px] bg-white border-slate-200 rounded-xl text-xs font-bold">
+                          <SelectValue placeholder="Sort" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="online_first">🟢 Online First</SelectItem>
+                          <SelectItem value="newest">Newest Joined</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1026,6 +1186,7 @@ function AdminDashboard() {
                         <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-wider">
                           <tr>
                             <th className="p-4 pl-6">User details</th>
+                            <th className="p-4">Live Status & Page</th>
                             <th className="p-4">Plan / Limits</th>
                             <th className="p-4">Tours Published</th>
                             <th className="p-4">Joined Date</th>
@@ -1049,8 +1210,17 @@ function AdminDashboard() {
                             return (
                               <tr key={p.id} className="hover:bg-slate-50/40 transition-colors">
                                 <td className="p-4 pl-6">
-                                  <div className="font-bold text-slate-800">
-                                    {p.name || "Unnamed User"}
+                                  <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                    <span>{p.name || "Unnamed User"}</span>
+                                    {parseLastSeen(p.last_seen_at).status === "online" && (
+                                      <span
+                                        className="relative flex h-2 w-2"
+                                        title="Online Right Now"
+                                      >
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                      </span>
+                                    )}
                                   </div>
                                   <div
                                     className="text-xs text-slate-400 truncate max-w-[200px]"
@@ -1063,6 +1233,79 @@ function AdminDashboard() {
                                       💼 {p.company_name}
                                     </div>
                                   )}
+                                </td>
+
+                                <td className="p-4">
+                                  {(() => {
+                                    const act = parseLastSeen(p.last_seen_at);
+                                    if (act.status === "online") {
+                                      return (
+                                        <div className="flex flex-col gap-1 items-start">
+                                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            <span className="relative flex h-2 w-2">
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                            </span>
+                                            Online Now
+                                          </span>
+                                          {p.last_active_path && (
+                                            <span
+                                              className="text-[10px] text-slate-600 font-mono bg-slate-100 px-1.5 py-0.5 rounded truncate max-w-[160px]"
+                                              title={p.last_active_path}
+                                            >
+                                              {p.last_active_path}
+                                            </span>
+                                          )}
+                                          {p.last_active_device && (
+                                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                              {p.last_active_device === "Mobile" ? (
+                                                <>
+                                                  <Smartphone className="h-3 w-3 text-slate-400" />
+                                                  Mobile
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <Monitor className="h-3 w-3 text-slate-400" />
+                                                  Desktop
+                                                </>
+                                              )}
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                    if (act.status === "idle") {
+                                      return (
+                                        <div className="flex flex-col gap-1 items-start">
+                                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                            {act.label}
+                                          </span>
+                                          {p.last_active_path && (
+                                            <span
+                                              className="text-[10px] text-slate-400 font-mono truncate max-w-[160px]"
+                                              title={p.last_active_path}
+                                            >
+                                              {p.last_active_path}
+                                            </span>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                    if (act.status === "recent") {
+                                      return (
+                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                          {act.label}
+                                        </span>
+                                      );
+                                    }
+                                    return (
+                                      <span className="text-[11px] text-slate-400 font-medium">
+                                        {act.label}
+                                      </span>
+                                    );
+                                  })()}
                                 </td>
 
                                 <td className="p-4">
@@ -2624,7 +2867,7 @@ function StatCard({
 }: {
   icon: React.ElementType;
   label: string;
-  value?: string | number;
+  value?: React.ReactNode;
   subtext: string;
   accent?: "success" | "warning";
 }) {

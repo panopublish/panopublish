@@ -41,6 +41,15 @@ async function ensureSchema(db: any) {
     await db.prepare("ALTER TABLE tours ADD COLUMN first_published_photo_url TEXT").run();
   } catch (_) {}
   try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN last_seen_at TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN last_active_path TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN last_active_device TEXT").run();
+  } catch (_) {}
+  try {
     if (typeof db.batch === "function") {
       await db.batch([
         db.prepare("CREATE INDEX IF NOT EXISTS idx_connections_tour_id ON connections(tour_id)"),
@@ -49,6 +58,7 @@ async function ensureSchema(db: any) {
         db.prepare("CREATE INDEX IF NOT EXISTS idx_photos_user_id ON photos(user_id)"),
         db.prepare("CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id)"),
         db.prepare("CREATE INDEX IF NOT EXISTS idx_constellations_tour_id ON constellations(tour_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_profiles_last_seen ON profiles(last_seen_at)"),
       ]);
     }
   } catch (_) {}
@@ -1178,6 +1188,43 @@ export const adminSendMarketingEmail = createServerFn({ method: "POST" })
     } catch (err: any) {
       console.error("adminSendMarketingEmail error:", err);
       return { error: { message: err.message || "Failed to send marketing emails" } };
+    }
+  });
+
+export const recordHeartbeat = createServerFn({ method: "POST" })
+  .inputValidator((data: { token?: string; path?: string; device?: string }) => data)
+  .handler(async ({ data }: any) => {
+    try {
+      const token = data?.token;
+      if (!token) return { success: false, error: "No token" };
+
+      const user = await getUserFromToken(token);
+      if (!user?.id) return { success: false, error: "Invalid user" };
+
+      const db = getBinding("DB");
+      if (!db) return { success: false, error: "DB binding missing" };
+
+      if (!schemaEnsured) {
+        await ensureSchema(db);
+      }
+
+      const path = typeof data?.path === "string" ? data.path.slice(0, 200) : "";
+      const device = typeof data?.device === "string" ? data.device.slice(0, 50) : "";
+
+      await db
+        .prepare(
+          `UPDATE profiles 
+           SET last_seen_at = datetime('now'),
+               last_active_path = ?,
+               last_active_device = ?
+           WHERE id = ?`
+        )
+        .bind(path, device, user.id)
+        .run();
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message };
     }
   });
 

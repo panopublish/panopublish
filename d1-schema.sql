@@ -23,8 +23,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   twitter_url TEXT,
   linkedin_url TEXT,
   billing_cycle_tours_used INTEGER NOT NULL DEFAULT 0,
+  last_seen_at TEXT,
+  last_active_path TEXT,
+  last_active_device TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_profiles_last_seen ON profiles(last_seen_at);
 
 -- Clients
 CREATE TABLE IF NOT EXISTS clients (
