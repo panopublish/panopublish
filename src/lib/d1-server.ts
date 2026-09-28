@@ -49,6 +49,9 @@ async function ensureIndexes(db: any) {
     try {
       await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
     } catch (_) {}
+    try {
+      await db.prepare("ALTER TABLE tours ADD COLUMN first_published_photo_url TEXT").run();
+    } catch (_) {}
   } catch (_) {}
 }
 
@@ -856,19 +859,60 @@ export const adminPurgeUserTourStorage = createServerFn({ method: "POST" })
         cursor = list?.cursor;
       }
 
-      // 3. Mark all tours for this user as storage_cleared = 1 (preserve status and client_id)
-      const updateToursRes: any = await db
-        .prepare("UPDATE tours SET storage_cleared = 1 WHERE user_id = ?")
+      // 3. Capture the first published photo URL for each tour before removing photos
+      const photosRes: any = await db
+        .prepare(
+          "SELECT tour_id, streetview_share_link, streetview_photo_id, streetview_status, order_index, uploaded_at FROM photos WHERE user_id = ? ORDER BY order_index ASC, uploaded_at ASC"
+        )
         .bind(targetUserId)
-        .run();
+        .all();
 
-      // 4. Remove all connections for this user's tours
+      const tourPhotoMap = new Map<string, string>();
+      for (const p of photosRes?.results || []) {
+        if (!tourPhotoMap.has(p.tour_id)) {
+          const link =
+            p.streetview_share_link ||
+            (p.streetview_photo_id
+              ? `https://www.google.com/maps/@?api=1&map_action=pano&pano=${p.streetview_photo_id}`
+              : null);
+          if (link) {
+            tourPhotoMap.set(p.tour_id, link);
+          }
+        }
+      }
+
+      // 4. Mark all tours for this user as storage_cleared = 1 and store first_published_photo_url (preserve status and client_id)
+      const userTours: any = await db
+        .prepare("SELECT id FROM tours WHERE user_id = ?")
+        .bind(targetUserId)
+        .all();
+
+      let toursUpdated = 0;
+      for (const t of userTours?.results || []) {
+        const firstPhotoUrl = tourPhotoMap.get(t.id) || null;
+        if (firstPhotoUrl) {
+          await db
+            .prepare(
+              "UPDATE tours SET storage_cleared = 1, first_published_photo_url = ? WHERE id = ?"
+            )
+            .bind(firstPhotoUrl, t.id)
+            .run();
+        } else {
+          await db
+            .prepare("UPDATE tours SET storage_cleared = 1 WHERE id = ?")
+            .bind(t.id)
+            .run();
+        }
+        toursUpdated++;
+      }
+
+      // 5. Remove all connections for this user's tours
       await db
         .prepare("DELETE FROM connections WHERE tour_id IN (SELECT id FROM tours WHERE user_id = ?)")
         .bind(targetUserId)
         .run();
 
-      // 5. Delete all photo rows for this user from the photos table to reclaim database space
+      // 6. Delete all photo rows for this user from the photos table to reclaim database space
       const deletePhotosRes: any = await db
         .prepare("DELETE FROM photos WHERE user_id = ?")
         .bind(targetUserId)
@@ -880,7 +924,7 @@ export const adminPurgeUserTourStorage = createServerFn({ method: "POST" })
           deletedFilesCount,
           deletedBytes,
           deletedMb: (deletedBytes / (1024 * 1024)).toFixed(2),
-          toursUpdated: updateToursRes?.meta?.changes || 0,
+          toursUpdated,
         },
         error: null,
       };

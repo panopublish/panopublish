@@ -29,6 +29,7 @@ type Tour = {
   cid?: string | null;
   google_place_id?: string | null;
   storage_cleared?: boolean | number | null;
+  first_published_photo_url?: string | null;
   client?: { name: string } | null;
 };
 
@@ -58,7 +59,7 @@ function ToursPage() {
       const [tourRes, profRes] = await Promise.all([
         supabase
           .from("tours")
-          .select("id,name,status,type,created_at,cid,google_place_id,storage_cleared,client:clients(name)")
+          .select("id,name,status,type,created_at,cid,google_place_id,storage_cleared,first_published_photo_url,client:clients(name)")
           .eq("user_id", user.id),
         supabase
           .from("profiles")
@@ -122,7 +123,7 @@ function ToursPage() {
         const [photoRes, connRes] = await Promise.all([
           supabase
             .from("photos")
-            .select("id,tour_id,thumbnail_url,streetview_status,streetview_photo_id")
+            .select("id,tour_id,thumbnail_url,streetview_status,streetview_photo_id,streetview_share_link")
             .in("tour_id", ids),
           supabase.from("connections").select("id,tour_id").in("tour_id", ids),
         ]);
@@ -392,11 +393,30 @@ function ToursPage() {
               const clearedHoverNote =
                 "This tour is deleted from PanoPublish database but it is available on google street view and can be viewed on this business profile";
 
-              const mapsUrl = t.cid
-                ? `https://www.google.com/maps?cid=${t.cid}`
-                : t.google_place_id
-                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name)}&query_place_id=${t.google_place_id}`
-                : null;
+              // Find first published image URL
+              const firstPublishedPhoto =
+                tourPhotos.find(
+                  (p) =>
+                    p.streetview_status === "PUBLISHED" &&
+                    (p.streetview_share_link || p.streetview_photo_id),
+                ) ||
+                tourPhotos.find((p) => p.streetview_share_link || p.streetview_photo_id);
+
+              const firstPublishedImageUrl =
+                t.first_published_photo_url ||
+                firstPublishedPhoto?.streetview_share_link ||
+                (firstPublishedPhoto?.streetview_photo_id
+                  ? `https://www.google.com/maps/@?api=1&map_action=pano&pano=${firstPublishedPhoto.streetview_photo_id}`
+                  : null);
+
+              // Give link to first published image from now on; fallback to CID/place search if unavailable
+              const mapsUrl =
+                firstPublishedImageUrl ||
+                (t.cid
+                  ? `https://www.google.com/maps?cid=${t.cid}`
+                  : t.google_place_id
+                  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name)}&query_place_id=${t.google_place_id}`
+                  : null);
 
               return (
                 <div
@@ -488,7 +508,11 @@ function ToursPage() {
                               href={mapsUrl}
                               target="_blank"
                               rel="noreferrer"
-                              title="View this business profile and published Street View photos on Google Maps"
+                              title={
+                                firstPublishedImageUrl
+                                  ? "View first published 360 photo on Google Street View"
+                                  : "View this business profile and published Street View photos on Google Maps"
+                              }
                             >
                               <Button className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold h-8 px-3 text-xs rounded gap-1 transition-transform active:scale-95 shadow-sm">
                                 <ExternalLink className="h-3.5 w-3.5" /> View on Google Maps

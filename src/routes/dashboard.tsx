@@ -70,6 +70,7 @@ type RecentTour = {
   cid?: string;
   google_place_id?: string;
   storage_cleared?: boolean | number | null;
+  first_published_photo_url?: string | null;
   client?: { name: string } | null;
 };
 
@@ -116,7 +117,7 @@ function Dashboard() {
           .eq("user_id", user.id),
         supabase
           .from("tours")
-          .select("id,name,status,type,created_at,cid,google_place_id,storage_cleared,client:clients(name)")
+          .select("id,name,status,type,created_at,cid,google_place_id,storage_cleared,first_published_photo_url,client:clients(name)")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
@@ -767,11 +768,13 @@ function Dashboard() {
               const clearedHoverNote =
                 "This tour is deleted from PanoPublish database but it is available on google street view and can be viewed on this business profile";
 
-              const mapsUrl = tour.cid
-                ? `https://www.google.com/maps?cid=${tour.cid}`
-                : tour.google_place_id
-                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tour.name)}&query_place_id=${tour.google_place_id}`
-                : null;
+              const mapsUrl =
+                tour.first_published_photo_url ||
+                (tour.cid
+                  ? `https://www.google.com/maps?cid=${tour.cid}`
+                  : tour.google_place_id
+                  ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tour.name)}&query_place_id=${tour.google_place_id}`
+                  : null);
 
               return (
                 <div
