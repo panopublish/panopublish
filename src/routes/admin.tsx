@@ -118,7 +118,7 @@ type Coupon = {
 };
 
 function AdminDashboard() {
-  const { session, user, loading: authLoading, startImpersonation } = useAuth();
+  const { session, user, loading: authLoading, startImpersonation, impersonatorSession } = useAuth();
   const navigate = useNavigate();
 
   // Data State
@@ -251,12 +251,16 @@ function AdminDashboard() {
     if (!authLoading) {
       if (!user) {
         navigate({ to: "/login/" });
-      } else if (user.email !== "vista360gtp@gmail.com" && user.email !== "er.prashantyadav37@gmail.com") {
+      } else if (
+        !impersonatorSession &&
+        user.email !== "vista360gtp@gmail.com" &&
+        user.email !== "er.prashantyadav37@gmail.com"
+      ) {
         toast.error("Access denied. Admin access only.");
         navigate({ to: "/dashboard/" });
       }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, impersonatorSession]);
 
   const loadData = async () => {
     setLoading(true);

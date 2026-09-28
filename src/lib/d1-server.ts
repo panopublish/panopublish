@@ -31,10 +31,15 @@ function checkIsAdmin(user: any) {
   return user?.email && ADMIN_EMAILS.includes(user.email);
 }
 
-let indexesEnsured = false;
-async function ensureIndexes(db: any) {
-  if (indexesEnsured || !db) return;
-  indexesEnsured = true;
+let schemaEnsured = false;
+async function ensureSchema(db: any) {
+  if (schemaEnsured || !db) return;
+  try {
+    await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE tours ADD COLUMN first_published_photo_url TEXT").run();
+  } catch (_) {}
   try {
     if (typeof db.batch === "function") {
       await db.batch([
@@ -46,13 +51,8 @@ async function ensureIndexes(db: any) {
         db.prepare("CREATE INDEX IF NOT EXISTS idx_constellations_tour_id ON constellations(tour_id)"),
       ]);
     }
-    try {
-      await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
-    } catch (_) {}
-    try {
-      await db.prepare("ALTER TABLE tours ADD COLUMN first_published_photo_url TEXT").run();
-    } catch (_) {}
   } catch (_) {}
+  schemaEnsured = true;
 }
 
 async function getUserFromToken(token: string) {
@@ -142,8 +142,8 @@ export const runD1Query = createServerFn({ method: "POST" })
       return { data: null, error: { message: "Cloudflare D1 Database binding 'DB' is missing" } };
     }
 
-    if (!indexesEnsured) {
-      ensureIndexes(db);
+    if (!schemaEnsured) {
+      await ensureSchema(db);
     }
 
     const { table, action } = payload;
@@ -240,11 +240,29 @@ export const runD1Query = createServerFn({ method: "POST" })
 
       if (payload.countOption === "exact") {
         const countSql = `SELECT COUNT(*) as total FROM ${table}${whereSql}`;
-        const countRes = await db
-          .prepare(countSql)
-          .bind(...params)
-          .first();
-        count = countRes ? (countRes as any).total : 0;
+        try {
+          const countRes = await db
+            .prepare(countSql)
+            .bind(...params)
+            .first();
+          count = countRes ? (countRes as any).total : 0;
+        } catch (countErr: any) {
+          if (countErr.message && countErr.message.includes("no such column")) {
+            try {
+              await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
+            } catch (_) {}
+            try {
+              await db.prepare("ALTER TABLE tours ADD COLUMN first_published_photo_url TEXT").run();
+            } catch (_) {}
+            const retryCountRes = await db
+              .prepare(countSql)
+              .bind(...params)
+              .first();
+            count = retryCountRes ? (retryCountRes as any).total : 0;
+          } else {
+            throw countErr;
+          }
+        }
       }
 
       if (payload.headOption) {
@@ -293,8 +311,26 @@ export const runD1Query = createServerFn({ method: "POST" })
         sql += ` LIMIT 1`;
       }
 
-      const stmt = db.prepare(sql);
-      let { results } = await stmt.bind(...params).all();
+      let results: any[] = [];
+      try {
+        const stmt = db.prepare(sql);
+        const queryRes = await stmt.bind(...params).all();
+        results = queryRes.results || [];
+      } catch (queryErr: any) {
+        if (queryErr.message && queryErr.message.includes("no such column")) {
+          try {
+            await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
+          } catch (_) {}
+          try {
+            await db.prepare("ALTER TABLE tours ADD COLUMN first_published_photo_url TEXT").run();
+          } catch (_) {}
+          const retryStmt = db.prepare(sql);
+          const retryRes = await retryStmt.bind(...params).all();
+          results = retryRes.results || [];
+        } else {
+          throw queryErr;
+        }
+      }
 
       if (table === "profiles" && results.length === 0 && user) {
         // Self-heal: Create profile in D1 if missing
