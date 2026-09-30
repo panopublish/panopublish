@@ -220,6 +220,8 @@ function ConnectionsErrorComponent({ error, reset }: { error: Error; reset: () =
   );
 }
 
+const MAPS_KEY = getEnv("VITE_GOOGLE_MAPS_API_KEY");
+
 export const Route = createFileRoute("/tours/$tourId/connections")({
   head: () => ({
     meta: [
@@ -234,6 +236,14 @@ export const Route = createFileRoute("/tours/$tourId/connections")({
       },
     ],
     scripts: [
+      ...(MAPS_KEY
+        ? [
+            {
+              src: `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geometry&loading=async`,
+              async: true,
+            },
+          ]
+        : []),
       {
         src: "https://cdn.jsdelivr.net/npm/marzipano@0.10.2/dist/marzipano.js",
         defer: true,
@@ -247,9 +257,6 @@ export const Route = createFileRoute("/tours/$tourId/connections")({
   component: ConnectionsPage,
   errorComponent: ConnectionsErrorComponent,
 });
-
-
-const MAPS_KEY = getEnv("VITE_GOOGLE_MAPS_API_KEY");
 
 type Photo = {
   id: string;
@@ -356,26 +363,39 @@ function getHotspotScreenCoords(
 }
 
 function useGoogleMaps() {
-  const [ready, setReady] = useState(() => typeof window !== "undefined" && !!window.google?.maps);
+  const [ready, setReady] = useState(
+    () => typeof window !== "undefined" && !!window.google?.maps?.StreetViewPanorama,
+  );
 
   useEffect(() => {
     if (!MAPS_KEY) return;
-    if (window.google?.maps) {
+    if (window.google?.maps?.StreetViewPanorama) {
       setReady(true);
       return;
     }
 
-    const interval = setInterval(() => {
-      if (window.google?.maps) {
+    const checkReady = () => {
+      if (window.google?.maps?.StreetViewPanorama) {
         setReady(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkReady()) return;
+
+    const interval = setInterval(() => {
+      if (checkReady()) {
         clearInterval(interval);
       }
-    }, 100);
+    }, 50);
 
-    const existing = document.querySelector<HTMLScriptElement>("script[src*='maps.googleapis.com']");
+    const existing = document.querySelector<HTMLScriptElement>(
+      "script[src*='maps.googleapis.com']",
+    );
     if (existing) {
       existing.addEventListener("load", () => {
-        if (window.google?.maps) setReady(true);
+        checkReady();
       });
       return () => clearInterval(interval);
     }
@@ -385,7 +405,7 @@ function useGoogleMaps() {
     s.defer = true;
     s.dataset.gmaps = "1";
     s.onload = () => {
-      if (window.google?.maps) setReady(true);
+      checkReady();
     };
     document.head.appendChild(s);
 
@@ -969,23 +989,21 @@ function ConnectionsPage() {
     };
   }, []);
 
-  // Fast Image Preloader for instant scene switching without black screens
+  // Progressive Image Preloader: Prioritize active scene so Google Street View loads without bandwidth competition
   useEffect(() => {
-    if (!previewMode || photos.length === 0) return;
-    if (active?.file_url) {
-      const img = new Image();
-      img.src = active.file_url;
-    }
-    if (active) {
+    if (!previewMode || photos.length === 0 || !active) return;
+    const timer = setTimeout(() => {
       const activeConns = conns.filter((c) => c.from_photo_id === active.id);
-      activeConns.forEach((c) => {
+      activeConns.slice(0, 2).forEach((c) => {
         const targetPhoto = photos.find((p) => p.id === c.to_photo_id);
         if (targetPhoto?.file_url) {
           const img = new Image();
           img.src = targetPhoto.file_url;
         }
       });
-    }
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, [previewMode, active?.id, photos, conns]);
 
   // 360 Panorama Main Viewer (Custom Tour Engine & Google StreetView)
@@ -1159,9 +1177,10 @@ function ConnectionsPage() {
           linksControl: true,
           enableCloseButton: false,
           showRoadLabels: false,
-          motionTracking: true,
-          motionTrackingControl: isMobile,
-          clickToGo: true,
+          motionTracking: false,
+          motionTrackingControl: false,
+          clickToGo: false,
+          gestureHandling: "greedy",
           panoProvider: createGoogleMapsPanoProvider(),
         };
 
@@ -1169,12 +1188,25 @@ function ConnectionsPage() {
         viewerRef.current = sv;
         prevActiveIdRef.current = active.id;
 
-        // Force viewport layout calculation to eliminate 0x0 WebGL black screen
-        setTimeout(() => {
+        // Force viewport layout calculation to eliminate 0x0 WebGL black screen on mobile & desktop
+        const triggerResize = () => {
           if (viewerRef.current && window.google?.maps?.event) {
             window.google.maps.event.trigger(viewerRef.current, "resize");
           }
-        }, 100);
+        };
+
+        triggerResize();
+        setTimeout(triggerResize, 60);
+        setTimeout(triggerResize, 150);
+        setTimeout(triggerResize, 350);
+        setTimeout(triggerResize, 700);
+
+        if (typeof ResizeObserver !== "undefined" && panoRef.current) {
+          const ro = new ResizeObserver(() => {
+            triggerResize();
+          });
+          ro.observe(panoRef.current);
+        }
 
         let povDebounceTimer: any = null;
         sv.addListener("pov_changed", () => {
@@ -2755,7 +2787,17 @@ function ConnectionsPage() {
             </button>
 
             <button
-              onClick={() => window.close()}
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  if (window.opener) {
+                    window.close();
+                  } else if (window.history.length > 1) {
+                    window.history.back();
+                  } else {
+                    window.close();
+                  }
+                }
+              }}
               className="h-8 px-2.5 sm:px-3 bg-red-600/90 hover:bg-red-600 backdrop-blur-md border border-red-500/30 rounded-xl text-white text-xs font-bold shadow-2xl flex items-center gap-1 transition-transform active:scale-95 cursor-pointer"
               title="Close Preview"
             >
@@ -2947,10 +2989,11 @@ function ConnectionsPage() {
                     title={`Go to scene: ${p.filename || `Scene ${idx + 1}`}`}
                   >
                     <img
-                      src={p.file_url}
+                      src={p.thumbnail_url || p.file_url}
                       alt={p.filename || `Scene ${idx + 1}`}
                       className="w-full h-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-0.5">
                       <span className="text-[9px] font-black text-white px-1 leading-tight truncate">
