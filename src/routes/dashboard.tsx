@@ -105,7 +105,7 @@ function Dashboard() {
     if (!user) return;
     (async () => {
       setLoadingData(true);
-      const [p, c, t, token, photosRes] = await Promise.all([
+      const [p, c, t, token, photosRes, subsRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("plan,onboarding_dismissed,billing_cycle_tours_used,credits,trial_ends_at,created_at")
@@ -122,6 +122,7 @@ function Dashboard() {
           .order("created_at", { ascending: false }),
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
         supabase.from("photos").select("tour_id,streetview_status,thumbnail_url,file_url").eq("user_id", user.id),
+        supabase.from("subscriptions").select("plan,amount_inr,status").eq("user_id", user.id),
       ]);
       if (p.error) {
         console.error("Dashboard profile error:", p.error);
@@ -222,19 +223,33 @@ function Dashboard() {
         : publishedCount;
 
       if (userProfile) {
+        const planBaseLimits: Record<string, number> = { trial: 1, basic: 5, pro: 20, agency: 50 };
+        const userBaseLimit = planBaseLimits[userProfile.plan ?? "trial"] ?? 1;
+        const paygCredits = (subsRes?.data || [])
+          .filter((s: any) => s.plan === "pay_as_you_go" && s.status === "active")
+          .reduce((sum: number, s: any) => sum + Math.round((s.amount_inr || 0) / 100), 0);
+        const expectedCredits = userBaseLimit + paygCredits;
+
+        const updates: any = {};
         if (userProfile.plan === "trial" && (userProfile.billing_cycle_tours_used ?? 0) < publishedCount) {
-          await supabase
-            .from("profiles")
-            .update({ billing_cycle_tours_used: publishedCount })
-            .eq("id", user.id);
+          updates.billing_cycle_tours_used = publishedCount;
           userProfile.billing_cycle_tours_used = publishedCount;
-          setProfile({ ...userProfile });
         } else if (isPaid && (userProfile.billing_cycle_tours_used ?? 0) > currentCyclePublished) {
+          updates.billing_cycle_tours_used = currentCyclePublished;
+          userProfile.billing_cycle_tours_used = currentCyclePublished;
+        }
+
+        // Self-heal: Ensure user credits match their plan allowance + extra payg credits (fixes legacy hardcoded 9 credits)
+        if (isPaid && userProfile.credits !== expectedCredits) {
+          updates.credits = expectedCredits;
+          userProfile.credits = expectedCredits;
+        }
+
+        if (Object.keys(updates).length > 0) {
           await supabase
             .from("profiles")
-            .update({ billing_cycle_tours_used: currentCyclePublished })
+            .update(updates)
             .eq("id", user.id);
-          userProfile.billing_cycle_tours_used = currentCyclePublished;
           setProfile({ ...userProfile });
         }
       }
@@ -311,7 +326,7 @@ function Dashboard() {
   const tourCount = cycleUsed;
   const remainingCredits = isAdmin ? 9999 : Math.max(0, totalAllowance - cycleUsed);
   const hasCredits = isAdmin || remainingCredits > 0;
-  const usagePct = limit > 0 ? Math.min(100, (cycleUsed / limit) * 100) : 0;
+  const usagePct = totalAllowance > 0 ? Math.min(100, (cycleUsed / totalAllowance) * 100) : 0;
 
   const onboarding = [
     { label: "Create your first client", done: (stats?.clients ?? 0) > 0, to: "/clients" },
@@ -611,7 +626,7 @@ function Dashboard() {
             <div className="my-4">
               <div className="flex items-center justify-between text-xs mb-1.5">
                 <span className="font-medium text-foreground">
-                  {tourCount} of {limit === 9999 ? "∞" : limit} tours published
+                  {tourCount} of {totalAllowance === 9999 ? "∞" : totalAllowance} tours published
                 </span>
                 <span className="font-semibold text-muted-foreground">
                   {Math.round(usagePct)}% used

@@ -572,7 +572,7 @@ function CreateTour() {
               <p className="text-sm text-slate-500 leading-relaxed">
                 You have reached your limit of{" "}
                 <strong className="text-slate-800 font-extrabold">
-                  {limit} tour{limit > 1 ? "s" : ""}
+                  {totalAllowance} tour{totalAllowance > 1 ? "s" : ""}
                 </strong>{" "}
                 on the{" "}
                 <span className="capitalize font-bold text-slate-700">

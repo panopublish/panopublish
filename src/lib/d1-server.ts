@@ -62,6 +62,10 @@ async function ensureSchema(db: any) {
       ]);
     }
   } catch (_) {}
+  try {
+    // Reset legacy hardcoded credit inflation for tmstudio934@gmail.com (Basic plan has 5 credits)
+    await db.prepare("UPDATE profiles SET credits = 5 WHERE LOWER(email) = 'tmstudio934@gmail.com' AND plan = 'basic' AND credits > 5").run();
+  } catch (_) {}
   schemaEnsured = true;
 }
 

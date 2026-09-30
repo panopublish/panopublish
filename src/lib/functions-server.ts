@@ -891,10 +891,13 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
               nowIso,
             ).run();
 
-            // Update profile plan & reset billing cycle tour usage count
+            const planLimits: Record<string, number> = { basic: 5, pro: 20, agency: 50 };
+            const baseLimit = planLimits[planLower] ?? 5;
+
+            // Update profile plan & reset billing cycle tour usage count and base plan credits
             await db.prepare(`
-              UPDATE profiles SET plan = ?, trial_ends_at = ?, billing_cycle_tours_used = 0 WHERE id = ?
-            `).bind(planLower, periodEndIso, user_id).run();
+              UPDATE profiles SET plan = ?, credits = ?, trial_ends_at = ?, billing_cycle_tours_used = 0 WHERE id = ?
+            `).bind(planLower, baseLimit, periodEndIso, user_id).run();
           }
         }
 
