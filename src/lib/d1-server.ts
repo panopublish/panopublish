@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getEnv, getBinding } from "./env";
 import { verifyJWT, hashPassword, signJWT } from "./auth-server";
+import { formatEmailMarkdownToHtml, parseInlineMarkdown } from "./email-formatter";
 
 function decodeJWT(token: string) {
   try {
@@ -1050,21 +1051,18 @@ export const adminSendMarketingEmail = createServerFn({ method: "POST" })
           .replace(/\{\{name\}\}/gi, displayName)
           .replace(/\{\{email\}\}/gi, email);
 
-        const personalHeadline = (headline || "")
-          .replace(/\{\{name\}\}/gi, displayName)
-          .replace(/\{\{email\}\}/gi, email);
+        const personalHeadline = parseInlineMarkdown(
+          (headline || "")
+            .replace(/\{\{name\}\}/gi, displayName)
+            .replace(/\{\{email\}\}/gi, email)
+        );
 
-        // Convert body text paragraphs to HTML if plain text
-        let formattedBody = (bodyText || "")
-          .replace(/\{\{name\}\}/gi, displayName)
-          .replace(/\{\{email\}\}/gi, email);
-
-        if (!/<[a-z][\s\S]*>/i.test(formattedBody)) {
-          formattedBody = formattedBody
-            .split(/\n\s*\n/)
-            .map((para: string) => `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #334155;">${para.replace(/\n/g, "<br/>")}</p>`)
-            .join("");
-        }
+        // Convert body text markdown / plain text to styled email HTML
+        const formattedBody = formatEmailMarkdownToHtml(
+          (bodyText || "")
+            .replace(/\{\{name\}\}/gi, displayName)
+            .replace(/\{\{email\}\}/gi, email)
+        );
 
         const ctaButtonHtml = ctaText && ctaUrl
           ? `

@@ -71,11 +71,17 @@ import {
   Building2,
   AtSign,
   FileSpreadsheet,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  Link as LinkIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEO } from "@/components/SEO";
+import { formatEmailMarkdownToHtml, parseInlineMarkdown } from "@/lib/email-formatter";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -670,6 +676,72 @@ function AdminDashboard() {
     } finally {
       setDirectSendingCold(false);
     }
+  };
+
+  // Rich Text Formatting Helper for Email Body
+  const handleInsertFormatting = (type: "bold" | "italic" | "h2" | "bullet" | "number" | "link" | "name") => {
+    const textarea = document.getElementById("email-body-textarea") as HTMLTextAreaElement | null;
+    const current = broadcastForm.bodyText || "";
+    let start = current.length;
+    let end = current.length;
+
+    if (textarea) {
+      start = textarea.selectionStart;
+      end = textarea.selectionEnd;
+    }
+
+    const selected = current.substring(start, end);
+    const before = current.substring(0, start);
+    const after = current.substring(end);
+    let replacement = "";
+    let newCursorPos = start;
+
+    switch (type) {
+      case "bold":
+        replacement = `**${selected || "bold text"}**`;
+        newCursorPos = selected ? start + replacement.length : start + 2;
+        break;
+      case "italic":
+        replacement = `*${selected || "italic text"}*`;
+        newCursorPos = selected ? start + replacement.length : start + 1;
+        break;
+      case "h2": {
+        const prefix = before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
+        replacement = `${prefix}## ${selected || "Section Heading"}\n\n`;
+        newCursorPos = start + replacement.length;
+        break;
+      }
+      case "bullet": {
+        const bPrefix = before.endsWith("\n") || before === "" ? "" : "\n";
+        replacement = `${bPrefix}- ${selected || "List item"}\n`;
+        newCursorPos = start + replacement.length;
+        break;
+      }
+      case "number": {
+        const nPrefix = before.endsWith("\n") || before === "" ? "" : "\n";
+        replacement = `${nPrefix}1. ${selected || "List item"}\n`;
+        newCursorPos = start + replacement.length;
+        break;
+      }
+      case "link":
+        replacement = `[${selected || "Link text"}](https://panopublish.com)`;
+        newCursorPos = start + replacement.length;
+        break;
+      case "name":
+        replacement = "{{name}}";
+        newCursorPos = start + replacement.length;
+        break;
+    }
+
+    const nextText = before + replacement + after;
+    setBroadcastForm((prev) => ({ ...prev, bodyText: nextText }));
+
+    setTimeout(() => {
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }, 10);
   };
 
   // Broadcast Recipient Controls (Registered Users)
@@ -2609,21 +2681,90 @@ function AdminDashboard() {
                           </div>
 
                           {/* Body */}
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             <div className="flex items-center justify-between">
                               <Label className="text-xs font-bold text-slate-500">Message Content</Label>
                               <span className="text-[10px] bg-blue-50 text-[#0277bd] font-bold px-2 py-0.5 rounded-full">
-                                Use &#123;&#123;name&#125;&#125; for personalized first name
+                                Markdown &amp; HTML supported
                               </span>
                             </div>
+
+                            {/* Rich Formatting Toolbar */}
+                            <div className="flex flex-wrap items-center gap-1 p-1.5 bg-slate-100 rounded-lg border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("bold")}
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs flex items-center gap-1 font-bold shadow-xs transition-colors"
+                                title="Bold (**text**)"
+                              >
+                                <Bold className="w-3.5 h-3.5" />
+                                <span className="text-[11px]">Bold</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("italic")}
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs flex items-center gap-1 italic shadow-xs transition-colors"
+                                title="Italic (*text*)"
+                              >
+                                <Italic className="w-3.5 h-3.5" />
+                                <span className="text-[11px]">Italic</span>
+                              </button>
+                              <div className="w-[1px] h-4 bg-slate-300 mx-0.5" />
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("h2")}
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs font-extrabold shadow-xs transition-colors"
+                                title="Heading (## Section)"
+                              >
+                                <span className="text-[11px]">H2</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("bullet")}
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs flex items-center gap-1 shadow-xs transition-colors"
+                                title="Bullet List (- item)"
+                              >
+                                <List className="w-3.5 h-3.5" />
+                                <span className="text-[11px] hidden sm:inline">Bullet</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("number")}
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs flex items-center gap-1 shadow-xs transition-colors"
+                                title="Numbered List (1. item)"
+                              >
+                                <ListOrdered className="w-3.5 h-3.5" />
+                                <span className="text-[11px] hidden sm:inline">1, 2, 3</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("link")}
+                                className="px-2 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded text-slate-800 text-xs flex items-center gap-1 shadow-xs transition-colors"
+                                title="Insert Link ([text](url))"
+                              >
+                                <LinkIcon className="w-3.5 h-3.5" />
+                                <span className="text-[11px] hidden sm:inline">Link</span>
+                              </button>
+                              <div className="w-[1px] h-4 bg-slate-300 mx-0.5" />
+                              <button
+                                type="button"
+                                onClick={() => handleInsertFormatting("name")}
+                                className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-[#0277bd] border border-blue-200 rounded text-[11px] font-bold transition-colors"
+                                title="Insert personalized name tag"
+                              >
+                                + &#123;&#123;name&#125;&#125;
+                              </button>
+                            </div>
+
                             <Textarea
-                              rows={6}
+                              id="email-body-textarea"
+                              rows={8}
                               value={broadcastForm.bodyText}
                               onChange={(e) =>
                                 setBroadcastForm((prev) => ({ ...prev, bodyText: e.target.value }))
                               }
-                              placeholder="Write your email body here..."
-                              className="bg-slate-50 border-slate-200 rounded-xl text-xs leading-relaxed"
+                              placeholder="Write your email body here... Supports **bold**, *italic*, ## headings, - lists, and [links](url)"
+                              className="bg-slate-50 border-slate-200 rounded-xl text-xs leading-relaxed font-mono"
                             />
                           </div>
 
@@ -3549,25 +3690,30 @@ function AdminDashboard() {
               {/* Email Mockup Content */}
               <div className="p-6 space-y-4">
                 {broadcastForm.headline && (
-                  <h2 className="text-lg font-black text-slate-900 leading-snug">
-                    {broadcastForm.headline.replace(
-                      /\{\{name\}\}/gi,
-                      emailAudienceMode === "cold" ? (coldRecipients[0]?.name || "Grand Palace Hotel") : "Alex"
-                    )}
-                  </h2>
+                  <h2
+                    className="text-lg font-black text-slate-900 leading-snug"
+                    dangerouslySetInnerHTML={{
+                      __html: parseInlineMarkdown(
+                        broadcastForm.headline.replace(
+                          /\{\{name\}\}/gi,
+                          emailAudienceMode === "cold" ? (coldRecipients[0]?.name || "Grand Palace Hotel") : "Alex"
+                        )
+                      ),
+                    }}
+                  />
                 )}
 
-                <div className="text-xs text-slate-700 leading-relaxed space-y-3">
-                  {broadcastForm.bodyText
-                    .replace(
-                      /\{\{name\}\}/gi,
-                      emailAudienceMode === "cold" ? (coldRecipients[0]?.name || "Grand Palace Hotel") : "Alex"
-                    )
-                    .split(/\n\s*\n/)
-                    .map((para, i) => (
-                      <p key={i}>{para}</p>
-                    ))}
-                </div>
+                <div
+                  className="text-sm text-slate-700 leading-relaxed font-sans"
+                  dangerouslySetInnerHTML={{
+                    __html: formatEmailMarkdownToHtml(
+                      broadcastForm.bodyText.replace(
+                        /\{\{name\}\}/gi,
+                        emailAudienceMode === "cold" ? (coldRecipients[0]?.name || "Grand Palace Hotel") : "Alex"
+                      )
+                    ),
+                  }}
+                />
 
                 {broadcastForm.ctaText && (
                   <div className="text-center pt-3 pb-2">
