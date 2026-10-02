@@ -998,6 +998,7 @@ export const adminSendMarketingEmail = createServerFn({ method: "POST" })
         ctaUrl,
         fromName,
         fromEmail,
+        isColdOutreach,
       } = ctx.data;
 
       // 1. Verify caller is admin
@@ -1033,7 +1034,9 @@ export const adminSendMarketingEmail = createServerFn({ method: "POST" })
         const item = recipients[i];
         const email = (item?.email || "").trim().toLowerCase();
         const rawName = (item?.name || "").trim();
-        const firstName = rawName ? rawName.split(" ")[0] : "";
+        // If business/client name like "Grand Palace Hotel", retain full name; if person name, use first name
+        const isLikelyBusiness = rawName && /(hotel|resort|hospital|clinic|showroom|store|restaurant|cafe|studio|properties|realty|academy|school|college|motors|infra|villas)/i.test(rawName);
+        const firstName = !isLikelyBusiness && rawName.includes(" ") ? rawName.split(" ")[0] : rawName;
         const displayName = firstName || "there";
 
         if (!email || !email.includes("@")) {
@@ -1127,13 +1130,23 @@ export const adminSendMarketingEmail = createServerFn({ method: "POST" })
           <!-- Footer with Unsubscribe notice -->
           <tr>
             <td style="padding: 24px 36px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #94a3b8; line-height: 1.6; text-align: center;">
-              <p style="margin: 0 0 8px 0;">
-                You received this update because you are a registered user of PanoPublish.
-              </p>
-              <p style="margin: 0;">
-                Need help? Contact us at <a href="mailto:support@panopublish.com" style="color: #64748b; text-decoration: underline;">support@panopublish.com</a> &bull; 
-                To unsubscribe from updates, reply to this email with "Unsubscribe".
-              </p>
+              ${
+                isColdOutreach
+                  ? `<p style="margin: 0 0 8px 0;">
+                      You received this email regarding Google Street View & 360° virtual tour solutions for your business.
+                    </p>
+                    <p style="margin: 0;">
+                      Questions or inquiries? Reply directly to this email or visit <a href="https://panopublish.com" style="color: #0277bd; text-decoration: underline;">panopublish.com</a> &bull; 
+                      To opt out, reply with "Unsubscribe".
+                    </p>`
+                  : `<p style="margin: 0 0 8px 0;">
+                      You received this update because you are a registered user of PanoPublish.
+                    </p>
+                    <p style="margin: 0;">
+                      Need help? Contact us at <a href="mailto:support@panopublish.com" style="color: #64748b; text-decoration: underline;">support@panopublish.com</a> &bull; 
+                      To unsubscribe from updates, reply to this email with "Unsubscribe".
+                    </p>`
+              }
             </td>
           </tr>
 

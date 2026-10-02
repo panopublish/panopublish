@@ -66,6 +66,11 @@ import {
   AlertTriangle,
   Radio,
   Activity,
+  Target,
+  Zap,
+  Building2,
+  AtSign,
+  FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateIN } from "@/lib/format";
@@ -199,6 +204,41 @@ function AdminDashboard() {
   const [confirmSendOpen, setConfirmSendOpen] = useState(false);
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  // Email Marketing Audience Mode & Cold Outreach State
+  type ColdRecipient = {
+    id: string;
+    email: string;
+    name?: string;
+    company?: string;
+  };
+
+  const [emailAudienceMode, setEmailAudienceMode] = useState<"users" | "cold">("cold");
+  const [coldRecipients, setColdRecipients] = useState<ColdRecipient[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("panopublish_cold_recipients");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [
+      {
+        id: "sample-1",
+        email: "contact@grandpalacehotel.com",
+        name: "Grand Palace Hotel",
+        company: "Hospitality & Suites",
+      },
+    ];
+  });
+  const [coldInputEmail, setColdInputEmail] = useState("");
+  const [coldInputName, setColdInputName] = useState("");
+  const [coldInputCompany, setColdInputCompany] = useState("");
+  const [directSendingCold, setDirectSendingCold] = useState(false);
+  const [showBulkColdModal, setShowBulkColdModal] = useState(false);
+  const [bulkColdText, setBulkColdText] = useState("");
+
   const [broadcastResult, setBroadcastResult] = useState<{
     totalSent: number;
     totalFailed: number;
@@ -359,8 +399,19 @@ function AdminDashboard() {
     }
   }, [user]);
 
-  // Broadcast Preset Templates
-  const handleApplyPreset = (preset: "features" | "promo" | "tips") => {
+  // Save cold recipients to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("panopublish_cold_recipients", JSON.stringify(coldRecipients));
+      } catch {}
+    }
+  }, [coldRecipients]);
+
+  // Broadcast & Cold Outreach Preset Templates
+  const handleApplyPreset = (
+    preset: "features" | "promo" | "tips" | "cold_hotel" | "cold_retail" | "cold_realestate" | "cold_quick"
+  ) => {
     if (preset === "features") {
       setBroadcastForm((prev) => ({
         ...prev,
@@ -391,10 +442,237 @@ function AdminDashboard() {
         ctaUrl: "https://panopublish.com/dashboard",
       }));
       toast.success("Applied '360 Tips' template");
+    } else if (preset === "cold_hotel") {
+      setBroadcastForm((prev) => ({
+        ...prev,
+        subject: "360° Google Street View Virtual Tour for {{name}}",
+        headline: "Help Guests Step Inside Before They Book",
+        bodyText: `Hi {{name}},\n\nI was reviewing your Google Maps listing and noticed you could attract significantly more guests with an official 360° Google Street View virtual walkthrough.\n\nOver 67% of travelers want a virtual tour before booking hotels, resorts, or event spaces. A verified Google walkthrough lets prospective guests step inside your lobby, premium suites, restaurant, and banquet halls directly from Google Search.\n\nWe provide professional 360° HDR photography with direct Google Maps publishing and no recurring monthly hosting fees.\n\nWould you be open to a quick 5-minute call or seeing a sample demo tour we created for a similar business?`,
+        ctaText: "View Sample Virtual Tour",
+        ctaUrl: "https://panopublish.com",
+      }));
+      toast.success("Applied 'Hotel & Resort Pitch' template");
+    } else if (preset === "cold_retail") {
+      setBroadcastForm((prev) => ({
+        ...prev,
+        subject: "Bring more in-store customers to {{name}} from Google Search",
+        headline: "Interactive 360° Walkthrough on Google Maps",
+        bodyText: `Hi {{name}},\n\nWhen customers in your area search for businesses like yours on Google, their decision is often driven by photos and ambiance.\n\nWith an interactive 360° Google Street View walkthrough, customers can virtually tour your store, explore aisles, and preview your showroom floor straight from Google Maps.\n\nBusinesses with virtual tours receive up to 2x more footfall and customer inquiries. We handle complete photography, panorama alignment, and instant Google Maps publishing.\n\nCan I send you a 60-second preview of what this looks like on Google Maps?`,
+        ctaText: "See Live Demo on Google Maps",
+        ctaUrl: "https://panopublish.com",
+      }));
+      toast.success("Applied 'Retail & Showroom' template");
+    } else if (preset === "cold_realestate") {
+      setBroadcastForm((prev) => ({
+        ...prev,
+        subject: "Interactive 360° Virtual Walkthrough for {{name}}",
+        headline: "Close Real Estate Deals Faster with 360° Walkthroughs",
+        bodyText: `Hi {{name}},\n\nHelp prospective buyers and tenants explore properties 24/7 without waiting for a physical site visit.\n\nOur immersive 360° virtual tours offer ultra-smooth walkthrough transitions, custom floorplans, and seamless integration onto your website, Google Maps, and WhatsApp brochures.\n\nSave hours of travel time and focus your efforts on qualified, high-intent buyers.\n\nWould you like to see a demo tour created for recent residential and commercial projects?`,
+        ctaText: "Explore Sample Tours",
+        ctaUrl: "https://panopublish.com",
+      }));
+      toast.success("Applied 'Real Estate Virtual Tour' template");
+    } else if (preset === "cold_quick") {
+      setBroadcastForm((prev) => ({
+        ...prev,
+        subject: "Quick question regarding Google Street View tour for {{name}}",
+        headline: "Stand Out on Google Maps & Local Search",
+        bodyText: `Hi {{name}},\n\nAre you looking to boost customer foot traffic to your business this month?\n\nWe specialize in setting up official high-definition 360° Google Street View virtual tours that appear directly on Google Search and Maps.\n\nIt takes under 45 minutes on-site and remains permanently on your Google profile with zero recurring subscription fees.\n\nReply to this email if you'd like to see sample tours and package pricing for your location.`,
+        ctaText: "Check Portfolio & Pricing",
+        ctaUrl: "https://panopublish.com/pricing",
+      }));
+      toast.success("Applied 'Quick Cold Pitch' template");
     }
   };
 
-  // Broadcast Recipient Controls
+  // Cold Outreach Recipient Handlers
+  const handleAddColdClient = () => {
+    const email = coldInputEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error("Please enter a client email address");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address (e.g. contact@business.com)");
+      return;
+    }
+    if (coldRecipients.some((c) => c.email.toLowerCase() === email)) {
+      toast.error("This email is already in your cold recipients list");
+      return;
+    }
+
+    const newRecipient: ColdRecipient = {
+      id: crypto.randomUUID(),
+      email,
+      name: coldInputName.trim() || undefined,
+      company: coldInputCompany.trim() || undefined,
+    };
+
+    setColdRecipients((prev) => [newRecipient, ...prev]);
+    setColdInputEmail("");
+    setColdInputName("");
+    setColdInputCompany("");
+    toast.success(`Added ${email} to cold outreach`);
+  };
+
+  const handleRemoveColdRecipient = (id: string, email: string) => {
+    setColdRecipients((prev) => prev.filter((c) => c.id !== id));
+    toast.success(`Removed ${email} from list`);
+  };
+
+  const handleClearAllColdRecipients = () => {
+    if (coldRecipients.length === 0) return;
+    setColdRecipients([]);
+    toast.info("Cleared all cold recipients");
+  };
+
+  const handleLoadSampleColdLeads = () => {
+    const samples: ColdRecipient[] = [
+      {
+        id: crypto.randomUUID(),
+        email: "reservations@grandpalaceresort.com",
+        name: "Grand Palace Resort",
+        company: "Luxury Hospitality",
+      },
+      {
+        id: crypto.randomUUID(),
+        email: "sales@apexmotors-dealership.com",
+        name: "Apex Motors Showroom",
+        company: "Automotive",
+      },
+      {
+        id: crypto.randomUUID(),
+        email: "leasing@skylinetowerrealty.com",
+        name: "Skyline Tower",
+        company: "Commercial Real Estate",
+      },
+    ];
+    setColdRecipients(samples);
+    toast.success("Loaded 3 demo cold leads for testing");
+  };
+
+  const handleProcessBulkColdClients = () => {
+    if (!bulkColdText.trim()) {
+      toast.error("Please paste email addresses");
+      return;
+    }
+
+    const lines = bulkColdText.split(/[\r\n,;]+/);
+    const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+    const newItems: ColdRecipient[] = [];
+    const existingEmails = new Set(coldRecipients.map((c) => c.email.toLowerCase()));
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      const match = line.match(emailRegex);
+      if (match) {
+        const email = match[0].toLowerCase();
+        if (!existingEmails.has(email)) {
+          existingEmails.add(email);
+          let name = line.replace(email, "").replace(/[<>()"']/g, "").trim();
+          if (name.startsWith("-") || name.startsWith(",")) name = name.slice(1).trim();
+          newItems.push({
+            id: crypto.randomUUID(),
+            email,
+            name: name || undefined,
+          });
+        }
+      }
+    }
+
+    if (newItems.length === 0) {
+      toast.info("No new valid email addresses found");
+      return;
+    }
+
+    setColdRecipients((prev) => [...newItems, ...prev]);
+    setBulkColdText("");
+    setShowBulkColdModal(false);
+    toast.success(`Added ${newItems.length} cold client email(s)`);
+  };
+
+  const handleDirectSendSingleCold = async () => {
+    const email = coldInputEmail.trim().toLowerCase();
+    if (!email) {
+      toast.error("Please enter a client email address first");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (!broadcastForm.subject.trim()) {
+      toast.error("Please enter an email subject");
+      return;
+    }
+
+    const name = coldInputName.trim() || coldInputCompany.trim() || "";
+    setDirectSendingCold(true);
+    const tid = toast.loading(`Sending cold pitch email to ${email}...`);
+
+    try {
+      let token = session?.access_token || "";
+      if (!token && typeof window !== "undefined") {
+        try {
+          const s = JSON.parse(localStorage.getItem("panopublish_session") || "{}");
+          token = s?.access_token || "";
+        } catch {}
+      }
+
+      const res = await adminSendMarketingEmail({
+        data: {
+          token,
+          recipients: [{ email, name }],
+          subject: broadcastForm.subject,
+          headline: broadcastForm.headline,
+          bodyText: broadcastForm.bodyText,
+          ctaText: broadcastForm.ctaText,
+          ctaUrl: broadcastForm.ctaUrl,
+          fromName: broadcastForm.fromName,
+          fromEmail: broadcastForm.fromEmail,
+          isColdOutreach: true,
+        },
+      });
+
+      if (res.error) {
+        throw new Error(res.error.message);
+      }
+
+      if (res.data?.totalFailed && res.data.totalFailed > 0) {
+        const reason = res.data.failedEmails?.[0]?.reason || "Failed to deliver";
+        throw new Error(reason);
+      }
+
+      if (!coldRecipients.some((c) => c.email.toLowerCase() === email)) {
+        setColdRecipients((prev) => [
+          {
+            id: crypto.randomUUID(),
+            email,
+            name: name || undefined,
+            company: coldInputCompany.trim() || undefined,
+          },
+          ...prev,
+        ]);
+      }
+
+      setBroadcastResult(res.data);
+      setColdInputEmail("");
+      setColdInputName("");
+      setColdInputCompany("");
+      toast.success(`Cold pitch email delivered to ${email}!`, { id: tid });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Failed to send cold email: " + err.message, { id: tid });
+    } finally {
+      setDirectSendingCold(false);
+    }
+  };
+
+  // Broadcast Recipient Controls (Registered Users)
   const handleSelectAllRecipients = () => {
     const allValid = profiles.filter((p) => p.email && p.email.includes("@")).map((p) => p.id);
     setSelectedUserIds(allValid);
@@ -453,10 +731,13 @@ function AdminDashboard() {
         } catch {}
       }
 
+      const isCold = emailAudienceMode === "cold";
+      const sampleName = isCold ? (coldRecipients[0]?.name || "Grand Palace Hotel") : user.email.split("@")[0];
+
       const res = await adminSendMarketingEmail({
         data: {
           token,
-          recipients: [{ email: user.email, name: user.email.split("@")[0] }],
+          recipients: [{ email: user.email, name: sampleName }],
           subject: `[TEST] ${broadcastForm.subject}`,
           headline: broadcastForm.headline,
           bodyText: broadcastForm.bodyText,
@@ -464,6 +745,7 @@ function AdminDashboard() {
           ctaUrl: broadcastForm.ctaUrl,
           fromName: broadcastForm.fromName,
           fromEmail: broadcastForm.fromEmail,
+          isColdOutreach: isCold,
         },
       });
 
@@ -486,20 +768,33 @@ function AdminDashboard() {
   };
 
   const handleConfirmBroadcastSend = async () => {
-    const targetRecipients = profiles
-      .filter((p) => selectedUserIds.includes(p.id) && p.email && p.email.includes("@"))
-      .map((p) => ({
-        email: p.email!,
-        name: p.name || p.username || "",
-      }));
+    const isCold = emailAudienceMode === "cold";
+
+    const targetRecipients = isCold
+      ? coldRecipients.map((c) => ({
+          email: c.email,
+          name: c.name || c.company || "",
+        }))
+      : profiles
+          .filter((p) => selectedUserIds.includes(p.id) && p.email && p.email.includes("@"))
+          .map((p) => ({
+            email: p.email!,
+            name: p.name || p.username || "",
+          }));
 
     if (targetRecipients.length === 0) {
-      toast.error("No recipients selected");
+      toast.error(
+        isCold
+          ? "No cold client emails found. Please type a client email address first."
+          : "No registered users selected"
+      );
       return;
     }
 
     setSendingBroadcast(true);
-    const tid = toast.loading(`Sending broadcast to ${targetRecipients.length} recipients...`);
+    const tid = toast.loading(
+      `Sending ${isCold ? "cold outreach" : "broadcast"} to ${targetRecipients.length} recipient${targetRecipients.length === 1 ? "" : "s"}...`
+    );
 
     try {
       let token = session?.access_token || "";
@@ -521,6 +816,7 @@ function AdminDashboard() {
           ctaUrl: broadcastForm.ctaUrl,
           fromName: broadcastForm.fromName,
           fromEmail: broadcastForm.fromEmail,
+          isColdOutreach: isCold,
         },
       });
 
@@ -533,15 +829,15 @@ function AdminDashboard() {
 
       if (res.data?.totalSent > 0) {
         toast.success(
-          `Broadcast complete! Sent ${res.data.totalSent} of ${targetRecipients.length} emails.`,
+          `${isCold ? "Cold outreach campaign" : "Broadcast"} complete! Sent ${res.data.totalSent} of ${targetRecipients.length} emails.`,
           { id: tid, duration: 6000 }
         );
       } else {
-        toast.error(`Broadcast failed: 0 emails delivered.`, { id: tid });
+        toast.error(`Delivery failed: 0 emails delivered.`, { id: tid });
       }
     } catch (err: any) {
       console.error(err);
-      toast.error("Failed to broadcast email: " + err.message, { id: tid });
+      toast.error("Failed to send email: " + err.message, { id: tid });
     } finally {
       setSendingBroadcast(false);
     }
@@ -1094,7 +1390,9 @@ function AdminDashboard() {
                   }`}
                 >
                   <Mail className="h-4 w-4 shrink-0" />
-                  <span>Marketing Email ({loading ? "..." : selectedUserIds.length})</span>
+                  <span>
+                    Email Marketing ({emailAudienceMode === "cold" ? `${coldRecipients.length} Cold` : (loading ? "..." : selectedUserIds.length)})
+                  </span>
                 </button>
               </div>
 
@@ -1642,35 +1940,91 @@ function AdminDashboard() {
                             Quota: 100/day &bull; 3,000/mo
                           </span>
                         </div>
-                        <h2 className="text-xl font-black tracking-tight text-white">
-                          1-Click Marketing Email Broadcast
+                        <h2 className="text-xl font-black tracking-tight text-white flex items-center gap-2">
+                          {emailAudienceMode === "cold" ? (
+                            <>
+                              <Target className="h-5 w-5 text-[#38bdf8]" />
+                              <span>Cold Client Email Pitching & Outreach</span>
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="h-5 w-5 text-[#38bdf8]" />
+                              <span>1-Click Registered Users Marketing Broadcast</span>
+                            </>
+                          )}
                         </h2>
                         <p className="text-xs text-slate-300 mt-1 max-w-xl leading-relaxed">
-                          Deliver product updates, promotional offers, and tips directly to your registered users. Easily select or remove specific recipients before sending.
+                          {emailAudienceMode === "cold"
+                            ? "Type prospective client email addresses to send high-converting 360° virtual tour pitches, Google Street View proposals, and portfolio demos."
+                            : "Deliver product updates, promotional offers, and tips directly to your registered users. Easily select or remove specific recipients before sending."}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2.5 text-center">
-                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recipients</div>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {/* Audience mode switch buttons in banner */}
+                        <div className="bg-slate-800/90 p-1 rounded-xl border border-slate-700/80 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setEmailAudienceMode("cold")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              emailAudienceMode === "cold"
+                                ? "bg-[#38bdf8] text-slate-950 shadow-md font-black"
+                                : "text-slate-300 hover:text-white"
+                            }`}
+                          >
+                            <Target className="h-3.5 w-3.5" />
+                            <span>Cold Outreach ({coldRecipients.length})</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEmailAudienceMode("users")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                              emailAudienceMode === "users"
+                                ? "bg-[#38bdf8] text-slate-950 shadow-md font-black"
+                                : "text-slate-300 hover:text-white"
+                            }`}
+                          >
+                            <Users className="h-3.5 w-3.5" />
+                            <span>Users ({selectedUserIds.length})</span>
+                          </button>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-xl px-4 py-2.5 text-center min-w-[90px]">
+                          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            {emailAudienceMode === "cold" ? "Cold Leads" : "Recipients"}
+                          </div>
                           <div className="text-xl font-black text-white">
-                            {selectedUserIds.length} <span className="text-xs text-slate-400 font-medium">/ {profiles.filter((p) => p.email).length}</span>
+                            {emailAudienceMode === "cold" ? coldRecipients.length : selectedUserIds.length}
+                            {emailAudienceMode === "users" && (
+                              <span className="text-xs text-slate-400 font-medium">
+                                {" "}
+                                / {profiles.filter((p) => p.email).length}
+                              </span>
+                            )}
                           </div>
                         </div>
+
                         <Button
                           onClick={() => setConfirmSendOpen(true)}
-                          disabled={selectedUserIds.length === 0 || sendingBroadcast}
+                          disabled={
+                            (emailAudienceMode === "cold"
+                              ? coldRecipients.length === 0
+                              : selectedUserIds.length === 0) || sendingBroadcast
+                          }
                           className="bg-[#38bdf8] hover:bg-[#0284c7] text-slate-950 font-black rounded-xl px-5 py-3 shadow-lg flex items-center gap-2 cursor-pointer transition-all hover:scale-105 active:scale-95"
                         >
                           {sendingBroadcast ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              <span>Broadcasting...</span>
+                              <span>Sending...</span>
                             </>
                           ) : (
                             <>
                               <Send className="h-4 w-4" />
-                              <span>Send to {selectedUserIds.length} Users</span>
+                              <span>
+                                Send to {emailAudienceMode === "cold" ? coldRecipients.length : selectedUserIds.length}{" "}
+                                {emailAudienceMode === "cold" ? "Cold Clients" : "Users"}
+                              </span>
                             </>
                           )}
                         </Button>
@@ -1722,146 +2076,402 @@ function AdminDashboard() {
                   <div className="grid lg:grid-cols-12 gap-6 items-start">
                     {/* Left Column (5 cols): Recipient Selector */}
                     <div className="lg:col-span-5 space-y-4">
-                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 space-y-3">
-                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <Users className="h-4 w-4 text-[#0277bd]" />
-                              <h3 className="font-bold text-slate-800 text-sm">Select Recipients</h3>
-                            </div>
-                            <p className="text-[11px] text-slate-400">
-                              {selectedUserIds.length} of {profiles.filter((p) => p.email).length} users selected
-                            </p>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSelectAllRecipients}
-                              className="h-7 px-2 text-[11px] font-bold text-[#0277bd] hover:bg-blue-50 rounded-lg cursor-pointer"
-                            >
-                              All
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleDeselectAllRecipients}
-                              className="h-7 px-2 text-[11px] font-bold text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
-                            >
-                              None
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleExcludeAdmins}
-                              className="h-7 px-2 text-[11px] font-bold text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer"
-                            >
-                              No Admins
-                            </Button>
-                          </div>
-                        </div>
+                      {/* Segment Selector Tabs */}
+                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-1.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setEmailAudienceMode("cold")}
+                          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            emailAudienceMode === "cold"
+                              ? "bg-[#0277bd] text-white shadow-sm font-black"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                          }`}
+                        >
+                          <Target className="h-4 w-4" />
+                          <span>Cold Clients ({coldRecipients.length})</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEmailAudienceMode("users")}
+                          className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            emailAudienceMode === "users"
+                              ? "bg-[#0277bd] text-white shadow-sm font-black"
+                              : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                          }`}
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>Registered Users ({selectedUserIds.length})</span>
+                        </button>
+                      </div>
 
-                        {/* Search & Filter */}
-                        <div className="flex gap-2">
-                          <div className="relative flex-1">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                            <Input
-                              placeholder="Search recipient..."
-                              value={broadcastSearchTerm}
-                              onChange={(e) => setBroadcastSearchTerm(e.target.value)}
-                              className="pl-8 h-8 text-xs bg-slate-50 border-slate-200 rounded-lg"
-                            />
-                          </div>
-                          <Select value={broadcastPlanFilter} onValueChange={setBroadcastPlanFilter}>
-                            <SelectTrigger className="w-[100px] h-8 text-xs bg-slate-50 border-slate-200 rounded-lg">
-                              <SelectValue placeholder="Plan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Plans</SelectItem>
-                              <SelectItem value="trial">Trial</SelectItem>
-                              <SelectItem value="basic">Basic</SelectItem>
-                              <SelectItem value="pro">Pro</SelectItem>
-                              <SelectItem value="agency">Agency</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        {/* Scrollable Recipient List */}
-                        <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 pr-1 space-y-1">
-                          {filteredBroadcastProfiles.length === 0 ? (
-                            <div className="p-8 text-center text-xs text-slate-400">
-                              No matching recipients found.
+                      {/* COLD CLIENTS SECTION */}
+                      {emailAudienceMode === "cold" && (
+                        <div className="space-y-4">
+                          {/* Type Email Address Box */}
+                          <div className="bg-white rounded-2xl border border-sky-200/80 shadow-sm p-5 space-y-4 bg-gradient-to-b from-sky-50/40 to-white">
+                            <div className="flex items-center justify-between pb-2 border-b border-sky-100">
+                              <div className="flex items-center gap-2">
+                                <div className="h-7 w-7 rounded-lg bg-[#0277bd]/10 text-[#0277bd] flex items-center justify-center font-bold">
+                                  <AtSign className="h-4 w-4" />
+                                </div>
+                                <div>
+                                  <h3 className="font-black text-slate-800 text-sm">
+                                    Type Cold Client Email
+                                  </h3>
+                                  <p className="text-[11px] text-slate-500">
+                                    Send virtual tour pitch directly to prospect
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowBulkColdModal(true)}
+                                className="h-7 px-2.5 text-[11px] font-bold text-[#0277bd] border-sky-200 hover:bg-sky-50 rounded-lg cursor-pointer flex items-center gap-1"
+                              >
+                                <FileSpreadsheet className="h-3.5 w-3.5" />
+                                Bulk Paste
+                              </Button>
                             </div>
-                          ) : (
-                            filteredBroadcastProfiles.map((p) => {
-                              const isSelected = selectedUserIds.includes(p.id);
-                              const isAdmin =
-                                p.email === "vista360gtp@gmail.com" ||
-                                p.email === "er.prashantyadav37@gmail.com";
-                              return (
-                                <div
-                                  key={p.id}
-                                  className={`flex items-center justify-between p-2.5 rounded-xl transition-all ${
-                                    isSelected
-                                      ? "bg-slate-50/80 hover:bg-slate-100/80"
-                                      : "opacity-40 hover:opacity-80 bg-white"
-                                  }`}
-                                >
-                                  <div
-                                    className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
-                                    onClick={() => handleToggleRecipient(p.id)}
-                                  >
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => handleToggleRecipient(p.id)}
-                                      className="cursor-pointer"
+
+                            <div className="space-y-3">
+                              {/* Email Input */}
+                              <div className="space-y-1">
+                                <Label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                  <span>
+                                    Client Email Address <span className="text-red-500">*</span>
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-normal">Press Enter to add</span>
+                                </Label>
+                                <div className="relative">
+                                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                  <Input
+                                    type="email"
+                                    placeholder="client@hotelgrand.com"
+                                    value={coldInputEmail}
+                                    onChange={(e) => setColdInputEmail(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleAddColdClient();
+                                      }
+                                    }}
+                                    className="pl-9 h-9 text-xs bg-white border-slate-200 rounded-xl font-medium focus-visible:ring-[#0277bd]"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Business / Client Name Input */}
+                              <div className="grid grid-cols-2 gap-2.5">
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-bold text-slate-700">
+                                    Client / Contact Name
+                                  </Label>
+                                  <div className="relative">
+                                    <Building2 className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                    <Input
+                                      placeholder="e.g. Grand Palace Hotel"
+                                      value={coldInputName}
+                                      onChange={(e) => setColdInputName(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          handleAddColdClient();
+                                        }
+                                      }}
+                                      className="pl-8 h-8 text-xs bg-white border-slate-200 rounded-xl"
                                     />
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className="font-bold text-xs text-slate-800 truncate">
-                                          {p.name || p.username || "User"}
-                                        </span>
-                                        {isAdmin && (
-                                          <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1 rounded">
-                                            Admin
-                                          </span>
-                                        )}
-                                        <span className="text-[9px] uppercase font-bold text-slate-400 border border-slate-200 px-1 rounded">
-                                          {p.plan}
-                                        </span>
-                                      </div>
-                                      <div className="text-[11px] text-slate-400 truncate" title={p.email || ""}>
-                                        {p.email}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="pl-2">
-                                    {isSelected ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveRecipient(p.id, p.name || p.email || "user")}
-                                        className="h-6 w-6 rounded-md hover:bg-red-50 text-slate-300 hover:text-red-500 flex items-center justify-center cursor-pointer transition-colors"
-                                        title="Remove from this email"
-                                      >
-                                        <X className="h-3.5 w-3.5" />
-                                      </button>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleToggleRecipient(p.id)}
-                                        className="h-6 px-2 rounded-md bg-blue-50 text-[#0277bd] hover:bg-blue-100 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                                      >
-                                        <Plus className="h-3 w-3" /> Add
-                                      </button>
-                                    )}
                                   </div>
                                 </div>
-                              );
-                            })
-                          )}
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-bold text-slate-700">
+                                    Company / Tag
+                                  </Label>
+                                  <div className="relative">
+                                    <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                                    <Input
+                                      placeholder="e.g. Resort / Showroom"
+                                      value={coldInputCompany}
+                                      onChange={(e) => setColdInputCompany(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          handleAddColdClient();
+                                        }
+                                      }}
+                                      className="pl-8 h-8 text-xs bg-white border-slate-200 rounded-xl"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="pt-1 flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  onClick={handleAddColdClient}
+                                  className="flex-1 bg-[#0277bd] hover:bg-[#01579b] text-white font-bold text-xs h-9 rounded-xl shadow-sm cursor-pointer flex items-center justify-center gap-1.5 transition-all"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                  Add to Cold List
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={handleDirectSendSingleCold}
+                                  disabled={directSendingCold || !coldInputEmail.trim()}
+                                  title="Send the currently composed email immediately to this single address without batch queueing"
+                                  className="border-sky-300 text-[#0277bd] hover:bg-sky-50 font-bold text-xs h-9 rounded-xl cursor-pointer flex items-center gap-1.5"
+                                >
+                                  {directSendingCold ? (
+                                    <>
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                      Sending...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                                      Send Directly
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Cold Clients Queue Card */}
+                          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 space-y-3">
+                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <Target className="h-4 w-4 text-[#0277bd]" />
+                                  <h3 className="font-bold text-slate-800 text-sm">
+                                    Cold Outreach Queue ({coldRecipients.length})
+                                  </h3>
+                                </div>
+                                <p className="text-[11px] text-slate-400">
+                                  Recipients ready for 1-click delivery
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {coldRecipients.length > 0 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleClearAllColdRecipients}
+                                    className="h-7 px-2 text-[11px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                                  >
+                                    Clear All
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={handleLoadSampleColdLeads}
+                                  className="h-7 px-2 text-[11px] font-bold text-[#0277bd] hover:bg-sky-50 rounded-lg cursor-pointer"
+                                >
+                                  Load Demo Leads
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* Scrollable list of cold recipients */}
+                            <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 pr-1 space-y-1">
+                              {coldRecipients.length === 0 ? (
+                                <div className="p-8 text-center space-y-2">
+                                  <div className="h-10 w-10 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                    <Target className="h-5 w-5" />
+                                  </div>
+                                  <div className="text-xs font-bold text-slate-700">No cold clients queued yet</div>
+                                  <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                                    Type an email address above and click <strong>Add to Cold List</strong>, or click <strong>Load Demo Leads</strong> to try.
+                                  </p>
+                                </div>
+                              ) : (
+                                coldRecipients.map((c) => (
+                                  <div
+                                    key={c.id}
+                                    className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                      <div className="h-8 w-8 rounded-lg bg-sky-100 text-[#0277bd] flex items-center justify-center font-black text-xs shrink-0">
+                                        <Building2 className="h-4 w-4" />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-bold text-xs text-slate-800 truncate">
+                                            {c.name || "Cold Prospect"}
+                                          </span>
+                                          {c.company && (
+                                            <span className="text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold truncate max-w-[100px]">
+                                              {c.company}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-[11px] text-slate-500 font-mono truncate" title={c.email}>
+                                          {c.email}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveColdRecipient(c.id, c.email)}
+                                      className="h-6 w-6 rounded-md hover:bg-red-50 text-slate-300 hover:text-red-500 flex items-center justify-center cursor-pointer transition-colors ml-2"
+                                      title="Remove from cold list"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {/* REGISTERED USERS SECTION */}
+                      {emailAudienceMode === "users" && (
+                        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 space-y-3">
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <Users className="h-4 w-4 text-[#0277bd]" />
+                                <h3 className="font-bold text-slate-800 text-sm">Select Recipients</h3>
+                              </div>
+                              <p className="text-[11px] text-slate-400">
+                                {selectedUserIds.length} of {profiles.filter((p) => p.email).length} users selected
+                              </p>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleSelectAllRecipients}
+                                className="h-7 px-2 text-[11px] font-bold text-[#0277bd] hover:bg-blue-50 rounded-lg cursor-pointer"
+                              >
+                                All
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleDeselectAllRecipients}
+                                className="h-7 px-2 text-[11px] font-bold text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer"
+                              >
+                                None
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleExcludeAdmins}
+                                className="h-7 px-2 text-[11px] font-bold text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer"
+                              >
+                                No Admins
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Search & Filter */}
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                              <Input
+                                placeholder="Search recipient..."
+                                value={broadcastSearchTerm}
+                                onChange={(e) => setBroadcastSearchTerm(e.target.value)}
+                                className="pl-8 h-8 text-xs bg-slate-50 border-slate-200 rounded-lg"
+                              />
+                            </div>
+                            <Select value={broadcastPlanFilter} onValueChange={setBroadcastPlanFilter}>
+                              <SelectTrigger className="w-[100px] h-8 text-xs bg-slate-50 border-slate-200 rounded-lg">
+                                <SelectValue placeholder="Plan" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All Plans</SelectItem>
+                                <SelectItem value="trial">Trial</SelectItem>
+                                <SelectItem value="basic">Basic</SelectItem>
+                                <SelectItem value="pro">Pro</SelectItem>
+                                <SelectItem value="agency">Agency</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Scrollable Recipient List */}
+                          <div className="max-h-[500px] overflow-y-auto divide-y divide-slate-100 pr-1 space-y-1">
+                            {filteredBroadcastProfiles.length === 0 ? (
+                              <div className="p-8 text-center text-xs text-slate-400">
+                                No matching recipients found.
+                              </div>
+                            ) : (
+                              filteredBroadcastProfiles.map((p) => {
+                                const isSelected = selectedUserIds.includes(p.id);
+                                const isAdmin =
+                                  p.email === "vista360gtp@gmail.com" ||
+                                  p.email === "er.prashantyadav37@gmail.com";
+                                return (
+                                  <div
+                                    key={p.id}
+                                    className={`flex items-center justify-between p-2.5 rounded-xl transition-all ${
+                                      isSelected
+                                        ? "bg-slate-50/80 hover:bg-slate-100/80"
+                                        : "opacity-40 hover:opacity-80 bg-white"
+                                    }`}
+                                  >
+                                    <div
+                                      className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
+                                      onClick={() => handleToggleRecipient(p.id)}
+                                    >
+                                      <Checkbox
+                                        checked={isSelected}
+                                        onCheckedChange={() => handleToggleRecipient(p.id)}
+                                        className="cursor-pointer"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-bold text-xs text-slate-800 truncate">
+                                            {p.name || p.username || "User"}
+                                          </span>
+                                          {isAdmin && (
+                                            <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1 rounded">
+                                              Admin
+                                            </span>
+                                          )}
+                                          <span className="text-[9px] uppercase font-bold text-slate-400 border border-slate-200 px-1 rounded">
+                                            {p.plan}
+                                          </span>
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 truncate" title={p.email || ""}>
+                                          {p.email}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="pl-2">
+                                      {isSelected ? (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveRecipient(p.id, p.name || p.email || "user")}
+                                          className="h-6 w-6 rounded-md hover:bg-red-50 text-slate-300 hover:text-red-500 flex items-center justify-center cursor-pointer transition-colors"
+                                          title="Remove from this email"
+                                        >
+                                          <X className="h-3.5 w-3.5" />
+                                        </button>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleToggleRecipient(p.id)}
+                                          className="h-6 px-2 rounded-md bg-blue-50 text-[#0277bd] hover:bg-blue-100 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                        >
+                                          <Plus className="h-3 w-3" /> Add
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Right Column (7 cols): Email Composer */}
@@ -1881,27 +2491,69 @@ function AdminDashboard() {
                           {/* Template presets */}
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[11px] font-bold text-slate-400 mr-1">Presets:</span>
-                            <button
-                              type="button"
-                              onClick={() => handleApplyPreset("features")}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer transition-colors"
-                            >
-                              🚀 Features
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleApplyPreset("promo")}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer transition-colors"
-                            >
-                              🏷️ 30% Promo
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleApplyPreset("tips")}
-                              className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 cursor-pointer transition-colors"
-                            >
-                              ⭐ 360 Tips
-                            </button>
+                            {emailAudienceMode === "cold" ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("cold_hotel")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-[#0277bd] cursor-pointer transition-colors"
+                                >
+                                  🏨 Hotel Pitch
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("cold_retail")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 cursor-pointer transition-colors"
+                                >
+                                  🏬 Retail/Store
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("cold_realestate")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 cursor-pointer transition-colors"
+                                >
+                                  🏢 Real Estate
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("cold_quick")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer transition-colors"
+                                >
+                                  ⚡ Quick Intro
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("promo")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 cursor-pointer transition-colors"
+                                >
+                                  🏷️ 30% Promo
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("features")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 cursor-pointer transition-colors"
+                                >
+                                  🚀 Features
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("promo")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 cursor-pointer transition-colors"
+                                >
+                                  🏷️ 30% Promo
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPreset("tips")}
+                                  className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 cursor-pointer transition-colors"
+                                >
+                                  ⭐ 360 Tips
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -2039,11 +2691,16 @@ function AdminDashboard() {
                           <Button
                             type="button"
                             onClick={() => setConfirmSendOpen(true)}
-                            disabled={selectedUserIds.length === 0 || sendingBroadcast}
+                            disabled={
+                              (emailAudienceMode === "cold"
+                                ? coldRecipients.length === 0
+                                : selectedUserIds.length === 0) || sendingBroadcast
+                            }
                             className="bg-[#0277bd] hover:bg-[#01579b] text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md cursor-pointer flex items-center gap-2 transition-all hover:shadow-lg"
                           >
                             <Send className="h-3.5 w-3.5" />
-                            Send to {selectedUserIds.length} Recipients (1-Click)
+                            Send to {emailAudienceMode === "cold" ? coldRecipients.length : selectedUserIds.length}{" "}
+                            {emailAudienceMode === "cold" ? "Cold Clients" : "Recipients"} (1-Click)
                           </Button>
                         </div>
                       </div>
@@ -2655,13 +3312,22 @@ function AdminDashboard() {
         )}
       </Dialog>
 
-      {/* Broadcast Confirmation Modal */}
+      {/* Broadcast / Cold Outreach Confirmation Modal */}
       <Dialog open={confirmSendOpen} onOpenChange={setConfirmSendOpen}>
         <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
             <DialogTitle className="text-lg font-black text-slate-800 flex items-center gap-2">
-              <Mail className="h-5 w-5 text-[#0277bd]" />
-              Confirm 1-Click Broadcast
+              {emailAudienceMode === "cold" ? (
+                <>
+                  <Target className="h-5 w-5 text-[#0277bd]" />
+                  <span>Confirm Cold Outreach Campaign</span>
+                </>
+              ) : (
+                <>
+                  <Mail className="h-5 w-5 text-[#0277bd]" />
+                  <span>Confirm Marketing Broadcast</span>
+                </>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -2669,7 +3335,11 @@ function AdminDashboard() {
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
               <div className="flex justify-between">
                 <span className="text-slate-400 font-medium">Recipients:</span>
-                <span className="font-bold text-slate-800">{selectedUserIds.length} users</span>
+                <span className="font-bold text-slate-800">
+                  {emailAudienceMode === "cold"
+                    ? `${coldRecipients.length} cold client${coldRecipients.length === 1 ? "" : "s"}`
+                    : `${selectedUserIds.length} users`}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400 font-medium">Sender:</span>
@@ -2689,35 +3359,58 @@ function AdminDashboard() {
               <div className="flex justify-between">
                 <span className="text-slate-400 font-medium">Estimated Time:</span>
                 <span className="font-bold text-emerald-600">
-                  ~{Math.max(1, Math.round(selectedUserIds.length * 0.5))}s (500ms safety throttle)
+                  ~{Math.max(1, Math.round((emailAudienceMode === "cold" ? coldRecipients.length : selectedUserIds.length) * 0.5))}s (500ms safety throttle)
                 </span>
               </div>
             </div>
 
             <div>
-              <div className="font-bold text-slate-600 mb-1.5">Sample Recipients Included:</div>
+              <div className="font-bold text-slate-600 mb-1.5">
+                {emailAudienceMode === "cold" ? "Cold Recipients Included:" : "Sample Recipients Included:"}
+              </div>
               <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                {profiles
-                  .filter((p) => selectedUserIds.includes(p.id))
-                  .slice(0, 8)
-                  .map((p) => (
-                    <span
-                      key={p.id}
-                      className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    >
-                      {p.email}
-                    </span>
-                  ))}
-                {selectedUserIds.length > 8 && (
-                  <span className="text-[10px] text-slate-400 font-bold px-1 self-center">
-                    +{selectedUserIds.length - 8} more
-                  </span>
+                {emailAudienceMode === "cold" ? (
+                  <>
+                    {coldRecipients.slice(0, 8).map((c) => (
+                      <span
+                        key={c.id}
+                        className="bg-sky-50 text-[#0277bd] text-[10px] font-semibold px-2 py-0.5 rounded-full border border-sky-100 truncate max-w-[200px]"
+                        title={c.email}
+                      >
+                        {c.name ? `${c.name} (${c.email})` : c.email}
+                      </span>
+                    ))}
+                    {coldRecipients.length > 8 && (
+                      <span className="text-[10px] text-slate-400 font-bold px-1 self-center">
+                        +{coldRecipients.length - 8} more
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {profiles
+                      .filter((p) => selectedUserIds.includes(p.id))
+                      .slice(0, 8)
+                      .map((p) => (
+                        <span
+                          key={p.id}
+                          className="bg-slate-100 text-slate-700 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                        >
+                          {p.email}
+                        </span>
+                      ))}
+                    {selectedUserIds.length > 8 && (
+                      <span className="text-[10px] text-slate-400 font-bold px-1 self-center">
+                        +{selectedUserIds.length - 8} more
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200/60 rounded-xl p-3 text-blue-900 leading-relaxed">
-              💡 <strong>Resend Free Tier Safety:</strong> Emails will be delivered sequentially with 500ms intervals to guarantee zero rate-limiting errors.
+              💡 <strong>Delivery Safety:</strong> Emails will be delivered sequentially with 500ms intervals to guarantee 100% compliance with email delivery rate limits.
             </div>
           </div>
 
@@ -2738,14 +3431,64 @@ function AdminDashboard() {
               {sendingBroadcast ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Sending Broadcast...</span>
+                  <span>Sending {emailAudienceMode === "cold" ? "Outreach" : "Broadcast"}...</span>
                 </>
               ) : (
                 <>
                   <Send className="h-4 w-4" />
-                  <span>Send Broadcast Now</span>
+                  <span>Send {emailAudienceMode === "cold" ? "Cold Outreach" : "Broadcast"} Now</span>
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Paste Cold Clients Modal */}
+      <Dialog open={showBulkColdModal} onOpenChange={setShowBulkColdModal}>
+        <DialogContent className="rounded-2xl max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-black text-slate-800 flex items-center gap-2">
+              <FileSpreadsheet className="h-4.5 w-4.5 text-[#0277bd]" />
+              Bulk Paste Cold Client Emails
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-2 space-y-3 text-xs">
+            <p className="text-slate-500">
+              Paste email addresses separated by commas, newlines, or semicolons. You can also include client names:
+            </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] font-mono text-slate-600 space-y-1">
+              <div>contact@grandhotel.com, Grand Palace Hotel</div>
+              <div>sales@apexmotors.com, Apex Motors</div>
+              <div>manager@seasidevilla.com</div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-bold text-slate-700">Paste Emails Below</Label>
+              <Textarea
+                rows={7}
+                placeholder="Paste emails here (one per line, or comma separated)..."
+                value={bulkColdText}
+                onChange={(e) => setBulkColdText(e.target.value)}
+                className="bg-white border-slate-200 rounded-xl text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkColdModal(false)}
+              className="rounded-xl border-slate-200 cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleProcessBulkColdClients}
+              className="bg-[#0277bd] hover:bg-[#01579b] text-white font-bold rounded-xl px-5 cursor-pointer shadow-sm"
+            >
+              Import Cold Emails
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2807,13 +3550,19 @@ function AdminDashboard() {
               <div className="p-6 space-y-4">
                 {broadcastForm.headline && (
                   <h2 className="text-lg font-black text-slate-900 leading-snug">
-                    {broadcastForm.headline.replace(/\{\{name\}\}/gi, "Alex")}
+                    {broadcastForm.headline.replace(
+                      /\{\{name\}\}/gi,
+                      emailAudienceMode === "cold" ? (coldRecipients[0]?.name || "Grand Palace Hotel") : "Alex"
+                    )}
                   </h2>
                 )}
 
                 <div className="text-xs text-slate-700 leading-relaxed space-y-3">
                   {broadcastForm.bodyText
-                    .replace(/\{\{name\}\}/gi, "Alex")
+                    .replace(
+                      /\{\{name\}\}/gi,
+                      emailAudienceMode === "cold" ? (coldRecipients[0]?.name || "Grand Palace Hotel") : "Alex"
+                    )
                     .split(/\n\s*\n/)
                     .map((para, i) => (
                       <p key={i}>{para}</p>
@@ -2837,8 +3586,17 @@ function AdminDashboard() {
 
               {/* Email Mockup Footer */}
               <div className="bg-slate-50 p-4 border-t border-slate-100 text-[10px] text-slate-400 text-center leading-normal">
-                You received this update because you are a registered user of PanoPublish.<br />
-                To unsubscribe, reply with "Unsubscribe".
+                {emailAudienceMode === "cold" ? (
+                  <>
+                    You received this email regarding Google Street View & 360° virtual tour solutions for your business.<br />
+                    To opt out, reply with "Unsubscribe".
+                  </>
+                ) : (
+                  <>
+                    You received this update because you are a registered user of PanoPublish.<br />
+                    To unsubscribe, reply with "Unsubscribe".
+                  </>
+                )}
               </div>
             </div>
           </div>
