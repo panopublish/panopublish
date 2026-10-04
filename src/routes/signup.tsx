@@ -16,6 +16,7 @@ import {
   Lock,
   Check,
   AlertCircle,
+  Gift,
 } from "lucide-react";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,9 @@ import { supabase } from "@/integrations/supabase/client";
 // ─── OTP state helpers ───────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/signup")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    ref: typeof search.ref === "string" ? search.ref : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Start Free 7-Day Trial — PanoPublish Virtual Tour Software" },
@@ -47,6 +51,7 @@ function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -67,6 +72,16 @@ function Signup() {
   useEffect(() => {
     if (user) navigate({ to: "/dashboard/" });
   }, [user, navigate]);
+
+  // Pre-fill referral code from query parameter (?ref=...)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const paramRef = new URLSearchParams(window.location.search).get("ref");
+      if (paramRef) {
+        setReferralCode(paramRef.toUpperCase().trim());
+      }
+    }
+  }, []);
 
   // Check username uniqueness reactively
   useEffect(() => {
@@ -145,12 +160,14 @@ function Signup() {
       data: {
         email,
         password,
+        referral_code: referralCode.trim() || undefined,
         metadata: {
           name: fullName,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           company_name: companyName.trim(),
           username: username.toLowerCase().trim(),
+          referral_code: referralCode.trim() || undefined,
         },
       },
     });
@@ -505,6 +522,31 @@ function Signup() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Referral Code (Optional) */}
+          <div className="space-y-1.5">
+            <Label
+              htmlFor="referralCode"
+              className="text-xs font-bold uppercase tracking-wider text-gray-500"
+            >
+              Referral Code <span className="text-gray-400 font-normal lowercase">(optional)</span>
+            </Label>
+            <div className="relative">
+              <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="referralCode"
+                placeholder="e.g. VIP25"
+                className="pl-10 h-11 bg-gray-50/50 focus-visible:ring-[#0277bd] border-gray-200 rounded-xl font-mono uppercase tracking-wider text-sm"
+                value={referralCode}
+                onChange={(e) =>
+                  setReferralCode(
+                    e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "")
+                  )
+                }
+                maxLength={24}
+              />
             </div>
           </div>
 

@@ -26,6 +26,11 @@ CREATE TABLE IF NOT EXISTS profiles (
   last_seen_at TEXT,
   last_active_path TEXT,
   last_active_device TEXT,
+  referral_code TEXT UNIQUE,
+  payout_upi_id TEXT,
+  payout_account_name TEXT,
+  payout_bank_account TEXT,
+  payout_ifsc TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_profiles_last_seen ON profiles(last_seen_at);
@@ -308,4 +313,60 @@ CREATE TABLE IF NOT EXISTS whatsapp_proofs (
   display_order INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- ─── Referral Program Tables (25% Lifetime Recurring Commission) ────────────
+
+CREATE TABLE IF NOT EXISTS referral_codes (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  code TEXT NOT NULL UNIQUE,
+  commission_percent REAL NOT NULL DEFAULT 25.0,
+  is_active BOOLEAN NOT NULL DEFAULT 1,
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code);
+CREATE INDEX IF NOT EXISTS idx_referral_codes_user_id ON referral_codes(user_id);
+
+CREATE TABLE IF NOT EXISTS referral_attributions (
+  id TEXT PRIMARY KEY,
+  referred_user_id TEXT NOT NULL UNIQUE REFERENCES profiles(id) ON DELETE CASCADE,
+  referrer_user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  referral_code_id TEXT REFERENCES referral_codes(id) ON DELETE SET NULL,
+  attributed_code TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_referral_attributions_referrer ON referral_attributions(referrer_user_id);
+CREATE INDEX IF NOT EXISTS idx_referral_attributions_referred ON referral_attributions(referred_user_id);
+
+CREATE TABLE IF NOT EXISTS referral_commissions (
+  id TEXT PRIMARY KEY,
+  referrer_user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  referred_user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  payment_source TEXT NOT NULL DEFAULT 'razorpay_subscription',
+  payment_reference_id TEXT NOT NULL,
+  plan_name TEXT,
+  payment_amount_inr REAL NOT NULL,
+  commission_percent REAL NOT NULL DEFAULT 25.0,
+  commission_amount_inr REAL NOT NULL,
+  status TEXT NOT NULL DEFAULT 'approved',
+  payout_id TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_referral_commissions_referrer ON referral_commissions(referrer_user_id);
+CREATE INDEX IF NOT EXISTS idx_referral_commissions_status ON referral_commissions(status);
+
+CREATE TABLE IF NOT EXISTS referral_payouts (
+  id TEXT PRIMARY KEY,
+  referrer_user_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  amount_inr REAL NOT NULL,
+  payout_method TEXT NOT NULL DEFAULT 'upi',
+  payout_address TEXT NOT NULL,
+  transaction_reference TEXT NOT NULL,
+  processed_by TEXT NOT NULL,
+  notes TEXT,
+  paid_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_referral_payouts_referrer ON referral_payouts(referrer_user_id);
 

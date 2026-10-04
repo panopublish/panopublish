@@ -60,6 +60,69 @@ async function verifyOrderSignature(
   return computedSignature === signature;
 }
 
+// Helper: Calculate and log lifetime 25% referral commission
+async function recordReferralCommission(
+  supabaseClient: any,
+  referredUserId: string,
+  paymentSource: string,
+  paymentRefId: string,
+  planName: string,
+  paymentAmountInr: number,
+) {
+  try {
+    // 1. Look up if this user was referred by someone
+    const { data: attribution } = await supabaseClient
+      .from("referral_attributions")
+      .select("referrer_user_id, referral_code_id")
+      .eq("referred_user_id", referredUserId)
+      .maybeSingle();
+
+    if (!attribution?.referrer_user_id) return;
+
+    // 2. Fetch commission percentage (defaults to 25.00%)
+    let commissionPercent = 25.0;
+    if (attribution.referral_code_id) {
+      const { data: codeRow } = await supabaseClient
+        .from("referral_codes")
+        .select("commission_percent")
+        .eq("id", attribution.referral_code_id)
+        .maybeSingle();
+      if (codeRow?.commission_percent) {
+        commissionPercent = Number(codeRow.commission_percent);
+      }
+    }
+
+    const commissionAmount =
+      Math.round(paymentAmountInr * (commissionPercent / 100) * 100) / 100;
+
+    // 3. Avoid duplicate logging for the exact same payment reference
+    const { data: existing } = await supabaseClient
+      .from("referral_commissions")
+      .select("id")
+      .eq("payment_reference_id", paymentRefId)
+      .maybeSingle();
+
+    if (!existing) {
+      await supabaseClient.from("referral_commissions").insert({
+        referrer_user_id: attribution.referrer_user_id,
+        referred_user_id: referredUserId,
+        payment_source: paymentSource,
+        payment_reference_id: paymentRefId,
+        plan_name: planName,
+        payment_amount_inr: paymentAmountInr,
+        commission_percent: commissionPercent,
+        commission_amount_inr: commissionAmount,
+        status: "approved",
+      });
+      console.log(
+        `[REFERRAL] Logged ₹${commissionAmount} (${commissionPercent}%) commission for referrer ${attribution.referrer_user_id} on payment ${paymentRefId}`,
+      );
+    }
+  } catch (err) {
+    console.error("[REFERRAL] Error logging commission:", err);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -150,7 +213,7 @@ serve(async (req) => {
         // Fetch user from subscriptions log
         const { data: subRow } = await supabaseClient
           .from("subscriptions")
-          .select("user_id")
+          .select("user_id, plan, amount_inr")
           .eq("razorpay_subscription_id", subscriptionId)
           .maybeSingle();
 
@@ -163,6 +226,22 @@ serve(async (req) => {
 
           console.log(
             `Successfully renewed subscription and reset tour count for subscription ${subscriptionId}, user ${subRow.user_id}`,
+          );
+
+          // Calculate and log lifetime 25% recurring referral commission
+          const paymentEntity = webhookPayload.payload.payment?.entity;
+          const paymentId = paymentEntity?.id || `${subscriptionId}_${Date.now()}`;
+          const planAmount = paymentEntity?.amount
+            ? paymentEntity.amount / 100
+            : (subRow.amount_inr || planPrices[subRow.plan] || 499);
+
+          await recordReferralCommission(
+            supabaseClient,
+            subRow.user_id,
+            "razorpay_subscription",
+            paymentId,
+            subRow.plan || "subscription",
+            planAmount,
           );
         }
       }
@@ -265,6 +344,16 @@ serve(async (req) => {
       });
 
       if (subErr) throw subErr;
+
+      // Calculate and record lifetime 25% referral commission
+      await recordReferralCommission(
+        supabaseClient,
+        user_id,
+        "razorpay_subscription",
+        razorpay_payment_id,
+        plan_name.toLowerCase(),
+        planAmount,
+      );
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -385,6 +474,16 @@ serve(async (req) => {
         razorpay_subscription_id: razorpay_payment_id,
         amount_inr: count * 100,
       });
+
+      // Calculate and record lifetime 25% referral commission on credits
+      await recordReferralCommission(
+        supabaseClient,
+        user_id,
+        "razorpay_order",
+        razorpay_payment_id,
+        "pay_as_you_go",
+        count * 100,
+      );
 
       return new Response(
         JSON.stringify({

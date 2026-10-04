@@ -197,6 +197,7 @@ export const customSignUp = createServerFn({ method: "POST" })
         company_name: metadata?.company_name || "",
         first_name: metadata?.first_name || "",
         last_name: metadata?.last_name || "",
+        referral_code: (metadata?.referral_code || "").trim().toUpperCase(),
       });
 
       // Insert or update in pending_users table
@@ -258,6 +259,45 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
         "trial",
         new Date(Date.now() + 7 * 86400000).toISOString()
       ).run();
+
+      // 2b. Auto-assign a unique referral code to new user
+      try {
+        const baseRef = (meta.username || meta.first_name || pending.email.split("@")[0])
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
+        const cleanBase = baseRef.length >= 3 ? baseRef : `PANO${pending.id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+        let myRefCode = cleanBase;
+
+        const existingCode = await db.prepare("SELECT id FROM referral_codes WHERE code = ?").bind(myRefCode).first();
+        if (existingCode) {
+          myRefCode = `${cleanBase}${Math.floor(100 + Math.random() * 899)}`;
+        }
+
+        await db.prepare("UPDATE profiles SET referral_code = ? WHERE id = ?").bind(myRefCode, pending.id).run();
+        await db.prepare(
+          "INSERT OR IGNORE INTO referral_codes (id, user_id, code, commission_percent, is_active) VALUES (?, ?, ?, ?, ?)"
+        ).bind(crypto.randomUUID(), pending.id, myRefCode, 25.0, 1).run();
+      } catch (refErr) {
+        console.error("Auto referral code assignment error:", refErr);
+      }
+
+      // 2c. Bind referral attribution if referred by another user
+      if (meta.referral_code) {
+        try {
+          const refRow = await db.prepare(
+            "SELECT * FROM referral_codes WHERE UPPER(code) = ? AND is_active = 1"
+          ).bind(meta.referral_code.toUpperCase()).first();
+
+          if (refRow && refRow.user_id !== pending.id) {
+            await db.prepare(`
+              INSERT OR IGNORE INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code)
+              VALUES (?, ?, ?, ?, ?)
+            `).bind(crypto.randomUUID(), pending.id, refRow.user_id, refRow.id, meta.referral_code.toUpperCase()).run();
+          }
+        } catch (attrErr) {
+          console.error("Referral attribution error:", attrErr);
+        }
+      }
 
       // 3. Delete from pending registrations
       await db.prepare("DELETE FROM pending_users WHERE id = ?").bind(userId).run();

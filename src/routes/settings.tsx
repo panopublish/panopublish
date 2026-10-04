@@ -35,12 +35,17 @@ import {
   Lock,
   Plus,
   Minus,
+  Gift,
+  Copy,
+  Users,
+  DollarSign,
+  Wallet,
 } from "lucide-react";
 import { waLink, formatDateIN } from "@/lib/format";
 
 import { SEO } from "@/components/SEO";
 
-type TabId = "basic" | "branding" | "billing" | "access" | "support";
+type TabId = "basic" | "branding" | "billing" | "referrals" | "access" | "support";
 
 interface SettingsSearch {
   tab?: string;
@@ -62,7 +67,7 @@ function SettingsPage() {
   const { user, session } = useAuth();
   const search = Route.useSearch();
 
-  const validTabs: TabId[] = ["basic", "branding", "billing", "access", "support"];
+  const validTabs: TabId[] = ["basic", "branding", "billing", "referrals", "access", "support"];
 
   const getInitialTab = (): TabId => {
     const sTab = search?.tab as TabId | undefined;
@@ -121,6 +126,21 @@ function SettingsPage() {
   // Google OAuth Connection
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
+
+  // Referral Program State (Lifetime 25% recurring commission)
+  const [referralCode, setReferralCode] = useState<string>("");
+  const [referralsCount, setReferralsCount] = useState<number>(0);
+  const [referralCommissions, setReferralCommissions] = useState<any[]>([]);
+  const [referralPayouts, setReferralPayouts] = useState<any[]>([]);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Payout Details Form
+  const [payoutUpiId, setPayoutUpiId] = useState("");
+  const [payoutAccountName, setPayoutAccountName] = useState("");
+  const [payoutBankAccount, setPayoutBankAccount] = useState("");
+  const [payoutIfsc, setPayoutIfsc] = useState("");
+  const [savingPayout, setSavingPayout] = useState(false);
 
   // Loading States
   const [loading, setLoading] = useState(true);
@@ -190,6 +210,78 @@ function SettingsPage() {
       } else {
         setUserSubscriptions([]);
         setLatestSub(null);
+      }
+
+      // 4. Fetch Referral Program Data
+      try {
+        let userRefCode = pData.referral_code;
+        if (!userRefCode) {
+          const { data: codeRow } = await supabase
+            .from("referral_codes")
+            .select("code")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (codeRow?.code) {
+            userRefCode = codeRow.code;
+          } else {
+            const base = (
+              pData.username ||
+              pData.first_name ||
+              user.email?.split("@")[0] ||
+              "PANO"
+            )
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, "");
+            userRefCode =
+              base.length >= 3 ? base : `PANO${user.id.slice(0, 4).toUpperCase()}`;
+
+            await supabase
+              .from("profiles")
+              .update({ referral_code: userRefCode })
+              .eq("id", user.id);
+
+            await supabase
+              .from("referral_codes")
+              .insert({
+                user_id: user.id,
+                code: userRefCode,
+                commission_percent: 25.0,
+                is_active: true,
+              });
+          }
+        }
+
+        setReferralCode(userRefCode || "");
+        setPayoutUpiId(pData.payout_upi_id ?? "");
+        setPayoutAccountName(pData.payout_account_name ?? "");
+        setPayoutBankAccount(pData.payout_bank_account ?? "");
+        setPayoutIfsc(pData.payout_ifsc ?? "");
+
+        // Count attributions
+        const { count: attrCount } = await supabase
+          .from("referral_attributions")
+          .select("id", { count: "exact", head: true })
+          .eq("referrer_user_id", user.id);
+        setReferralsCount(attrCount || 0);
+
+        // Commissions list
+        const { data: commData } = await supabase
+          .from("referral_commissions")
+          .select("*")
+          .eq("referrer_user_id", user.id)
+          .order("created_at", { ascending: false });
+        setReferralCommissions(commData || []);
+
+        // Payouts list
+        const { data: payData } = await supabase
+          .from("referral_payouts")
+          .select("*")
+          .eq("referrer_user_id", user.id)
+          .order("paid_at", { ascending: false });
+        setReferralPayouts(payData || []);
+      } catch (refErr) {
+        console.warn("Could not load referral data:", refErr);
       }
     } catch (err: any) {
       console.error(err);
@@ -619,10 +711,52 @@ function SettingsPage() {
     }
   };
 
+  const copyReferralCode = () => {
+    if (!referralCode) return;
+    navigator.clipboard.writeText(referralCode);
+    setCopiedCode(true);
+    toast.success(`Referral code "${referralCode}" copied!`);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const copyReferralLink = () => {
+    if (!referralCode) return;
+    const url = `${typeof window !== "undefined" ? window.location.origin : "https://panopublish.com"}/signup?ref=${referralCode}`;
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    toast.success("Referral signup link copied!");
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const handleSavePayoutDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setSavingPayout(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          payout_upi_id: payoutUpiId.trim(),
+          payout_account_name: payoutAccountName.trim(),
+          payout_bank_account: payoutBankAccount.trim(),
+          payout_ifsc: payoutIfsc.trim().toUpperCase(),
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+      toast.success("Payout details saved successfully!");
+    } catch (err: any) {
+      toast.error("Failed to save payout details: " + err.message);
+    } finally {
+      setSavingPayout(false);
+    }
+  };
+
   const sidebarTabs = [
     { id: "basic", label: "Basic", icon: User },
     { id: "branding", label: "Branding", icon: Globe },
     { id: "billing", label: "Billing", icon: CreditCard },
+    { id: "referrals", label: "Referrals", icon: Gift },
     { id: "access", label: "Access", icon: Key },
     { id: "support", label: "Support", icon: HelpCircle },
   ];
@@ -1617,6 +1751,325 @@ function SettingsPage() {
                 </div>
               );
             })()}
+
+              {/* TABS: REFERRALS TAB (25% Lifetime Recurring Commission) */}
+              {activeTab === "referrals" && (() => {
+                const totalEarned = referralCommissions
+                  .filter((c) => c.status !== "void")
+                  .reduce((sum, c) => sum + (Number(c.commission_amount_inr) || 0), 0);
+
+                const totalPaid = referralPayouts.reduce(
+                  (sum, p) => sum + (Number(p.amount_inr) || 0),
+                  0,
+                );
+
+                const availableBalance = Math.max(0, totalEarned - totalPaid);
+
+                return (
+                  <div className="space-y-8 max-w-4xl">
+                    {/* Header */}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-gray-800">Referral Program</h2>
+                        <span className="bg-emerald-100 text-emerald-800 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          25% Lifetime Commission
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Share your unique referral code with photographers and agencies. Earn 25% recurring commission on every monthly subscription renewal and credit purchase they make.
+                      </p>
+                    </div>
+
+                    {/* Referral Code Hero Box */}
+                    <div className="bg-gradient-to-br from-[#0277bd]/5 via-sky-50/50 to-indigo-50/30 border border-[#0277bd]/20 rounded-2xl p-6 shadow-sm">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                            Your Personal Referral Code
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl md:text-3xl font-mono font-black text-[#0277bd] tracking-widest bg-white border border-[#0277bd]/30 px-4 py-1.5 rounded-xl shadow-inner">
+                              {referralCode || "LOADING..."}
+                            </span>
+                            <Button
+                              type="button"
+                              onClick={copyReferralCode}
+                              variant="outline"
+                              className="h-10 px-4 gap-2 font-bold text-xs border-gray-300 hover:border-[#0277bd] hover:text-[#0277bd] bg-white cursor-pointer"
+                            >
+                              {copiedCode ? (
+                                <>
+                                  <Check className="h-4 w-4 text-emerald-600" />
+                                  <span className="text-emerald-600">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4" />
+                                  <span>Copy Code</span>
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <p className="text-[11px] text-gray-500">
+                            Photographers can enter this code in the &ldquo;Referral Code&rdquo; field on the signup page.
+                          </p>
+                        </div>
+
+                        {/* Copy Link Option */}
+                        <div className="flex flex-col gap-2 md:items-end">
+                          <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                            Quick Share Link
+                          </span>
+                          <Button
+                            type="button"
+                            onClick={copyReferralLink}
+                            className="bg-[#0277bd] hover:bg-[#0266a1] text-white font-bold h-10 px-5 gap-2 shadow-sm text-xs cursor-pointer"
+                          >
+                            {copiedLink ? (
+                              <>
+                                <Check className="h-4 w-4" /> Link Copied!
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="h-4 w-4" /> Copy Direct Signup Link
+                              </>
+                            )}
+                          </Button>
+                          <span className="text-[10px] text-gray-400">
+                            Auto-fills your referral code upon opening signup
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KPI Cards Grid */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-4 space-y-1">
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span className="text-xs font-bold uppercase tracking-wider">Referred</span>
+                          <Users className="h-4 w-4 text-[#0277bd]" />
+                        </div>
+                        <div className="text-2xl font-black text-gray-800">
+                          {referralsCount}
+                        </div>
+                        <p className="text-[10px] text-gray-400">Active attributions</p>
+                      </div>
+
+                      <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-4 space-y-1">
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span className="text-xs font-bold uppercase tracking-wider">Lifetime Earned</span>
+                          <DollarSign className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        <div className="text-2xl font-black text-emerald-600">
+                          ₹{Math.round(totalEarned).toLocaleString("en-IN")}
+                        </div>
+                        <p className="text-[10px] text-gray-400">25% recurring total</p>
+                      </div>
+
+                      <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-4 space-y-1">
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span className="text-xs font-bold uppercase tracking-wider">Unpaid Balance</span>
+                          <Wallet className="h-4 w-4 text-[#0277bd]" />
+                        </div>
+                        <div className="text-2xl font-black text-[#0277bd]">
+                          ₹{Math.round(availableBalance).toLocaleString("en-IN")}
+                        </div>
+                        <p className="text-[10px] text-gray-400">Ready for next payout</p>
+                      </div>
+
+                      <div className="bg-slate-50 border border-gray-200/80 rounded-2xl p-4 space-y-1">
+                        <div className="flex items-center justify-between text-gray-400">
+                          <span className="text-xs font-bold uppercase tracking-wider">Total Settled</span>
+                          <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="text-2xl font-black text-gray-800">
+                          ₹{Math.round(totalPaid).toLocaleString("en-IN")}
+                        </div>
+                        <p className="text-[10px] text-gray-400">Paid out to date</p>
+                      </div>
+                    </div>
+
+                    {/* Two Column Layout: Payout Settings & Commission Ledger */}
+                    <div className="grid md:grid-cols-5 gap-8 pt-2">
+                      {/* Left: Payout Settings Form (2 cols) */}
+                      <div className="md:col-span-2 space-y-4">
+                        <div>
+                          <h3 className="text-base font-bold text-gray-800">Payout Preferences</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Enter your UPI ID or bank details to receive monthly commission settlements.
+                          </p>
+                        </div>
+
+                        <form onSubmit={handleSavePayoutDetails} className="space-y-4 bg-slate-50/50 border rounded-2xl p-5">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="payoutUpi" className="text-xs font-bold text-gray-600">
+                              UPI ID (Instant Payout)
+                            </Label>
+                            <Input
+                              id="payoutUpi"
+                              placeholder="e.g. yourname@okhdfcbank"
+                              value={payoutUpiId}
+                              onChange={(e) => setPayoutUpiId(e.target.value)}
+                              className="bg-white text-sm"
+                            />
+                            <p className="text-[10px] text-gray-400">
+                              Supports GPay, PhonePe, Paytm, or BHIM UPI IDs.
+                            </p>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="payoutName" className="text-xs font-bold text-gray-600">
+                              Account Holder Name
+                            </Label>
+                            <Input
+                              id="payoutName"
+                              placeholder="e.g. Prashant Kumar"
+                              value={payoutAccountName}
+                              onChange={(e) => setPayoutAccountName(e.target.value)}
+                              className="bg-white text-sm"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="payoutBank" className="text-xs font-bold text-gray-600">
+                              Bank Account Number (Optional)
+                            </Label>
+                            <Input
+                              id="payoutBank"
+                              placeholder="Account number"
+                              value={payoutBankAccount}
+                              onChange={(e) => setPayoutBankAccount(e.target.value)}
+                              className="bg-white text-sm"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="payoutIfsc" className="text-xs font-bold text-gray-600">
+                              IFSC Code (Optional)
+                            </Label>
+                            <Input
+                              id="payoutIfsc"
+                              placeholder="e.g. HDFC0001234"
+                              value={payoutIfsc}
+                              onChange={(e) => setPayoutIfsc(e.target.value.toUpperCase())}
+                              className="bg-white text-sm uppercase font-mono"
+                            />
+                          </div>
+
+                          <Button
+                            type="submit"
+                            disabled={savingPayout}
+                            className="w-full bg-[#0277bd] hover:bg-[#0266a1] text-white font-bold h-10 shadow-sm text-xs cursor-pointer mt-2"
+                          >
+                            {savingPayout ? "Saving Details..." : "Save Payout Details"}
+                          </Button>
+                        </form>
+                      </div>
+
+                      {/* Right: Commission Activity Ledger (3 cols) */}
+                      <div className="md:col-span-3 space-y-4">
+                        <div>
+                          <h3 className="text-base font-bold text-gray-800">Earnings & Commission History</h3>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            Lifetime 25% commissions logged automatically on each renewal.
+                          </p>
+                        </div>
+
+                        <div className="border rounded-2xl overflow-hidden shadow-sm bg-white">
+                          <div className="overflow-x-auto max-h-[420px]">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-slate-50 border-b text-gray-500 uppercase tracking-wider font-bold text-[10px] sticky top-0">
+                                <tr>
+                                  <th className="p-3 pl-4">Date</th>
+                                  <th className="p-3">Plan / Item</th>
+                                  <th className="p-3 text-right">Payment</th>
+                                  <th className="p-3 text-right">Commission (25%)</th>
+                                  <th className="p-3 text-center pr-4">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-gray-100 font-medium text-gray-600">
+                                {referralCommissions.length === 0 ? (
+                                  <tr>
+                                    <td
+                                      colSpan={5}
+                                      className="p-8 text-center text-gray-400 italic bg-gray-50/50"
+                                    >
+                                      No commissions recorded yet. Once users sign up with your code and make a purchase, earnings will appear here instantly.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  referralCommissions.map((comm: any) => (
+                                    <tr key={comm.id} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="p-3 pl-4 text-gray-400 whitespace-nowrap">
+                                        {formatDateIN(comm.created_at)}
+                                      </td>
+                                      <td className="p-3 font-semibold text-gray-700 capitalize whitespace-nowrap">
+                                        {comm.plan_name === "pay_as_you_go"
+                                          ? "Tour Credits"
+                                          : `${comm.plan_name} Plan`}
+                                      </td>
+                                      <td className="p-3 text-right font-mono text-gray-500 whitespace-nowrap">
+                                        ₹{Number(comm.payment_amount_inr || 0).toLocaleString("en-IN")}
+                                      </td>
+                                      <td className="p-3 text-right font-mono font-bold text-emerald-600 whitespace-nowrap">
+                                        ₹{Number(comm.commission_amount_inr || 0).toLocaleString("en-IN")}
+                                      </td>
+                                      <td className="p-3 text-center pr-4 whitespace-nowrap">
+                                        {comm.status === "paid" ? (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                            Paid
+                                          </span>
+                                        ) : comm.status === "void" ? (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                            Void
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            Approved
+                                          </span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Recent Payout Settlements list if any */}
+                        {referralPayouts.length > 0 && (
+                          <div className="space-y-2 pt-2">
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                              Settlement Receipts
+                            </span>
+                            <div className="space-y-2">
+                              {referralPayouts.map((pay: any) => (
+                                <div
+                                  key={pay.id}
+                                  className="bg-slate-50 border rounded-xl p-3 flex items-center justify-between text-xs"
+                                >
+                                  <div>
+                                    <span className="font-bold text-gray-800">
+                                      ₹{Number(pay.amount_inr).toLocaleString("en-IN")} settled via {pay.payout_method?.toUpperCase()}
+                                    </span>
+                                    <div className="text-[10px] text-gray-400">
+                                      Ref: {pay.transaction_reference} • {formatDateIN(pay.paid_at)}
+                                    </div>
+                                  </div>
+                                  <span className="text-emerald-600 font-bold text-[11px] flex items-center gap-1">
+                                    <Check className="h-3.5 w-3.5" /> Completed
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* TABS 4: ACCESS TAB */}
               {activeTab === "access" && (

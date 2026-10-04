@@ -36,6 +36,7 @@ import {
   Map,
   Image,
   Tag,
+  Gift,
   Plus,
   ShieldCheck,
   Calendar,
@@ -106,6 +107,11 @@ type Profile = {
   last_seen_at?: string | null;
   last_active_path?: string | null;
   last_active_device?: string | null;
+  referral_code?: string | null;
+  payout_upi_id?: string | null;
+  payout_account_name?: string | null;
+  payout_bank_account?: string | null;
+  payout_ifsc?: string | null;
   created_at: string;
 };
 
@@ -171,6 +177,52 @@ type Coupon = {
   used_at: string | null;
 };
 
+type ReferralCode = {
+  id: string;
+  user_id: string;
+  code: string;
+  commission_percent: number;
+  is_active: boolean;
+  notes: string | null;
+  created_at: string;
+};
+
+type ReferralAttribution = {
+  id: string;
+  referred_user_id: string;
+  referrer_user_id: string;
+  referral_code_id: string | null;
+  attributed_code: string;
+  created_at: string;
+};
+
+type ReferralCommission = {
+  id: string;
+  referrer_user_id: string;
+  referred_user_id: string;
+  payment_source: string;
+  payment_reference_id: string;
+  plan_name: string | null;
+  payment_amount_inr: number;
+  commission_percent: number;
+  commission_amount_inr: number;
+  status: "pending" | "approved" | "paid" | "void";
+  payout_id: string | null;
+  created_at: string;
+};
+
+type ReferralPayout = {
+  id: string;
+  referrer_user_id: string;
+  amount_inr: number;
+  payout_method: string;
+  payout_address: string;
+  transaction_reference: string;
+  processed_by: string;
+  notes: string | null;
+  paid_at: string;
+};
+
 function AdminDashboard() {
   const { session, user, loading: authLoading, startImpersonation, impersonatorSession } = useAuth();
   const navigate = useNavigate();
@@ -182,7 +234,30 @@ function AdminDashboard() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [referralCodes, setReferralCodes] = useState<ReferralCode[]>([]);
+  const [referralAttributions, setReferralAttributions] = useState<ReferralAttribution[]>([]);
+  const [referralCommissions, setReferralCommissions] = useState<ReferralCommission[]>([]);
+  const [referralPayouts, setReferralPayouts] = useState<ReferralPayout[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Referral Program Admin Form States
+  const [refForm, setRefForm] = useState({
+    userId: "",
+    code: "",
+    commissionPercent: 25,
+    notes: "",
+  });
+  const [creatingRefCode, setCreatingRefCode] = useState(false);
+  const [payoutModalOpen, setPayoutModalOpen] = useState(false);
+  const [selectedPayoutReferrer, setSelectedPayoutReferrer] = useState<any>(null);
+  const [payoutForm, setPayoutForm] = useState({
+    amount: 0,
+    method: "upi",
+    address: "",
+    reference: "",
+    notes: "",
+  });
+  const [processingPayout, setProcessingPayout] = useState(false);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
@@ -190,7 +265,7 @@ function AdminDashboard() {
   const [activityFilter, setActivityFilter] = useState<"all" | "online" | "idle" | "today" | "offline">("all");
   const [sortBy, setSortBy] = useState<"online_first" | "newest">("online_first");
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [activeTab, setActiveTab] = useState<"users" | "subscriptions" | "coupons" | "broadcast">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "subscriptions" | "coupons" | "referrals" | "broadcast">("users");
 
   // Broadcast / Marketing Email State
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
@@ -357,13 +432,17 @@ function AdminDashboard() {
   const loadData = async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
     try {
-      const [profRes, subRes, tourRes, photoRes, clientRes, couponRes] = await Promise.all([
+      const [profRes, subRes, tourRes, photoRes, clientRes, couponRes, refCodeRes, refAttrRes, refCommRes, refPayRes] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("subscriptions").select("*").order("created_at", { ascending: false }),
         supabase.from("tours").select("*").order("created_at", { ascending: false }),
         supabase.from("photos").select("id,tour_id,view_count,streetview_status"),
         supabase.from("clients").select("id"),
         supabase.from("coupons").select("*").order("created_at", { ascending: false }),
+        supabase.from("referral_codes").select("*").order("created_at", { ascending: false }),
+        supabase.from("referral_attributions").select("*").order("created_at", { ascending: false }),
+        supabase.from("referral_commissions").select("*").order("created_at", { ascending: false }),
+        supabase.from("referral_payouts").select("*").order("paid_at", { ascending: false }),
       ]);
 
       const profs = (profRes.data as Profile[]) ?? [];
@@ -380,6 +459,10 @@ function AdminDashboard() {
       setPhotos(photoRes.data ?? []);
       setClients(clientRes.data ?? []);
       setCoupons((couponRes.data as Coupon[]) ?? []);
+      setReferralCodes((refCodeRes.data as ReferralCode[]) ?? []);
+      setReferralAttributions((refAttrRes.data as ReferralAttribution[]) ?? []);
+      setReferralCommissions((refCommRes.data as ReferralCommission[]) ?? []);
+      setReferralPayouts((refPayRes.data as ReferralPayout[]) ?? []);
     } catch (e: any) {
       console.error("Failed to load admin dashboard data:", e);
       if (showSpinner) toast.error("Error loading dashboard data: " + e.message);
@@ -1122,6 +1205,138 @@ function AdminDashboard() {
     }
   };
 
+  // Referral Program Handlers
+  const handleCreateReferralCode = async () => {
+    if (!refForm.code.trim()) return toast.error("Referral code is required");
+    if (!refForm.userId) return toast.error("Please select a user");
+
+    setCreatingRefCode(true);
+    try {
+      const cleanCode = refForm.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+      const { error } = await supabase.from("referral_codes").insert({
+        user_id: refForm.userId,
+        code: cleanCode,
+        commission_percent: Number(refForm.commissionPercent) || 25,
+        is_active: true,
+        notes: refForm.notes.trim() || null,
+      });
+
+      if (error) throw error;
+
+      // Update profile referral_code if not set
+      await supabase
+        .from("profiles")
+        .update({ referral_code: cleanCode })
+        .eq("id", refForm.userId)
+        .is("referral_code", null);
+
+      toast.success(`Referral code "${cleanCode}" created!`);
+      setRefForm({ userId: "", code: "", commissionPercent: 25, notes: "" });
+      loadData(false);
+    } catch (err: any) {
+      toast.error("Failed to create referral code: " + err.message);
+    } finally {
+      setCreatingRefCode(false);
+    }
+  };
+
+  const handleToggleReferralCode = async (id: string, current: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("referral_codes")
+        .update({ is_active: !current })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success(`Referral code ${!current ? "activated" : "deactivated"}`);
+      loadData(false);
+    } catch (err: any) {
+      toast.error("Failed to toggle referral code: " + err.message);
+    }
+  };
+
+  const handleDeleteReferralCode = async (id: string, code: string) => {
+    if (!confirm(`Delete referral code "${code}"? This will not affect existing historical commissions.`)) return;
+    try {
+      const { error } = await supabase.from("referral_codes").delete().eq("id", id);
+      if (error) throw error;
+      toast.success(`Referral code "${code}" deleted.`);
+      loadData(false);
+    } catch (err: any) {
+      toast.error("Failed to delete referral code: " + err.message);
+    }
+  };
+
+  const openPayoutModal = (referrer: Profile, pendingAmount: number) => {
+    setSelectedPayoutReferrer(referrer);
+    setPayoutForm({
+      amount: pendingAmount,
+      method: "upi",
+      address: referrer.payout_upi_id || "",
+      reference: "",
+      notes: "",
+    });
+    setPayoutModalOpen(true);
+  };
+
+  const handleConfirmPayout = async () => {
+    if (!selectedPayoutReferrer) return;
+    if (!payoutForm.amount || payoutForm.amount <= 0) return toast.error("Invalid payout amount");
+    if (!payoutForm.reference.trim()) return toast.error("UTR / Transaction Reference is required");
+
+    setProcessingPayout(true);
+    try {
+      const { data: payoutRow, error: pErr } = await supabase
+        .from("referral_payouts")
+        .insert({
+          referrer_user_id: selectedPayoutReferrer.id,
+          amount_inr: payoutForm.amount,
+          payout_method: payoutForm.method,
+          payout_address: payoutForm.address.trim(),
+          transaction_reference: payoutForm.reference.trim(),
+          processed_by: user?.email || "admin",
+          notes: payoutForm.notes.trim() || null,
+        })
+        .select("id")
+        .single();
+
+      if (pErr) throw pErr;
+
+      const { error: commErr } = await supabase
+        .from("referral_commissions")
+        .update({
+          status: "paid",
+          payout_id: payoutRow?.id,
+        })
+        .eq("referrer_user_id", selectedPayoutReferrer.id)
+        .eq("status", "approved");
+
+      if (commErr) throw commErr;
+
+      toast.success(`Settled ₹${payoutForm.amount} to ${selectedPayoutReferrer.name || selectedPayoutReferrer.email}`);
+      setPayoutModalOpen(false);
+      loadData(false);
+    } catch (err: any) {
+      toast.error("Failed to process payout: " + err.message);
+    } finally {
+      setProcessingPayout(false);
+    }
+  };
+
+  const handleVoidCommission = async (id: string) => {
+    if (!confirm("Are you sure you want to void this commission row?")) return;
+    try {
+      const { error } = await supabase
+        .from("referral_commissions")
+        .update({ status: "void" })
+        .eq("id", id);
+      if (error) throw error;
+      toast.success("Commission marked as void");
+      loadData(false);
+    } catch (err: any) {
+      toast.error("Failed to void commission: " + err.message);
+    }
+  };
+
   const planLimits: Record<string, number> = {
     trial: 1,
     basic: 5,
@@ -1452,6 +1667,17 @@ function AdminDashboard() {
                   }`}
                 >
                   Coupons ({loading ? "..." : coupons.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab("referrals")}
+                  className={`flex-1 min-w-[120px] py-3 px-3 rounded-xl font-bold text-xs md:text-sm text-center transition-all duration-300 flex items-center justify-center gap-1.5 ${
+                    activeTab === "referrals"
+                      ? "bg-slate-900 text-white shadow-md"
+                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+                  }`}
+                >
+                  <Gift className="h-4 w-4 shrink-0" />
+                  <span>Referrals ({loading ? "..." : referralCodes.length})</span>
                 </button>
                 <button
                   onClick={() => setActiveTab("broadcast")}
@@ -1992,6 +2218,332 @@ function AdminDashboard() {
                   )}
                 </div>
               )}
+
+              {/* Tab Content: Referrals & Lifetime 25% Commissions Suite */}
+              {activeTab === "referrals" && (() => {
+                const totalLifetimeEarned = referralCommissions
+                  .filter((c) => c.status !== "void")
+                  .reduce((sum, c) => sum + (Number(c.commission_amount_inr) || 0), 0);
+
+                const totalSettled = referralPayouts.reduce(
+                  (sum, p) => sum + (Number(p.amount_inr) || 0),
+                  0,
+                );
+
+                const totalPendingPayout = Math.max(0, totalLifetimeEarned - totalSettled);
+
+                // Group by referrer
+                const referrerSummary = profiles.map((p) => {
+                  const comms = referralCommissions.filter((c) => c.referrer_user_id === p.id && c.status !== "void");
+                  const earned = comms.reduce((sum, c) => sum + (Number(c.commission_amount_inr) || 0), 0);
+                  const paid = referralPayouts.filter((pay) => pay.referrer_user_id === p.id).reduce((sum, pay) => sum + (Number(pay.amount_inr) || 0), 0);
+                  const pending = Math.max(0, earned - paid);
+                  const attrCount = referralAttributions.filter((a) => a.referrer_user_id === p.id).length;
+                  return {
+                    profile: p,
+                    code: p.referral_code || referralCodes.find((rc) => rc.user_id === p.id)?.code || "-",
+                    earned,
+                    paid,
+                    pending,
+                    attrCount,
+                  };
+                }).filter((r) => r.earned > 0 || r.attrCount > 0 || r.code !== "-");
+
+                return (
+                  <div className="space-y-6">
+                    {/* Referrals Top Summary Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-white border rounded-2xl p-4 shadow-xs">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Total Referral Codes
+                        </span>
+                        <div className="text-2xl font-black text-slate-900 mt-1">
+                          {referralCodes.length}
+                        </div>
+                        <span className="text-[10px] text-slate-400">
+                          {referralCodes.filter((c) => c.is_active).length} active
+                        </span>
+                      </div>
+
+                      <div className="bg-white border rounded-2xl p-4 shadow-xs">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Active Attributions
+                        </span>
+                        <div className="text-2xl font-black text-[#0277bd] mt-1">
+                          {referralAttributions.length}
+                        </div>
+                        <span className="text-[10px] text-slate-400">Referred photographers</span>
+                      </div>
+
+                      <div className="bg-white border rounded-2xl p-4 shadow-xs">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Total Lifetime Accrued (25%)
+                        </span>
+                        <div className="text-2xl font-black text-emerald-600 mt-1">
+                          ₹{Math.round(totalLifetimeEarned).toLocaleString("en-IN")}
+                        </div>
+                        <span className="text-[10px] text-slate-400">Gross commissions earned</span>
+                      </div>
+
+                      <div className="bg-white border rounded-2xl p-4 shadow-xs border-amber-200 bg-amber-50/20">
+                        <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
+                          Pending Payouts
+                        </span>
+                        <div className="text-2xl font-black text-amber-700 mt-1">
+                          ₹{Math.round(totalPendingPayout).toLocaleString("en-IN")}
+                        </div>
+                        <span className="text-[10px] text-amber-600">Awaiting UPI settlement</span>
+                      </div>
+                    </div>
+
+                    {/* Section 1: Referrers & Pending Settlements */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-800">
+                            Referrer Partners & Payout Balances
+                          </h3>
+                          <p className="text-[11px] text-slate-400">
+                            Click &ldquo;Settle via UPI&rdquo; to record payment and mark commissions as paid.
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">
+                          {referrerSummary.length} Partners
+                        </span>
+                      </div>
+
+                      {referrerSummary.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 text-xs font-semibold">
+                          No referrers with active codes or earnings yet.
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                              <tr>
+                                <th className="p-3.5 pl-6">Partner</th>
+                                <th className="p-3.5">Code</th>
+                                <th className="p-3.5 text-center">Invited Users</th>
+                                <th className="p-3.5">Saved UPI ID</th>
+                                <th className="p-3.5 text-right">Lifetime Earned</th>
+                                <th className="p-3.5 text-right">Pending Payout</th>
+                                <th className="p-3.5 pr-6 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium">
+                              {referrerSummary.map((r) => (
+                                <tr key={r.profile.id} className="hover:bg-slate-50/40 transition-colors">
+                                  <td className="p-3.5 pl-6">
+                                    <div className="font-bold text-slate-800">{r.profile.name || "Anonymous Creator"}</div>
+                                    <div className="text-[10px] font-mono text-slate-400">{r.profile.email}</div>
+                                  </td>
+                                  <td className="p-3.5">
+                                    <span className="font-mono font-bold text-[#0277bd] bg-blue-50 border border-blue-100 rounded px-2 py-0.5">
+                                      {r.code}
+                                    </span>
+                                  </td>
+                                  <td className="p-3.5 text-center font-bold text-slate-700">
+                                    {r.attrCount}
+                                  </td>
+                                  <td className="p-3.5">
+                                    {r.profile.payout_upi_id ? (
+                                      <span className="font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                                        {r.profile.payout_upi_id}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 italic text-[11px]">Not entered</span>
+                                    )}
+                                  </td>
+                                  <td className="p-3.5 text-right font-mono text-slate-600">
+                                    ₹{Math.round(r.earned).toLocaleString("en-IN")}
+                                  </td>
+                                  <td className="p-3.5 text-right font-mono font-bold text-amber-600">
+                                    ₹{Math.round(r.pending).toLocaleString("en-IN")}
+                                  </td>
+                                  <td className="p-3.5 pr-6 text-right">
+                                    <Button
+                                      size="sm"
+                                      disabled={r.pending <= 0}
+                                      onClick={() => openPayoutModal(r.profile, r.pending)}
+                                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] h-8 px-3 rounded-xl shadow-xs cursor-pointer disabled:opacity-40"
+                                    >
+                                      Settle via UPI
+                                    </Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section 2: Active Referral Codes Table */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-800">Referral Codes Registry</h3>
+                          <p className="text-[11px] text-slate-400">All registered referral codes and assigned commission rates.</p>
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">
+                          {referralCodes.length} Codes
+                        </span>
+                      </div>
+
+                      {referralCodes.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400 text-xs">No referral codes registered yet.</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                              <tr>
+                                <th className="p-3 pl-6">Code</th>
+                                <th className="p-3">Assigned Owner</th>
+                                <th className="p-3 text-center">Commission %</th>
+                                <th className="p-3">Created</th>
+                                <th className="p-3">Status</th>
+                                <th className="p-3 pr-6 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium">
+                              {referralCodes.map((rc) => {
+                                const owner = profiles.find((p) => p.id === rc.user_id);
+                                return (
+                                  <tr key={rc.id} className="hover:bg-slate-50/40">
+                                    <td className="p-3 pl-6 font-mono font-black text-[#0277bd] text-sm">
+                                      {rc.code}
+                                    </td>
+                                    <td className="p-3 text-slate-600">
+                                      <div className="font-semibold">{owner?.name || "User"}</div>
+                                      <div className="text-[10px] font-mono text-slate-400">{owner?.email}</div>
+                                    </td>
+                                    <td className="p-3 text-center font-bold text-emerald-600">
+                                      {rc.commission_percent}%
+                                    </td>
+                                    <td className="p-3 text-slate-400 text-[11px]">
+                                      {formatDateIN(rc.created_at)}
+                                    </td>
+                                    <td className="p-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleReferralCode(rc.id, rc.is_active)}
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold cursor-pointer transition-all ${
+                                          rc.is_active
+                                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                            : "bg-slate-100 text-slate-500 border border-slate-200"
+                                        }`}
+                                      >
+                                        {rc.is_active ? "Active" : "Disabled"}
+                                      </button>
+                                    </td>
+                                    <td className="p-3 pr-6 text-right">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleDeleteReferralCode(rc.id, rc.code)}
+                                        className="hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg h-7 w-7"
+                                        title="Delete referral code"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section 3: Lifetime Commissions Ledger */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-800">Commissions Transaction Ledger</h3>
+                          <p className="text-[11px] text-slate-400">All recurring 25% commission entries created on initial orders & automatic renewals.</p>
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">
+                          {referralCommissions.length} Entries
+                        </span>
+                      </div>
+
+                      {referralCommissions.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400 text-xs">No commission transactions logged yet.</div>
+                      ) : (
+                        <div className="overflow-x-auto max-h-[400px]">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-wider sticky top-0">
+                              <tr>
+                                <th className="p-3 pl-6">Date</th>
+                                <th className="p-3">Referrer</th>
+                                <th className="p-3">Subscriber</th>
+                                <th className="p-3">Plan / Source</th>
+                                <th className="p-3 text-right">Charge</th>
+                                <th className="p-3 text-right">25% Comm.</th>
+                                <th className="p-3 text-center">Status</th>
+                                <th className="p-3 pr-6 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+                              {referralCommissions.map((comm) => {
+                                const refUser = profiles.find((p) => p.id === comm.referrer_user_id);
+                                const subUser = profiles.find((p) => p.id === comm.referred_user_id);
+                                return (
+                                  <tr key={comm.id} className="hover:bg-slate-50/40">
+                                    <td className="p-3 pl-6 text-slate-400 whitespace-nowrap">
+                                      {formatDateIN(comm.created_at)}
+                                    </td>
+                                    <td className="p-3">
+                                      <div className="font-semibold text-slate-800">{refUser?.name || "Referrer"}</div>
+                                      <div className="text-[10px] font-mono text-slate-400">{refUser?.email}</div>
+                                    </td>
+                                    <td className="p-3">
+                                      <div className="font-semibold text-slate-800">{subUser?.name || "Subscriber"}</div>
+                                      <div className="text-[10px] font-mono text-slate-400">{subUser?.email}</div>
+                                    </td>
+                                    <td className="p-3 capitalize font-medium text-slate-700">
+                                      {comm.plan_name === "pay_as_you_go" ? "Credits Order" : `${comm.plan_name} Plan`}
+                                    </td>
+                                    <td className="p-3 text-right font-mono text-slate-500">
+                                      ₹{Number(comm.payment_amount_inr).toLocaleString("en-IN")}
+                                    </td>
+                                    <td className="p-3 text-right font-mono font-bold text-emerald-600">
+                                      ₹{Number(comm.commission_amount_inr).toLocaleString("en-IN")}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        comm.status === "paid"
+                                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                          : comm.status === "void"
+                                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      }`}>
+                                        {comm.status}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 pr-6 text-right">
+                                      {comm.status === "approved" && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleVoidCommission(comm.id)}
+                                          className="text-[10px] text-rose-500 hover:text-rose-700 font-bold underline cursor-pointer"
+                                        >
+                                          Void
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Tab Content: Marketing Broadcast */}
               {activeTab === "broadcast" && (
@@ -2854,22 +3406,122 @@ function AdminDashboard() {
             {/* Right 1 Column: Create Coupon Form Panel & Storage Purge */}
             {activeTab !== "broadcast" && (
               <div className="space-y-6">
-                {/* Form Container */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
-                  <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                    <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
-                    <div>
-                      <h2 className="text-base font-black text-slate-800">Generate Offer Code</h2>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                        Targeted Discount System
-                      </p>
+                {/* Form Container: Referral Code Generator OR Coupon Generator */}
+                {activeTab === "referrals" ? (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+                    <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                      <Gift className="h-5 w-5 text-[#0277bd]" />
+                      <div>
+                        <h2 className="text-base font-black text-slate-800">Assign Referral Code</h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                          Creator Partner Program
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Select User */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-slate-500">Select Creator / User</Label>
+                        <Select
+                          value={refForm.userId}
+                          onValueChange={(val) => {
+                            const u = profiles.find((p) => p.id === val);
+                            const autoCode = u
+                              ? (u.username || u.name?.split(" ")[0] || "VIP")
+                                  .toUpperCase()
+                                  .replace(/[^A-Z0-9]/g, "") + "25"
+                              : "";
+                            setRefForm((prev) => ({
+                              ...prev,
+                              userId: val,
+                              code: prev.code || autoCode,
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="bg-slate-50 border-slate-200 rounded-xl text-xs">
+                            <SelectValue placeholder="Choose user..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {profiles.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name || p.username || "User"} ({p.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Code Input */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-slate-500">Referral Code</Label>
+                        <Input
+                          placeholder="e.g. VIP25"
+                          value={refForm.code}
+                          onChange={(e) =>
+                            setRefForm((prev) => ({
+                              ...prev,
+                              code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""),
+                            }))
+                          }
+                          className="font-mono bg-slate-50 border-slate-200 rounded-xl text-sm uppercase tracking-wider"
+                        />
+                      </div>
+
+                      {/* Commission % */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-slate-500">Commission Rate (%)</Label>
+                        <Input
+                          type="number"
+                          value={refForm.commissionPercent}
+                          onChange={(e) =>
+                            setRefForm((prev) => ({
+                              ...prev,
+                              commissionPercent: Number(e.target.value),
+                            }))
+                          }
+                          className="font-mono bg-slate-50 border-slate-200 rounded-xl text-sm"
+                        />
+                      </div>
+
+                      {/* Notes */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-slate-500">Partner Notes (Optional)</Label>
+                        <Input
+                          placeholder="e.g. Top photographer partner"
+                          value={refForm.notes}
+                          onChange={(e) =>
+                            setRefForm((prev) => ({ ...prev, notes: e.target.value }))
+                          }
+                          className="bg-slate-50 border-slate-200 rounded-xl text-xs"
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleCreateReferralCode}
+                        disabled={creatingRefCode}
+                        className="w-full bg-[#0277bd] hover:bg-[#01579b] text-white font-black text-xs py-3 rounded-xl shadow-md cursor-pointer transition-all mt-2"
+                      >
+                        {creatingRefCode ? "Generating..." : "Create Referral Code"}
+                      </Button>
                     </div>
                   </div>
+                ) : (
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-5">
+                    <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                      <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+                      <div>
+                        <h2 className="text-base font-black text-slate-800">Generate Offer Code</h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                          Targeted Discount System
+                        </p>
+                      </div>
+                    </div>
 
-                  <div className="space-y-4">
-                    {/* Coupon Code Input */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-slate-500">Coupon / Promo Code</Label>
+                    <div className="space-y-4">
+                      {/* Coupon Code Input */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-bold text-slate-500">Coupon / Promo Code</Label>
                       <div className="flex gap-2">
                         <Input
                           placeholder="e.g. WELCOME50"
@@ -2993,6 +3645,7 @@ function AdminDashboard() {
                     Create Targeted Offer
                   </Button>
                 </div>
+                )}
 
                 {/* Cloudflare R2 Storage Management Box */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-sm">
@@ -3753,6 +4406,108 @@ function AdminDashboard() {
               className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold cursor-pointer"
             >
               Close Preview
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Settle Referral Payout Modal */}
+      <Dialog open={payoutModalOpen} onOpenChange={setPayoutModalOpen}>
+        <DialogContent className="sm:max-w-[480px] bg-white rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <Gift className="h-5 w-5 text-[#0277bd]" />
+              <span>Settle Referral Commission</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedPayoutReferrer && (
+            <div className="space-y-4 py-2">
+              <div className="bg-slate-50 border rounded-xl p-3.5 space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">Referrer:</span>
+                  <span className="font-bold text-slate-800">
+                    {selectedPayoutReferrer.name || selectedPayoutReferrer.email}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">Email:</span>
+                  <span className="font-mono text-slate-700">{selectedPayoutReferrer.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">Saved UPI ID:</span>
+                  <span className="font-mono font-bold text-[#0277bd]">
+                    {selectedPayoutReferrer.payout_upi_id || "Not configured by user"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">Settlement Amount (INR)</Label>
+                <Input
+                  type="number"
+                  value={payoutForm.amount}
+                  onChange={(e) =>
+                    setPayoutForm((prev) => ({ ...prev, amount: Number(e.target.value) }))
+                  }
+                  className="font-mono font-bold text-base"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">Recipient UPI ID / Bank</Label>
+                <Input
+                  value={payoutForm.address}
+                  onChange={(e) =>
+                    setPayoutForm((prev) => ({ ...prev, address: e.target.value }))
+                  }
+                  placeholder="e.g. user@okhdfcbank"
+                  className="font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">
+                  Transaction Reference / UTR Number <span className="text-rose-500">*</span>
+                </Label>
+                <Input
+                  value={payoutForm.reference}
+                  onChange={(e) =>
+                    setPayoutForm((prev) => ({ ...prev, reference: e.target.value }))
+                  }
+                  placeholder="e.g. 529301928301 (from your banking / GPay app)"
+                  className="font-mono text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">Internal Notes (Optional)</Label>
+                <Input
+                  value={payoutForm.notes}
+                  onChange={(e) =>
+                    setPayoutForm((prev) => ({ ...prev, notes: e.target.value }))
+                  }
+                  placeholder="e.g. Settled via PhonePe UPI"
+                  className="text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPayoutModalOpen(false)}
+              className="rounded-xl text-xs font-bold"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmPayout}
+              disabled={processingPayout}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+            >
+              {processingPayout ? "Recording Settlement..." : "Mark as Paid & Settle"}
             </Button>
           </DialogFooter>
         </DialogContent>
