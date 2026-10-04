@@ -83,6 +83,11 @@ class D1QueryBuilder {
     return this;
   }
 
+  is(column: string, value: any) {
+    this.filters.push({ type: "is", column, value });
+    return this;
+  }
+
   or(filterStr: string) {
     this.filters.push({ type: "or", column: "", value: filterStr });
     return this;

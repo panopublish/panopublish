@@ -338,6 +338,13 @@ export const runD1Query = createServerFn({ method: "POST" })
           } else if (f.type === "neq") {
             clauses.push(`${colName} != ?`);
             params.push(f.value);
+          } else if (f.type === "is") {
+            if (f.value === null) {
+              clauses.push(`${colName} IS NULL`);
+            } else {
+              clauses.push(`${colName} IS ?`);
+              params.push(f.value);
+            }
           } else if (f.type === "in") {
             if (Array.isArray(f.value) && f.value.length > 0) {
               const placeholders = f.value.map(() => "?").join(", ");

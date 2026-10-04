@@ -1233,12 +1233,11 @@ function AdminDashboard() {
 
       if (error) throw error;
 
-      // Update profile referral_code if not set
+      // Update profile referral_code
       await supabase
         .from("profiles")
         .update({ referral_code: cleanCode })
-        .eq("id", refForm.userId)
-        .is("referral_code", null);
+        .eq("id", refForm.userId);
 
       toast.success(`Referral code "${cleanCode}" created!`);
       setRefForm({ userId: "", code: "", commissionPercent: 25, notes: "" });
