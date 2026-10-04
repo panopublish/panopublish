@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Compass, Eye, EyeOff, Lock } from "lucide-react";
+import { Eye, EyeOff, Lock } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
 
 export const Route = createFileRoute("/reset-password")({
@@ -125,8 +126,8 @@ function ResetPassword() {
         ]}
       />
       <div className="hidden md:flex gradient-hero text-primary-foreground p-10 flex-col justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-lg">
-          <Compass className="h-6 w-6" /> PanoPublish
+        <Link to="/" className="flex items-center gap-2">
+          <Logo logoClassName="h-8 w-8" />
         </Link>
         <div>
           <h2 className="text-3xl font-bold">Secure your account.</h2>

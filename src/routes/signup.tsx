@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
-  Compass,
   Eye,
   EyeOff,
   User,
@@ -18,6 +17,7 @@ import {
   AlertCircle,
   Gift,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -252,7 +252,10 @@ function Signup() {
 
       {/* ── EMAIL VERIFICATION OTP SCREEN ── */}
       {verifyState?.required && (
-        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-gray-100 p-8 flex flex-col items-center text-center gap-6">
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl border border-gray-100 p-8 flex flex-col items-center text-center gap-5">
+          <Link to="/" className="hover:opacity-90 transition-opacity mb-1">
+            <Logo logoClassName="h-8 w-8" className="text-xl font-bold tracking-tight" />
+          </Link>
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Mail className="h-8 w-8 text-primary" />
           </div>
@@ -314,12 +317,12 @@ function Signup() {
       {!verifyState?.required && (
         <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden flex flex-col p-8 md:p-10">
         {/* Logo and Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 font-bold text-2xl text-[#0277bd] mb-3"
+            className="inline-flex items-center justify-center mb-4 hover:opacity-90 transition-opacity"
           >
-            <Compass className="h-7 w-7 text-[#0277bd]" /> PanoPublish
+            <Logo logoClassName="h-9 w-9" className="text-2xl font-bold tracking-tight" />
           </Link>
           <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Sign up for free</h1>
           <p className="text-sm text-gray-500 mt-2 font-medium">
