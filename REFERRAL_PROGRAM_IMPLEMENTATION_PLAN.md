@@ -20,12 +20,13 @@
      - Every recurring monthly renewal debited automatically via Razorpay (`subscription.charged`).
      - Pay-as-you-go extra tour credit purchases.
 
-3. **Discreet & Non-Public Presentation:**
-   - No public landing pages shouting "Join our Private Affiliate Program" or "Secret Partner Club".
-   - Navigation and footer maintain core product focus (no public "Affiliate" links).
-   - Signup page features a clean, optional input field: `Referral Code (optional)`.
-   - Referrers access their referral code and earnings ledger privately within their authenticated **Settings** (`/settings?tab=referrals`) or Dashboard.
-   - Admins can generate and manage referral codes and process payouts within the existing Admin Portal (`/admin`).
+3. **Strictly Admin-Assigned Partner Access:**
+   - The referral program is NOT open to or visible to all users.
+   - Only users explicitly assigned a referral code by an admin via the Admin Panel (`/admin`) receive partner status.
+   - Regular users do NOT see the "Referrals" tab in Settings, and codes are never auto-generated on signup or profile load.
+   - If an unassigned user visits `/settings?tab=referrals`, they are gracefully redirected to the `"basic"` tab.
+   - Once assigned by an admin, the partner's Settings dynamically reveals the "Referrals" tab with their unique code, share link, real-time commission ledger (25%), and UPI payout details.
+   - Admins can assign or manage referral partners in 1 click from either the Users table or the Referrals tab in `/admin`.
 
 ---
 

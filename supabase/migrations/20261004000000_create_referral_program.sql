@@ -144,71 +144,7 @@ GRANT SELECT ON TABLE public.referral_commissions TO authenticated;
 GRANT ALL ON TABLE public.referral_payouts TO postgres, service_role;
 GRANT SELECT ON TABLE public.referral_payouts TO authenticated;
 
--- Function: Ensure each profile has a referral code
-CREATE OR REPLACE FUNCTION public.ensure_user_referral_code()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_base_code text;
-  v_final_code text;
-  v_count int;
-BEGIN
-  IF NEW.referral_code IS NULL OR TRIM(NEW.referral_code) = '' THEN
-    -- Generate code from username or email prefix
-    IF NEW.username IS NOT NULL AND TRIM(NEW.username) != '' THEN
-      v_base_code := UPPER(REGEXP_REPLACE(NEW.username, '[^a-zA-Z0-9]', '', 'g'));
-    ELSE
-      v_base_code := UPPER(REGEXP_REPLACE(SPLIT_PART(NEW.email, '@', 1), '[^a-zA-Z0-9]', '', 'g'));
-    END IF;
-
-    IF LENGTH(v_base_code) < 3 THEN
-      v_base_code := 'PANO' || SUBSTRING(REPLACE(NEW.id::text, '-', ''), 1, 4);
-    END IF;
-
-    v_final_code := v_base_code;
-    
-    -- Check collision and append random digits if needed
-    SELECT COUNT(*) INTO v_count FROM public.referral_codes WHERE code = v_final_code;
-    IF v_count > 0 THEN
-      v_final_code := v_base_code || FLOOR(100 + RANDOM() * 899)::text;
-    END IF;
-
-    NEW.referral_code := v_final_code;
-
-    -- Also insert into referral_codes table
-    INSERT INTO public.referral_codes (user_id, code, commission_percent, is_active)
-    VALUES (NEW.id, v_final_code, 25.00, true)
-    ON CONFLICT (code) DO NOTHING;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-
-DROP TRIGGER IF EXISTS trg_ensure_user_referral_code ON public.profiles;
-CREATE TRIGGER trg_ensure_user_referral_code
-  BEFORE INSERT ON public.profiles
-  FOR EACH ROW
-  EXECUTE FUNCTION public.ensure_user_referral_code();
-
--- Backfill existing profiles without referral codes
-DO $$
-DECLARE
-  r RECORD;
-  v_code text;
-  v_exists int;
-BEGIN
-  FOR r IN SELECT id, email, username FROM public.profiles WHERE referral_code IS NULL LOOP
-    v_code := UPPER(COALESCE(NULLIF(REGEXP_REPLACE(r.username, '[^a-zA-Z0-9]', '', 'g'), ''), NULLIF(REGEXP_REPLACE(SPLIT_PART(r.email, '@', 1), '[^a-zA-Z0-9]', '', 'g'), ''), 'PANO' || SUBSTRING(REPLACE(r.id::text, '-', ''), 1, 4)));
-    SELECT COUNT(*) INTO v_exists FROM public.referral_codes WHERE code = v_code;
-    IF v_exists > 0 THEN
-      v_code := v_code || FLOOR(100 + RANDOM() * 899)::text;
-    END IF;
-
-    UPDATE public.profiles SET referral_code = v_code WHERE id = r.id;
-    INSERT INTO public.referral_codes (user_id, code, commission_percent, is_active)
-    VALUES (r.id, v_code, 25.00, true)
-    ON CONFLICT (code) DO NOTHING;
-  END LOOP;
-END $$;
+-- NOTE: Referral codes are strictly private and assigned manually by the admin from the Admin Panel.
+-- No auto-generation trigger or global backfill is applied.
 
 NOTIFY pgrst, 'reload schema';

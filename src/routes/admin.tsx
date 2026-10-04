@@ -1829,6 +1829,15 @@ function AdminDashboard() {
                                       💼 {p.company_name}
                                     </div>
                                   )}
+                                  {(() => {
+                                    const pCode = referralCodes.find((rc) => rc.user_id === p.id && rc.is_active);
+                                    if (!pCode) return null;
+                                    return (
+                                      <div className="text-[10px] bg-blue-50 text-[#0277bd] border border-blue-200 rounded px-1.5 py-0.5 inline-flex items-center gap-1 font-bold mt-1">
+                                        🎁 Partner: <span className="font-mono">{pCode.code}</span>
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
 
                                 <td className="p-4">
@@ -1992,6 +2001,26 @@ function AdminDashboard() {
                                       title={`Purge Images & Database Photos for ${p.name || p.email} (Free Storage & Archive)`}
                                     >
                                       <Database className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => {
+                                        setActiveTab("referrals");
+                                        const autoCode = (p.username || p.name?.split(" ")[0] || "VIP")
+                                          .toUpperCase()
+                                          .replace(/[^A-Z0-9]/g, "") + "25";
+                                        setRefForm({
+                                          userId: p.id,
+                                          code: p.referral_code || autoCode,
+                                          commissionPercent: 25,
+                                          notes: `Assigned partner: ${p.name || p.email}`,
+                                        });
+                                      }}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="hover:bg-blue-50 text-[#0277bd] hover:text-[#01579b] cursor-pointer rounded-xl"
+                                      title={`Assign / Manage Referral Partner for ${p.name || p.email}`}
+                                    >
+                                      <Gift className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       onClick={() => handleOpenEditProfile(p)}
@@ -2304,7 +2333,7 @@ function AdminDashboard() {
                             Referrer Partners & Payout Balances
                           </h3>
                           <p className="text-[11px] text-slate-400">
-                            Click &ldquo;Settle via UPI&rdquo; to record payment and mark commissions as paid.
+                            Private Partner Program: Only assigned creators see the Referrals tab in Settings. Click &ldquo;Settle via UPI&rdquo; to record payment.
                           </p>
                         </div>
                         <span className="text-xs font-bold text-slate-500">
@@ -3414,7 +3443,7 @@ function AdminDashboard() {
                       <div>
                         <h2 className="text-base font-black text-slate-800">Assign Referral Code</h2>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                          Creator Partner Program
+                          Private Partner Program (Grants Referrals Tab Access)
                         </p>
                       </div>
                     </div>

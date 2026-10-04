@@ -127,7 +127,8 @@ function SettingsPage() {
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState("");
 
-  // Referral Program State (Lifetime 25% recurring commission)
+  // Referral Program State (strictly admin-assigned partners only)
+  const [hasReferralAccess, setHasReferralAccess] = useState(false);
   const [referralCode, setReferralCode] = useState<string>("");
   const [referralsCount, setReferralsCount] = useState<number>(0);
   const [referralCommissions, setReferralCommissions] = useState<any[]>([]);
@@ -212,76 +213,55 @@ function SettingsPage() {
         setLatestSub(null);
       }
 
-      // 4. Fetch Referral Program Data
+      // 4. Check Referral Partner Status (strictly admin-assigned only)
       try {
-        let userRefCode = pData.referral_code;
-        if (!userRefCode) {
-          const { data: codeRow } = await supabase
-            .from("referral_codes")
-            .select("code")
-            .eq("user_id", user.id)
-            .maybeSingle();
+        const { data: codeRow } = await supabase
+          .from("referral_codes")
+          .select("code, is_active")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .maybeSingle();
 
-          if (codeRow?.code) {
-            userRefCode = codeRow.code;
-          } else {
-            const base = (
-              pData.username ||
-              pData.first_name ||
-              user.email?.split("@")[0] ||
-              "PANO"
-            )
-              .toUpperCase()
-              .replace(/[^A-Z0-9]/g, "");
-            userRefCode =
-              base.length >= 3 ? base : `PANO${user.id.slice(0, 4).toUpperCase()}`;
+        if (codeRow?.code) {
+          setHasReferralAccess(true);
+          setReferralCode(codeRow.code);
+          setPayoutUpiId(pData.payout_upi_id ?? "");
+          setPayoutAccountName(pData.payout_account_name ?? "");
+          setPayoutBankAccount(pData.payout_bank_account ?? "");
+          setPayoutIfsc(pData.payout_ifsc ?? "");
 
-            await supabase
-              .from("profiles")
-              .update({ referral_code: userRefCode })
-              .eq("id", user.id);
+          // Count attributions
+          const { count: attrCount } = await supabase
+            .from("referral_attributions")
+            .select("id", { count: "exact", head: true })
+            .eq("referrer_user_id", user.id);
+          setReferralsCount(attrCount || 0);
 
-            await supabase
-              .from("referral_codes")
-              .insert({
-                user_id: user.id,
-                code: userRefCode,
-                commission_percent: 25.0,
-                is_active: true,
-              });
-          }
+          // Commissions list
+          const { data: commData } = await supabase
+            .from("referral_commissions")
+            .select("*")
+            .eq("referrer_user_id", user.id)
+            .order("created_at", { ascending: false });
+          setReferralCommissions(commData || []);
+
+          // Payouts list
+          const { data: payData } = await supabase
+            .from("referral_payouts")
+            .select("*")
+            .eq("referrer_user_id", user.id)
+            .order("paid_at", { ascending: false });
+          setReferralPayouts(payData || []);
+        } else {
+          setHasReferralAccess(false);
+          setReferralCode("");
+          setReferralsCount(0);
+          setReferralCommissions([]);
+          setReferralPayouts([]);
         }
-
-        setReferralCode(userRefCode || "");
-        setPayoutUpiId(pData.payout_upi_id ?? "");
-        setPayoutAccountName(pData.payout_account_name ?? "");
-        setPayoutBankAccount(pData.payout_bank_account ?? "");
-        setPayoutIfsc(pData.payout_ifsc ?? "");
-
-        // Count attributions
-        const { count: attrCount } = await supabase
-          .from("referral_attributions")
-          .select("id", { count: "exact", head: true })
-          .eq("referrer_user_id", user.id);
-        setReferralsCount(attrCount || 0);
-
-        // Commissions list
-        const { data: commData } = await supabase
-          .from("referral_commissions")
-          .select("*")
-          .eq("referrer_user_id", user.id)
-          .order("created_at", { ascending: false });
-        setReferralCommissions(commData || []);
-
-        // Payouts list
-        const { data: payData } = await supabase
-          .from("referral_payouts")
-          .select("*")
-          .eq("referrer_user_id", user.id)
-          .order("paid_at", { ascending: false });
-        setReferralPayouts(payData || []);
       } catch (refErr) {
-        console.warn("Could not load referral data:", refErr);
+        console.warn("Could not check referral partner access:", refErr);
+        setHasReferralAccess(false);
       }
     } catch (err: any) {
       console.error(err);
@@ -294,6 +274,12 @@ function SettingsPage() {
   useEffect(() => {
     loadProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (!loading && !hasReferralAccess && activeTab === "referrals") {
+      setActiveTab("basic");
+    }
+  }, [loading, hasReferralAccess, activeTab]);
 
 
   const saveBasic = async () => {
@@ -756,7 +742,7 @@ function SettingsPage() {
     { id: "basic", label: "Basic", icon: User },
     { id: "branding", label: "Branding", icon: Globe },
     { id: "billing", label: "Billing", icon: CreditCard },
-    { id: "referrals", label: "Referrals", icon: Gift },
+    ...(hasReferralAccess ? [{ id: "referrals", label: "Referrals", icon: Gift }] : []),
     { id: "access", label: "Access", icon: Key },
     { id: "support", label: "Support", icon: HelpCircle },
   ];
@@ -1752,8 +1738,8 @@ function SettingsPage() {
               );
             })()}
 
-              {/* TABS: REFERRALS TAB (25% Lifetime Recurring Commission) */}
-              {activeTab === "referrals" && (() => {
+              {/* TABS: REFERRALS TAB (25% Lifetime Recurring Commission - Admin Assigned Only) */}
+              {activeTab === "referrals" && hasReferralAccess && (() => {
                 const totalEarned = referralCommissions
                   .filter((c) => c.status !== "void")
                   .reduce((sum, c) => sum + (Number(c.commission_amount_inr) || 0), 0);
