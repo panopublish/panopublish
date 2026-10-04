@@ -178,6 +178,10 @@ class D1QueryBuilder {
         this.table === "coupons" &&
         this.action === "select";
 
+      const isPublicReferralCodeCheck =
+        this.table === "referral_codes" &&
+        this.action === "select";
+
       const isPublicTourPreviewCheck =
         this.action === "select" &&
         (
@@ -188,7 +192,7 @@ class D1QueryBuilder {
           (this.table === "constellations" && this.filters.some(f => f.column === "tour_id" || f.column === "constellations.tour_id"))
         );
 
-      const isPublicQuery = isUsernameCheck || isPublicCouponCheck || isPublicTourPreviewCheck;
+      const isPublicQuery = isUsernameCheck || isPublicCouponCheck || isPublicReferralCodeCheck || isPublicTourPreviewCheck;
 
       if (!isPublicQuery) {
         if (typeof window !== "undefined") {

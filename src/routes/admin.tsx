@@ -15,6 +15,7 @@ import {
   adminCleanOrphanedStorage,
   adminPurgeUserTourStorage,
   adminSendMarketingEmail,
+  adminEnsureReferralTables,
 } from "@/lib/d1-server";
 import {
   Dialog,
@@ -432,6 +433,10 @@ function AdminDashboard() {
   const loadData = async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
     try {
+      const token = session?.access_token || "";
+      if (token) {
+        await adminEnsureReferralTables({ data: { token } }).catch(() => {});
+      }
       const [profRes, subRes, tourRes, photoRes, clientRes, couponRes, refCodeRes, refAttrRes, refCommRes, refPayRes] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("subscriptions").select("*").order("created_at", { ascending: false }),
@@ -1212,8 +1217,13 @@ function AdminDashboard() {
 
     setCreatingRefCode(true);
     try {
+      const token = session?.access_token || "";
+      if (token) {
+        await adminEnsureReferralTables({ data: { token } }).catch(() => {});
+      }
       const cleanCode = refForm.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
       const { error } = await supabase.from("referral_codes").insert({
+        id: crypto.randomUUID(),
         user_id: refForm.userId,
         code: cleanCode,
         commission_percent: Number(refForm.commissionPercent) || 25,

@@ -33,6 +33,103 @@ function checkIsAdmin(user: any) {
 }
 
 let schemaEnsured = false;
+
+async function ensureReferralSchema(db: any) {
+  if (!db) return;
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN referral_code TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN payout_upi_id TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN payout_account_name TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN payout_bank_account TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN payout_ifsc TEXT").run();
+  } catch (_) {}
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS referral_codes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        code TEXT NOT NULL UNIQUE,
+        commission_percent REAL NOT NULL DEFAULT 25.0,
+        is_active BOOLEAN NOT NULL DEFAULT 1,
+        notes TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )
+    `).run();
+  } catch (_) {}
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS referral_attributions (
+        id TEXT PRIMARY KEY,
+        referred_user_id TEXT NOT NULL UNIQUE,
+        referrer_user_id TEXT NOT NULL,
+        referral_code_id TEXT,
+        attributed_code TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
+    `).run();
+  } catch (_) {}
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS referral_commissions (
+        id TEXT PRIMARY KEY,
+        referrer_user_id TEXT NOT NULL,
+        referred_user_id TEXT NOT NULL,
+        payment_source TEXT NOT NULL DEFAULT 'razorpay_subscription',
+        payment_reference_id TEXT NOT NULL,
+        plan_name TEXT,
+        payment_amount_inr REAL NOT NULL,
+        commission_percent REAL NOT NULL DEFAULT 25.0,
+        commission_amount_inr REAL NOT NULL,
+        status TEXT NOT NULL DEFAULT 'approved',
+        payout_id TEXT,
+        created_at TEXT DEFAULT (datetime('now'))
+      )
+    `).run();
+  } catch (_) {}
+
+  try {
+    await db.prepare(`
+      CREATE TABLE IF NOT EXISTS referral_payouts (
+        id TEXT PRIMARY KEY,
+        referrer_user_id TEXT NOT NULL,
+        amount_inr REAL NOT NULL,
+        payout_method TEXT NOT NULL DEFAULT 'upi',
+        payout_address TEXT NOT NULL,
+        transaction_reference TEXT NOT NULL,
+        processed_by TEXT NOT NULL,
+        notes TEXT,
+        paid_at TEXT DEFAULT (datetime('now'))
+      )
+    `).run();
+  } catch (_) {}
+
+  try {
+    if (typeof db.batch === "function") {
+      await db.batch([
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_codes_user_id ON referral_codes(user_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_attributions_referrer ON referral_attributions(referrer_user_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_attributions_referred ON referral_attributions(referred_user_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_commissions_referrer ON referral_commissions(referrer_user_id)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_commissions_status ON referral_commissions(status)"),
+        db.prepare("CREATE INDEX IF NOT EXISTS idx_referral_payouts_referrer ON referral_payouts(referrer_user_id)"),
+      ]);
+    }
+  } catch (_) {}
+}
+
 async function ensureSchema(db: any) {
   if (schemaEnsured || !db) return;
   try {
@@ -67,6 +164,9 @@ async function ensureSchema(db: any) {
     // Reset legacy hardcoded credit inflation for tmstudio934@gmail.com (Basic plan has 5 credits)
     await db.prepare("UPDATE profiles SET credits = 5 WHERE LOWER(email) = 'tmstudio934@gmail.com' AND plan = 'basic' AND credits > 5").run();
   } catch (_) {}
+
+  await ensureReferralSchema(db);
+
   schemaEnsured = true;
 }
 
@@ -130,6 +230,10 @@ export const runD1Query = createServerFn({ method: "POST" })
         payload.table === "coupons" &&
         payload.action === "select";
 
+      const isPublicReferralCodeCheck =
+        payload.table === "referral_codes" &&
+        payload.action === "select";
+
       const isPublicTourPreviewCheck =
         payload.action === "select" &&
         (
@@ -140,7 +244,7 @@ export const runD1Query = createServerFn({ method: "POST" })
           (payload.table === "constellations" && payload.filters?.some((f: any) => f.column === "tour_id" || f.column === "constellations.tour_id"))
         );
 
-      const isPublicQuery = isUsernameCheck || isPublicCouponCheck || isPublicTourPreviewCheck;
+      const isPublicQuery = isUsernameCheck || isPublicCouponCheck || isPublicReferralCodeCheck || isPublicTourPreviewCheck;
 
       let user: any = null;
       let userId: string | null = null;
@@ -162,6 +266,9 @@ export const runD1Query = createServerFn({ method: "POST" })
     }
 
     const { table, action } = payload;
+    if (table && table.startsWith("referral_")) {
+      await ensureReferralSchema(db);
+    }
 
     // Build the query and parameter bindings
     let sql = "";
@@ -185,8 +292,19 @@ export const runD1Query = createServerFn({ method: "POST" })
           } else {
             throw new Error("Unauthorized: Profile access requires authentication");
           }
-        } else if (table === "coupons") {
-          // coupons is public read
+        } else if (table === "coupons" || table === "referral_codes") {
+          // coupons and referral_codes are public read
+        } else if (
+          table === "referral_attributions" ||
+          table === "referral_commissions" ||
+          table === "referral_payouts"
+        ) {
+          if (userId) {
+            clauses.push(`${table}.referrer_user_id = ?`);
+            params.push(userId);
+          } else {
+            throw new Error(`Unauthorized: Access to ${table} requires authentication`);
+          }
         } else if (table === "connections" || table === "users") {
           // connections are scoped via tour_id (no user_id column)
           // users table is for auth only, no user_id column
@@ -262,7 +380,8 @@ export const runD1Query = createServerFn({ method: "POST" })
             .first();
           count = countRes ? (countRes as any).total : 0;
         } catch (countErr: any) {
-          if (countErr.message && countErr.message.includes("no such column")) {
+          if (countErr.message && (countErr.message.includes("no such table") || countErr.message.includes("no such column"))) {
+            await ensureReferralSchema(db);
             try {
               await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
             } catch (_) {}
@@ -332,7 +451,8 @@ export const runD1Query = createServerFn({ method: "POST" })
         const queryRes = await stmt.bind(...params).all();
         results = queryRes.results || [];
       } catch (queryErr: any) {
-        if (queryErr.message && queryErr.message.includes("no such column")) {
+        if (queryErr.message && (queryErr.message.includes("no such table") || queryErr.message.includes("no such column"))) {
+          await ensureReferralSchema(db);
           try {
             await db.prepare("ALTER TABLE tours ADD COLUMN storage_cleared INTEGER DEFAULT 0").run();
           } catch (_) {}
@@ -529,7 +649,10 @@ export const runD1Query = createServerFn({ method: "POST" })
             .bind(...values)
             .run();
         } catch (insertErr: any) {
-          if (insertErr?.message?.includes("no column named")) {
+          if (insertErr?.message?.includes("no such table")) {
+            await ensureReferralSchema(db);
+            await db.prepare(sql).bind(...values).run();
+          } else if (insertErr?.message?.includes("no column named")) {
             // Attempt auto-migration and fallback by removing non-existent columns
             if (table === "photos") {
               await db.prepare("ALTER TABLE photos ADD COLUMN thumbnail_url TEXT").run().catch(() => {});
@@ -1237,6 +1360,24 @@ export const recordHeartbeat = createServerFn({ method: "POST" })
         .bind(path, device, user.id)
         .run();
 
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message };
+    }
+  });
+
+export const adminEnsureReferralTables = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async (ctx: any) => {
+    try {
+      const { token } = ctx.data || {};
+      const user = await getUserFromToken(token);
+      if (!checkIsAdmin(user)) {
+        throw new Error("Unauthorized: Admin privileges required");
+      }
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding DB is missing");
+      await ensureReferralSchema(db);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message };
