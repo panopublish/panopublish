@@ -1385,9 +1385,171 @@ export const adminEnsureReferralTables = createServerFn({ method: "POST" })
       const db = getBinding("DB");
       if (!db) throw new Error("Database binding DB is missing");
       await ensureReferralSchema(db);
+
+      // Auto-heal: Ensure Vinod Bharti is linked to TSR HELP if not yet attributed
+      try {
+        const tsrProfile: any = await db.prepare(
+          "SELECT id, email, name FROM profiles WHERE LOWER(email) = 'tsrhelp7@gmail.com' OR LOWER(name) LIKE '%tsr help%' LIMIT 1"
+        ).first();
+
+        const vinodProfile: any = await db.prepare(
+          "SELECT id, email, name FROM profiles WHERE LOWER(email) = 'bhartiv418@gmail.com' OR LOWER(name) LIKE '%vinod%bharti%' LIMIT 1"
+        ).first();
+
+        if (tsrProfile && vinodProfile) {
+          const tsrCodeRow: any = await db.prepare(
+            "SELECT id, code FROM referral_codes WHERE user_id = ? LIMIT 1"
+          ).bind(tsrProfile.id).first();
+
+          const existingAttr: any = await db.prepare(
+            "SELECT id FROM referral_attributions WHERE referred_user_id = ? LIMIT 1"
+          ).bind(vinodProfile.id).first();
+
+          if (!existingAttr) {
+            const codeToUse = tsrCodeRow?.code || "TSRHELP";
+            await db.prepare(`
+              INSERT INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code, created_at)
+              VALUES (?, ?, ?, ?, ?, datetime('now'))
+            `).bind(
+              crypto.randomUUID(),
+              vinodProfile.id,
+              tsrProfile.id,
+              tsrCodeRow?.id || null,
+              codeToUse
+            ).run();
+            console.log(`[REFERRAL AUTO-HEAL] Linked Vinod Bharti (${vinodProfile.email}) to TSR HELP (${tsrProfile.email}) code=${codeToUse}`);
+          }
+        }
+      } catch (autoErr) {
+        console.warn("[REFERRAL AUTO-HEAL] Warning:", autoErr);
+      }
+
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message };
+    }
+  });
+
+export const adminSetUserReferrer = createServerFn({ method: "POST" })
+  .inputValidator((data: { token?: string; referredUserId: string; referrerCodeOrUserId: string }) => data)
+  .handler(async ({ data }: any) => {
+    try {
+      const { token, referredUserId, referrerCodeOrUserId } = data || {};
+      const adminUser = await getUserFromToken(token);
+      if (!checkIsAdmin(adminUser)) {
+        throw new Error("Unauthorized: Admin privileges required");
+      }
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding DB is missing");
+      await ensureReferralSchema(db);
+
+      if (!referredUserId || !referrerCodeOrUserId) {
+        throw new Error("Both referred user and referrer code are required");
+      }
+
+      // Find target referred user
+      const targetUser: any = await db.prepare(
+        "SELECT id, email, name FROM profiles WHERE id = ? OR LOWER(email) = ? LIMIT 1"
+      ).bind(referredUserId, referredUserId.toLowerCase()).first();
+
+      if (!targetUser) throw new Error("Referred user not found");
+
+      // Find referrer by code, user_id, or email
+      const cleanRefInput = referrerCodeOrUserId.trim().toUpperCase().replace(/[\s\-_]/g, "");
+
+      let refCodeRow: any = await db.prepare(`
+        SELECT id, user_id, code, commission_percent
+        FROM referral_codes
+        WHERE (
+          UPPER(code) = ?
+          OR REPLACE(REPLACE(REPLACE(UPPER(code), ' ', ''), '-', ''), '_', '') = ?
+          OR user_id = ?
+        )
+        LIMIT 1
+      `).bind(referrerCodeOrUserId.trim().toUpperCase(), cleanRefInput, referrerCodeOrUserId).first();
+
+      let referrerUserId = refCodeRow?.user_id;
+      let attributedCode = refCodeRow?.code || cleanRefInput;
+      let referralCodeId = refCodeRow?.id || null;
+
+      if (!referrerUserId) {
+        // Try finding partner profile directly
+        const partnerProf: any = await db.prepare(`
+          SELECT id, email, name, referral_code
+          FROM profiles
+          WHERE id = ? OR LOWER(email) = ? OR UPPER(referral_code) = ?
+          LIMIT 1
+        `).bind(referrerCodeOrUserId, referrerCodeOrUserId.toLowerCase(), cleanRefInput).first();
+
+        if (partnerProf) {
+          referrerUserId = partnerProf.id;
+          attributedCode = partnerProf.referral_code || cleanRefInput;
+          const pCode: any = await db.prepare(
+            "SELECT id, code FROM referral_codes WHERE user_id = ? LIMIT 1"
+          ).bind(referrerUserId).first();
+          if (pCode) {
+            referralCodeId = pCode.id;
+            attributedCode = pCode.code;
+          }
+        }
+      }
+
+      if (!referrerUserId) {
+        throw new Error(`Referral partner not found for "${referrerCodeOrUserId}"`);
+      }
+
+      if (referrerUserId === targetUser.id) {
+        throw new Error("A user cannot refer themselves");
+      }
+
+      // Upsert attribution record
+      const existing: any = await db.prepare(
+        "SELECT id FROM referral_attributions WHERE referred_user_id = ? LIMIT 1"
+      ).bind(targetUser.id).first();
+
+      if (existing) {
+        await db.prepare(`
+          UPDATE referral_attributions
+          SET referrer_user_id = ?, referral_code_id = ?, attributed_code = ?
+          WHERE id = ?
+        `).bind(referrerUserId, referralCodeId, attributedCode, existing.id).run();
+      } else {
+        await db.prepare(`
+          INSERT INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code, created_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `).bind(crypto.randomUUID(), targetUser.id, referrerUserId, referralCodeId, attributedCode).run();
+      }
+
+      return {
+        data: {
+          success: true,
+          referredUserId: targetUser.id,
+          referrerUserId,
+          attributedCode,
+        },
+        error: null,
+      };
+    } catch (err: any) {
+      console.error("adminSetUserReferrer error:", err);
+      return { error: { message: err.message || "Failed to set referrer" } };
+    }
+  });
+
+export const adminRemoveUserReferrer = createServerFn({ method: "POST" })
+  .inputValidator((data: { token?: string; referredUserId: string }) => data)
+  .handler(async ({ data }: any) => {
+    try {
+      const { token, referredUserId } = data || {};
+      const adminUser = await getUserFromToken(token);
+      if (!checkIsAdmin(adminUser)) {
+        throw new Error("Unauthorized: Admin privileges required");
+      }
+      const db = getBinding("DB");
+      if (!db) throw new Error("Database binding DB is missing");
+      await db.prepare("DELETE FROM referral_attributions WHERE referred_user_id = ?").bind(referredUserId).run();
+      return { data: { success: true }, error: null };
+    } catch (err: any) {
+      return { error: { message: err.message || "Failed to remove referrer" } };
     }
   });
 

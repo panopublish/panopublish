@@ -16,6 +16,8 @@ import {
   adminPurgeUserTourStorage,
   adminSendMarketingEmail,
   adminEnsureReferralTables,
+  adminSetUserReferrer,
+  adminRemoveUserReferrer,
 } from "@/lib/d1-server";
 import {
   Dialog,
@@ -66,6 +68,8 @@ import {
   UserX,
   X,
   AlertTriangle,
+  Link2,
+  Unlink,
   Radio,
   Activity,
   Target,
@@ -1275,6 +1279,87 @@ function AdminDashboard() {
     }
   };
 
+  // Manual Referral Attribution State & Handlers
+  const [attributeModalOpen, setAttributeModalOpen] = useState(false);
+  const [attributeTargetUser, setAttributeTargetUser] = useState<Profile | null>(null);
+  const [attributeReferrerCode, setAttributeReferrerCode] = useState("");
+  const [savingAttribution, setSavingAttribution] = useState(false);
+
+  const handleOpenAttributeModal = (targetProfile: Profile) => {
+    setAttributeTargetUser(targetProfile);
+    const existing = referralAttributions.find((a) => a.referred_user_id === targetProfile.id);
+    setAttributeReferrerCode(existing?.attributed_code || "");
+    setAttributeModalOpen(true);
+  };
+
+  const handleSaveAttribution = async () => {
+    if (!attributeTargetUser) return;
+    if (!attributeReferrerCode.trim()) {
+      toast.error("Please enter or select a partner referral code");
+      return;
+    }
+
+    setSavingAttribution(true);
+    try {
+      let token = session?.access_token || "";
+      if (!token && typeof window !== "undefined") {
+        try {
+          const s = JSON.parse(localStorage.getItem("panopublish_session") || "{}");
+          token = s?.access_token || "";
+        } catch {}
+      }
+
+      const res = await adminSetUserReferrer({
+        data: {
+          token,
+          referredUserId: attributeTargetUser.id,
+          referrerCodeOrUserId: attributeReferrerCode.trim(),
+        },
+      });
+
+      if (res?.error) {
+        throw new Error(res.error.message);
+      }
+
+      toast.success(
+        `Attributed ${attributeTargetUser.name || attributeTargetUser.email} to partner code "${res.data?.attributedCode || attributeReferrerCode}"!`
+      );
+      setAttributeModalOpen(false);
+      loadData(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to link attribution");
+    } finally {
+      setSavingAttribution(false);
+    }
+  };
+
+  const handleRemoveAttribution = async (targetUserId: string, userName?: string) => {
+    if (!confirm(`Remove referral attribution for ${userName || "this user"}?`)) return;
+    try {
+      let token = session?.access_token || "";
+      if (!token && typeof window !== "undefined") {
+        try {
+          const s = JSON.parse(localStorage.getItem("panopublish_session") || "{}");
+          token = s?.access_token || "";
+        } catch {}
+      }
+
+      const res = await adminRemoveUserReferrer({
+        data: {
+          token,
+          referredUserId: targetUserId,
+        },
+      });
+
+      if (res?.error) throw new Error(res.error.message);
+
+      toast.success("Referral attribution removed");
+      loadData(false);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove attribution");
+    }
+  };
+
   const openPayoutModal = (referrer: Profile, pendingAmount: number) => {
     setSelectedPayoutReferrer(referrer);
     setPayoutForm({
@@ -1847,6 +1932,20 @@ function AdminDashboard() {
                                       </div>
                                     );
                                   })()}
+                                  {(() => {
+                                    const attr = referralAttributions.find((a) => a.referred_user_id === p.id);
+                                    if (!attr) return null;
+                                    const referrerUser = profiles.find((prof) => prof.id === attr.referrer_user_id);
+                                    return (
+                                      <div
+                                        onClick={() => handleOpenAttributeModal(p)}
+                                        className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 rounded px-1.5 py-0.5 inline-flex items-center gap-1 font-bold mt-1 cursor-pointer hover:bg-emerald-100 transition-colors"
+                                        title={`Click to edit or reassign referrer. Attributed code: ${attr.attributed_code}`}
+                                      >
+                                        🤝 Referred by: <span className="font-semibold underline">{referrerUser?.name || referrerUser?.email || "Partner"}</span> (<span className="font-mono">{attr.attributed_code}</span>)
+                                      </div>
+                                    );
+                                  })()}
                                 </td>
 
                                 <td className="p-4">
@@ -2030,6 +2129,15 @@ function AdminDashboard() {
                                       title={`Assign / Manage Referral Partner for ${p.name || p.email}`}
                                     >
                                       <Gift className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleOpenAttributeModal(p)}
+                                      variant="ghost"
+                                      size="icon"
+                                      className="hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 cursor-pointer rounded-xl"
+                                      title={`Attribute / Link Referrer for ${p.name || p.email}`}
+                                    >
+                                      <Link2 className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       onClick={() => handleOpenEditProfile(p)}
@@ -2481,6 +2589,104 @@ function AdminDashboard() {
                                         onClick={() => handleDeleteReferralCode(rc.id, rc.code)}
                                         className="hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg h-7 w-7"
                                         title="Delete referral code"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section 2.5: Attributed Referred Photographers Directory */}
+                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-800">Attributed Photographers (Referred Users Directory)</h3>
+                          <p className="text-[11px] text-slate-400">Direct link between registered photographers and their referral partner. Every subscription and credit purchase made by these users earns 25% commission for their partner.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-slate-500">
+                            {referralAttributions.length} Attributions
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setAttributeTargetUser(null);
+                              setAttributeReferrerCode("");
+                              setAttributeModalOpen(true);
+                            }}
+                            className="bg-[#0277bd] hover:bg-[#0266a1] text-white text-[11px] font-bold h-7 px-2.5 rounded-lg flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Link Referral
+                          </Button>
+                        </div>
+                      </div>
+
+                      {referralAttributions.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400 text-xs">No photographers currently attributed to referral codes.</div>
+                      ) : (
+                        <div className="overflow-x-auto max-h-[360px]">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black uppercase text-slate-400 tracking-wider sticky top-0">
+                              <tr>
+                                <th className="p-3 pl-6">Referred Photographer</th>
+                                <th className="p-3">Partner (Referrer)</th>
+                                <th className="p-3">Code Used</th>
+                                <th className="p-3">Current Plan</th>
+                                <th className="p-3">Date Linked</th>
+                                <th className="p-3 pr-6 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-medium text-slate-600">
+                              {referralAttributions.map((attr) => {
+                                const refUser = profiles.find((p) => p.id === attr.referred_user_id);
+                                const partnerUser = profiles.find((p) => p.id === attr.referrer_user_id);
+                                return (
+                                  <tr key={attr.id} className="hover:bg-slate-50/40">
+                                    <td className="p-3 pl-6">
+                                      <div className="font-bold text-slate-800">{refUser?.name || "Photographer"}</div>
+                                      <div className="text-[10px] font-mono text-slate-400">{refUser?.email || attr.referred_user_id}</div>
+                                    </td>
+                                    <td className="p-3">
+                                      <div className="font-semibold text-slate-800">{partnerUser?.name || "Partner"}</div>
+                                      <div className="text-[10px] font-mono text-slate-400">{partnerUser?.email || attr.referrer_user_id}</div>
+                                    </td>
+                                    <td className="p-3">
+                                      <span className="font-mono font-bold text-[#0277bd] bg-blue-50 border border-blue-100 rounded px-2 py-0.5">
+                                        {attr.attributed_code}
+                                      </span>
+                                    </td>
+                                    <td className="p-3">
+                                      <span className="capitalize text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                                        {refUser?.plan || "trial"}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 text-slate-400 text-[11px] whitespace-nowrap">
+                                      {formatDateIN(attr.created_at)}
+                                    </td>
+                                    <td className="p-3 pr-6 text-right space-x-1">
+                                      {refUser && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => handleOpenAttributeModal(refUser)}
+                                          className="hover:bg-blue-50 text-slate-400 hover:text-[#0277bd] rounded-lg h-7 w-7"
+                                          title="Change partner attribution"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" />
+                                        </Button>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleRemoveAttribution(attr.referred_user_id, refUser?.name || refUser?.email || undefined)}
+                                        className="hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg h-7 w-7"
+                                        title="Remove referral attribution"
                                       >
                                         <Trash2 className="h-3.5 w-3.5" />
                                       </Button>
@@ -4547,6 +4753,138 @@ function AdminDashboard() {
             >
               {processingPayout ? "Recording Settlement..." : "Mark as Paid & Settle"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Link / Attribute Referral Modal */}
+      <Dialog open={attributeModalOpen} onOpenChange={setAttributeModalOpen}>
+        <DialogContent className="sm:max-w-[480px] bg-white rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-emerald-600" />
+              <span>{attributeTargetUser ? "Link Photographer to Partner" : "Manually Attribute Referral"}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {attributeTargetUser ? (
+              <div className="bg-slate-50 border rounded-xl p-3.5 space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">Photographer:</span>
+                  <span className="font-bold text-slate-800">
+                    {attributeTargetUser.name || attributeTargetUser.email}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">Email:</span>
+                  <span className="font-mono text-slate-700">{attributeTargetUser.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-semibold">Current Plan:</span>
+                  <span className="font-bold uppercase text-slate-600">{attributeTargetUser.plan || "trial"}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-600">Select Photographer User</Label>
+                <Select
+                  value=""
+                  onValueChange={(val) => {
+                    const u = profiles.find((p) => p.id === val);
+                    if (u) {
+                      setAttributeTargetUser(u);
+                      const existing = referralAttributions.find((a) => a.referred_user_id === u.id);
+                      setAttributeReferrerCode(existing?.attributed_code || "");
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full text-xs">
+                    <SelectValue placeholder="Search or select photographer..." />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[240px]">
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">
+                        {p.name || "User"} ({p.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Quick Partner Selection dropdown */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-600">Select Registered Partner</Label>
+              <Select
+                value={attributeReferrerCode}
+                onValueChange={(val) => setAttributeReferrerCode(val)}
+              >
+                <SelectTrigger className="w-full text-xs">
+                  <SelectValue placeholder="Choose an active referral partner..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-[220px]">
+                  {referralCodes.map((rc) => {
+                    const owner = profiles.find((p) => p.id === rc.user_id);
+                    return (
+                      <SelectItem key={rc.id} value={rc.code} className="text-xs">
+                        {owner?.name || owner?.email || "Partner"} — Code: {rc.code} ({rc.commission_percent}% Comm.)
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Manual Code Input */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-600">
+                Or Type Referral Code / Partner Email
+              </Label>
+              <Input
+                value={attributeReferrerCode}
+                onChange={(e) => setAttributeReferrerCode(e.target.value.toUpperCase())}
+                placeholder="e.g. TSRHELP or tsrhelp7@gmail.com"
+                className="font-mono uppercase font-bold text-xs"
+              />
+              <p className="text-[10px] text-slate-400">
+                Spaces and hyphens are automatically handled. The partner will earn 25% recurring commission whenever this photographer renews or buys credits.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 justify-between">
+            {attributeTargetUser && referralAttributions.some((a) => a.referred_user_id === attributeTargetUser.id) ? (
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() => {
+                  handleRemoveAttribution(attributeTargetUser.id, attributeTargetUser.name || attributeTargetUser.email || undefined);
+                  setAttributeModalOpen(false);
+                }}
+                className="text-rose-600 hover:bg-rose-50 text-xs font-bold mr-auto"
+              >
+                Unlink Attribution
+              </Button>
+            ) : <div />}
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setAttributeModalOpen(false)}
+                className="rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveAttribution}
+                disabled={savingAttribution || !attributeReferrerCode.trim() || !attributeTargetUser}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold"
+              >
+                {savingAttribution ? "Linking..." : "Save Attribution"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

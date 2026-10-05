@@ -898,6 +898,51 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
             await db.prepare(`
               UPDATE profiles SET plan = ?, credits = ?, trial_ends_at = ?, billing_cycle_tours_used = 0 WHERE id = ?
             `).bind(planLower, baseLimit, periodEndIso, user_id).run();
+
+            // Referral Commission Calculation & Recording (25% recurring)
+            try {
+              const attrRow: any = await db.prepare(
+                "SELECT * FROM referral_attributions WHERE referred_user_id = ? LIMIT 1"
+              ).bind(user_id).first();
+
+              if (attrRow?.referrer_user_id) {
+                let commissionPercent = 25.0;
+                if (attrRow.referral_code_id) {
+                  const codeRow: any = await db.prepare(
+                    "SELECT commission_percent FROM referral_codes WHERE id = ? LIMIT 1"
+                  ).bind(attrRow.referral_code_id).first();
+                  if (codeRow?.commission_percent) {
+                    commissionPercent = Number(codeRow.commission_percent);
+                  }
+                }
+
+                const commissionAmount = Math.round(amountInr * (commissionPercent / 100) * 100) / 100;
+                const payRef = razorpay_payment_id || razorpay_subscription_id || `sub_${Date.now()}`;
+
+                const existingComm: any = await db.prepare(
+                  "SELECT id FROM referral_commissions WHERE payment_reference_id = ? LIMIT 1"
+                ).bind(payRef).first();
+
+                if (!existingComm) {
+                  await db.prepare(`
+                    INSERT INTO referral_commissions (id, referrer_user_id, referred_user_id, payment_source, payment_reference_id, plan_name, payment_amount_inr, commission_percent, commission_amount_inr, status)
+                    VALUES (?, ?, ?, 'razorpay_subscription', ?, ?, ?, ?, ?, 'approved')
+                  `).bind(
+                    crypto.randomUUID(),
+                    attrRow.referrer_user_id,
+                    user_id,
+                    payRef,
+                    planLower,
+                    amountInr,
+                    commissionPercent,
+                    commissionAmount
+                  ).run();
+                  console.log(`[REFERRAL] Recorded ₹${commissionAmount} commission for referrer ${attrRow.referrer_user_id}`);
+                }
+              }
+            } catch (refCommErr) {
+              console.error("[REFERRAL] Subscription commission logging failed:", refCommErr);
+            }
           }
         }
 
@@ -1009,6 +1054,50 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
               count * 100,
               nowIso,
             ).run();
+
+            // Referral Commission Calculation & Recording for credits purchase (25%)
+            try {
+              const attrRow: any = await db.prepare(
+                "SELECT * FROM referral_attributions WHERE referred_user_id = ? LIMIT 1"
+              ).bind(user_id).first();
+
+              if (attrRow?.referrer_user_id) {
+                let commissionPercent = 25.0;
+                if (attrRow.referral_code_id) {
+                  const codeRow: any = await db.prepare(
+                    "SELECT commission_percent FROM referral_codes WHERE id = ? LIMIT 1"
+                  ).bind(attrRow.referral_code_id).first();
+                  if (codeRow?.commission_percent) {
+                    commissionPercent = Number(codeRow.commission_percent);
+                  }
+                }
+
+                const totalInr = count * 100;
+                const commissionAmount = Math.round(totalInr * (commissionPercent / 100) * 100) / 100;
+                const payRef = razorpay_payment_id || `credits_${Date.now()}`;
+
+                const existingComm: any = await db.prepare(
+                  "SELECT id FROM referral_commissions WHERE payment_reference_id = ? LIMIT 1"
+                ).bind(payRef).first();
+
+                if (!existingComm) {
+                  await db.prepare(`
+                    INSERT INTO referral_commissions (id, referrer_user_id, referred_user_id, payment_source, payment_reference_id, plan_name, payment_amount_inr, commission_percent, commission_amount_inr, status)
+                    VALUES (?, ?, ?, 'razorpay_credits', ?, 'pay_as_you_go', ?, ?, ?, 'approved')
+                  `).bind(
+                    crypto.randomUUID(),
+                    attrRow.referrer_user_id,
+                    user_id,
+                    payRef,
+                    totalInr,
+                    commissionPercent,
+                    commissionAmount
+                  ).run();
+                }
+              }
+            } catch (refErr) {
+              console.error("[REFERRAL] Credit purchase commission logging failed:", refErr);
+            }
 
             return { success: true, new_credits: newCredits, added_credits: count };
           }

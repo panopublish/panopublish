@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 // ─── OTP state helpers ───────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/signup")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { ref?: string } => ({
     ref: typeof search.ref === "string" ? search.ref : undefined,
   }),
   head: () => ({
@@ -78,7 +78,7 @@ function Signup() {
     if (typeof window !== "undefined") {
       const paramRef = new URLSearchParams(window.location.search).get("ref");
       if (paramRef) {
-        setReferralCode(paramRef.toUpperCase().trim());
+        setReferralCode(paramRef.toUpperCase().trim().replace(/[^A-Z0-9_-]/g, ""));
       }
     }
   }, []);
@@ -156,18 +156,20 @@ function Signup() {
 
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
+    const cleanRef = referralCode.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+
     const res = await customSignUp({
       data: {
         email,
         password,
-        referral_code: referralCode.trim() || undefined,
+        referral_code: cleanRef || undefined,
         metadata: {
           name: fullName,
           first_name: firstName.trim(),
           last_name: lastName.trim(),
           company_name: companyName.trim(),
           username: username.toLowerCase().trim(),
-          referral_code: referralCode.trim() || undefined,
+          referral_code: cleanRef || undefined,
         },
       },
     });

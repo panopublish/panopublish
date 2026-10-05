@@ -265,15 +265,50 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
       // 2c. Bind referral attribution if referred by another user
       if (meta.referral_code) {
         try {
-          const refRow = await db.prepare(
-            "SELECT * FROM referral_codes WHERE UPPER(code) = ? AND is_active = 1"
-          ).bind(meta.referral_code.toUpperCase()).first();
+          const rawCode = String(meta.referral_code).trim();
+          const cleanCode = rawCode.toUpperCase().replace(/[\s\-_]/g, "");
+
+          // 1. Flexible match in referral_codes (matching raw uppercase OR cleaned normalized code)
+          let refRow: any = await db.prepare(`
+            SELECT id, user_id, code, commission_percent, is_active
+            FROM referral_codes
+            WHERE (
+              UPPER(code) = ?
+              OR REPLACE(REPLACE(REPLACE(UPPER(code), ' ', ''), '-', ''), '_', '') = ?
+            )
+            AND (is_active = 1 OR is_active = '1' OR is_active = true OR is_active = 'true')
+            LIMIT 1
+          `).bind(rawCode.toUpperCase(), cleanCode).first();
+
+          // 2. Fallback: Check if entered code matches partner's referral_code, company_name, username, or name
+          if (!refRow && cleanCode) {
+            const partnerProfile: any = await db.prepare(`
+              SELECT p.id as user_id, rc.id as ref_code_id, rc.code as ref_code
+              FROM profiles p
+              JOIN referral_codes rc ON rc.user_id = p.id AND (rc.is_active = 1 OR rc.is_active = '1' OR rc.is_active = true OR rc.is_active = 'true')
+              WHERE (
+                REPLACE(REPLACE(REPLACE(UPPER(p.referral_code), ' ', ''), '-', ''), '_', '') = ?
+                OR REPLACE(REPLACE(REPLACE(UPPER(p.username), ' ', ''), '-', ''), '_', '') = ?
+                OR REPLACE(REPLACE(REPLACE(UPPER(p.company_name), ' ', ''), '-', ''), '_', '') = ?
+                OR REPLACE(REPLACE(REPLACE(UPPER(p.name), ' ', ''), '-', ''), '_', '') = ?
+              )
+              LIMIT 1
+            `).bind(cleanCode, cleanCode, cleanCode, cleanCode).first();
+
+            if (partnerProfile) {
+              refRow = {
+                id: partnerProfile.ref_code_id,
+                user_id: partnerProfile.user_id,
+                code: partnerProfile.ref_code,
+              };
+            }
+          }
 
           if (refRow && refRow.user_id !== pending.id) {
             await db.prepare(`
               INSERT OR IGNORE INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code)
               VALUES (?, ?, ?, ?, ?)
-            `).bind(crypto.randomUUID(), pending.id, refRow.user_id, refRow.id, meta.referral_code.toUpperCase()).run();
+            `).bind(crypto.randomUUID(), pending.id, refRow.user_id, refRow.id, refRow.code || cleanCode).run();
           }
         } catch (attrErr) {
           console.error("Referral attribution error:", attrErr);
