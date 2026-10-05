@@ -21,22 +21,25 @@ export function LazyThumbnail({
   fallbackIcon,
   ...props
 }: LazyThumbnailProps) {
-  const [currentSrc, setCurrentSrc] = useState(src);
-  const [isInView, setIsInView] = useState(() => loadedUrlsCache.has(src));
-  const [isLoaded, setIsLoaded] = useState(() => loadedUrlsCache.has(src));
+  const effectiveSrc = src || fallbackSrc || "";
+  const [currentSrc, setCurrentSrc] = useState(effectiveSrc);
+  const [isInView, setIsInView] = useState(() => !!effectiveSrc && loadedUrlsCache.has(effectiveSrc));
+  const [isLoaded, setIsLoaded] = useState(() => !!effectiveSrc && loadedUrlsCache.has(effectiveSrc));
   const [hasError, setHasError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setCurrentSrc(src);
+    const nextSrc = src || fallbackSrc || "";
+    setCurrentSrc(nextSrc);
     setHasError(false);
-    if (loadedUrlsCache.has(src)) {
+    if (nextSrc && loadedUrlsCache.has(nextSrc)) {
       setIsInView(true);
       setIsLoaded(true);
     }
-  }, [src]);
+  }, [src, fallbackSrc]);
 
   useEffect(() => {
+    if (!currentSrc) return;
     if (loadedUrlsCache.has(currentSrc)) {
       setIsInView(true);
       setIsLoaded(true);
@@ -112,9 +115,9 @@ export function LazyThumbnail({
           fetchpriority="low"
           onLoad={handleLoad}
           onError={handleError}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
-            isLoaded ? "opacity-100" : "opacity-0"
-          } ${className}`}
+          className={`w-full h-full object-cover ${
+            loadedUrlsCache.has(currentSrc) ? "" : "transition-opacity duration-200"
+          } ${isLoaded ? "opacity-100" : "opacity-0"} ${className}`}
           {...props}
         />
       )}

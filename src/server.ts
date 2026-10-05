@@ -166,10 +166,30 @@ export default {
         if (!object) {
           return new Response("File not found", { status: 404 });
         }
+        const clientEtag = request.headers.get("if-none-match");
+        if (
+          clientEtag &&
+          object.httpEtag &&
+          (clientEtag === object.httpEtag ||
+            clientEtag === `"${object.httpEtag}"` ||
+            clientEtag === `W/"${object.httpEtag}"`)
+        ) {
+          return new Response(null, {
+            status: 304,
+            headers: {
+              etag: object.httpEtag,
+              "cache-control": "public, max-age=31536000, immutable",
+              "CDN-Cache-Control": "public, max-age=31536000, immutable",
+              "Access-Control-Allow-Origin": "*",
+            },
+          });
+        }
+
         const headers = new Headers();
         object.writeHttpMetadata(headers);
         headers.set("etag", object.httpEtag);
         headers.set("cache-control", "public, max-age=31536000, immutable");
+        headers.set("CDN-Cache-Control", "public, max-age=31536000, immutable");
         headers.set("Access-Control-Allow-Origin", "*");
         headers.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
 

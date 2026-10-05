@@ -19,6 +19,7 @@ import { StatusBadge, Status } from "@/components/StatusBadge";
 import { SceneViewerModal } from "@/components/SceneViewerModal";
 import { LazyThumbnail } from "@/components/LazyThumbnail";
 import { createPanoramaThumbnailBlob } from "@/lib/thumbnail";
+import { tourStore } from "@/lib/tour-store";
 import {
   Plus,
   Trash2,
@@ -182,15 +183,19 @@ async function extractPhotoMetadata(file: File) {
 function TourDetail() {
   const { tourId } = Route.useParams();
   const { user } = useAuth();
-  const [tour, setTour] = useState<Tour | null>(null);
-  const [islands, setIslands] = useState<Island[]>([]);
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [activeIsland, setActiveIsland] = useState<string | null>(null);
+  const cached = tourStore.get(tourId);
+  const [tour, setTour] = useState<Tour | null>(() => (cached?.tour as any) || null);
+  const [islands, setIslands] = useState<Island[]>(() => (cached?.islands as any) || []);
+  const [photos, setPhotos] = useState<Photo[]>(() => (cached?.photos as any) || []);
+  const [activeIsland, setActiveIsland] = useState<string | null>(() => {
+    if (cached?.islands && cached.islands.length > 0) return cached.islands[0].id;
+    return null;
+  });
   const [showAddIsland, setShowAddIsland] = useState(false);
   const [newIslandName, setNewIslandName] = useState("");
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameVal, setRenameVal] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !cached?.tour);
 
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
@@ -202,7 +207,7 @@ function TourDetail() {
   const [dragOverPhotoId, setDragOverPhotoId] = useState<string | null>(null);
 
   const [customShowSceneNames, setCustomShowSceneNames] = useState(true);
-  const [profile, setProfile] = useState<{ plan: string } | null>(null);
+  const [profile, setProfile] = useState<{ plan: string } | null>(() => (cached?.profile as any) || null);
 
   const cachedType =
     typeof window !== "undefined" && tourId
@@ -210,7 +215,7 @@ function TourDetail() {
       : null;
   const isCustomTour = (tour?.type || cachedType) === "custom";
 
-  const load = async (showLoading = true) => {
+  const load = async (showLoading = !tourStore.get(tourId)?.tour) => {
     if (!user) return;
     if (showLoading) setIsLoading(true);
     try {
@@ -313,6 +318,7 @@ function TourDetail() {
         }
       }
 
+      let fetchedIslands: Island[] = [];
       if ((t as any)?.type !== "custom") {
         // Only load islands for non-custom tours
         const { data: is } = await supabase
@@ -324,7 +330,7 @@ function TourDetail() {
         (ps ?? []).forEach((p: any) => {
           if (p.island_id) counts.set(p.island_id, (counts.get(p.island_id) ?? 0) + 1);
         });
-        const fetchedIslands = (is ?? []).map((i: any) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
+        fetchedIslands = (is ?? []).map((i: any) => ({ ...i, photo_count: counts.get(i.id) ?? 0 }));
         setIslands(fetchedIslands);
 
         const hasUnassigned = (ps ?? []).some((p: any) => !p.island_id);
@@ -342,6 +348,13 @@ function TourDetail() {
           setShowAddIsland(true);
         }
       }
+
+      tourStore.set(tourId, {
+        tour: t as any,
+        photos: sortedPhotos,
+        islands: fetchedIslands,
+        profile: prof,
+      });
     } catch (err) {
       console.error("Error loading tour details:", err);
     } finally {
@@ -350,8 +363,19 @@ function TourDetail() {
   };
 
   useEffect(() => {
-    load();
+    load(!tourStore.get(tourId)?.tour);
   }, [user, tourId]);
+
+  useEffect(() => {
+    if (tour || photos.length > 0) {
+      tourStore.set(tourId, {
+        tour,
+        photos,
+        islands,
+        profile,
+      });
+    }
+  }, [tourId, tour, photos, islands, profile]);
 
   const unassignedPhotos = !isCustomTour ? photos.filter((p) => !p.island_id) : [];
   const unassignedCount = unassignedPhotos.length;
@@ -1057,7 +1081,8 @@ function TourDetail() {
                           className={`relative aspect-square rounded-xl border bg-gray-100 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg ${dragOverPhotoId === p.id ? "ring-2 ring-[#0277bd] ring-offset-2" : ""}`}
                         >
                           <LazyThumbnail
-                            src={p.thumbnail_url || ""}
+                            src={p.thumbnail_url || p.file_url}
+                            fallbackSrc={p.file_url}
                             alt={p.filename ?? "Photo"}
                             aspectRatio="aspect-square"
                             className="group-hover:scale-105 transition-transform"
@@ -1554,13 +1579,13 @@ function TourDetail() {
                             onClick={() => setViewerIndex(idx)}
                             className={`relative aspect-square rounded-xl border bg-gray-100 overflow-hidden cursor-pointer transition-transform hover:scale-[1.02] hover:shadow-lg ${dragOverPhotoId === p.id ? "ring-2 ring-[#0277bd] ring-offset-2" : ""}`}
                           >
-                            <img
-                              src={p.file_url}
-                              loading="lazy"
+                            <LazyThumbnail
+                              src={p.thumbnail_url || p.file_url}
+                              fallbackSrc={p.file_url}
                               alt={p.filename ?? "Photo"}
-                              width={400}
-                              height={400}
-                              className="w-full h-full object-cover"
+                              aspectRatio="aspect-square"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              fallbackIcon={<ImageIcon className="h-8 w-8 text-gray-400" />}
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
                             <div className="absolute top-2 left-2 rounded bg-black/70 text-white px-2 py-0.5 text-[11px] font-bold">

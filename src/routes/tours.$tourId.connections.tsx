@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LazyThumbnail } from "@/components/LazyThumbnail";
+import { tourStore } from "@/lib/tour-store";
 import {
   Plus,
   Minus,
@@ -433,12 +434,17 @@ function ConnectionsPage() {
     }
   }, []);
 
-  const [loading, setLoading] = useState(true);
-  const isInitialLoadRef = useRef(true);
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [conns, setConns] = useState<Conn[]>([]);
-  const [constellations, setConstellations] = useState<Constellation[]>([]);
-  const [activeConstName, setActiveConstName] = useState("");
+  const cached = tourStore.get(tourId);
+  const [loading, setLoading] = useState(() => !cached?.tour);
+  const isInitialLoadRef = useRef(!cached?.tour);
+  const [photos, setPhotos] = useState<Photo[]>(() => (cached?.photos as any) || []);
+  const [conns, setConns] = useState<Conn[]>(() => (cached?.connections as any) || []);
+  const [constellations, setConstellations] = useState<Constellation[]>(() => (cached?.constellations as any) || []);
+  const [activeConstName, setActiveConstName] = useState(() => {
+    if (cached?.constellations && cached.constellations.length > 0) return cached.constellations[0].name;
+    if (cached?.tour?.name) return cached.tour.name;
+    return "";
+  });
   const [tour, setTour] = useState<{
     name: string;
     latitude: number | null;
@@ -449,8 +455,11 @@ function ConnectionsPage() {
     nadir_pos?: string | null;
     nadir_logo_url?: string | null;
     custom_settings?: string | null;
-  } | null>(null);
-  const [activeIdx, setActiveIdx] = useState<number | null>(null);
+  } | null>(() => (cached?.tour as any) || null);
+  const [activeIdx, setActiveIdx] = useState<number | null>(() => {
+    if (cached?.photos && cached.photos.length > 0) return 0;
+    return null;
+  });
   const [autoAlign, setAutoAlign] = useState(true);
   const [alignFine, setAlignFine] = useState([5]);
   const [spacing, setSpacing] = useState("3m");
@@ -508,10 +517,27 @@ function ConnectionsPage() {
     pitch: 0,
     zoom: 1,
   });
-  const [islands, setIslands] = useState<Island[]>([]);
-  const [islandOpen, setIslandOpen] = useState<Record<string, boolean>>({});
-  const [rightIslandOpen, setRightIslandOpen] = useState<Record<string, boolean>>({});
-  const [activeIslandId, setActiveIslandId] = useState<string | null>(null);
+  const [islands, setIslands] = useState<Island[]>(() => (cached?.islands as any) || []);
+  const [islandOpen, setIslandOpen] = useState<Record<string, boolean>>(() => {
+    if (cached?.photos && cached.photos.length > 0) {
+      const firstIsland = cached.photos[0]?.island_id || "unassigned";
+      return { [firstIsland]: true };
+    }
+    return {};
+  });
+  const [rightIslandOpen, setRightIslandOpen] = useState<Record<string, boolean>>(() => {
+    if (cached?.photos && cached.photos.length > 0) {
+      const firstIsland = cached.photos[0]?.island_id || "unassigned";
+      return { [firstIsland]: true };
+    }
+    return {};
+  });
+  const [activeIslandId, setActiveIslandId] = useState<string | null>(() => {
+    if (cached?.photos && cached.photos.length > 0) {
+      return cached.photos[0]?.island_id || "unassigned";
+    }
+    return null;
+  });
   const [levelDropdownOpen, setLevelDropdownOpen] = useState(false);
   const [addFloorOpen, setAddFloorOpen] = useState(false);
   const [newFloorName, setNewFloorName] = useState("");
@@ -716,6 +742,14 @@ function ConnectionsPage() {
       } else if (!activeConstName) {
         setActiveConstName("Default Constellation");
       }
+
+      tourStore.set(tourId, {
+        tour: t as any,
+        photos: sortedPhotos,
+        connections: fetchedConns,
+        constellations: (cons as any) ?? [],
+        islands: (is as any) ?? [],
+      });
     } finally {
       if (isInitialLoadRef.current) {
         isInitialLoadRef.current = false;
@@ -727,6 +761,18 @@ function ConnectionsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (tour || photos.length > 0 || conns.length > 0) {
+      tourStore.set(tourId, {
+        tour,
+        photos,
+        connections: conns,
+        constellations,
+        islands,
+      });
+    }
+  }, [tourId, tour, photos, conns, constellations, islands]);
 
   const markConnectionsUnsynced = useCallback(async () => {
     try {

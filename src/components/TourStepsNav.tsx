@@ -86,6 +86,7 @@ export function TourStepsNav({
               <Link
                 key={tab.id}
                 to={tab.to}
+                preload="intent"
                 className={`flex items-center gap-1.5 px-3 py-1 text-xs font-semibold transition-colors ${
                   isActive ? "text-[#0277bd]" : "text-gray-500 hover:text-gray-700"
                 }`}
