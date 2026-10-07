@@ -178,7 +178,7 @@ function uploadBlobToGoogleWithProgress(
   blob: Blob,
   token: string,
   onProgress?: (pct: number) => void,
-  timeoutMs = 90000,
+  timeoutMs = 120000,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -199,13 +199,23 @@ function uploadBlobToGoogleWithProgress(
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
+      } else if (xhr.status === 401) {
+        reject(new Error(`Google upload rejected: OAuth token expired (401). Will refresh and retry.`));
+      } else if (xhr.status === 403) {
+        reject(new Error(`Google upload forbidden (403): Street View Publish API may not be enabled for this account.`));
+      } else if (xhr.status === 429) {
+        reject(new Error(`Google upload rate-limited (429): too many requests. Waiting before retry...`));
       } else {
-        reject(new Error(`Direct Google upload failed (${xhr.status}): ${xhr.responseText || xhr.statusText}`));
+        reject(new Error(`Google upload HTTP ${xhr.status}: ${xhr.responseText?.slice(0, 200) || xhr.statusText}`));
       }
     };
 
-    xhr.onerror = () => reject(new Error("Network error during direct upload to Google"));
-    xhr.ontimeout = () => reject(new Error("Upload to Google timed out (90s). Retrying..."));
+    xhr.onerror = () => reject(new Error(
+      "NETWORK_ERROR: Could not reach Google's upload endpoint. Check internet connection."
+    ));
+    xhr.ontimeout = () => reject(new Error(
+      `UPLOAD_TIMEOUT: Image upload timed out after ${Math.round(timeoutMs / 1000)}s. The file may be too large or the connection too slow.`
+    ));
 
     xhr.send(blob);
   });
@@ -781,7 +791,10 @@ function PublishPage() {
 
       // Helper to fetch, apply nadir client-side, and inject GPano XMP headers
       const prepareSceneBlob = async (targetPhoto: any): Promise<Blob | null> => {
+        const sceneName = targetPhoto.filename || targetPhoto.id || "unknown";
         let processedBlob: Blob | null = null;
+        let lastPrepErr = "";
+
         for (let fetchAttempt = 1; fetchAttempt <= 3; fetchAttempt++) {
           try {
             processedBlob = await processNadirClientSide(
@@ -793,20 +806,35 @@ function PublishPage() {
             );
             break;
           } catch (procErr: any) {
-            console.warn(`Nadir processing attempt ${fetchAttempt} fallback to original:`, procErr);
+            lastPrepErr = procErr?.message || String(procErr);
+            console.warn(`Scene "${sceneName}" nadir processing attempt ${fetchAttempt} failed (${lastPrepErr}), falling back to raw fetch.`);
+            // Fallback: fetch the raw image file directly
             try {
               const rawRes = await fetch(targetPhoto.file_url);
               if (rawRes.ok) {
                 processedBlob = await rawRes.blob();
                 break;
+              } else if (rawRes.status === 0 || rawRes.type === "opaque") {
+                // status 0 or opaque = CORS blocked
+                lastPrepErr = `CORS_ERROR: Browser blocked access to image URL (cross-origin policy). Scene "${sceneName}" cannot be fetched from ${new URL(targetPhoto.file_url).hostname}.`;
+              } else {
+                lastPrepErr = `HTTP ${rawRes.status}: Could not fetch image file for scene "${sceneName}".`;
               }
-            } catch (rawErr) {
-              if (fetchAttempt < 3) await new Promise((r) => setTimeout(r, 1000));
+            } catch (rawErr: any) {
+              if (rawErr?.message?.includes("Failed to fetch") || rawErr?.name === "TypeError") {
+                lastPrepErr = `CORS_ERROR: Browser blocked fetch for scene "${sceneName}" — image URL may be on a different origin without CORS headers.`;
+              } else {
+                lastPrepErr = rawErr?.message || String(rawErr);
+              }
+              if (fetchAttempt < 3) await new Promise((r) => setTimeout(r, 1000 * fetchAttempt));
             }
           }
         }
 
-        if (!processedBlob) return null;
+        if (!processedBlob) {
+          console.error(`Scene "${sceneName}" could not be fetched after 3 attempts. Last error: ${lastPrepErr}`);
+          return null;
+        }
 
         // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
         try {
@@ -815,8 +843,10 @@ function PublishPage() {
             pitch: targetPhoto.pitch || 0,
             roll: targetPhoto.roll || 0,
           });
-        } catch (xmpErr) {
-          console.warn(`Could not inject XMP for scene ${targetPhoto.filename || targetPhoto.id}:`, xmpErr);
+        } catch (xmpErr: any) {
+          const xmpErrMsg = xmpErr?.message || String(xmpErr);
+          console.warn(`XMP injection failed for scene "${sceneName}": ${xmpErrMsg}`);
+          // XMP injection failure is non-fatal — upload continues without sphere metadata
         }
 
         return processedBlob;
@@ -859,7 +889,15 @@ function PublishPage() {
 
         if (!processedBlob) {
           failedCount++;
-          toast.error(`Scene ${alreadyDone + photoIndex} failed: Could not fetch image file.`);
+          const photoName = photo.filename || photo.id || `Scene ${alreadyDone + photoIndex}`;
+          // Provide a targeted hint based on the URL type
+          const urlHint = photo.file_url?.includes("supabase")
+            ? " The image may have been deleted from Supabase Storage or its URL has changed."
+            : " Check if the image URL is publicly accessible.";
+          toast.error(
+            `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Could not fetch image file.${urlHint}`,
+            { duration: 10000 },
+          );
           try {
             await supabase
               .from("photos")
@@ -998,15 +1036,31 @@ function PublishPage() {
 
         if (!success) {
           failedCount++;
+          const photoName = photo.filename || photo.id || `Scene ${alreadyDone + photoIndex}`;
           console.error(
-            `Scene ${alreadyDone + photoIndex} (${photo.filename || photo.id}) permanently failed:`,
+            `Scene ${alreadyDone + photoIndex} ("${photoName}") permanently failed after 6 attempts:`,
             lastErrorMsg,
           );
-          const isNot360 = lastErrorMsg.toLowerCase().includes("not a 360 photo");
-          const errorMsg = isNot360
-            ? `Scene ${alreadyDone + photoIndex} failed: Google rejected this image because it is not an equirectangular 360° photo (requires 2:1 aspect ratio). Please remove or replace Scene ${alreadyDone + photoIndex}.`
-            : `Scene ${alreadyDone + photoIndex} failed: ${lastErrorMsg}`;
-          toast.error(errorMsg, { duration: 9000 });
+
+          // Build a human-readable, targeted error message based on the failure type
+          let errorMsg: string;
+          if (lastErrorMsg.toLowerCase().includes("not a 360 photo") || lastErrorMsg.toLowerCase().includes("equirectangular")) {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Google rejected this image — it is not an equirectangular 360° photo (requires 2:1 aspect ratio). Please remove or replace this scene.`;
+          } else if (lastErrorMsg.includes("UPLOAD_TIMEOUT")) {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Upload timed out. The file is likely too large or your connection is too slow. Try compressing the image and re-uploading.`;
+          } else if (lastErrorMsg.includes("NETWORK_ERROR") || lastErrorMsg.includes("Failed to fetch")) {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Network error reaching Google. Check your internet connection and try again.`;
+          } else if (lastErrorMsg.includes("403")) {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Google rejected upload (403 Forbidden). Ensure the Street View Publish API is enabled in Google Cloud Console.`;
+          } else if (lastErrorMsg.includes("401")) {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Google OAuth token expired. Please disconnect and reconnect your Google account, then retry.`;
+          } else if (lastErrorMsg.includes("429") || lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.toLowerCase().includes("rate")) {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Google API rate limit hit. Please wait a few minutes before retrying this scene.`;
+          } else {
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: ${lastErrorMsg}`;
+          }
+
+          toast.error(errorMsg, { duration: 12000 });
           try {
             await supabase
               .from("photos")
