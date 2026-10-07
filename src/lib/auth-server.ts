@@ -191,6 +191,9 @@ export const customSignUp = createServerFn({ method: "POST" })
       const username = metadata?.username || `${baseUsername}_${id.slice(0, 4)}`;
       const name = metadata?.name || email.split("@")[0];
 
+      const rawPromo = metadata?.applied_promo || (metadata?.referral_code === "TSRHELP" ? "TSRHELP" : "");
+      const appliedPromo = String(rawPromo).trim().toUpperCase();
+
       const pendingMetadata = JSON.stringify({
         name,
         username,
@@ -198,6 +201,7 @@ export const customSignUp = createServerFn({ method: "POST" })
         first_name: metadata?.first_name || "",
         last_name: metadata?.last_name || "",
         referral_code: (metadata?.referral_code || "").trim().toUpperCase(),
+        applied_promo: appliedPromo,
       });
 
       // Insert or update in pending_users table
@@ -245,20 +249,45 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
 
       // 2. Parse metadata and create profile
       const meta = JSON.parse(pending.metadata as string);
-      await db.prepare(`
-        INSERT INTO profiles (id, email, name, username, company_name, first_name, last_name, plan, trial_ends_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).bind(
-        pending.id,
-        pending.email,
-        meta.name,
-        meta.username,
-        meta.company_name,
-        meta.first_name,
-        meta.last_name,
-        "trial",
-        new Date(Date.now() + 7 * 86400000).toISOString()
-      ).run();
+      const appliedPromo = (meta.applied_promo || (meta.referral_code === "TSRHELP" ? "TSRHELP" : "")).trim().toUpperCase() || null;
+      try {
+        await db.prepare(`
+          INSERT INTO profiles (id, email, name, username, company_name, first_name, last_name, plan, trial_ends_at, applied_promo, promo_discount_redeemed)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        `).bind(
+          pending.id,
+          pending.email,
+          meta.name,
+          meta.username,
+          meta.company_name,
+          meta.first_name,
+          meta.last_name,
+          "trial",
+          new Date(Date.now() + 7 * 86400000).toISOString(),
+          appliedPromo
+        ).run();
+      } catch (insertErr) {
+        // Fallback in case columns are still being migrated
+        await db.prepare(`
+          INSERT INTO profiles (id, email, name, username, company_name, first_name, last_name, plan, trial_ends_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).bind(
+          pending.id,
+          pending.email,
+          meta.name,
+          meta.username,
+          meta.company_name,
+          meta.first_name,
+          meta.last_name,
+          "trial",
+          new Date(Date.now() + 7 * 86400000).toISOString()
+        ).run();
+        if (appliedPromo) {
+          try {
+            await db.prepare("UPDATE profiles SET applied_promo = ? WHERE id = ?").bind(appliedPromo, pending.id).run();
+          } catch (_) {}
+        }
+      }
 
 
 

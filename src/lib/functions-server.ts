@@ -787,11 +787,57 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
 
       // ── Create Subscription ──────────────────────────────────────────────
       if (payload.action === "create_subscription") {
-        const { plan_name } = payload;
+        const { plan_name, user_id, token } = payload;
         const planId = RAZORPAY_PLAN_IDS[plan_name?.toLowerCase()];
 
         if (!planId) {
           throw new Error(`Unknown plan: ${plan_name}`);
+        }
+
+        let effectiveUserId = user_id;
+        if (!effectiveUserId && token) {
+          try {
+            effectiveUserId = await getUserIdFromToken(token);
+          } catch (_) {}
+        }
+
+        const db = getBinding("DB");
+        let offerIdToApply: string | null = null;
+        let isOfferApplied = false;
+
+        // Check if user has TSRHELP promo code and has not redeemed it yet
+        if (db && effectiveUserId && plan_name?.toLowerCase() === "basic") {
+          try {
+            const userProfile: any = await db.prepare(
+              "SELECT applied_promo, promo_discount_redeemed FROM profiles WHERE id = ?"
+            ).bind(effectiveUserId).first();
+
+            if (
+              userProfile &&
+              userProfile.applied_promo === "TSRHELP" &&
+              !userProfile.promo_discount_redeemed
+            ) {
+              const offerId = getEnv("RAZORPAY_OFFER_TSRHELP_ID") || "offer_Tkv0P54Ob7pXDI";
+              offerIdToApply = offerId;
+              isOfferApplied = true;
+            }
+          } catch (err) {
+            console.warn("Could not check TSRHELP promo eligibility:", err);
+          }
+        }
+
+        const subBody: any = {
+          plan_id: planId,
+          quantity: 1,
+          total_count: 120, // 10 years max
+          notify_info: {
+            notify_phone: payload.phone || null,
+            notify_email: payload.email || null,
+          },
+        };
+
+        if (offerIdToApply) {
+          subBody.offer_id = offerIdToApply;
         }
 
         const res = await fetch("https://api.razorpay.com/v1/subscriptions", {
@@ -800,15 +846,7 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
             "Content-Type": "application/json",
             Authorization: authHeader,
           },
-          body: JSON.stringify({
-            plan_id: planId,
-            quantity: 1,
-            total_count: 120, // 10 years max
-            notify_info: {
-              notify_phone: payload.phone || null,
-              notify_email: payload.email || null,
-            },
-          }),
+          body: JSON.stringify(subBody),
         });
 
         const data: any = await res.json();
@@ -817,7 +855,14 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
           throw new Error(data?.error?.description || "Failed to create Razorpay subscription");
         }
 
-        return { success: true, subscription_id: data.id };
+        return {
+          success: true,
+          subscription_id: data.id,
+          offer_applied: isOfferApplied,
+          discount_amount: isOfferApplied ? 150 : 0,
+          first_month_amount: isOfferApplied ? 349 : 499,
+          regular_amount: 499,
+        };
       }
 
       // ── Verify Subscription Payment ──────────────────────────────────────
@@ -862,7 +907,33 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
               agency: 2999,
             };
             const planLower = plan_name?.toLowerCase() || "basic";
-            const amountInr = planAmounts[planLower] ?? 499;
+            let amountInr = planAmounts[planLower] ?? 499;
+
+            // Check if user redeemed TSRHELP discount on this 1st month payment
+            let userProfileRow: any = null;
+            try {
+              userProfileRow = await db.prepare(
+                "SELECT applied_promo, promo_discount_redeemed FROM profiles WHERE id = ?"
+              ).bind(user_id).first();
+            } catch (_) {}
+
+            const isTsrHelpFirstMonth =
+              planLower === "basic" &&
+              userProfileRow?.applied_promo === "TSRHELP" &&
+              !userProfileRow?.promo_discount_redeemed;
+
+            if (isTsrHelpFirstMonth) {
+              amountInr = 349;
+            }
+
+            // Mark promo discount as redeemed so it can't be reused
+            if (userProfileRow?.applied_promo === "TSRHELP") {
+              try {
+                await db.prepare(
+                  "UPDATE profiles SET promo_discount_redeemed = 1 WHERE id = ?"
+                ).bind(user_id).run();
+              } catch (_) {}
+            }
             const nowIso = new Date().toISOString();
             const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
 

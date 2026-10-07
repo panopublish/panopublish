@@ -148,6 +148,12 @@ async function ensureSchema(db: any) {
     await db.prepare("ALTER TABLE profiles ADD COLUMN last_active_device TEXT").run();
   } catch (_) {}
   try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN applied_promo TEXT").run();
+  } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE profiles ADD COLUMN promo_discount_redeemed BOOLEAN NOT NULL DEFAULT 0").run();
+  } catch (_) {}
+  try {
     if (typeof db.batch === "function") {
       await db.batch([
         db.prepare("CREATE INDEX IF NOT EXISTS idx_connections_tour_id ON connections(tour_id)"),

@@ -40,6 +40,8 @@ import {
   Users,
   DollarSign,
   Wallet,
+  Sparkles,
+  Tag,
 } from "lucide-react";
 import { waLink, formatDateIN } from "@/lib/format";
 
@@ -142,6 +144,10 @@ function SettingsPage() {
   const [payoutBankAccount, setPayoutBankAccount] = useState("");
   const [payoutIfsc, setPayoutIfsc] = useState("");
   const [savingPayout, setSavingPayout] = useState(false);
+
+  // Promo / Coupon State
+  const [promoInput, setPromoInput] = useState("");
+  const [applyingPromo, setApplyingPromo] = useState(false);
 
   // Loading States
   const [loading, setLoading] = useState(true);
@@ -480,6 +486,34 @@ function SettingsPage() {
     });
   };
 
+  const applyPromoCode = async () => {
+    if (!promoInput.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+    const cleanCode = promoInput.trim().toUpperCase();
+    if (cleanCode !== "TSRHELP") {
+      toast.error("Invalid coupon code");
+      return;
+    }
+    setApplyingPromo(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ applied_promo: "TSRHELP" })
+        .eq("id", user?.id);
+
+      if (error) throw error;
+      toast.success("Coupon TSRHELP applied! Flat ₹150 OFF on your first month of Basic.");
+      setPromoInput("");
+      await loadProfile();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to apply coupon");
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
   const triggerRazorpaySimulate = async (planName: string) => {
     const planNameLower = planName.toLowerCase();
     const tid = toast.loading(`Initializing subscription for ${planName} plan...`);
@@ -491,6 +525,7 @@ function SettingsPage() {
           action: "create_subscription",
           plan_name: planNameLower,
           email: user?.email,
+          user_id: user?.id,
         },
       });
 
@@ -503,11 +538,16 @@ function SettingsPage() {
       await loadRazorpayScript();
       const keyId = getEnv("VITE_RAZORPAY_KEY_ID") || "";
 
+      const isOfferApplied = !!data.offer_applied;
+      const descText = isOfferApplied
+        ? `${planName} Tier - 1st Mo ₹${data.first_month_amount} (TSRHELP ₹${data.discount_amount} OFF), then ₹${data.regular_amount || 499}/mo autopay`
+        : `${planName} Tier Monthly Subscription`;
+
       const options = {
         key: keyId,
         subscription_id: data.subscription_id,
         name: "PanoPublish",
-        description: `${planName} Tier Monthly Subscription`,
+        description: descText,
         image: logoUrl || undefined,
         handler: async function (response: any) {
           const verifyId = toast.loading("Verifying payment transaction signature...");
@@ -531,7 +571,11 @@ function SettingsPage() {
             if (!verifyData?.success)
               throw new Error(verifyData?.error || "Signature verification failed");
 
-            toast.success(`Welcome to the ${planName} plan! Subscription activated successfully.`, {
+            const successMsg = isOfferApplied
+              ? `Welcome to the ${planName} plan! TSRHELP applied: ₹349 paid for 1st month. Next cycles ₹499/mo autopay.`
+              : `Welcome to the ${planName} plan! Subscription activated successfully.`;
+
+            toast.success(successMsg, {
               id: verifyId,
             });
             loadProfile();
@@ -1289,6 +1333,51 @@ function SettingsPage() {
                         )}
                       </div>
 
+                    {/* Promo Code & Discount Status */}
+                    {profile?.applied_promo === "TSRHELP" && !profile?.promo_discount_redeemed ? (
+                      <div className="bg-emerald-50/90 border border-emerald-200/90 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 bg-emerald-100 rounded-xl text-emerald-700 shrink-0 mt-0.5">
+                            <Sparkles className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-emerald-900 text-sm flex items-center gap-2">
+                              Coupon TSRHELP Active!
+                              <span className="text-[10px] bg-emerald-200/80 text-emerald-800 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                ₹150 OFF Applied
+                              </span>
+                            </div>
+                            <p className="text-xs text-emerald-700 mt-0.5 leading-relaxed">
+                              Your 1st month of Basic is discounted to <strong>₹349</strong> (save ₹150). AutoPay will recur at ₹499/mo starting month 2.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : !profile?.promo_discount_redeemed && profile?.plan === "trial" ? (
+                      <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <Tag className="h-4 w-4 text-slate-500 shrink-0" />
+                          <span className="text-xs font-semibold text-slate-700">Have a promo or coupon code?</span>
+                        </div>
+                        <div className="flex items-center gap-2 max-w-sm w-full sm:w-auto">
+                          <Input
+                            placeholder="Enter TSRHELP"
+                            value={promoInput}
+                            onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                            className="h-8.5 text-xs uppercase font-mono bg-white"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={applyPromoCode}
+                            disabled={applyingPromo || !promoInput.trim()}
+                            className="h-8.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3"
+                          >
+                            {applyingPromo ? "Applying..." : "Apply"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+
                     {/* Razorpay Plans Grid */}
                     <div className="space-y-4">
                       <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">
@@ -1300,17 +1389,38 @@ function SettingsPage() {
                         className={`border rounded-2xl p-5 flex flex-col justify-between transition-all relative ${
                           profile?.plan === "basic"
                             ? "border-[#0277bd] bg-blue-50/10 shadow-md ring-2 ring-[#0277bd]/20 scale-102"
+                            : profile?.applied_promo === "TSRHELP" && !profile?.promo_discount_redeemed
+                            ? "border-emerald-500 shadow-md bg-emerald-50/5 ring-2 ring-emerald-500/20"
                             : "hover:border-gray-300"
                         }`}
                       >
+                        {profile?.applied_promo === "TSRHELP" && !profile?.promo_discount_redeemed && (
+                          <div className="absolute top-[-11px] right-4 bg-emerald-600 text-white text-[9px] font-black tracking-wider uppercase px-2 py-0.5 rounded-full shadow flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            ₹150 OFF APPLIED
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <div className="text-base font-extrabold text-gray-800">Basic Tier</div>
                           <p className="text-[11px] text-gray-400 leading-snug">
                             Perfect for single agency builders or small virtual tour creators.
                           </p>
-                          <div className="pt-2 text-2xl font-black text-gray-900 flex items-baseline gap-0.5">
-                            ₹499<span className="text-xs text-gray-400 font-bold">/mo</span>
-                          </div>
+                          {profile?.applied_promo === "TSRHELP" && !profile?.promo_discount_redeemed ? (
+                            <div className="pt-2">
+                              <div className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-black text-emerald-600">₹349</span>
+                                <span className="text-sm text-gray-400 line-through">₹499</span>
+                                <span className="text-[10px] text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.5 rounded">1st mo</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                Renews at ₹499/mo autopay onwards
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="pt-2 text-2xl font-black text-gray-900 flex items-baseline gap-0.5">
+                              ₹499<span className="text-xs text-gray-400 font-bold">/mo</span>
+                            </div>
+                          )}
                           <ul className="text-xs text-gray-500 space-y-1.5 pt-2 border-t font-medium">
                             <li className="flex items-center gap-1.5">
                               <Check className="h-3.5 w-3.5 text-green-500 shrink-0" /> 1 user
@@ -1337,10 +1447,16 @@ function SettingsPage() {
                           className={`w-full mt-5 font-bold ${
                             profile?.plan === "basic" && !isSubCancelled
                               ? "bg-gray-100 text-gray-400 cursor-default hover:bg-gray-100"
+                              : profile?.applied_promo === "TSRHELP" && !profile?.promo_discount_redeemed
+                              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-md cursor-pointer"
                               : "bg-[#0277bd] hover:bg-[#0266a1] text-white shadow-md"
                           }`}
                         >
-                          {profile?.plan === "basic" && !isSubCancelled ? "Current Plan" : "Select Basic"}
+                          {profile?.plan === "basic" && !isSubCancelled
+                            ? "Current Plan"
+                            : profile?.applied_promo === "TSRHELP" && !profile?.promo_discount_redeemed
+                            ? "Subscribe at ₹349 (1st Month)"
+                            : "Select Basic"}
                         </Button>
                       </div>
 

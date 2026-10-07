@@ -16,6 +16,7 @@ import {
   Check,
   AlertCircle,
   Gift,
+  Sparkles,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { SEO } from "@/components/SEO";
@@ -24,8 +25,10 @@ import { supabase } from "@/integrations/supabase/client";
 // ─── OTP state helpers ───────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/signup")({
-  validateSearch: (search: Record<string, unknown>): { ref?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { ref?: string; code?: string; coupon?: string } => ({
     ref: typeof search.ref === "string" ? search.ref : undefined,
+    code: typeof search.code === "string" ? search.code : undefined,
+    coupon: typeof search.coupon === "string" ? search.coupon : undefined,
   }),
   head: () => ({
     meta: [
@@ -73,10 +76,11 @@ function Signup() {
     if (user) navigate({ to: "/dashboard/" });
   }, [user, navigate]);
 
-  // Pre-fill referral code from query parameter (?ref=...)
+  // Pre-fill referral or promo code from query parameter (?ref=... or ?code=... or ?coupon=...)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const paramRef = new URLSearchParams(window.location.search).get("ref");
+      const searchParams = new URLSearchParams(window.location.search);
+      const paramRef = searchParams.get("ref") || searchParams.get("code") || searchParams.get("coupon");
       if (paramRef) {
         setReferralCode(paramRef.toUpperCase().trim().replace(/[^A-Z0-9_-]/g, ""));
       }
@@ -170,6 +174,7 @@ function Signup() {
           company_name: companyName.trim(),
           username: username.toLowerCase().trim(),
           referral_code: cleanRef || undefined,
+          applied_promo: cleanRef === "TSRHELP" ? "TSRHELP" : undefined,
         },
       },
     });
@@ -530,19 +535,19 @@ function Signup() {
             </div>
           </div>
 
-          {/* Referral Code (Optional) */}
+          {/* Referral / Promo Code (Optional) */}
           <div className="space-y-1.5">
             <Label
               htmlFor="referralCode"
               className="text-xs font-bold uppercase tracking-wider text-gray-500"
             >
-              Referral Code <span className="text-gray-400 font-normal lowercase">(optional)</span>
+              Referral / Promo Code <span className="text-gray-400 font-normal lowercase">(optional)</span>
             </Label>
             <div className="relative">
               <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 id="referralCode"
-                placeholder="e.g. VIP25"
+                placeholder="e.g. TSRHELP"
                 className="pl-10 h-11 bg-gray-50/50 focus-visible:ring-[#0277bd] border-gray-200 rounded-xl font-mono uppercase tracking-wider text-sm"
                 value={referralCode}
                 onChange={(e) =>
@@ -553,6 +558,17 @@ function Signup() {
                 maxLength={24}
               />
             </div>
+            {referralCode.trim().toUpperCase() === "TSRHELP" && (
+              <div className="flex items-start gap-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl text-emerald-950 text-xs shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
+                <Sparkles className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                <div className="space-y-0.5">
+                  <div className="font-bold text-emerald-800">Code TSRHELP Applied!</div>
+                  <div className="text-emerald-700 leading-relaxed">
+                    Flat <strong>₹150 OFF</strong> on your first month subscription. Pay only <strong>₹349</strong> for Month 1, then standard ₹499/mo autopay.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <Button

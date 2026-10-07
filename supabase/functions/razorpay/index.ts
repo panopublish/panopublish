@@ -32,6 +32,9 @@ async function verifySignature(
   const signatureArray = Array.from(new Uint8Array(signatureBuffer));
   const computedSignature = signatureArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
+  return computedSignature === signature;
+}
+
 // HMAC-SHA256 signature verification for one-time orders
 async function verifyOrderSignature(
   orderId: string,
@@ -122,6 +125,18 @@ async function recordReferralCommission(
     console.error("[REFERRAL] Error logging commission:", err);
   }
 }
+
+const planPrices: Record<string, number> = {
+  basic: 499,
+  pro: 1499,
+  agency: 2999,
+};
+
+const staticPlanIds: Record<string, string> = {
+  basic: "plan_Sx8pyS9J75kPLf",
+  pro: "plan_Sx9MoqhOSiSQYh",
+  agency: "plan_Sx9O12idzkpCLD",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -251,25 +266,50 @@ serve(async (req) => {
 
     // 2. Handle Standard JSON Actions
     const { action, ...payload } = await req.json();
-    const planPrices: Record<string, number> = {
-      basic: 499,
-      pro: 1499,
-      agency: 2999,
-    };
-
-    const staticPlanIds: Record<string, string> = {
-      basic: "plan_Sx8pyS9J75kPLf",
-      pro: "plan_Sx9MoqhOSiSQYh",
-      agency: "plan_Sx9O12idzkpCLD",
-    };
 
     if (action === "create_subscription") {
-      const { plan_name, email } = payload;
-      const planAmount = planPrices[plan_name.toLowerCase()];
+      const { plan_name, email, user_id } = payload;
+      const planLower = plan_name.toLowerCase();
+      const planAmount = planPrices[planLower];
       if (!planAmount) throw new Error("Invalid plan selection");
 
-      const planId = staticPlanIds[plan_name.toLowerCase()];
+      const planId = staticPlanIds[planLower];
       if (!planId) throw new Error("Plan ID not found for selection");
+
+      let offerIdToApply: string | null = null;
+      let isOfferApplied = false;
+
+      if (user_id && planLower === "basic") {
+        try {
+          const { data: userProfile } = await supabaseClient
+            .from("profiles")
+            .select("applied_promo, promo_discount_redeemed")
+            .eq("id", user_id)
+            .maybeSingle();
+
+          if (
+            userProfile &&
+            userProfile.applied_promo === "TSRHELP" &&
+            !userProfile.promo_discount_redeemed
+          ) {
+            offerIdToApply = Deno.env.get("RAZORPAY_OFFER_TSRHELP_ID") || "offer_Tkv0P54Ob7pXDI";
+            isOfferApplied = true;
+          }
+        } catch (err) {
+          console.warn("Could not check TSRHELP promo eligibility:", err);
+        }
+      }
+
+      const subPayload: any = {
+        plan_id: planId,
+        total_count: 12, // 1 year
+        quantity: 1,
+        customer_notify: 1,
+      };
+
+      if (offerIdToApply) {
+        subPayload.offer_id = offerIdToApply;
+      }
 
       // 2. Create Razorpay Subscription
       const subRes = await fetch("https://api.razorpay.com/v1/subscriptions", {
@@ -278,12 +318,7 @@ serve(async (req) => {
           Authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          plan_id: planId,
-          total_count: 12, // 1 year
-          quantity: 1,
-          customer_notify: 1,
-        }),
+        body: JSON.stringify(subPayload),
       });
 
       const subData = await subRes.json();
@@ -295,7 +330,9 @@ serve(async (req) => {
           success: true,
           subscription_id: subData.id,
           plan_id: planId,
-          amount: planAmount,
+          amount: isOfferApplied ? 349 : planAmount,
+          offer_applied: isOfferApplied,
+          discount_amount: isOfferApplied ? 150 : 0,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -323,13 +360,35 @@ serve(async (req) => {
         throw new Error("Invalid Razorpay payment signature.");
       }
 
+      // Check if user had TSRHELP discount on first month
+      let effectiveAmount = planAmount;
+      const { data: userProf } = await supabaseClient
+        .from("profiles")
+        .select("applied_promo, promo_discount_redeemed")
+        .eq("id", user_id)
+        .maybeSingle();
+
+      const isTsrHelpFirstMonth =
+        plan_name.toLowerCase() === "basic" &&
+        userProf?.applied_promo === "TSRHELP" &&
+        !userProf?.promo_discount_redeemed;
+
+      if (isTsrHelpFirstMonth) {
+        effectiveAmount = 349;
+      }
+
       // Update public.profiles table
+      const profileUpdates: any = {
+        plan: plan_name.toLowerCase(),
+        billing_cycle_tours_used: 0,
+      };
+      if (userProf?.applied_promo === "TSRHELP") {
+        profileUpdates.promo_discount_redeemed = true;
+      }
+
       const { error: profileErr } = await supabaseClient
         .from("profiles")
-        .update({
-          plan: plan_name.toLowerCase(),
-          billing_cycle_tours_used: 0,
-        })
+        .update(profileUpdates)
         .eq("id", user_id);
 
       if (profileErr) throw profileErr;
@@ -340,7 +399,7 @@ serve(async (req) => {
         plan: plan_name.toLowerCase(),
         status: "active",
         razorpay_subscription_id,
-        amount_inr: planAmount,
+        amount_inr: effectiveAmount,
       });
 
       if (subErr) throw subErr;

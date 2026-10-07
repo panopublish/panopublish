@@ -31,9 +31,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   payout_account_name TEXT,
   payout_bank_account TEXT,
   payout_ifsc TEXT,
+  applied_promo TEXT,
+  promo_discount_redeemed BOOLEAN NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_profiles_last_seen ON profiles(last_seen_at);
+CREATE INDEX IF NOT EXISTS idx_profiles_applied_promo ON profiles(applied_promo);
 
 -- Clients
 CREATE TABLE IF NOT EXISTS clients (
