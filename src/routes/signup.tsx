@@ -547,7 +547,6 @@ function Signup() {
               <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 id="referralCode"
-                placeholder="e.g. TSRHELP"
                 className="pl-10 h-11 bg-gray-50/50 focus-visible:ring-[#0277bd] border-gray-200 rounded-xl font-mono uppercase tracking-wider text-sm"
                 value={referralCode}
                 onChange={(e) =>
