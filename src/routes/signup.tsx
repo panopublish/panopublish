@@ -558,14 +558,9 @@ function Signup() {
               />
             </div>
             {referralCode.trim().toUpperCase() === "TSRHELP" && (
-              <div className="flex items-start gap-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl text-emerald-950 text-xs shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
-                <Sparkles className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                <div className="space-y-0.5">
-                  <div className="font-bold text-emerald-800">Code TSRHELP Applied!</div>
-                  <div className="text-emerald-700 leading-relaxed">
-                    Flat <strong>₹150 OFF</strong> on your first month subscription. Pay only <strong>₹349</strong> for Month 1, then standard ₹499/mo autopay.
-                  </div>
-                </div>
+              <div className="flex items-center gap-2.5 p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl text-emerald-800 text-xs font-medium shadow-xs animate-in fade-in slide-in-from-top-1 duration-200">
+                <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>Flat ₹150 OFF on your first month subscription</span>
               </div>
             )}
           </div>
