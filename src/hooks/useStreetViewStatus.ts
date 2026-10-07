@@ -57,7 +57,36 @@ export function useStreetViewStatus(
         }
 
         if (data?.success && !isCancelled) {
+          // Before reloading, snapshot which photos were in PROCESSING so we can detect rejections
+          const wasProcessingIds = new Set(processingPhotos.map((p) => p.id));
+
           onPhotosUpdatedRef.current();
+
+          // Check if any previously-PROCESSING photo is now FAILED (Google async rejection)
+          if (!isCancelled && wasProcessingIds.size > 0) {
+            try {
+              const processingIdArray = Array.from(wasProcessingIds);
+              const { data: nowFailed } = await supabase
+                .from("photos")
+                .select("id, filename, streetview_status")
+                .in("id", processingIdArray)
+                .eq("streetview_status", "FAILED");
+
+              if (nowFailed && nowFailed.length > 0 && !isCancelled) {
+                nowFailed.forEach((p: any) => {
+                  const name = p.filename || p.id || "unknown scene";
+                  toast.error(
+                    `Google rejected "${name}" — this image was accepted for upload but then rejected during Google's processing. ` +
+                    `This usually means the image is not a valid equirectangular 360° panorama, has corrupted data, or its aspect ratio is not exactly 2:1. ` +
+                    `Please replace this scene with a properly formatted 360° photo and retry.`,
+                    { duration: 15000 },
+                  );
+                });
+              }
+            } catch (rejectionCheckErr) {
+              console.warn("Could not check for rejected photos:", rejectionCheckErr);
+            }
+          }
 
           // Check if all photos in this tour have finished processing
           const tourId = processingPhotos[0]?.tour_id;
@@ -70,7 +99,7 @@ export function useStreetViewStatus(
               .limit(1);
 
             if (!remainingProcessing || remainingProcessing.length === 0) {
-              console.log(`All photos for tour ${tourId} published! Syncing connections...`);
+              console.log(`All photos for tour ${tourId} finished processing. Syncing connections...`);
               let synced = false;
               for (let attempt = 1; attempt <= 3; attempt++) {
                 try {

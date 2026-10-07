@@ -629,36 +629,80 @@ serve(async (req) => {
 
     if (action === "batch_get_photo_status") {
       try {
-        const listRes = await fetch(
-          `https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC&pageSize=100`,
-          {
+        // Paginate through ALL Google Street View photos (API max is 100/page)
+        const allGooglePhotos: any[] = [];
+        let pageToken: string | undefined = undefined;
+        let pageCount = 0;
+        const MAX_PAGES = 10; // safety cap: 1000 photos
+
+        do {
+          const url = new URL("https://streetviewpublish.googleapis.com/v1/photos");
+          url.searchParams.set("key", apiKey);
+          url.searchParams.set("view", "BASIC");
+          url.searchParams.set("pageSize", "100");
+          if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+          const listRes = await fetch(url.toString(), {
             headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
-          },
-        );
-        if (!listRes.ok) {
-          throw new Error(`Failed to list photos: status ${listRes.status}`);
+          });
+          if (!listRes.ok) {
+            throw new Error(`Failed to list photos (page ${pageCount + 1}): status ${listRes.status}`);
+          }
+          const listData: any = await listRes.json();
+          const page = listData.photos || [];
+          allGooglePhotos.push(...page);
+          pageToken = listData.nextPageToken;
+          pageCount++;
+        } while (pageToken && pageCount < MAX_PAGES);
+
+        // Build a map of Google photoId → resolved status
+        const statusMap = new Map<string, { status: string; shareLink?: string; viewCount: number }>();
+        for (const gp of allGooglePhotos) {
+          const gid = gp.photoId?.id;
+          if (!gid) continue;
+          const status =
+            gp.mapsPublishStatus === "PUBLISHED"
+              ? "PUBLISHED"
+              : gp.mapsPublishStatus?.includes("REJECTED")
+              ? "FAILED"
+              : "PROCESSING";
+          statusMap.set(gid, {
+            status,
+            shareLink: gp.shareLink,
+            viewCount: gp.viewCount ? parseInt(gp.viewCount, 10) : 0,
+          });
         }
-        const listData: any = await listRes.json();
-        const googlePhotos = listData.photos || [];
+
+        // Bulk-update our Supabase DB for all photos whose status changed
+        // (Do this server-side so it's instant and doesn't require a client round-trip)
+        if (statusMap.size > 0) {
+          const updates: Promise<any>[] = [];
+          for (const [gid, info] of statusMap) {
+            updates.push(
+              supabaseClient
+                .from("photos")
+                .update({
+                  streetview_status: info.status,
+                  streetview_share_link: info.shareLink || null,
+                  view_count: info.viewCount,
+                })
+                .eq("streetview_photo_id", gid),
+            );
+          }
+          // Fire all updates in parallel, ignore individual errors
+          await Promise.allSettled(updates);
+        }
 
         return new Response(
           JSON.stringify({
             success: true,
-            photos: googlePhotos.map((gp: any) => ({
-              id: gp.photoId?.id,
-              status:
-                gp.mapsPublishStatus === "PUBLISHED"
-                  ? "PUBLISHED"
-                  : gp.mapsPublishStatus?.includes("REJECTED")
-                    ? "FAILED"
-                    : "PROCESSING",
-              shareLink: gp.shareLink,
-              viewCount: gp.viewCount ? parseInt(gp.viewCount, 10) : 0,
+            total_google_photos: allGooglePhotos.length,
+            photos: Array.from(statusMap.entries()).map(([id, info]) => ({
+              id,
+              ...info,
             })),
           }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       } catch (err: any) {
         return new Response(JSON.stringify({ success: false, error: err.message }), {

@@ -1393,15 +1393,53 @@ function PublishPage() {
         throw new Error(lastErrorMsg);
       }
 
-      toast.success(`${photoToPublish.filename || "Scene"} published to Google Maps!`);
+      toast.success(`"${photoToPublish.filename || "Scene"}" sent to Google Maps — processing started.`);
       load();
+
+      // Schedule a delayed check: Google sometimes accepts then silently rejects during processing.
+      // Poll after 35s (typical processing window) to catch async REJECTED_UNKNOWN rejections.
+      const delayedCheckPhotoId = photoToPublish.id;
+      const delayedCheckName = photoToPublish.filename || photoToPublish.id || "scene";
+      setTimeout(async () => {
+        try {
+          const { data: checkResult } = await supabase
+            .from("photos")
+            .select("streetview_status")
+            .eq("id", delayedCheckPhotoId)
+            .maybeSingle();
+          if (checkResult?.streetview_status === "FAILED") {
+            toast.error(
+              `Google rejected "${delayedCheckName}" during processing — the upload was accepted but Google's servers could not process this image. ` +
+              `This typically means the image is not a valid equirectangular 360° panorama (must be 2:1 aspect ratio, e.g. 8000×4000px), ` +
+              `or the JPEG data may be corrupted. Please replace this photo with a properly formatted 360° image and retry.`,
+              { duration: 18000 },
+            );
+            load();
+          }
+        } catch (pollErr) {
+          console.warn("Delayed rejection check error:", pollErr);
+        }
+      }, 35000);
     } catch (e: any) {
       console.error("Single scene publish error:", e);
-      const isNot360 = (e.message || "").toLowerCase().includes("not a 360 photo");
-      const errorMsg = isNot360
-        ? `Google rejected this image: It is not an equirectangular 360° photo (requires 2:1 aspect ratio). Please replace this photo.`
-        : `Failed to publish scene: ${e.message}`;
-      toast.error(errorMsg, { duration: 9000 });
+      const msg = e.message || "";
+      let errorMsg: string;
+      if (msg.toLowerCase().includes("not a 360 photo") || msg.toLowerCase().includes("equirectangular")) {
+        errorMsg = `Google rejected "${photoToPublish.filename || "scene"}": Not an equirectangular 360° photo (requires 2:1 aspect ratio). Please replace this image.`;
+      } else if (msg.includes("UPLOAD_TIMEOUT")) {
+        errorMsg = `Upload timed out for "${photoToPublish.filename || "scene"}". The file may be too large or your connection too slow. Try compressing and re-uploading.`;
+      } else if (msg.includes("NETWORK_ERROR") || msg.includes("Failed to fetch")) {
+        errorMsg = `Network error uploading "${photoToPublish.filename || "scene"}". Check your internet connection and retry.`;
+      } else if (msg.includes("403")) {
+        errorMsg = `Google rejected upload (403 Forbidden): Ensure the Street View Publish API is enabled in Google Cloud Console.`;
+      } else if (msg.includes("401")) {
+        errorMsg = `Google OAuth token expired. Please disconnect and reconnect your Google account, then retry.`;
+      } else if (msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate")) {
+        errorMsg = `Google API rate limit hit for "${photoToPublish.filename || "scene"}". Please wait a few minutes before retrying.`;
+      } else {
+        errorMsg = `Failed to publish "${photoToPublish.filename || "scene"}": ${msg}`;
+      }
+      toast.error(errorMsg, { duration: 12000 });
       try {
         await supabase
           .from("photos")
