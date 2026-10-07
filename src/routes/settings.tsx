@@ -1361,7 +1361,7 @@ function SettingsPage() {
                         </div>
                         <div className="flex items-center gap-2 max-w-sm w-full sm:w-auto">
                           <Input
-                            placeholder="Enter TSRHELP"
+                            placeholder="Enter promo code"
                             value={promoInput}
                             onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
                             className="h-8.5 text-xs uppercase font-mono bg-white"

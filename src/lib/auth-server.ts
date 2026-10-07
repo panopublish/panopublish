@@ -191,7 +191,8 @@ export const customSignUp = createServerFn({ method: "POST" })
       const username = metadata?.username || `${baseUsername}_${id.slice(0, 4)}`;
       const name = metadata?.name || email.split("@")[0];
 
-      const rawPromo = metadata?.applied_promo || (metadata?.referral_code === "TSRHELP" ? "TSRHELP" : "");
+      const rawRef = String(metadata?.referral_code || "").trim().toUpperCase();
+      const rawPromo = metadata?.applied_promo || (rawRef === "TSRHELP" ? "TSRHELP" : "");
       const appliedPromo = String(rawPromo).trim().toUpperCase();
 
       const pendingMetadata = JSON.stringify({
@@ -249,7 +250,8 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
 
       // 2. Parse metadata and create profile
       const meta = JSON.parse(pending.metadata as string);
-      const appliedPromo = (meta.applied_promo || (meta.referral_code === "TSRHELP" ? "TSRHELP" : "")).trim().toUpperCase() || null;
+      const refCodeMeta = String(meta.referral_code || "").trim().toUpperCase();
+      const appliedPromo = (meta.applied_promo || (refCodeMeta === "TSRHELP" ? "TSRHELP" : "")).trim().toUpperCase() || null;
       try {
         await db.prepare(`
           INSERT INTO profiles (id, email, name, username, company_name, first_name, last_name, plan, trial_ends_at, applied_promo, promo_discount_redeemed)
@@ -338,6 +340,13 @@ export const customVerifyEmail = createServerFn({ method: "POST" })
               INSERT OR IGNORE INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code)
               VALUES (?, ?, ?, ?, ?)
             `).bind(crypto.randomUUID(), pending.id, refRow.user_id, refRow.id, refRow.code || cleanCode).run();
+
+            // If referred by TSRHELP, guarantee applied_promo is set on profile
+            if ((refRow.code || "").toUpperCase() === "TSRHELP" || cleanCode === "TSRHELP") {
+              try {
+                await db.prepare("UPDATE profiles SET applied_promo = 'TSRHELP' WHERE id = ?").bind(pending.id).run();
+              } catch (_) {}
+            }
           }
         } catch (attrErr) {
           console.error("Referral attribution error:", attrErr);

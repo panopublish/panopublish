@@ -173,6 +173,68 @@ async function ensureSchema(db: any) {
 
   await ensureReferralSchema(db);
 
+  // Auto-heal & backfill: Ensure 360digitalsstudio is attributed to TSR HELP if not already present
+  try {
+    const tsrProfile: any = await db.prepare(
+      "SELECT id, email, name FROM profiles WHERE LOWER(email) = 'tsrhelp7@gmail.com' OR LOWER(name) LIKE '%tsr help%' LIMIT 1"
+    ).first();
+
+    const user360: any = await db.prepare(
+      "SELECT id, email FROM profiles WHERE LOWER(email) = '360digitalsstudio@gmail.com' LIMIT 1"
+    ).first();
+
+    if (tsrProfile && user360) {
+      const tsrCodeRow: any = await db.prepare(
+        "SELECT id, code FROM referral_codes WHERE user_id = ? LIMIT 1"
+      ).bind(tsrProfile.id).first();
+
+      const existingAttr: any = await db.prepare(
+        "SELECT id FROM referral_attributions WHERE referred_user_id = ? LIMIT 1"
+      ).bind(user360.id).first();
+
+      if (!existingAttr) {
+        const codeToUse = tsrCodeRow?.code || "TSRHELP";
+        await db.prepare(`
+          INSERT INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code, created_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `).bind(
+          crypto.randomUUID(),
+          user360.id,
+          tsrProfile.id,
+          tsrCodeRow?.id || null,
+          codeToUse
+        ).run();
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to auto-heal 360digitalsstudio attribution:", e);
+  }
+
+  // Auto-heal: Ensure ALL users referred by TSR HELP have applied_promo = 'TSRHELP' if discount not yet redeemed
+  try {
+    await db.prepare(`
+      UPDATE profiles
+      SET applied_promo = 'TSRHELP'
+      WHERE (applied_promo IS NULL OR applied_promo = '')
+        AND (promo_discount_redeemed = 0 OR promo_discount_redeemed IS NULL)
+        AND (
+          id IN (
+            SELECT referred_user_id FROM referral_attributions
+            WHERE UPPER(attributed_code) = 'TSRHELP'
+               OR referrer_user_id IN (
+                 SELECT user_id FROM referral_codes WHERE UPPER(code) = 'TSRHELP'
+               )
+               OR referrer_user_id IN (
+                 SELECT id FROM profiles WHERE LOWER(email) = 'tsrhelp7@gmail.com' OR LOWER(name) LIKE '%tsr help%'
+               )
+          )
+          OR LOWER(email) = '360digitalsstudio@gmail.com'
+        )
+    `).run();
+  } catch (e) {
+    console.warn("Failed to backfill TSRHELP promo to referred users:", e);
+  }
+
   schemaEnsured = true;
 }
 
@@ -532,6 +594,38 @@ export const runD1Query = createServerFn({ method: "POST" })
         }
         return row;
       });
+
+      // Auto-populate TSRHELP promo for referred users if not yet redeemed
+      if (table === "profiles") {
+        for (const row of processedResults) {
+          if ((!row.applied_promo || row.applied_promo === "") && !row.promo_discount_redeemed) {
+            const is360 = row.email && row.email.toLowerCase() === "360digitalsstudio@gmail.com";
+            let isReferredByTsr = is360;
+            if (!isReferredByTsr && row.id) {
+              try {
+                const attrCheck: any = await db.prepare(`
+                  SELECT id FROM referral_attributions
+                  WHERE referred_user_id = ?
+                    AND (
+                      UPPER(attributed_code) = 'TSRHELP'
+                      OR referrer_user_id IN (SELECT user_id FROM referral_codes WHERE UPPER(code) = 'TSRHELP')
+                      OR referrer_user_id IN (SELECT id FROM profiles WHERE LOWER(email) = 'tsrhelp7@gmail.com' OR LOWER(name) LIKE '%tsr help%')
+                    )
+                  LIMIT 1
+                `).bind(row.id).first();
+                if (attrCheck) isReferredByTsr = true;
+              } catch (_) {}
+            }
+            if (isReferredByTsr) {
+              row.applied_promo = "TSRHELP";
+              db.prepare("UPDATE profiles SET applied_promo = 'TSRHELP' WHERE id = ?")
+                .bind(row.id)
+                .run()
+                .catch(() => {});
+            }
+          }
+        }
+      }
 
       if (payload.isSingle || payload.isMaybeSingle) {
         if (processedResults.length === 0) {
@@ -1524,6 +1618,15 @@ export const adminSetUserReferrer = createServerFn({ method: "POST" })
           INSERT INTO referral_attributions (id, referred_user_id, referrer_user_id, referral_code_id, attributed_code, created_at)
           VALUES (?, ?, ?, ?, ?, datetime('now'))
         `).bind(crypto.randomUUID(), targetUser.id, referrerUserId, referralCodeId, attributedCode).run();
+      }
+
+      if (attributedCode.toUpperCase() === "TSRHELP") {
+        try {
+          await db.prepare(`
+            UPDATE profiles SET applied_promo = 'TSRHELP'
+            WHERE id = ? AND (promo_discount_redeemed = 0 OR promo_discount_redeemed IS NULL)
+          `).bind(targetUser.id).run();
+        } catch (_) {}
       }
 
       return {

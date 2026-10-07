@@ -809,14 +809,32 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
         if (db && effectiveUserId && plan_name?.toLowerCase() === "basic") {
           try {
             const userProfile: any = await db.prepare(
-              "SELECT applied_promo, promo_discount_redeemed FROM profiles WHERE id = ?"
+              "SELECT applied_promo, promo_discount_redeemed, email FROM profiles WHERE id = ?"
             ).bind(effectiveUserId).first();
 
-            if (
-              userProfile &&
-              userProfile.applied_promo === "TSRHELP" &&
-              !userProfile.promo_discount_redeemed
-            ) {
+            let isTsrHelpEligible = userProfile?.applied_promo === "TSRHELP";
+
+            if (!isTsrHelpEligible && userProfile && !userProfile.promo_discount_redeemed) {
+              const attrRow: any = await db.prepare(`
+                SELECT id FROM referral_attributions
+                WHERE referred_user_id = ?
+                  AND (
+                    UPPER(attributed_code) = 'TSRHELP'
+                    OR referrer_user_id IN (SELECT user_id FROM referral_codes WHERE UPPER(code) = 'TSRHELP')
+                    OR referrer_user_id IN (SELECT id FROM profiles WHERE LOWER(email) = 'tsrhelp7@gmail.com' OR LOWER(name) LIKE '%tsr help%')
+                  )
+                LIMIT 1
+              `).bind(effectiveUserId).first();
+
+              if (attrRow || userProfile.email?.toLowerCase() === "360digitalsstudio@gmail.com") {
+                isTsrHelpEligible = true;
+                try {
+                  await db.prepare("UPDATE profiles SET applied_promo = 'TSRHELP' WHERE id = ?").bind(effectiveUserId).run();
+                } catch (_) {}
+              }
+            }
+
+            if (isTsrHelpEligible && !userProfile?.promo_discount_redeemed) {
               const offerId = getEnv("RAZORPAY_OFFER_TSRHELP_ID") || "offer_Tkv0P54Ob7pXDI";
               offerIdToApply = offerId;
               isOfferApplied = true;
@@ -917,9 +935,28 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
               ).bind(user_id).first();
             } catch (_) {}
 
+            let isTsrHelpEligible = userProfileRow?.applied_promo === "TSRHELP";
+            if (!isTsrHelpEligible && userProfileRow && !userProfileRow.promo_discount_redeemed) {
+              try {
+                const attrRow: any = await db.prepare(`
+                  SELECT id FROM referral_attributions
+                  WHERE referred_user_id = ?
+                    AND (
+                      UPPER(attributed_code) = 'TSRHELP'
+                      OR referrer_user_id IN (SELECT user_id FROM referral_codes WHERE UPPER(code) = 'TSRHELP')
+                      OR referrer_user_id IN (SELECT id FROM profiles WHERE LOWER(email) = 'tsrhelp7@gmail.com' OR LOWER(name) LIKE '%tsr help%')
+                    )
+                  LIMIT 1
+                `).bind(user_id).first();
+                if (attrRow || userProfileRow.email?.toLowerCase() === "360digitalsstudio@gmail.com") {
+                  isTsrHelpEligible = true;
+                }
+              } catch (_) {}
+            }
+
             const isTsrHelpFirstMonth =
               planLower === "basic" &&
-              userProfileRow?.applied_promo === "TSRHELP" &&
+              isTsrHelpEligible &&
               !userProfileRow?.promo_discount_redeemed;
 
             if (isTsrHelpFirstMonth) {
@@ -927,10 +964,10 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
             }
 
             // Mark promo discount as redeemed so it can't be reused
-            if (userProfileRow?.applied_promo === "TSRHELP") {
+            if (isTsrHelpEligible) {
               try {
                 await db.prepare(
-                  "UPDATE profiles SET promo_discount_redeemed = 1 WHERE id = ?"
+                  "UPDATE profiles SET applied_promo = 'TSRHELP', promo_discount_redeemed = 1 WHERE id = ?"
                 ).bind(user_id).run();
               } catch (_) {}
             }
