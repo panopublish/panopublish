@@ -254,7 +254,7 @@ function PublishPage() {
   const [publishProgress, setPublishProgress] = useState<{
     current: number;
     total: number;
-    step: "idle" | "processing" | "encoding" | "uploading" | "connecting" | "success" | "failed";
+    step: "idle" | "processing" | "encoding" | "uploading" | "google_processing" | "connecting" | "success" | "failed";
     message: string;
     uploadPct?: number;
   } | null>(null);
@@ -589,7 +589,7 @@ function PublishPage() {
     const allPublished =
       photos.length > 0 && photos.every((p) => p.streetview_status === "PUBLISHED");
 
-    if (anyProcessing) {
+    if (anyProcessing && !publishing) {
       setPrevWasProcessing(true);
     }
 
@@ -600,7 +600,7 @@ function PublishPage() {
       setPrevWasProcessing(false);
       toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
       syncConnectionsOnly();
-    } else if (allPublished && prevWasProcessing && accessToken && !publishing) {
+    } else if (allPublished && prevWasProcessing && needsSync && accessToken && !publishing) {
       setPrevWasProcessing(false);
       toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
       syncConnectionsOnly();
@@ -1109,28 +1109,90 @@ function PublishPage() {
         await new Promise((r) => setTimeout(r, 1200));
       }
 
+      // Step 4.5: Wait for Google to process uploaded scenes before connection syncing
+      setPublishProgress({
+        current: photoList.length,
+        total: photoList.length,
+        step: "google_processing",
+        uploadPct: 75,
+        message: "Google is processing 360° scenes... Please keep this window open.",
+      });
+
+      const maxWaitMs = 120000; // 2 minutes max
+      const pollIntervalMs = 4000;
+      const processingStartTime = Date.now();
+      const notifiedRejectionIds = new Set<string>();
+
+      while (Date.now() - processingStartTime < maxWaitMs) {
+        await new Promise((r) => setTimeout(r, pollIntervalMs));
+
+        const token = (await getFreshToken()) || freshToken;
+        if (!token) break;
+
+        try {
+          await supabase.functions.invoke("streetview-publish", {
+            body: {
+              action: "batch_get_photo_status",
+              access_token: token,
+            },
+          });
+        } catch (pollErr) {
+          console.warn("Status poll error:", pollErr);
+        }
+
+        const { data: currentTourPhotos } = await supabase
+          .from("photos")
+          .select("id, filename, streetview_status")
+          .eq("tour_id", tourId);
+
+        if (currentTourPhotos && currentTourPhotos.length > 0) {
+          const processingScenes = currentTourPhotos.filter((p: any) => p.streetview_status === "PROCESSING");
+          const readyCount = currentTourPhotos.filter((p: any) => p.streetview_status === "PUBLISHED").length;
+          const failedScenes = currentTourPhotos.filter((p: any) => p.streetview_status === "FAILED");
+          const totalCount = currentTourPhotos.length;
+
+          failedScenes.forEach((p: any) => {
+            if (!notifiedRejectionIds.has(p.id)) {
+              notifiedRejectionIds.add(p.id);
+              toast.error(
+                `Google rejected "${p.filename || "Scene"}" during processing (must be 2:1 equirectangular panorama).`,
+              );
+            }
+          });
+
+          const completedCount = readyCount + failedScenes.length;
+          const pct = Math.min(92, 75 + Math.round((completedCount / totalCount) * 17));
+
+          setPublishProgress({
+            current: completedCount,
+            total: totalCount,
+            step: "google_processing",
+            uploadPct: pct,
+            message: `Google processing scenes (${readyCount}/${totalCount} ready)... Please keep this window open.`,
+          });
+
+          if (processingScenes.length === 0) {
+            break;
+          }
+        }
+      }
+
       // Step 5: Update connections and poses on Google Maps
       setPublishProgress({
         current: photoList.length,
         total: photoList.length,
         step: "connecting",
-        uploadPct: 92,
+        uploadPct: 95,
         message: "Synchronizing Street View connections on Google Maps...",
       });
       toast.info("Updating connections and poses on Google Maps...");
 
       const connectionToken = (await getFreshToken()) || freshToken;
-      await syncStreetViewConnections(supabase, tourId, connectionToken);
-
-      // Since photos are still processing, explicitly set synced to false.
-      // The background status hook will auto-trigger a final sync once processing completes.
-      const { data: latestPhotos } = await supabase
-        .from("photos")
-        .select("streetview_status")
-        .eq("tour_id", tourId);
-      const allPublishedNow = latestPhotos
-        ? latestPhotos.every((p: any) => p.streetview_status === "PUBLISHED")
-        : false;
+      try {
+        await syncStreetViewConnections(supabase, tourId, connectionToken);
+      } catch (connErr: any) {
+        console.warn("Connection sync notice:", connErr);
+      }
 
       const isAlreadyPublished = tour?.has_been_published ?? false;
       await supabase
@@ -1138,9 +1200,20 @@ function PublishPage() {
         .update({
           status: "published",
           has_been_published: true,
-          streetview_connections_synced: allPublishedNow,
+          streetview_connections_synced: true,
         } as any)
         .eq("id", tourId);
+
+      setTour((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              status: "published",
+              has_been_published: true,
+              streetview_connections_synced: true,
+            }
+          : null,
+      );
 
       if (!isAlreadyPublished && user) {
         const currentUsed = profile?.billing_cycle_tours_used ?? 0;
@@ -1157,7 +1230,7 @@ function PublishPage() {
         );
       }
 
-      // ONLY 100% and successful once all connections are synced!
+      // ONLY reach 100% once Google processing and connections are fully synced!
       setPublishProgress({
         current: photoList.length,
         total: photoList.length,
@@ -1173,8 +1246,8 @@ function PublishPage() {
       }
       load();
 
-      // Display the 100% full progress bar for 3 seconds before dismissing
-      await new Promise((r) => setTimeout(r, 3000));
+      // Display the 100% full progress bar for 3.5 seconds before dismissing
+      await new Promise((r) => setTimeout(r, 3500));
     } catch (e: any) {
       console.error("Publishing error:", e);
       toast.error("Publishing stopped: " + e.message);
@@ -2632,6 +2705,7 @@ function PublishPage() {
               {publishProgress && (() => {
                 const isSuccess = publishProgress.step === "success";
                 const isConnecting = publishProgress.step === "connecting";
+                const isGoogleProcessing = publishProgress.step === "google_processing";
                 const isFailed = publishProgress.step === "failed";
                 const displaySceneNum = Math.min(publishProgress.total, publishProgress.current + 1);
                 const currentUploadPct = publishProgress.uploadPct || 0;
@@ -2641,10 +2715,12 @@ function PublishPage() {
                 if (isSuccess) {
                   calculatedPct = 100;
                 } else if (isConnecting) {
-                  calculatedPct = 95;
+                  calculatedPct = publishProgress.uploadPct || 95;
+                } else if (isGoogleProcessing) {
+                  calculatedPct = publishProgress.uploadPct || 85;
                 } else {
                   const sceneFraction = (publishProgress.current + (currentUploadPct / 100)) / total;
-                  calculatedPct = Math.min(88, Math.max(3, Math.round(sceneFraction * 85)));
+                  calculatedPct = Math.min(75, Math.max(3, Math.round(sceneFraction * 75)));
                 }
 
                 return (
@@ -2676,6 +2752,11 @@ function PublishPage() {
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0277bd]" />
                             Syncing Connections to Google Maps
+                          </>
+                        ) : isGoogleProcessing ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-[#0277bd]" />
+                            Processing Scenes on Google Maps
                           </>
                         ) : (
                           <>
