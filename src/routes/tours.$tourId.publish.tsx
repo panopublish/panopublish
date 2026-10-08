@@ -2122,6 +2122,8 @@ function PublishPage() {
                           className="text-xs border rounded-lg w-full h-8 px-2 bg-background font-medium outline-none cursor-pointer"
                           disabled={nadirType === "None"}
                         >
+                          <option value="5%">5% (Minimal)</option>
+                          <option value="8%">8% (Extra Small)</option>
                           <option value="10%">10% (Small)</option>
                           <option value="13%">13% (Medium)</option>
                           <option value="15%">15% (Standard)</option>
@@ -2536,6 +2538,7 @@ function PublishPage() {
                   className="border rounded px-2 py-1 bg-background font-medium"
                 >
                   <option value="5%">5%</option>
+                  <option value="8%">8%</option>
                   <option value="10%">10%</option>
                   <option value="13%">13%</option>
                   <option value="15%">15%</option>
