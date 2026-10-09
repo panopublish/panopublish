@@ -240,6 +240,7 @@ export type Database = {
           size_bytes: number | null;
           status: string;
           streetview_photo_id: string | null;
+          streetview_rejection_reason: string | null;
           streetview_share_link: string | null;
           streetview_status: string | null;
           thumbnail_url?: string | null;
@@ -264,6 +265,7 @@ export type Database = {
           size_bytes?: number | null;
           status?: string;
           streetview_photo_id?: string | null;
+          streetview_rejection_reason?: string | null;
           streetview_share_link?: string | null;
           streetview_status?: string | null;
           thumbnail_url?: string | null;
@@ -288,6 +290,7 @@ export type Database = {
           size_bytes?: number | null;
           status?: string;
           streetview_photo_id?: string | null;
+          streetview_rejection_reason?: string | null;
           streetview_share_link?: string | null;
           streetview_status?: string | null;
           thumbnail_url?: string | null;

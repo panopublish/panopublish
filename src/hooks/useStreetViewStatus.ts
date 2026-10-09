@@ -68,18 +68,40 @@ export function useStreetViewStatus(
               const processingIdArray = Array.from(wasProcessingIds);
               const { data: nowFailed } = await supabase
                 .from("photos")
-                .select("id, filename, streetview_status")
+                .select("id, filename, streetview_status, streetview_rejection_reason")
                 .in("id", processingIdArray)
                 .eq("streetview_status", "FAILED");
 
               if (nowFailed && nowFailed.length > 0 && !isCancelled) {
                 nowFailed.forEach((p: any) => {
                   const name = p.filename || p.id || "unknown scene";
+                  const rawCode: string = p.streetview_rejection_reason || "";
+
+                  // Map Google's exact rejection codes to human-readable explanations
+                  const rejectionMessages: Record<string, string> = {
+                    REJECTED_NOT_PANORAMA:
+                      "Google says this is NOT a valid equirectangular 360° panorama. The image may not be 2:1 aspect ratio, may have wrong XMP metadata, or Google's vision AI didn't recognize it as a panorama.",
+                    REJECTED_INSUFFICIENT_GPS:
+                      "Google rejected this photo because it has no or insufficient GPS coordinates. Please ensure the image has valid GPS EXIF data and a position is set.",
+                    REJECTED_TOO_SMALL:
+                      "Google rejected this photo because the resolution is too small. Street View requires a minimum of ~7.5 megapixels (approximately 4000×2000 pixels or larger).",
+                    REJECTED_CORRUPT_DATA:
+                      "Google rejected this photo because the image data is corrupted. Try re-exporting the original image and re-uploading.",
+                    REJECTED_DUPLICATE:
+                      "Google says this photo is a duplicate — a very similar photo from the same GPS location may already exist on Street View under another account.",
+                    REJECTED_UNKNOWN:
+                      "Google rejected this photo for an unknown reason. Try re-uploading the original unedited image.",
+                  };
+
+                  const explanation =
+                    rejectionMessages[rawCode] ||
+                    (rawCode
+                      ? `Google rejection code: ${rawCode}. Please check image format, resolution, and GPS coordinates.`
+                      : "This image was accepted for upload but then rejected during processing. Check image format, aspect ratio (must be 2:1), and GPS coordinates.");
+
                   toast.error(
-                    `Google rejected "${name}" — this image was accepted for upload but then rejected during Google's processing. ` +
-                    `This usually means the image is not a valid equirectangular 360° panorama, has corrupted data, or its aspect ratio is not exactly 2:1. ` +
-                    `Please replace this scene with a properly formatted 360° photo and retry.`,
-                    { duration: 15000 },
+                    `Google rejected "${name}"\n\n${explanation}`,
+                    { duration: 20000 },
                   );
                 });
               }

@@ -51,6 +51,9 @@ async function ensureReferralSchema(db: any) {
   try {
     await db.prepare("ALTER TABLE profiles ADD COLUMN payout_ifsc TEXT").run();
   } catch (_) {}
+  try {
+    await db.prepare("ALTER TABLE photos ADD COLUMN streetview_rejection_reason TEXT").run();
+  } catch (_) {}
 
   try {
     await db.prepare(`

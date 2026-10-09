@@ -667,12 +667,12 @@ serve(async (req) => {
           const googlePhotos = listData.photos || [];
           const found = googlePhotos.find((gp: any) => gp.photoId?.id === streetview_photo_id);
           if (found) {
-            if (found.mapsPublishStatus === "PUBLISHED") status = "PUBLISHED";
-            else if (
-              found.mapsPublishStatus === "REJECTED_UNKNOWN" ||
-              found.mapsPublishStatus === "REJECTED"
-            )
-              status = "FAILED";
+            const mps: string = found.mapsPublishStatus || "";
+            if (mps === "PUBLISHED") status = "PUBLISHED";
+            // Capture ALL Google rejection codes — previously only REJECTED_UNKNOWN was handled,
+            // leaving REJECTED_NOT_PANORAMA, REJECTED_INSUFFICIENT_GPS, REJECTED_TOO_SMALL,
+            // REJECTED_CORRUPT_DATA, REJECTED_DUPLICATE permanently stuck as PROCESSING.
+            else if (mps.startsWith("REJECTED")) status = "FAILED";
             shareLink = found.shareLink;
             viewCount = found.viewCount ? parseInt(found.viewCount, 10) : 0;
             rawData = found;
@@ -696,26 +696,27 @@ serve(async (req) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.message || "Failed to get photo status");
 
-        if (data.mapsPublishStatus === "PUBLISHED") status = "PUBLISHED";
-        else if (
-          data.mapsPublishStatus === "REJECTED_UNKNOWN" ||
-          data.mapsPublishStatus === "REJECTED"
-        )
-          status = "FAILED";
+        const mps: string = data.mapsPublishStatus || "";
+        if (mps === "PUBLISHED") status = "PUBLISHED";
+        else if (mps.startsWith("REJECTED")) status = "FAILED";
 
         shareLink = data.shareLink;
         viewCount = data.viewCount ? parseInt(data.viewCount, 10) : 0;
         rawData = data;
       }
 
-      // Update in database directly
+      // Update in database directly — also store the raw mapsPublishStatus as rejection_reason
+      const rejectionReason = (rawData?.mapsPublishStatus || "").startsWith("REJECTED")
+        ? rawData.mapsPublishStatus
+        : null;
       const { error: dbErr } = await supabaseClient
         .from("photos")
         .update({
           streetview_status: status,
           streetview_share_link: shareLink,
           view_count: viewCount,
-        })
+          ...(rejectionReason ? { streetview_rejection_reason: rejectionReason } : {}),
+        } as any)
         .eq("streetview_photo_id", streetview_photo_id);
 
       if (dbErr) {
@@ -773,20 +774,19 @@ serve(async (req) => {
         } while (pageToken && pageCount < MAX_PAGES);
 
         // Build a map of Google photoId → resolved status
-        const statusMap = new Map<string, { status: string; shareLink?: string; viewCount: number }>();
+        const statusMap = new Map<string, { status: string; shareLink?: string; viewCount: number; rejectionReason?: string }>();
         for (const gp of allGooglePhotos) {
           const gid = gp.photoId?.id;
           if (!gid) continue;
-          const status =
-            gp.mapsPublishStatus === "PUBLISHED"
-              ? "PUBLISHED"
-              : gp.mapsPublishStatus?.includes("REJECTED")
-              ? "FAILED"
-              : "PROCESSING";
+          const mps: string = gp.mapsPublishStatus || "";
+          const status = mps === "PUBLISHED" ? "PUBLISHED"
+            : mps.startsWith("REJECTED") ? "FAILED"
+            : "PROCESSING";
           statusMap.set(gid, {
             status,
             shareLink: gp.shareLink,
             viewCount: gp.viewCount ? parseInt(gp.viewCount, 10) : 0,
+            rejectionReason: mps.startsWith("REJECTED") ? mps : undefined,
           });
         }
 
@@ -802,13 +802,17 @@ serve(async (req) => {
                   streetview_status: info.status,
                   streetview_share_link: info.shareLink || null,
                   view_count: info.viewCount,
-                })
+                  // Store the exact Google rejection code (REJECTED_NOT_PANORAMA, REJECTED_DUPLICATE, etc.)
+                  // so the UI can show a meaningful error instead of a generic "must be 2:1" message
+                  ...(info.rejectionReason ? { streetview_rejection_reason: info.rejectionReason } : {}),
+                } as any)
                 .eq("streetview_photo_id", gid),
             );
           }
           // Fire all updates in parallel, ignore individual errors
           await Promise.allSettled(updates);
         }
+
 
         return new Response(
           JSON.stringify({

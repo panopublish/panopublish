@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS photos (
   roll REAL DEFAULT 0,
   capture_time TEXT,
   streetview_photo_id TEXT,
+  streetview_rejection_reason TEXT,
   streetview_share_link TEXT,
   streetview_status TEXT DEFAULT 'NOT_PUBLISHED',
   thumbnail_url TEXT,

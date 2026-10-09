@@ -147,6 +147,7 @@ type Photo = {
   capture_time?: string;
   streetview_status?: string;
   streetview_photo_id?: string;
+  streetview_rejection_reason?: string | null;
   streetview_share_link?: string | null;
   island_id?: string | null;
 };
@@ -1153,7 +1154,7 @@ function PublishPage() {
 
         const { data: currentTourPhotos } = await supabase
           .from("photos")
-          .select("id, filename, streetview_status")
+          .select("id, filename, streetview_status, streetview_rejection_reason")
           .eq("tour_id", tourId);
 
         if (currentTourPhotos && currentTourPhotos.length > 0) {
@@ -1165,8 +1166,24 @@ function PublishPage() {
           failedScenes.forEach((p: any) => {
             if (!notifiedRejectionIds.has(p.id)) {
               notifiedRejectionIds.add(p.id);
+              const reason = p.streetview_rejection_reason || "";
+              const explanation =
+                reason === "REJECTED_NOT_PANORAMA"
+                  ? "Not recognized as a valid 360° panorama"
+                  : reason === "REJECTED_INSUFFICIENT_GPS"
+                  ? "Missing or invalid GPS coordinates"
+                  : reason === "REJECTED_TOO_SMALL"
+                  ? "Image resolution is below Street View minimum"
+                  : reason === "REJECTED_DUPLICATE"
+                  ? "Google detected a duplicate image at this location"
+                  : reason === "REJECTED_CORRUPT_DATA"
+                  ? "Image file data is corrupted"
+                  : reason
+                  ? `Google rejection code: ${reason}`
+                  : "Google could not process this image";
               toast.error(
-                `Google rejected "${p.filename || "Scene"}" during processing (must be 2:1 equirectangular panorama).`,
+                `Google rejected "${p.filename || "Scene"}" during processing: ${explanation}.`,
+                { duration: 15000 },
               );
             }
           });
@@ -1497,14 +1514,30 @@ function PublishPage() {
         try {
           const { data: checkResult } = await supabase
             .from("photos")
-            .select("streetview_status")
+            .select("streetview_status, streetview_rejection_reason")
             .eq("id", delayedCheckPhotoId)
             .maybeSingle();
           if (checkResult?.streetview_status === "FAILED") {
+            const rawCode = (checkResult as any)?.streetview_rejection_reason || "";
+            const rejectionMessages: Record<string, string> = {
+              REJECTED_NOT_PANORAMA:
+                "Google says this is NOT a valid equirectangular 360° panorama. Check aspect ratio and metadata.",
+              REJECTED_INSUFFICIENT_GPS:
+                "Google rejected this photo because of missing or insufficient GPS coordinates.",
+              REJECTED_TOO_SMALL:
+                "Google rejected this photo because the resolution is too small (requires ~7.5 MP minimum).",
+              REJECTED_CORRUPT_DATA:
+                "Google rejected this photo because the image data is corrupted. Try re-exporting.",
+              REJECTED_DUPLICATE:
+                "Google says this photo is a duplicate of an existing photo at this location.",
+            };
+            const explanation =
+              rejectionMessages[rawCode] ||
+              (rawCode
+                ? `Google rejection code: ${rawCode}`
+                : "Google's servers could not process this image during processing.");
             toast.error(
-              `Google rejected "${delayedCheckName}" during processing — the upload was accepted but Google's servers could not process this image. ` +
-              `This typically means the image is not a valid equirectangular 360° panorama (must be 2:1 aspect ratio, e.g. 8000×4000px), ` +
-              `or the JPEG data may be corrupted. Please replace this photo with a properly formatted 360° image and retry.`,
+              `Google rejected "${delayedCheckName}" during processing: ${explanation}`,
               { duration: 18000 },
             );
             load();
@@ -3048,10 +3081,24 @@ function PublishPage() {
                         </Button>
                       </div>
                     ) : p.streetview_status === "FAILED" ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-red-600 font-semibold text-xs flex items-center gap-1">
                           <XIcon className="h-4 w-4" /> FAILED
                         </span>
+                        {/* Show actual Google rejection reason if available */}
+                        {p.streetview_rejection_reason && (
+                          <span
+                            title={p.streetview_rejection_reason}
+                            className="text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded cursor-help"
+                          >
+                            {p.streetview_rejection_reason === "REJECTED_NOT_PANORAMA" ? "NOT_PANORAMA" :
+                             p.streetview_rejection_reason === "REJECTED_INSUFFICIENT_GPS" ? "NO_GPS" :
+                             p.streetview_rejection_reason === "REJECTED_TOO_SMALL" ? "TOO_SMALL" :
+                             p.streetview_rejection_reason === "REJECTED_CORRUPT_DATA" ? "CORRUPT" :
+                             p.streetview_rejection_reason === "REJECTED_DUPLICATE" ? "DUPLICATE" :
+                             p.streetview_rejection_reason.replace("REJECTED_", "")}
+                          </span>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -3062,6 +3109,7 @@ function PublishPage() {
                           <RotateCcw className="h-3 w-3 mr-1" /> Retry
                         </Button>
                       </div>
+
                     ) : (
                       <span className="text-gray-400 font-semibold text-xs">NOT PUBLISHED</span>
                     )}

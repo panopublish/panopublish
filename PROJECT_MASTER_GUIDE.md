@@ -391,6 +391,7 @@ When working on this repository or generating code based on this guide, AI model
 
 ## 10. Summary of Reference Links
 - **Master Guide (Root)**: [PROJECT_MASTER_GUIDE.md](file:///d:/Pano%20Publish/PROJECT_MASTER_GUIDE.md)
+- **Known Bugs & Issue Tracker**: [BUG_LIST.md](file:///d:/Pano%20Publish/BUG_LIST.md)
 - **Public Master Guide**: [public/PanoPublish_Master_Guide.md](file:///d:/Pano%20Publish/public/PanoPublish_Master_Guide.md)
 - **LLM Summary**: [public/llms.txt](file:///d:/Pano%20Publish/public/llms.txt)
 - **Full LLM Context**: [public/llms-full.txt](file:///d:/Pano%20Publish/public/llms-full.txt)

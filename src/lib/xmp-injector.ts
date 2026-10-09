@@ -412,13 +412,14 @@ export async function ensureGPanoXmpBlob(
     `aspect=${width && height ? (width/height).toFixed(3) : '?'} forceNormalize=${!!options.forceNormalize}`
   );
 
-  const isAspectRatio2To1 = width && height && Math.abs(width / height - 2.0) <= 0.02;
+  // An image is directly compatible with pure byte-level injection if its aspect ratio
+  // is reasonably panoramic (between 1.7 and 2.3). createGPanoXmpXml natively computes
+  // the 2:1 FullPano sphere and centers the cropped area with CroppedAreaLeft/Top.
+  // This preserves 100% JPEG quality without canvas re-compression.
+  const isPanoramicRatio = width && height && (width / height >= 1.7 && width / height <= 2.3);
 
-  // --- Path A: genuinely non-2:1 aspect ratio ---
-  // Canvas-normalize to exact 2:1 ONLY when required for geometry.
-  // Use ORIGINAL dimensions (width, height) as CroppedArea XMP fields — the canvas target
-  // dimensions (targetW, targetH) describe the FullPano sphere, not the content area.
-  if (width && height && !isAspectRatio2To1) {
+  // --- Path A: Canvas normalize ONLY for non-panoramic images (e.g. flat photos) ---
+  if (width && height && !isPanoramicRatio) {
     try {
       const normalizedBlob = await normalizeTo2To1Canvas(blob, width, height);
       const normBuffer = await normalizedBlob.arrayBuffer();
@@ -429,27 +430,30 @@ export async function ensureGPanoXmpBlob(
       const targetW = normSofDims?.width ?? Math.max(width, height * 2);
       const targetH = normSofDims?.height ?? Math.round(targetW / 2);
 
-      // IMPORTANT: pass original (width, height) — createGPanoXmpXml will compute correct
-      // CroppedArea and FullPano fields from these. Passing (targetW, targetH) would make
-      // CroppedAreaImageWidth = FullPanoWidth (no crop offset) which is incorrect.
+      // CRITICAL FIX: The canvas JPEG now physically has dimensions targetW x targetH
+      // with black padding bars making it a full 2:1 equirectangular sphere.
+      // Therefore, the XMP CroppedAreaImageWidth/Height MUST equal targetW x targetH
+      // (the actual JPEG dimensions) to prevent Google's "dimension mismatch / not 2:1" rejection.
       const injectedBytes = injectGPanoXmpBytes(
         normBytes,
-        width,
-        height,
+        targetW,
+        targetH,
         options.heading || 0,
         options.pitch || 0,
         options.roll || 0
       );
-      console.info(`[PanoPublish XMP] Path A (canvas normalize): canvas=${targetW}x${targetH}, XMP content=${width}x${height}`);
+      console.info(`[PanoPublish XMP] Path A (canvas normalize): canvas=${targetW}x${targetH}, XMP 2:1 full pano`);
       return new Blob([injectedBytes.buffer as ArrayBuffer], { type: "image/jpeg" });
     } catch (normErr) {
       console.warn("[PanoPublish XMP] Canvas normalize failed, falling through to strip+inject:", normErr);
     }
   }
 
-  // --- Path B: 2:1 image (or canvas normalization failed) ---
-  // Strip all existing XMP, inject fresh PanoPublish GPano XMP.
-  // Byte-level injection: preserves original JPEG quality exactly.
+  // --- Path B: Panoramic image (including 2:1 and slightly cropped panoramas) ---
+  // Strip all existing camera/editor XMP, inject fresh PanoPublish GPano XMP.
+  // Byte-level injection: preserves original JPEG quality exactly without re-compressing.
+  // For slightly non-2:1 panoramas, createGPanoXmpXml automatically specifies the 2:1
+  // FullPano sphere with matching CroppedArea dimensions equal to physical JPEG SOF pixels.
   if (width && height) {
     try {
       const strippedBytes = stripExistingXmpSegments(rawBytes);
@@ -461,7 +465,7 @@ export async function ensureGPanoXmpBlob(
         options.pitch || 0,
         options.roll || 0
       );
-      console.info(`[PanoPublish XMP] Path B (strip+inject): ${width}x${height} (2:1=${isAspectRatio2To1})`);
+      console.info(`[PanoPublish XMP] Path B (byte-level strip+inject): ${width}x${height} aspect=${(width/height).toFixed(3)}`);
       return new Blob([injected.buffer as ArrayBuffer], { type: "image/jpeg" });
     } catch (e) {
       console.warn("[PanoPublish XMP] Could not strip+inject GPano XMP bytes:", e);

@@ -555,38 +555,50 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
 
     if (payload.action === "batch_get_photo_status") {
       try {
-        const listRes = await fetch(
-          `https://streetviewpublish.googleapis.com/v1/photos?key=${apiKey}&view=BASIC&pageSize=100`,
-          {
-            headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
-          },
-        );
-        if (!listRes.ok) {
-          throw new Error(`Failed to list photos: status ${listRes.status}`);
-        }
-        const listData: any = await listRes.json();
-        const googlePhotos = listData.photos || [];
+        // Paginate through ALL Google Street View photos (API max is 100/page)
+        const allGooglePhotos: any[] = [];
+        let pageToken: string | undefined = undefined;
+        let pageCount = 0;
+        const MAX_PAGES = 10; // safety cap: 1000 photos
 
-        const updates: Array<{ id: string; status: string; shareLink?: string }> = [];
-        for (const gp of googlePhotos) {
+        do {
+          const url = new URL("https://streetviewpublish.googleapis.com/v1/photos");
+          url.searchParams.set("key", apiKey);
+          url.searchParams.set("view", "BASIC");
+          url.searchParams.set("pageSize", "100");
+          if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+          const listRes = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+          });
+          if (!listRes.ok) {
+            throw new Error(`Failed to list photos (page ${pageCount + 1}): status ${listRes.status}`);
+          }
+          const listData: any = await listRes.json();
+          const page = listData.photos || [];
+          allGooglePhotos.push(...page);
+          pageToken = listData.nextPageToken;
+          pageCount++;
+        } while (pageToken && pageCount < MAX_PAGES);
+
+        const updates: Array<{ id: string; status: string; shareLink?: string; rejectionReason?: string }> = [];
+        for (const gp of allGooglePhotos) {
           const pid = gp.photoId?.id;
           if (!pid) continue;
-          let status = "PROCESSING";
-          if (gp.mapsPublishStatus === "PUBLISHED") status = "PUBLISHED";
-          else if (
-            gp.mapsPublishStatus === "REJECTED_UNKNOWN" ||
-            gp.mapsPublishStatus === "REJECTED"
-          )
-            status = "FAILED";
+          const mps: string = gp.mapsPublishStatus || "";
+          const status = mps === "PUBLISHED" ? "PUBLISHED"
+            : mps.startsWith("REJECTED") ? "FAILED"
+            : "PROCESSING";
+          const rejectionReason = mps.startsWith("REJECTED") ? mps : null;
 
           await db
             .prepare(
-              "UPDATE photos SET streetview_status = ?, streetview_share_link = COALESCE(?, streetview_share_link), view_count = ? WHERE streetview_photo_id = ?",
+              "UPDATE photos SET streetview_status = ?, streetview_share_link = COALESCE(?, streetview_share_link), view_count = ?, streetview_rejection_reason = COALESCE(?, streetview_rejection_reason) WHERE streetview_photo_id = ?",
             )
-            .bind(status, gp.shareLink || null, gp.viewCount ? parseInt(gp.viewCount, 10) : 0, pid)
+            .bind(status, gp.shareLink || null, gp.viewCount ? parseInt(gp.viewCount, 10) : 0, rejectionReason, pid)
             .run();
 
-          updates.push({ id: pid, status, shareLink: gp.shareLink });
+          updates.push({ id: pid, status, shareLink: gp.shareLink, rejectionReason: rejectionReason || undefined });
         }
 
         return { success: true, count: updates.length, updates };
@@ -615,12 +627,9 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           const googlePhotos = listData.photos || [];
           const found = googlePhotos.find((gp: any) => gp.photoId?.id === streetview_photo_id);
           if (found) {
-            if (found.mapsPublishStatus === "PUBLISHED") status = "PUBLISHED";
-            else if (
-              found.mapsPublishStatus === "REJECTED_UNKNOWN" ||
-              found.mapsPublishStatus === "REJECTED"
-            )
-              status = "FAILED";
+            const mps: string = found.mapsPublishStatus || "";
+            if (mps === "PUBLISHED") status = "PUBLISHED";
+            else if (mps.startsWith("REJECTED")) status = "FAILED";
             shareLink = found.shareLink;
             viewCount = found.viewCount ? parseInt(found.viewCount, 10) : 0;
             rawData = found;
@@ -640,12 +649,9 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
         const data: any = await res.json();
         if (!res.ok) throw new Error(data.error?.message || "Failed to get photo status");
 
-        if (data.mapsPublishStatus === "PUBLISHED") status = "PUBLISHED";
-        else if (
-          data.mapsPublishStatus === "REJECTED_UNKNOWN" ||
-          data.mapsPublishStatus === "REJECTED"
-        )
-          status = "FAILED";
+        const mps: string = data.mapsPublishStatus || "";
+        if (mps === "PUBLISHED") status = "PUBLISHED";
+        else if (mps.startsWith("REJECTED")) status = "FAILED";
 
         shareLink = data.shareLink;
         viewCount = data.viewCount ? parseInt(data.viewCount, 10) : 0;
@@ -653,14 +659,17 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
       }
 
       // Update in D1 database
+      const rejectionReason = (rawData?.mapsPublishStatus || "").startsWith("REJECTED")
+        ? rawData.mapsPublishStatus
+        : null;
       await db
         .prepare(
-          "UPDATE photos SET streetview_status = ?, streetview_share_link = ?, view_count = ? WHERE streetview_photo_id = ?",
+          "UPDATE photos SET streetview_status = ?, streetview_share_link = ?, view_count = ?, streetview_rejection_reason = COALESCE(?, streetview_rejection_reason) WHERE streetview_photo_id = ?",
         )
-        .bind(status, shareLink || null, viewCount, streetview_photo_id)
+        .bind(status, shareLink || null, viewCount, rejectionReason, streetview_photo_id)
         .run();
 
-      return { status, shareLink, viewCount, data: rawData };
+      return { status, shareLink, viewCount, rejectionReason, data: rawData };
     }
 
     if (payload.action === "batch_delete_photos") {
