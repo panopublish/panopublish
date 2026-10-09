@@ -8,6 +8,7 @@ export interface Photo {
   tour_id?: string;
   streetview_status?: string;
   streetview_photo_id?: string;
+  streetview_rejection_reason?: string | null;
   [key: string]: any;
 }
 
@@ -76,6 +77,8 @@ export function useStreetViewStatus(
                 nowFailed.forEach((p: any) => {
                   const name = p.filename || p.id || "unknown scene";
                   const rawCode: string = p.streetview_rejection_reason || "";
+                  // Skip REJECTED_UNKNOWN: it's handled as pending review, not a hard failure
+                  if (rawCode === "REJECTED_UNKNOWN") return;
 
                   // Map Google's exact rejection codes to human-readable explanations
                   const rejectionMessages: Record<string, string> = {
@@ -89,8 +92,6 @@ export function useStreetViewStatus(
                       "Google rejected this photo because the image data is corrupted. Try re-exporting the original image and re-uploading.",
                     REJECTED_DUPLICATE:
                       "Google says this photo is a duplicate — a very similar photo from the same GPS location may already exist on Street View under another account.",
-                    REJECTED_UNKNOWN:
-                      "Google rejected this photo for an unknown reason. Try re-uploading the original unedited image.",
                   };
 
                   const explanation =
@@ -110,18 +111,28 @@ export function useStreetViewStatus(
             }
           }
 
-          // Check if all photos in this tour have finished processing
+          // Check if all photos in this tour have finished processing or are in secondary review
           const tourId = processingPhotos[0]?.tour_id;
           if (tourId) {
+            const { data: tourData } = await supabase
+              .from("tours")
+              .select("streetview_connections_synced")
+              .eq("id", tourId)
+              .maybeSingle();
+
             const { data: remainingProcessing } = await supabase
               .from("photos")
-              .select("id")
+              .select("id, streetview_rejection_reason")
               .eq("tour_id", tourId)
-              .eq("streetview_status", "PROCESSING")
-              .limit(1);
+              .eq("streetview_status", "PROCESSING");
 
-            if (!remainingProcessing || remainingProcessing.length === 0) {
-              console.log(`All photos for tour ${tourId} finished processing. Syncing connections...`);
+            const strictlyProcessing = (remainingProcessing || []).filter(
+              (p: any) => p.streetview_rejection_reason !== "REJECTED_UNKNOWN"
+            );
+
+            // If no scenes are in immediate ingestion processing, sync connections once
+            if (strictlyProcessing.length === 0 && !tourData?.streetview_connections_synced) {
+              console.log(`Scenes for tour ${tourId} finished processing / queued for review. Syncing connections...`);
               let synced = false;
               for (let attempt = 1; attempt <= 3; attempt++) {
                 try {

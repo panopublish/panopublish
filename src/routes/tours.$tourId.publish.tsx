@@ -39,6 +39,7 @@ import {
   Lock,
   AlertCircle,
   RotateCcw,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { StatusBadge, Status } from "@/components/StatusBadge";
@@ -360,16 +361,34 @@ function PublishPage() {
   const [exportProgress, setExportProgress] = useState<{ message: string; pct: number } | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [syncingConnections, setSyncingConnections] = useState(false);
+  const [checkingStatusPhotoId, setCheckingStatusPhotoId] = useState<string | null>(null);
+  const [refreshingStatuses, setRefreshingStatuses] = useState(false);
+
+  const getValidGoogleToken = async (): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth", {
+        body: { action: "get_valid_token", user_id: user?.id },
+      });
+      if (!error && data?.access_token) {
+        setAccessToken(data.access_token);
+        return data.access_token;
+      }
+    } catch (e) {
+      console.error("Failed to refresh token:", e);
+    }
+    return accessToken || null;
+  };
 
   const handleSyncConnections = async () => {
-    if (!accessToken) {
+    const token = (await getValidGoogleToken()) || accessToken;
+    if (!token) {
       toast.error("Please connect your Google account first.");
       return;
     }
     setSyncingConnections(true);
     const tid = toast.loading("Syncing all connections and walking paths to Google Maps...");
     try {
-      await syncStreetViewConnections(supabase, tourId, accessToken);
+      await syncStreetViewConnections(supabase, tourId, token);
       await supabase
         .from("tours")
         .update({ streetview_connections_synced: true } as any)
@@ -380,6 +399,84 @@ function PublishPage() {
       toast.error("Failed to sync connections: " + (err.message || "Unknown error"), { id: tid });
     } finally {
       setSyncingConnections(false);
+    }
+  };
+
+  const handleCheckSinglePhotoStatus = async (photo: Photo) => {
+    if (!photo.streetview_photo_id) {
+      toast.error("This scene has not been uploaded to Google yet.");
+      return;
+    }
+    const token = (await getValidGoogleToken()) || accessToken;
+    if (!token) {
+      toast.error("Please connect your Google account first.");
+      return;
+    }
+    setCheckingStatusPhotoId(photo.id);
+    const tid = toast.loading(`Checking status of "${photo.filename || "Scene"}" on Google Maps...`);
+    try {
+      const { data, error } = await supabase.functions.invoke("streetview-publish", {
+        body: {
+          action: "get_photo_status",
+          streetview_photo_id: photo.streetview_photo_id,
+          access_token: token,
+        },
+      });
+      if (error) throw new Error(error.message || "Failed to check status");
+
+      await load();
+
+      if (data?.status === "PUBLISHED") {
+        toast.success(`"${photo.filename || "Scene"}" is PUBLISHED on Google Maps!`, { id: tid });
+      } else if (data?.rejectionReason === "REJECTED_UNKNOWN") {
+        toast.info(
+          `"${photo.filename || "Scene"}" is in Google's secondary review queue (typically takes 2–24h). It will publish automatically.`,
+          { id: tid, duration: 8000 }
+        );
+      } else if (data?.status === "FAILED") {
+        toast.error(
+          `Google rejected "${photo.filename || "Scene"}": ${data?.rejectionReason || "Processing failed"}`,
+          { id: tid }
+        );
+      } else {
+        toast.info(
+          `"${photo.filename || "Scene"}" is currently processing on Google Maps.`,
+          { id: tid }
+        );
+      }
+    } catch (err: any) {
+      console.error("Single status check error:", err);
+      toast.error("Failed to check status: " + (err.message || "Unknown error"), { id: tid });
+    } finally {
+      setCheckingStatusPhotoId(null);
+    }
+  };
+
+  const handleRefreshAllStatuses = async () => {
+    const token = (await getValidGoogleToken()) || accessToken;
+    if (!token) {
+      toast.error("Please connect your Google account first.");
+      return;
+    }
+    setRefreshingStatuses(true);
+    const tid = toast.loading("Polling Google Street View for latest statuses...");
+    try {
+      const { data, error } = await supabase.functions.invoke("streetview-publish", {
+        body: {
+          action: "batch_get_photo_status",
+          access_token: token,
+        },
+      });
+      if (error) throw new Error(error.message || "Failed to sync statuses");
+
+      await load();
+      const count = data?.count || 0;
+      toast.success(`Google Maps status refreshed (${count} scenes checked).`, { id: tid });
+    } catch (e: any) {
+      console.error("Batch status sync error:", e);
+      toast.error("Status sync failed: " + (e.message || "Unknown error"), { id: tid });
+    } finally {
+      setRefreshingStatuses(false);
     }
   };
 
@@ -475,7 +572,29 @@ function PublishPage() {
       if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
       return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
     });
-    setPhotos(loadedPhotos);
+
+    // Auto-heal photos mistakenly set to FAILED with REJECTED_UNKNOWN
+    // Since REJECTED_UNKNOWN is Google's deferred review queue (2-24h), treat as PROCESSING
+    let healedAny = false;
+    for (const p of loadedPhotos) {
+      if (
+        p.streetview_status === "FAILED" &&
+        p.streetview_rejection_reason === "REJECTED_UNKNOWN" &&
+        p.streetview_photo_id
+      ) {
+        p.streetview_status = "PROCESSING";
+        healedAny = true;
+        await supabase
+          .from("photos")
+          .update({ streetview_status: "PROCESSING" } as any)
+          .eq("id", p.id);
+      }
+    }
+    if (healedAny) {
+      setPhotos([...loadedPhotos]);
+    } else {
+      setPhotos(loadedPhotos);
+    }
 
     // Self-healing check: Sync tour status based on photos (Google Street View tours only)
     if (t && t.type !== "custom" && loadedPhotos.length > 0) {
@@ -1161,6 +1280,8 @@ function PublishPage() {
           const processingScenes = currentTourPhotos.filter((p: any) => p.streetview_status === "PROCESSING");
           const readyCount = currentTourPhotos.filter((p: any) => p.streetview_status === "PUBLISHED").length;
           const failedScenes = currentTourPhotos.filter((p: any) => p.streetview_status === "FAILED");
+          const reviewScenes = processingScenes.filter((p: any) => p.streetview_rejection_reason === "REJECTED_UNKNOWN");
+          const strictlyProcessing = processingScenes.filter((p: any) => p.streetview_rejection_reason !== "REJECTED_UNKNOWN");
           const totalCount = currentTourPhotos.length;
 
           failedScenes.forEach((p: any) => {
@@ -1188,18 +1309,31 @@ function PublishPage() {
             }
           });
 
-          const completedCount = readyCount + failedScenes.length;
+          // Inform user if scenes entered Google's secondary review queue
+          reviewScenes.forEach((p: any) => {
+            if (!notifiedRejectionIds.has(p.id)) {
+              notifiedRejectionIds.add(p.id);
+              toast.info(
+                `"${p.filename || "Scene"}" is in Google's secondary review queue (typically 2–24h). It will publish automatically without re-uploading.`,
+                { duration: 12000 },
+              );
+            }
+          });
+
+          const completedCount = readyCount + failedScenes.length + reviewScenes.length;
           const pct = Math.min(92, 75 + Math.round((completedCount / totalCount) * 17));
 
           setPublishProgress({
-            current: completedCount,
+            current: readyCount + reviewScenes.length,
             total: totalCount,
             step: "google_processing",
             uploadPct: pct,
-            message: `Google processing scenes (${readyCount}/${totalCount} ready)... Please keep this window open.`,
+            message: reviewScenes.length > 0
+              ? `Google processing scenes (${readyCount} published, ${reviewScenes.length} in review)...`
+              : `Google processing scenes (${readyCount}/${totalCount} ready)... Please keep this window open.`,
           });
 
-          if (processingScenes.length === 0) {
+          if (strictlyProcessing.length === 0) {
             break;
           }
         }
@@ -1517,8 +1651,8 @@ function PublishPage() {
             .select("streetview_status, streetview_rejection_reason")
             .eq("id", delayedCheckPhotoId)
             .maybeSingle();
+          const rawCode = (checkResult as any)?.streetview_rejection_reason || "";
           if (checkResult?.streetview_status === "FAILED") {
-            const rawCode = (checkResult as any)?.streetview_rejection_reason || "";
             const rejectionMessages: Record<string, string> = {
               REJECTED_NOT_PANORAMA:
                 "Google says this is NOT a valid equirectangular 360° panorama. Check aspect ratio and metadata.",
@@ -1539,6 +1673,12 @@ function PublishPage() {
             toast.error(
               `Google rejected "${delayedCheckName}" during processing: ${explanation}`,
               { duration: 18000 },
+            );
+            load();
+          } else if (rawCode === "REJECTED_UNKNOWN") {
+            toast.info(
+              `Google has queued "${delayedCheckName}" for standard secondary review (typically 2–24h). No action needed — Google will publish it automatically.`,
+              { duration: 12000 },
             );
             load();
           }
@@ -2922,33 +3062,17 @@ function PublishPage() {
                       </div>
                     </div>
 
-                    {/* Optional Status Sync button if scenes are processing */}
-                    {accessToken && hasProcessing && (
+                    {/* Status Sync button if scenes are processing or uploaded to Google */}
+                    {accessToken && (hasProcessing || photos.some((p) => p.streetview_photo_id)) && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={async () => {
-                          const tid = toast.loading("Polling Google Street View for latest status...");
-                          try {
-                            // Actually call the Google API — not just reload the DB
-                            if (accessToken) {
-                              await supabase.functions.invoke("streetview-publish", {
-                                body: {
-                                  action: "batch_get_photo_status",
-                                  access_token: accessToken,
-                                },
-                              });
-                            }
-                            await load();
-                            toast.success("Status synced from Google!", { id: tid });
-                          } catch (e: any) {
-                            toast.error("Status sync failed: " + e.message, { id: tid });
-                          }
-                        }}
+                        disabled={refreshingStatuses || publishing}
+                        onClick={handleRefreshAllStatuses}
                         className="text-xs font-semibold shrink-0 gap-1.5 border-slate-200 hover:bg-slate-50 cursor-pointer h-9 px-3 rounded-lg"
                       >
-                        <Clock className="h-3.5 w-3.5 text-[#0277bd]" />
-                        Sync Google Status
+                        <RefreshCw className={`h-3.5 w-3.5 text-[#0277bd] ${refreshingStatuses ? "animate-spin" : ""}`} />
+                        {refreshingStatuses ? "Checking Google..." : "Sync Google Status"}
                       </Button>
                     )}
 
@@ -3048,21 +3172,50 @@ function PublishPage() {
                         )}
                       </div>
                     ) : p.streetview_status === "PROCESSING" ? (
-                      <div className="flex items-center gap-3">
-                        <span className="text-amber-600 font-semibold text-xs flex items-center gap-1 animate-pulse">
-                          <Clock className="h-4 w-4 text-amber-500 animate-spin" /> PROCESSING
-                        </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {p.streetview_rejection_reason === "REJECTED_UNKNOWN" ? (
+                          <>
+                            <span
+                              className="text-amber-700 font-semibold text-xs flex items-center gap-1"
+                              title="Google has placed this 360 photo in its secondary review queue (typically 2–24 hours). Google will publish it automatically without re-uploading."
+                            >
+                              <Clock className="h-4 w-4 text-amber-500 animate-spin" /> PENDING GOOGLE REVIEW
+                            </span>
+                            <span
+                              title="Google Vision AI secondary review queue. Typically resolves in 2–24 hours."
+                              className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded cursor-help"
+                            >
+                              IN REVIEW (2–24h)
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-amber-600 font-semibold text-xs flex items-center gap-1 animate-pulse">
+                            <Clock className="h-4 w-4 text-amber-500 animate-spin" /> PROCESSING
+                          </span>
+                        )}
                         {p.streetview_share_link && (
                           <a
                             href={p.streetview_share_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors opacity-70"
+                            className="text-[#0277bd] hover:text-[#01579b] text-xs font-bold underline flex items-center gap-0.5 transition-colors opacity-80"
                           >
                             View on Maps
                           </a>
                         )}
-                        {/* Force Retry: re-uploads a scene stuck in PROCESSING */}
+                        {p.streetview_photo_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={publishing || checkingStatusPhotoId === p.id}
+                            onClick={() => handleCheckSinglePhotoStatus(p)}
+                            className="h-6 px-2 text-[11px] font-bold border-amber-300 text-amber-800 hover:bg-amber-50 cursor-pointer rounded"
+                            title="Check if Google has completed processing this scene"
+                          >
+                            <RefreshCw className={`h-3 w-3 mr-1 ${checkingStatusPhotoId === p.id ? "animate-spin" : ""}`} /> Check Status
+                          </Button>
+                        )}
+                        {/* Force Retry / Re-upload */}
                         <Button
                           size="sm"
                           variant="outline"
@@ -3076,8 +3229,9 @@ function PublishPage() {
                             setTimeout(() => publishSinglePhoto({ ...p, streetview_status: "FAILED", streetview_photo_id: undefined }), 300);
                           }}
                           className="h-6 px-2 text-[11px] font-bold border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 cursor-pointer rounded"
+                          title="Re-upload scene from scratch (restarts Google review)"
                         >
-                          <RotateCcw className="h-3 w-3 mr-1" /> Force Retry
+                          <RotateCcw className="h-3 w-3 mr-1" /> Re-upload
                         </Button>
                       </div>
                     ) : p.streetview_status === "FAILED" ? (
@@ -3096,8 +3250,21 @@ function PublishPage() {
                              p.streetview_rejection_reason === "REJECTED_TOO_SMALL" ? "TOO_SMALL" :
                              p.streetview_rejection_reason === "REJECTED_CORRUPT_DATA" ? "CORRUPT" :
                              p.streetview_rejection_reason === "REJECTED_DUPLICATE" ? "DUPLICATE" :
+                             p.streetview_rejection_reason === "REJECTED_UNKNOWN" ? "UNKNOWN / IN REVIEW" :
                              p.streetview_rejection_reason.replace("REJECTED_", "")}
                           </span>
+                        )}
+                        {p.streetview_photo_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={publishing || checkingStatusPhotoId === p.id}
+                            onClick={() => handleCheckSinglePhotoStatus(p)}
+                            className="h-6 px-2 text-[11px] font-bold border-slate-300 text-slate-700 hover:bg-slate-50 cursor-pointer rounded"
+                            title="Check if Google has updated status"
+                          >
+                            <RefreshCw className={`h-3 w-3 mr-1 ${checkingStatusPhotoId === p.id ? "animate-spin" : ""}`} /> Check Status
+                          </Button>
                         )}
                         <Button
                           size="sm"

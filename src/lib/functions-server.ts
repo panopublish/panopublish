@@ -586,14 +586,20 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           const pid = gp.photoId?.id;
           if (!pid) continue;
           const mps: string = gp.mapsPublishStatus || "";
+          // REJECTED_UNKNOWN is Google's deferred queue/review status, NOT a permanent failure.
+          // Google often flips REJECTED_UNKNOWN to PUBLISHED overnight (2-24h).
+          // We keep it as PROCESSING with rejectionReason = "REJECTED_UNKNOWN" so it can be monitored and synced.
           const status = mps === "PUBLISHED" ? "PUBLISHED"
+            : mps === "REJECTED_UNKNOWN" ? "PROCESSING"
             : mps.startsWith("REJECTED") ? "FAILED"
             : "PROCESSING";
-          const rejectionReason = mps.startsWith("REJECTED") ? mps : null;
+          const rejectionReason = mps === "PUBLISHED" ? null
+            : mps.startsWith("REJECTED") ? mps
+            : null;
 
           await db
             .prepare(
-              "UPDATE photos SET streetview_status = ?, streetview_share_link = COALESCE(?, streetview_share_link), view_count = ?, streetview_rejection_reason = COALESCE(?, streetview_rejection_reason) WHERE streetview_photo_id = ?",
+              "UPDATE photos SET streetview_status = ?, streetview_share_link = COALESCE(?, streetview_share_link), view_count = ?, streetview_rejection_reason = ? WHERE streetview_photo_id = ?",
             )
             .bind(status, gp.shareLink || null, gp.viewCount ? parseInt(gp.viewCount, 10) : 0, rejectionReason, pid)
             .run();
@@ -629,6 +635,7 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           if (found) {
             const mps: string = found.mapsPublishStatus || "";
             if (mps === "PUBLISHED") status = "PUBLISHED";
+            else if (mps === "REJECTED_UNKNOWN") status = "PROCESSING";
             else if (mps.startsWith("REJECTED")) status = "FAILED";
             shareLink = found.shareLink;
             viewCount = found.viewCount ? parseInt(found.viewCount, 10) : 0;
@@ -651,6 +658,7 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
 
         const mps: string = data.mapsPublishStatus || "";
         if (mps === "PUBLISHED") status = "PUBLISHED";
+        else if (mps === "REJECTED_UNKNOWN") status = "PROCESSING";
         else if (mps.startsWith("REJECTED")) status = "FAILED";
 
         shareLink = data.shareLink;
@@ -659,12 +667,13 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
       }
 
       // Update in D1 database
-      const rejectionReason = (rawData?.mapsPublishStatus || "").startsWith("REJECTED")
-        ? rawData.mapsPublishStatus
+      const rawMps: string = rawData?.mapsPublishStatus || "";
+      const rejectionReason = rawMps === "PUBLISHED" ? null
+        : rawMps.startsWith("REJECTED") ? rawMps
         : null;
       await db
         .prepare(
-          "UPDATE photos SET streetview_status = ?, streetview_share_link = ?, view_count = ?, streetview_rejection_reason = COALESCE(?, streetview_rejection_reason) WHERE streetview_photo_id = ?",
+          "UPDATE photos SET streetview_status = ?, streetview_share_link = COALESCE(?, streetview_share_link), view_count = ?, streetview_rejection_reason = ? WHERE streetview_photo_id = ?",
         )
         .bind(status, shareLink || null, viewCount, rejectionReason, streetview_photo_id)
         .run();
