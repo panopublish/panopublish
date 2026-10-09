@@ -317,16 +317,55 @@ function getImageDimensions(blob: Blob): Promise<{ width: number; height: number
 }
 
 /**
+ * Reads actual JPEG pixel dimensions from the SOF (Start of Frame) marker in the binary stream.
+ *
+ * WHY THIS IS CRITICAL:
+ * `img.naturalWidth / naturalHeight` in a browser APPLIES EXIF orientation automatically.
+ * If a 360 camera wrote EXIF Orientation=6 (90° CW), the browser reports width=height_physical
+ * and height=width_physical. Our XMP then claims the WRONG dimensions. Google reads the physical
+ * SOF dimensions from the JPEG binary, sees a mismatch with XMP, and rejects with "must be 2:1".
+ *
+ * This function bypasses EXIF entirely and reads the true physical pixel dimensions.
+ */
+export function getJpegDimensionsFromSof(bytes: Uint8Array): { width: number; height: number } | null {
+  if (bytes.length < 10 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let off = 2;
+  while (off < bytes.length - 8) {
+    if (bytes[off] !== 0xff) break;
+    const mk = bytes[off + 1];
+    // SOF markers: C0-C3, C5-C7, C9-CB, CD-CF (all DCT/lossless SOF variants)
+    const isSof =
+      (mk >= 0xc0 && mk <= 0xc3) ||
+      (mk >= 0xc5 && mk <= 0xc7) ||
+      (mk >= 0xc9 && mk <= 0xcb) ||
+      (mk >= 0xcd && mk <= 0xcf);
+    if (isSof && off + 8 < bytes.length) {
+      // SOF layout: FF Cx [len_hi len_lo] [precision] [height_hi height_lo] [width_hi width_lo]
+      const h = (bytes[off + 5] << 8) | bytes[off + 6];
+      const w = (bytes[off + 7] << 8) | bytes[off + 8];
+      if (w > 0 && h > 0) return { width: w, height: h };
+    }
+    // Skip to next marker
+    if (mk === 0xd8 || mk === 0xd9 || (mk >= 0xd0 && mk <= 0xd7)) { off += 2; continue; }
+    if (mk === 0xda) break; // SOS — compressed data starts, no more markers
+    if (off + 3 >= bytes.length) break;
+    const segLen = (bytes[off + 2] << 8) | bytes[off + 3];
+    off += 2 + segLen;
+  }
+  return null;
+}
+
+/**
  * Ensures an image Blob has valid Google Photo Sphere GPano XMP headers embedded.
  *
  * KEY BEHAVIOR:
- * 1. For images that are NOT 2:1 aspect ratio: canvas-normalize to exact 2:1, then inject XMP.
- * 2. For images that ARE already 2:1: ALWAYS strip existing XMP then inject fresh PanoPublish XMP.
- *    We NEVER canvas re-encode a 2:1 image because canvas.toBlob() re-compresses at 95% quality,
- *    which can degrade images that were originally encoded at higher quality or with specific codec
- *    settings. Google's processing rejects degraded images. Direct byte-level strip+inject is safe.
- * 3. `forceNormalize` flag means: "always strip and replace XMP" (not "always canvas re-encode").
- *    It is set on every upload path to ensure camera-embedded GPano is never trusted.
+ * 1. Uses SOF-based dimension reading (physical JPEG pixels, not EXIF-corrected visual size)
+ *    to prevent XMP dimension mismatch when EXIF Orientation ≠ 1.
+ * 2. For images that are NOT 2:1: canvas-normalize to exact 2:1, then inject XMP with
+ *    ORIGINAL dimensions as CroppedArea fields (not the canvas 2:1 target dimensions).
+ * 3. For images that ARE already 2:1: strip existing XMP + inject fresh PanoPublish XMP.
+ *    No re-encoding — preserves original JPEG quality exactly.
+ * 4. `forceNormalize` means "always strip and reinject XMP" (not "always canvas re-encode").
  */
 export async function ensureGPanoXmpBlob(
   blob: Blob,
@@ -335,9 +374,12 @@ export async function ensureGPanoXmpBlob(
   const arrayBuffer = await blob.arrayBuffer();
   const rawBytes = new Uint8Array(arrayBuffer);
 
-  // Get dimensions
-  let width = options.width;
-  let height = options.height;
+  // PRIMARY: Read dimensions from SOF marker (true physical pixels, unaffected by EXIF orientation)
+  const sofDims = getJpegDimensionsFromSof(rawBytes);
+
+  // FALLBACK: Read visual dimensions from <img> (respects EXIF rotation)
+  let width = options.width ?? sofDims?.width;
+  let height = options.height ?? sofDims?.height;
 
   if (!width || !height) {
     try {
@@ -345,43 +387,69 @@ export async function ensureGPanoXmpBlob(
       width = dims.width;
       height = dims.height;
     } catch {
-      // Dimensions load error — will attempt injection without canvas normalization
+      // Dimensions completely unavailable — injection will be skipped
     }
   }
+
+  // If SOF dims available and EXIF-corrected visual dims differ significantly, prefer SOF
+  // (prevents XMP dimension mismatch caused by EXIF orientation tags)
+  if (sofDims && width && height) {
+    const sofAspect = sofDims.width / sofDims.height;
+    const visualAspect = width / height;
+    // If the two sources disagree on orientation (portrait vs landscape), use SOF
+    if (Math.abs(sofAspect - visualAspect) > 0.5) {
+      console.info(
+        `[PanoPublish XMP] EXIF orientation mismatch detected. ` +
+        `SOF: ${sofDims.width}x${sofDims.height}, visual: ${width}x${height}. Using SOF dims.`
+      );
+      width = sofDims.width;
+      height = sofDims.height;
+    }
+  }
+
+  console.info(
+    `[PanoPublish XMP] Processing ${width}x${height} (SOF: ${sofDims?.width}x${sofDims?.height}) ` +
+    `aspect=${width && height ? (width/height).toFixed(3) : '?'} forceNormalize=${!!options.forceNormalize}`
+  );
 
   const isAspectRatio2To1 = width && height && Math.abs(width / height - 2.0) <= 0.02;
 
   // --- Path A: genuinely non-2:1 aspect ratio ---
-  // Canvas-normalize to exact 2:1 ONLY when required for geometry, then inject XMP.
-  // NOTE: We deliberately do NOT canvas-normalize 2:1 images even with forceNormalize=true,
-  // because canvas re-encoding degrades JPEG quality and can cause Google's processing rejection.
+  // Canvas-normalize to exact 2:1 ONLY when required for geometry.
+  // Use ORIGINAL dimensions (width, height) as CroppedArea XMP fields — the canvas target
+  // dimensions (targetW, targetH) describe the FullPano sphere, not the content area.
   if (width && height && !isAspectRatio2To1) {
     try {
       const normalizedBlob = await normalizeTo2To1Canvas(blob, width, height);
       const normBuffer = await normalizedBlob.arrayBuffer();
-      // Canvas output has no XMP — safe to inject directly without stripping
       const normBytes = new Uint8Array(normBuffer);
-      const targetW = Math.max(width, height * 2);
-      const targetH = Math.round(targetW / 2);
+
+      // Verify the canvas output dimensions match what we expect
+      const normSofDims = getJpegDimensionsFromSof(normBytes);
+      const targetW = normSofDims?.width ?? Math.max(width, height * 2);
+      const targetH = normSofDims?.height ?? Math.round(targetW / 2);
+
+      // IMPORTANT: pass original (width, height) — createGPanoXmpXml will compute correct
+      // CroppedArea and FullPano fields from these. Passing (targetW, targetH) would make
+      // CroppedAreaImageWidth = FullPanoWidth (no crop offset) which is incorrect.
       const injectedBytes = injectGPanoXmpBytes(
         normBytes,
-        targetW,
-        targetH,
+        width,
+        height,
         options.heading || 0,
         options.pitch || 0,
         options.roll || 0
       );
+      console.info(`[PanoPublish XMP] Path A (canvas normalize): canvas=${targetW}x${targetH}, XMP content=${width}x${height}`);
       return new Blob([injectedBytes.buffer as ArrayBuffer], { type: "image/jpeg" });
     } catch (normErr) {
-      console.warn("Could not normalize non-2:1 canvas, falling through to strip+inject:", normErr);
-      // Fall through to Path B with original dimensions
+      console.warn("[PanoPublish XMP] Canvas normalize failed, falling through to strip+inject:", normErr);
     }
   }
 
-  // --- Path B: 2:1 image (or normalization failed above) ---
-  // ALWAYS strip existing XMP then inject fresh, complete, Google-spec-compliant GPano XMP.
-  // This runs for EVERY upload (forceNormalize=true guarantees no camera XMP is trusted).
-  // Byte-level injection preserves original JPEG quality exactly.
+  // --- Path B: 2:1 image (or canvas normalization failed) ---
+  // Strip all existing XMP, inject fresh PanoPublish GPano XMP.
+  // Byte-level injection: preserves original JPEG quality exactly.
   if (width && height) {
     try {
       const strippedBytes = stripExistingXmpSegments(rawBytes);
@@ -393,16 +461,16 @@ export async function ensureGPanoXmpBlob(
         options.pitch || 0,
         options.roll || 0
       );
+      console.info(`[PanoPublish XMP] Path B (strip+inject): ${width}x${height} (2:1=${isAspectRatio2To1})`);
       return new Blob([injected.buffer as ArrayBuffer], { type: "image/jpeg" });
     } catch (e) {
-      console.warn("Could not strip+inject GPano XMP bytes:", e);
+      console.warn("[PanoPublish XMP] Could not strip+inject GPano XMP bytes:", e);
     }
   }
 
-  // Fallback: return original blob unchanged (should rarely happen)
+  console.warn(`[PanoPublish XMP] All paths failed — uploading without XMP. width=${width}, height=${height}`);
   return blob;
 }
-
 
 /**
  * Normalizes non-2:1 panoramic images onto a perfect 2:1 equirectangular canvas.

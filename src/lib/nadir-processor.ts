@@ -32,7 +32,27 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
 
       // APP markers are E0 to EF
       if (marker >= 0xe0 && marker <= 0xef) {
-        appSegments.push(originalBytes.slice(offset, offset + 2 + length));
+        // Skip XMP APP1 segments — identified by the XMP namespace URI prefix.
+        // We must NOT transplant the camera's XMP because ensureGPanoXmpBlob will inject
+        // fresh PanoPublish XMP. Transplanting camera XMP creates dual-XMP JPEGs which
+        // Google's parser rejects. EXIF APP1 (starts with "Exif\0") is kept for GPS data etc.
+        const isXmp =
+          marker === 0xe1 && // APP1
+          length > 32 &&
+          (() => {
+            // Check for XMP namespace identifier
+            const preview = new TextDecoder("utf-8", { fatal: false }).decode(
+              originalBytes.subarray(offset + 4, Math.min(offset + 40, originalBytes.length))
+            );
+            return (
+              preview.startsWith("http://ns.adobe.com/xap/1.0/") ||
+              preview.startsWith("http://ns.adobe.com/xmp/extension/")
+            );
+          })();
+
+        if (!isXmp) {
+          appSegments.push(originalBytes.slice(offset, offset + 2 + length));
+        }
       }
 
       offset += 2 + length;
@@ -48,7 +68,7 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
   result[0] = 0xff;
   result[1] = 0xd8;
 
-  // Write APP segments
+  // Write APP segments (EXIF preserved, XMP excluded)
   let writeOffset = 2;
   for (const seg of appSegments) {
     result.set(seg, writeOffset);
@@ -60,6 +80,7 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
 
   return result;
 }
+
 
 export async function processNadirClientSide(
   photoUrl: string,
