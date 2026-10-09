@@ -2895,9 +2895,22 @@ function PublishPage() {
                         variant="outline"
                         size="sm"
                         onClick={async () => {
-                          const tid = toast.loading("Checking Google Street View status...");
-                          await load();
-                          toast.success("Status checked!", { id: tid });
+                          const tid = toast.loading("Polling Google Street View for latest status...");
+                          try {
+                            // Actually call the Google API — not just reload the DB
+                            if (accessToken) {
+                              await supabase.functions.invoke("streetview-publish", {
+                                body: {
+                                  action: "batch_get_photo_status",
+                                  access_token: accessToken,
+                                },
+                              });
+                            }
+                            await load();
+                            toast.success("Status synced from Google!", { id: tid });
+                          } catch (e: any) {
+                            toast.error("Status sync failed: " + e.message, { id: tid });
+                          }
                         }}
                         className="text-xs font-semibold shrink-0 gap-1.5 border-slate-200 hover:bg-slate-50 cursor-pointer h-9 px-3 rounded-lg"
                       >
@@ -2905,6 +2918,7 @@ function PublishPage() {
                         Sync Google Status
                       </Button>
                     )}
+
                   </div>
                 );
               })()}
@@ -2983,8 +2997,7 @@ function PublishPage() {
                     className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium"
                   >
                     <span className="text-muted-foreground w-8">{i}</span>
-                    <span className="flex-1 truncate">{p.filename}</span>
-                    {p.streetview_status === "PUBLISHED" ? (
+                    <span className="flex-1 truncate">{p.filename}</span>`r`n                     {p.streetview_status === "PUBLISHED" ? (
                       <div className="flex items-center gap-3">
                         <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
                           <CheckCheck className="h-4 w-4 text-green-600" /> PUBLISHED
@@ -3015,6 +3028,23 @@ function PublishPage() {
                             View on Maps
                           </a>
                         )}
+                        {/* Force Retry: re-uploads a scene stuck in PROCESSING */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={publishing}
+                          onClick={async () => {
+                            await supabase
+                              .from("photos")
+                              .update({ streetview_status: "FAILED", streetview_photo_id: null } as any)
+                              .eq("id", p.id);
+                            await load();
+                            setTimeout(() => publishSinglePhoto({ ...p, streetview_status: "FAILED", streetview_photo_id: undefined }), 300);
+                          }}
+                          className="h-6 px-2 text-[11px] font-bold border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 cursor-pointer rounded"
+                        >
+                          <RotateCcw className="h-3 w-3 mr-1" /> Force Retry
+                        </Button>
                       </div>
                     ) : p.streetview_status === "FAILED" ? (
                       <div className="flex items-center gap-2">
