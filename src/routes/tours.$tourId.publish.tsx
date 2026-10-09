@@ -2997,7 +2997,8 @@ function PublishPage() {
                     className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium"
                   >
                     <span className="text-muted-foreground w-8">{i}</span>
-                    <span className="flex-1 truncate">{p.filename}</span>`r`n                     {p.streetview_status === "PUBLISHED" ? (
+                    <span className="flex-1 truncate">{p.filename}</span>
+                     {p.streetview_status === "PUBLISHED" ? (
                       <div className="flex items-center gap-3">
                         <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
                           <CheckCheck className="h-4 w-4 text-green-600" /> PUBLISHED

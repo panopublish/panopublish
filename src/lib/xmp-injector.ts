@@ -319,11 +319,14 @@ function getImageDimensions(blob: Blob): Promise<{ width: number; height: number
 /**
  * Ensures an image Blob has valid Google Photo Sphere GPano XMP headers embedded.
  *
- * KEY BEHAVIOR (Bug fixes applied):
- * 1. ALWAYS strips existing XMP segments first — prevents dual-XMP JPEG malformation.
- * 2. NEVER trusts camera-embedded GPano metadata — always re-injects PanoPublish XMP.
- * 3. If aspect ratio is not 2:1 OR forceNormalize is set, canvas-normalizes to 2:1 first.
- * 4. The `forceNormalize` flag is always used on retry paths for FAILED scenes.
+ * KEY BEHAVIOR:
+ * 1. For images that are NOT 2:1 aspect ratio: canvas-normalize to exact 2:1, then inject XMP.
+ * 2. For images that ARE already 2:1: ALWAYS strip existing XMP then inject fresh PanoPublish XMP.
+ *    We NEVER canvas re-encode a 2:1 image because canvas.toBlob() re-compresses at 95% quality,
+ *    which can degrade images that were originally encoded at higher quality or with specific codec
+ *    settings. Google's processing rejects degraded images. Direct byte-level strip+inject is safe.
+ * 3. `forceNormalize` flag means: "always strip and replace XMP" (not "always canvas re-encode").
+ *    It is set on every upload path to ensure camera-embedded GPano is never trusted.
  */
 export async function ensureGPanoXmpBlob(
   blob: Blob,
@@ -348,9 +351,11 @@ export async function ensureGPanoXmpBlob(
 
   const isAspectRatio2To1 = width && height && Math.abs(width / height - 2.0) <= 0.02;
 
-  // --- Path A: non-2:1 aspect ratio OR forceNormalize requested ---
-  // Canvas-normalize to exact 2:1 first, then inject. Canvas output is XMP-clean.
-  if (width && height && (!isAspectRatio2To1 || options.forceNormalize)) {
+  // --- Path A: genuinely non-2:1 aspect ratio ---
+  // Canvas-normalize to exact 2:1 ONLY when required for geometry, then inject XMP.
+  // NOTE: We deliberately do NOT canvas-normalize 2:1 images even with forceNormalize=true,
+  // because canvas re-encoding degrades JPEG quality and can cause Google's processing rejection.
+  if (width && height && !isAspectRatio2To1) {
     try {
       const normalizedBlob = await normalizeTo2To1Canvas(blob, width, height);
       const normBuffer = await normalizedBlob.arrayBuffer();
@@ -369,19 +374,17 @@ export async function ensureGPanoXmpBlob(
       return new Blob([injectedBytes.buffer as ArrayBuffer], { type: "image/jpeg" });
     } catch (normErr) {
       console.warn("Could not normalize non-2:1 canvas, falling through to strip+inject:", normErr);
-      // Fall through to Path B below
+      // Fall through to Path B with original dimensions
     }
   }
 
-  // --- Path B: 2:1 image — ALWAYS strip existing XMP then inject fresh PanoPublish XMP ---
-  // We never trust camera-embedded GPano metadata because:
-  //   a) It may be partial, outdated, or use deprecated attributes
-  //   b) A second injection without stripping produces dual-XMP which Google rejects
+  // --- Path B: 2:1 image (or normalization failed above) ---
+  // ALWAYS strip existing XMP then inject fresh, complete, Google-spec-compliant GPano XMP.
+  // This runs for EVERY upload (forceNormalize=true guarantees no camera XMP is trusted).
+  // Byte-level injection preserves original JPEG quality exactly.
   if (width && height) {
     try {
-      // Fix 1 & 2: Strip all existing XMP segments first
       const strippedBytes = stripExistingXmpSegments(rawBytes);
-      // Inject fresh, complete, Google-spec-compliant GPano XMP
       const injected = injectGPanoXmpBytes(
         strippedBytes,
         width,
@@ -399,6 +402,7 @@ export async function ensureGPanoXmpBlob(
   // Fallback: return original blob unchanged (should rarely happen)
   return blob;
 }
+
 
 /**
  * Normalizes non-2:1 panoramic images onto a perfect 2:1 equirectangular canvas.
