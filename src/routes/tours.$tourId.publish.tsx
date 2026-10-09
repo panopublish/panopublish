@@ -836,12 +836,16 @@ function PublishPage() {
           return null;
         }
 
-        // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
+        // Strip camera XMP and inject fresh PanoPublish GPano XMP.
+        // forceNormalize: true ensures we ALWAYS strip existing XMP before injecting —
+        // camera-embedded GPano (Insta360, Ricoh, DJI, etc.) may be partial or stale,
+        // and a JPEG with two XMP APP1 blocks is rejected by Google's parser.
         try {
           processedBlob = await ensureGPanoXmpBlob(processedBlob, {
             heading: targetPhoto.heading || 0,
             pitch: targetPhoto.pitch || 0,
             roll: targetPhoto.roll || 0,
+            forceNormalize: true,
           });
         } catch (xmpErr: any) {
           const xmpErrMsg = xmpErr?.message || String(xmpErr);
@@ -1010,10 +1014,17 @@ function PublishPage() {
                 lastErrorMsg,
               );
             }
-            // Auto-heal non-360 photo error from Google by normalizing canvas to 2:1 equirectangular format
-            if (lastErrorMsg.toLowerCase().includes("not a 360 photo") && attempt === 1) {
+            // Auto-heal: on any upload or processing rejection, force re-normalize and re-inject XMP.
+            // We trigger this on attempt 1 for known 360 errors, and on attempt 2+ for any error
+            // (covers cases where Google accepts the upload but rejects during async processing).
+            const should360Heal =
+              lastErrorMsg.toLowerCase().includes("not a 360 photo") ||
+              lastErrorMsg.toLowerCase().includes("equirectangular") ||
+              lastErrorMsg.toLowerCase().includes("panorama") ||
+              attempt >= 2;
+            if (should360Heal) {
               try {
-                console.info(`Auto-normalizing Scene ${alreadyDone + photoIndex} to 2:1 equirectangular format...`);
+                console.info(`Auto-normalizing Scene ${alreadyDone + photoIndex} (attempt ${attempt}): stripping camera XMP and re-normalizing to 2:1...`);
                 processedBlob = await ensureGPanoXmpBlob(processedBlob, {
                   heading: photo.heading || 0,
                   pitch: photo.pitch || 0,
@@ -1335,12 +1346,15 @@ function PublishPage() {
         throw new Error("Could not fetch scene image file");
       }
 
-      // Guarantee official Google Photo Sphere GPano XMP metadata is present in JPEG binary
+      // Strip camera XMP and inject fresh PanoPublish GPano XMP.
+      // Always force-normalize: camera-embedded GPano may be stale or partial,
+      // and dual XMP APP1 blocks cause Google's processing to reject the image.
       try {
         processedBlob = await ensureGPanoXmpBlob(processedBlob, {
           heading: photoToPublish.heading || 0,
           pitch: photoToPublish.pitch || 0,
           roll: photoToPublish.roll || 0,
+          forceNormalize: true,
         });
       } catch (xmpErr) {
         console.warn(`Could not inject XMP for single scene:`, xmpErr);
@@ -1438,10 +1452,16 @@ function PublishPage() {
           break;
         } catch (uploadErr: any) {
           lastErrorMsg = uploadErr.message || "Upload error";
-          // Auto-heal non-360 photo error from Google by normalizing canvas to 2:1 equirectangular format
-          if (lastErrorMsg.toLowerCase().includes("not a 360 photo") && attempt === 1) {
+          // Auto-heal: re-normalize and re-inject XMP on any retry attempt.
+          // This covers both upload-time rejection and async processing rejection by Google.
+          const should360HealSingle =
+            lastErrorMsg.toLowerCase().includes("not a 360 photo") ||
+            lastErrorMsg.toLowerCase().includes("equirectangular") ||
+            lastErrorMsg.toLowerCase().includes("panorama") ||
+            attempt >= 2;
+          if (should360HealSingle) {
             try {
-              console.info(`Auto-normalizing single scene to 2:1 equirectangular format...`);
+              console.info(`Auto-normalizing single scene (attempt ${attempt}): stripping camera XMP and re-normalizing to 2:1...`);
               processedBlob = await ensureGPanoXmpBlob(processedBlob, {
                 heading: photoToPublish.heading || 0,
                 pitch: photoToPublish.pitch || 0,

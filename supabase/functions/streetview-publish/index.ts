@@ -190,7 +190,124 @@ serve(async (req) => {
         }
       }
 
-      const contentLength = processedBuffer.byteLength.toString();
+
+      // -------------------------------------------------------------------------
+      // Fix 5: Server-side GPano XMP injection (no browser dependency)
+      // The legacy publish_photo path previously sent bare JPEGs to Google with
+      // zero XMP metadata. We now strip any existing camera XMP and inject a
+      // clean, Google-spec-compliant GPano block before uploading.
+      // -------------------------------------------------------------------------
+      try {
+        const imgForDims = await Image.decode(
+          processedBuffer instanceof ArrayBuffer
+            ? new Uint8Array(processedBuffer)
+            : new Uint8Array((processedBuffer as Uint8Array).buffer, (processedBuffer as Uint8Array).byteOffset, (processedBuffer as Uint8Array).byteLength)
+        );
+        const imgW = imgForDims.width;
+        const imgH = imgForDims.height;
+
+        // Compute 2:1 equirectangular full-pano dimensions
+        let fullW = imgW;
+        let fullH = imgH;
+        if (Math.abs(imgW / imgH - 2.0) > 0.01) {
+          if (imgW > imgH * 2) { fullW = imgW; fullH = Math.round(imgW / 2); }
+          else { fullH = imgH; fullW = imgH * 2; }
+        }
+        const cropLeft = Math.max(0, Math.round((fullW - imgW) / 2));
+        const cropTop  = Math.max(0, Math.round((fullH - imgH) / 2));
+
+        const xmpXml = `<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.1.0-jc003">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+        xmlns:GPano="http://ns.google.com/photos/1.0/panorama/">
+      <GPano:UsePanoramaViewer>True</GPano:UsePanoramaViewer>
+      <GPano:CaptureSoftware>PanoPublish</GPano:CaptureSoftware>
+      <GPano:StitchingSoftware>PanoPublish</GPano:StitchingSoftware>
+      <GPano:ProjectionType>equirectangular</GPano:ProjectionType>
+      <GPano:PoseHeadingDegrees>${Number(heading || 0).toFixed(1)}</GPano:PoseHeadingDegrees>
+      <GPano:PosePitchDegrees>${Number(pitch || 0).toFixed(1)}</GPano:PosePitchDegrees>
+      <GPano:PoseRollDegrees>${Number(roll || 0).toFixed(1)}</GPano:PoseRollDegrees>
+      <GPano:InitialViewHeadingDegrees>0.0</GPano:InitialViewHeadingDegrees>
+      <GPano:InitialViewPitchDegrees>0.0</GPano:InitialViewPitchDegrees>
+      <GPano:InitialViewRollDegrees>0.0</GPano:InitialViewRollDegrees>
+      <GPano:InitialHorizontalFOVDegrees>75.0</GPano:InitialHorizontalFOVDegrees>
+      <GPano:CroppedAreaImageWidthPixels>${imgW}</GPano:CroppedAreaImageWidthPixels>
+      <GPano:CroppedAreaImageHeightPixels>${imgH}</GPano:CroppedAreaImageHeightPixels>
+      <GPano:FullPanoWidthPixels>${fullW}</GPano:FullPanoWidthPixels>
+      <GPano:FullPanoHeightPixels>${fullH}</GPano:FullPanoHeightPixels>
+      <GPano:CroppedAreaLeftPixels>${cropLeft}</GPano:CroppedAreaLeftPixels>
+      <GPano:CroppedAreaTopPixels>${cropTop}</GPano:CroppedAreaTopPixels>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>`;
+
+        const enc = new TextEncoder();
+        const xmpHeader = enc.encode("http://ns.adobe.com/xap/1.0/\0");
+        const xmpXmlBytes = enc.encode(xmpXml);
+        const segPayloadLen = xmpHeader.length + xmpXmlBytes.length;
+        const segTotalLen = 2 + segPayloadLen; // includes the 2-byte length field itself
+
+        if (segTotalLen <= 65535) {
+          const rawBytes = processedBuffer instanceof ArrayBuffer
+            ? new Uint8Array(processedBuffer)
+            : processedBuffer as Uint8Array;
+
+          // --- Strip existing XMP APP1 segments ---
+          const stripped: Uint8Array[] = [rawBytes.subarray(0, 2)]; // SOI
+          let off = 2;
+          while (off < rawBytes.length - 1) {
+            if (rawBytes[off] !== 0xff) break;
+            const mk = rawBytes[off + 1];
+            if (mk === 0xd8 || mk === 0xd9 || (mk >= 0xd0 && mk <= 0xd7)) {
+              stripped.push(rawBytes.subarray(off, off + 2)); off += 2; continue;
+            }
+            if (mk === 0xda) { stripped.push(rawBytes.subarray(off)); break; }
+            if (off + 3 >= rawBytes.length) break;
+            const sLen = (rawBytes[off + 2] << 8) | rawBytes[off + 3];
+            const sEnd = off + 2 + sLen;
+            if (sEnd > rawBytes.length) { stripped.push(rawBytes.subarray(off)); break; }
+            const seg = rawBytes.subarray(off, sEnd);
+            if (mk === 0xe1 && sLen > 32) {
+              const preview = new TextDecoder("utf-8", { fatal: false }).decode(
+                rawBytes.subarray(off + 4, Math.min(off + 40, rawBytes.length))
+              );
+              if (preview.startsWith("http://ns.adobe.com/xap/1.0/")) { off = sEnd; continue; }
+            }
+            stripped.push(seg); off = sEnd;
+          }
+          const strippedLen = stripped.reduce((s, a) => s + a.length, 0);
+          const strippedBytes = new Uint8Array(strippedLen);
+          let wo = 0;
+          for (const s of stripped) { strippedBytes.set(s, wo); wo += s.length; }
+
+          // --- Build and prepend new XMP APP1 segment ---
+          const app1 = new Uint8Array(2 + segTotalLen);
+          app1[0] = 0xff; app1[1] = 0xe1;
+          app1[2] = (segTotalLen >> 8) & 0xff; app1[3] = segTotalLen & 0xff;
+          app1.set(xmpHeader, 4);
+          app1.set(xmpXmlBytes, 4 + xmpHeader.length);
+
+          let insertAt = 2;
+          if (strippedBytes.length > 4 && strippedBytes[2] === 0xff && strippedBytes[3] === 0xe0) {
+            insertAt = 2 + 2 + ((strippedBytes[4] << 8) | strippedBytes[5]);
+          }
+          const withXmp = new Uint8Array(strippedBytes.length + app1.length);
+          withXmp.set(strippedBytes.subarray(0, insertAt), 0);
+          withXmp.set(app1, insertAt);
+          withXmp.set(strippedBytes.subarray(insertAt), insertAt + app1.length);
+          processedBuffer = withXmp;
+        }
+      } catch (xmpErr) {
+        console.warn("Server-side XMP injection failed, uploading without XMP:", xmpErr);
+      }
+
+      const contentLength = (
+        processedBuffer instanceof ArrayBuffer
+          ? processedBuffer.byteLength
+          : (processedBuffer as Uint8Array).byteLength
+      ).toString();
+
+
 
       // Step 3: Upload bytes to Google
       const uploadRes = await fetch(uploadUrl, {
