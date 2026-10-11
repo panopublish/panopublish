@@ -882,10 +882,15 @@ function PublishPage() {
       // Fetch the latest photo records from the database to skip already published/processing scenes
       const { data: dbPhotos } = await supabase
         .from("photos")
-        .select("id, streetview_status, streetview_photo_id, file_url, filename, latitude, longitude, heading, pitch, roll, island_id, capture_time")
+        .select("id, streetview_status, streetview_photo_id, file_url, filename, latitude, longitude, heading, pitch, roll, island_id, capture_time, order_index, uploaded_at")
         .eq("tour_id", tourId);
 
-      const photoList = dbPhotos && dbPhotos.length > 0 ? dbPhotos : photos;
+      const sortedDbPhotos = ((dbPhotos as any[]) ?? []).sort((a, b) => {
+        if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
+        return new Date(a.uploaded_at || 0).getTime() - new Date(b.uploaded_at || 0).getTime();
+      });
+
+      const photoList = sortedDbPhotos.length > 0 ? sortedDbPhotos : photos;
 
       const toPublish = photoList.filter(
         (p: any) =>

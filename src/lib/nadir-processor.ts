@@ -41,42 +41,64 @@ export function calcHeading(
 }
 
 export function getSceneArrowHeading(
-  photo: { id: string; heading?: number | null; latitude?: number | null; longitude?: number | null } | null | undefined,
-  allPhotos: Array<{ id: string; heading?: number | null; latitude?: number | null; longitude?: number | null }>,
+  photo: { id: string; heading?: number | null; latitude?: number | null; longitude?: number | null; order_index?: number | null } | null | undefined,
+  allPhotos: Array<{ id: string; heading?: number | null; latitude?: number | null; longitude?: number | null; order_index?: number | null }>,
   allConns: Array<{ from_photo_id: string; to_photo_id: string; heading?: number | null }>,
 ): number {
   if (!photo) return 0;
   const photoHeading = photo.heading || 0;
+  const currentIndex = (allPhotos || []).findIndex((p) => p.id === photo.id);
+  const currentOrder = photo.order_index != null ? photo.order_index : (currentIndex !== -1 ? currentIndex : 0);
 
-  // 1. Look for outgoing connection from this scene (align with first arrow)
+  // 1. Look for outgoing connection from this scene (prioritizing forward navigation)
   const outgoing = (allConns || []).filter((c) => c.from_photo_id === photo.id);
   if (outgoing.length > 0) {
-    const conn = outgoing[0];
-    const target = (allPhotos || []).find((p) => p.id === conn.to_photo_id);
+    let chosenConn = outgoing[0];
+    if (outgoing.length > 1) {
+      const forwardConn = outgoing.find((c) => {
+        const target = (allPhotos || []).find((p) => p.id === c.to_photo_id);
+        const targetIdx = (allPhotos || []).findIndex((p) => p.id === c.to_photo_id);
+        const targetOrder = target?.order_index != null ? target.order_index : targetIdx;
+        return targetOrder > currentOrder;
+      });
+      if (forwardConn) chosenConn = forwardConn;
+    }
+
+    const target = (allPhotos || []).find((p) => p.id === chosenConn.to_photo_id);
     if (target) {
       const geoH = calcHeading(photo.latitude, photo.longitude, target.latitude, target.longitude);
       if (geoH !== null) {
         return (geoH - photoHeading + 360) % 360;
       }
     }
-    if (typeof conn.heading === "number" && !isNaN(conn.heading)) {
-      return (conn.heading - photoHeading + 360) % 360;
+    if (typeof chosenConn.heading === "number" && !isNaN(chosenConn.heading)) {
+      return (chosenConn.heading - photoHeading + 360) % 360;
     }
   }
 
   // 2. Look for incoming connection to this scene (reverse direction by 180 degrees)
   const incoming = (allConns || []).filter((c) => c.to_photo_id === photo.id);
   if (incoming.length > 0) {
-    const conn = incoming[0];
-    const source = (allPhotos || []).find((p) => p.id === conn.from_photo_id);
+    let chosenConn = incoming[0];
+    if (incoming.length > 1) {
+      const forwardConn = incoming.find((c) => {
+        const source = (allPhotos || []).find((p) => p.id === c.from_photo_id);
+        const sourceIdx = (allPhotos || []).findIndex((p) => p.id === c.from_photo_id);
+        const sourceOrder = source?.order_index != null ? source.order_index : sourceIdx;
+        return sourceOrder > currentOrder;
+      });
+      if (forwardConn) chosenConn = forwardConn;
+    }
+
+    const source = (allPhotos || []).find((p) => p.id === chosenConn.from_photo_id);
     if (source) {
       const geoH = calcHeading(source.latitude, source.longitude, photo.latitude, photo.longitude);
       if (geoH !== null) {
         return (geoH + 180 - photoHeading + 360) % 360;
       }
     }
-    if (typeof conn.heading === "number" && !isNaN(conn.heading)) {
-      return (conn.heading + 180 - photoHeading + 360) % 360;
+    if (typeof chosenConn.heading === "number" && !isNaN(chosenConn.heading)) {
+      return (chosenConn.heading + 180 - photoHeading + 360) % 360;
     }
   }
 
@@ -402,11 +424,13 @@ export async function processNadirClientSide(
         const yOffset = y * W * 4;
 
         for (let x = 0; x < W; x++) {
-          const theta = isBottom
-            ? (x / W) * 2 * Math.PI - headingRad - Math.PI / 2
-            : (-x / W) * 2 * Math.PI + headingRad - Math.PI / 2;
-          const u = Math.round(R + r * Math.cos(theta));
-          const v = Math.round(R + r * Math.sin(theta));
+          // Equirectangular center (x = W/2) corresponds to yaw 0°.
+          // Offset by +PI so heading 0 aligns with forward center view and logo is right-side up.
+          const angleFromArrow = isBottom
+            ? (x / W) * 2 * Math.PI - (headingRad + Math.PI)
+            : -(x / W) * 2 * Math.PI + (headingRad + Math.PI);
+          const u = Math.round(R + r * Math.sin(angleFromArrow));
+          const v = Math.round(R - r * Math.cos(angleFromArrow));
 
           if (u >= 0 && u < D && r <= R && v >= 0 && v < D) {
             const logoIdx = (v * D + u) * 4;

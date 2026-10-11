@@ -145,11 +145,11 @@ serve(async (req) => {
                   const r = (distFromPole / h) * R;
 
                   for (let x = 0; x < W; x++) {
-                    const theta = isBottom
-                      ? (x / W) * 2 * Math.PI - headingRad - Math.PI / 2
-                      : (-x / W) * 2 * Math.PI + headingRad - Math.PI / 2;
-                    const u = Math.round(R + r * Math.cos(theta));
-                    const v = Math.round(R + r * Math.sin(theta));
+                    const angleFromArrow = isBottom
+                      ? (x / W) * 2 * Math.PI - (headingRad + Math.PI)
+                      : -(x / W) * 2 * Math.PI + (headingRad + Math.PI);
+                    const u = Math.round(R + r * Math.sin(angleFromArrow));
+                    const v = Math.round(R - r * Math.cos(angleFromArrow));
 
                     if (u >= 0 && u < D && v >= 0 && v < D && r <= R) {
                       const logoIdx = (v * logoW + u) * 4;
