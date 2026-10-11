@@ -83,7 +83,7 @@ const MUSIC_PRESETS = [
   },
 ];
 
-import { processNadirClientSide } from "@/lib/nadir-processor";
+import { processNadirClientSide, getSceneArrowHeading } from "@/lib/nadir-processor";
 import { ensureGPanoXmpBlob } from "@/lib/xmp-injector";
 
 import { SEO } from "@/components/SEO";
@@ -915,6 +915,8 @@ function PublishPage() {
         let processedBlob: Blob | null = null;
         let lastPrepErr = "";
 
+        const arrowHeading = getSceneArrowHeading(targetPhoto, photoList, connections);
+
         for (let fetchAttempt = 1; fetchAttempt <= 3; fetchAttempt++) {
           try {
             processedBlob = await processNadirClientSide(
@@ -923,6 +925,7 @@ function PublishPage() {
               size,
               pos,
               tour?.nadir_logo_url,
+              arrowHeading,
             );
             break;
           } catch (procErr: any) {
@@ -1470,6 +1473,8 @@ function PublishPage() {
       }
 
       let processedBlob: Blob | null = null;
+      const arrowHeading = getSceneArrowHeading(photoToPublish, photos, connections);
+
       for (let fetchAttempt = 1; fetchAttempt <= 3; fetchAttempt++) {
         try {
           processedBlob = await processNadirClientSide(
@@ -1478,6 +1483,7 @@ function PublishPage() {
             size,
             pos,
             tour?.nadir_logo_url,
+            arrowHeading,
           );
           break;
         } catch (procErr: any) {

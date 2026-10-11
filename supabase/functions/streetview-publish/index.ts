@@ -63,8 +63,8 @@ serve(async (req) => {
       const photoBuffer = await photoRes.arrayBuffer();
 
       // Nadir / Logo processing
-      const { nadir_type, nadir_size, nadir_pos, nadir_logo_url } = payload;
-      let processedBuffer = photoBuffer;
+      const { nadir_type, nadir_size, nadir_pos, nadir_logo_url, arrow_heading } = payload;
+      let processedBuffer: ArrayBuffer | Uint8Array = photoBuffer;
 
       const typeLower = nadir_type ? nadir_type.toLowerCase().trim() : "none";
       const posLower = nadir_pos ? nadir_pos.toLowerCase().trim() : "btm";
@@ -137,13 +137,17 @@ serve(async (req) => {
                 const logoW = logo.width;
 
                 const R = D / 2;
+                const headingRad = (((arrow_heading ?? 0) % 360) * Math.PI) / 180;
+
                 for (let y = 0; y < h; y++) {
                   const targetY = yStart + y;
                   const distFromPole = isBottom ? H - 1 - targetY : targetY;
                   const r = (distFromPole / h) * R;
 
                   for (let x = 0; x < W; x++) {
-                    const theta = (x / W) * 2 * Math.PI - Math.PI / 2;
+                    const theta = isBottom
+                      ? (x / W) * 2 * Math.PI - headingRad - Math.PI / 2
+                      : (-x / W) * 2 * Math.PI + headingRad - Math.PI / 2;
                     const u = Math.round(R + r * Math.cos(theta));
                     const v = Math.round(R + r * Math.sin(theta));
 
@@ -183,7 +187,7 @@ serve(async (req) => {
             logo = null;
             band = null;
 
-            processedBuffer = await image.encodeJPEG(90);
+            processedBuffer = await image.encodeJPEG(98);
           } catch (nadirErr) {
             console.error("Nadir processing failed, publishing original:", nadirErr);
           }

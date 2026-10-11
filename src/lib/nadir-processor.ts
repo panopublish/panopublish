@@ -14,11 +14,89 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
+export function calcHeading(
+  fromLat: number | null | undefined,
+  fromLng: number | null | undefined,
+  toLat: number | null | undefined,
+  toLng: number | null | undefined,
+): number | null {
+  if (
+    typeof fromLat !== "number" ||
+    typeof fromLng !== "number" ||
+    typeof toLat !== "number" ||
+    typeof toLng !== "number" ||
+    isNaN(fromLat) ||
+    isNaN(fromLng) ||
+    isNaN(toLat) ||
+    isNaN(toLng)
+  ) {
+    return null;
+  }
+  const dLon = toLng - fromLng;
+  const dLat = toLat - fromLat;
+  if (dLon === 0 && dLat === 0) return null;
+  let h = Math.atan2(dLon, dLat) * (180 / Math.PI);
+  if (h < 0) h += 360;
+  return h;
+}
+
+export function getSceneArrowHeading(
+  photo: { id: string; heading?: number | null; latitude?: number | null; longitude?: number | null } | null | undefined,
+  allPhotos: Array<{ id: string; heading?: number | null; latitude?: number | null; longitude?: number | null }>,
+  allConns: Array<{ from_photo_id: string; to_photo_id: string; heading?: number | null }>,
+): number {
+  if (!photo) return 0;
+  const photoHeading = photo.heading || 0;
+
+  // 1. Look for outgoing connection from this scene (align with first arrow)
+  const outgoing = (allConns || []).filter((c) => c.from_photo_id === photo.id);
+  if (outgoing.length > 0) {
+    const conn = outgoing[0];
+    const target = (allPhotos || []).find((p) => p.id === conn.to_photo_id);
+    if (target) {
+      const geoH = calcHeading(photo.latitude, photo.longitude, target.latitude, target.longitude);
+      if (geoH !== null) {
+        return (geoH - photoHeading + 360) % 360;
+      }
+    }
+    if (typeof conn.heading === "number" && !isNaN(conn.heading)) {
+      return (conn.heading - photoHeading + 360) % 360;
+    }
+  }
+
+  // 2. Look for incoming connection to this scene (reverse direction by 180 degrees)
+  const incoming = (allConns || []).filter((c) => c.to_photo_id === photo.id);
+  if (incoming.length > 0) {
+    const conn = incoming[0];
+    const source = (allPhotos || []).find((p) => p.id === conn.from_photo_id);
+    if (source) {
+      const geoH = calcHeading(source.latitude, source.longitude, photo.latitude, photo.longitude);
+      if (geoH !== null) {
+        return (geoH + 180 - photoHeading + 360) % 360;
+      }
+    }
+    if (typeof conn.heading === "number" && !isNaN(conn.heading)) {
+      return (conn.heading + 180 - photoHeading + 360) % 360;
+    }
+  }
+
+  // 3. Fallback to 0 degrees
+  return 0;
+}
+
 export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Array): Uint8Array {
+  if (originalBytes.length < 4 || originalBytes[0] !== 0xff || originalBytes[1] !== 0xd8) {
+    return newBytes;
+  }
+  if (newBytes.length < 4 || newBytes[0] !== 0xff || newBytes[1] !== 0xd8) {
+    return newBytes;
+  }
+
+  let originalApp0: Uint8Array | null = null;
   const appSegments: Uint8Array[] = [];
   let offset = 2; // skip SOI (0xFFD8)
 
-  while (offset < originalBytes.length) {
+  while (offset < originalBytes.length - 1) {
     if (originalBytes[offset] === 0xff) {
       const marker = originalBytes[offset + 1];
 
@@ -28,7 +106,15 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
         break;
       }
 
+      // Standalone markers without length: RST0-7
+      if (marker >= 0xd0 && marker <= 0xd7) {
+        offset += 2;
+        continue;
+      }
+
+      if (offset + 3 >= originalBytes.length) break;
       const length = (originalBytes[offset + 2] << 8) + originalBytes[offset + 3];
+      if (length < 2 || offset + 2 + length > originalBytes.length) break;
 
       // APP markers are E0 to EF
       if (marker >= 0xe0 && marker <= 0xef) {
@@ -40,7 +126,6 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
           marker === 0xe1 && // APP1
           length > 32 &&
           (() => {
-            // Check for XMP namespace identifier
             const preview = new TextDecoder("utf-8", { fatal: false }).decode(
               originalBytes.subarray(offset + 4, Math.min(offset + 40, originalBytes.length))
             );
@@ -51,7 +136,13 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
           })();
 
         if (!isXmp) {
-          appSegments.push(originalBytes.slice(offset, offset + 2 + length));
+          const segBytes = originalBytes.slice(offset, offset + 2 + length);
+          if (marker === 0xe0) {
+            // Keep original APP0 JFIF if present
+            if (!originalApp0) originalApp0 = segBytes;
+          } else {
+            appSegments.push(segBytes);
+          }
         }
       }
 
@@ -61,22 +152,49 @@ export function transplantMetadata(originalBytes: Uint8Array, newBytes: Uint8Arr
     }
   }
 
-  const totalAppLength = appSegments.reduce((sum, seg) => sum + seg.length, 0);
-  const result = new Uint8Array(2 + totalAppLength + (newBytes.length - 2));
+  // Find start of canvas image data (DQT, SOF, etc.), stripping any browser-generated APP segments
+  // (such as stray canvas APP0 JFIF) so they don't appear out of order after APP1 Exif.
+  let canvasDataOffset = 2; // skip SOI (0xFFD8)
+  while (canvasDataOffset < newBytes.length - 1) {
+    if (newBytes[canvasDataOffset] !== 0xff) break;
+    const marker = newBytes[canvasDataOffset + 1];
+
+    if (marker >= 0xe0 && marker <= 0xef) {
+      if (canvasDataOffset + 3 >= newBytes.length) break;
+      const len = (newBytes[canvasDataOffset + 2] << 8) | newBytes[canvasDataOffset + 3];
+      canvasDataOffset += 2 + len;
+    } else {
+      break;
+    }
+  }
+
+  const canvasImageData = newBytes.subarray(canvasDataOffset);
+  const totalAppLength =
+    (originalApp0 ? originalApp0.length : 0) +
+    appSegments.reduce((sum, seg) => sum + seg.length, 0);
+
+  const result = new Uint8Array(2 + totalAppLength + canvasImageData.length);
 
   // Write SOI
   result[0] = 0xff;
   result[1] = 0xd8;
 
-  // Write APP segments (EXIF preserved, XMP excluded)
   let writeOffset = 2;
+
+  // 1. Write original APP0 immediately after SOI (strict JFIF standard compliance)
+  if (originalApp0) {
+    result.set(originalApp0, writeOffset);
+    writeOffset += originalApp0.length;
+  }
+
+  // 2. Write original EXIF and other APP segments
   for (const seg of appSegments) {
     result.set(seg, writeOffset);
     writeOffset += seg.length;
   }
 
-  // Write the rest of newBytes (skipping its first 2 bytes 0xFF, 0xD8)
-  result.set(newBytes.subarray(2), writeOffset);
+  // 3. Write canvas compressed image data (DQT, SOF, DHT, SOS...)
+  result.set(canvasImageData, writeOffset);
 
   return result;
 }
@@ -88,6 +206,7 @@ export async function processNadirClientSide(
   nadirSize: string,
   nadirPos: string,
   logoUrl?: string | null,
+  arrowHeadingDeg?: number | null,
 ): Promise<Blob> {
   const typeLower = nadirType ? nadirType.toLowerCase().trim() : "none";
   const posLower = nadirPos ? nadirPos.toLowerCase().trim() : "btm";
@@ -121,8 +240,8 @@ export async function processNadirClientSide(
     if (originalBytes) return new Blob([originalBytes.buffer as any], { type: "image/jpeg" });
   }
 
-  const W = img.width;
-  const H = img.height;
+  const W = img.naturalWidth || img.width;
+  const H = img.naturalHeight || img.height;
 
   const mainCanvas = document.createElement("canvas");
   mainCanvas.width = W;
@@ -237,9 +356,17 @@ export async function processNadirClientSide(
       blurCtx.drawImage(paddedCanvas, 0, 0);
 
       mainCtx.drawImage(blurCanvas, 0, padding, W, h, 0, yStart, W, h);
+
+      // Immediate memory cleanup
+      bandCanvas.width = 0;
+      bandCanvas.height = 0;
+      paddedCanvas.width = 0;
+      paddedCanvas.height = 0;
+      blurCanvas.width = 0;
+      blurCanvas.height = 0;
     } else if (typeLower === "tour level" && logoUrl) {
       const logoImg = await loadImage(logoUrl);
-      const D = Math.min(logoImg.width, logoImg.height);
+      const D = Math.min(logoImg.naturalWidth || logoImg.width, logoImg.naturalHeight || logoImg.height);
       const logoCanvas = document.createElement("canvas");
       logoCanvas.width = D;
       logoCanvas.height = D;
@@ -247,8 +374,8 @@ export async function processNadirClientSide(
       if (!logoCtx) throw new Error("Could not get logo canvas context");
       logoCtx.drawImage(
         logoImg,
-        (logoImg.width - D) / 2,
-        (logoImg.height - D) / 2,
+        ((logoImg.naturalWidth || logoImg.width) - D) / 2,
+        ((logoImg.naturalHeight || logoImg.height) - D) / 2,
         D,
         D,
         0,
@@ -266,13 +393,18 @@ export async function processNadirClientSide(
       const R = D / 2;
       const borderThickness = R * 0.03;
 
+      // Heading rotation in radians: align top of logo with arrow heading direction
+      const headingRad = (((arrowHeadingDeg ?? 0) % 360) * Math.PI) / 180;
+
       for (let y = 0; y < h; y++) {
         const distFromPole = isBottom ? h - 1 - y : y;
         const r = (distFromPole / h) * R;
         const yOffset = y * W * 4;
 
         for (let x = 0; x < W; x++) {
-          const theta = (x / W) * 2 * Math.PI - Math.PI / 2;
+          const theta = isBottom
+            ? (x / W) * 2 * Math.PI - headingRad - Math.PI / 2
+            : (-x / W) * 2 * Math.PI + headingRad - Math.PI / 2;
           const u = Math.round(R + r * Math.cos(theta));
           const v = Math.round(R + r * Math.sin(theta));
 
@@ -305,9 +437,12 @@ export async function processNadirClientSide(
         }
       }
       mainCtx.putImageData(mainImgData, 0, yStart);
+      logoCanvas.width = 0;
+      logoCanvas.height = 0;
     }
   }
 
+  // Export at maximum JPEG quality (0.98) to ensure zero compression degradation
   const newBlob = await new Promise<Blob>((resolve, reject) => {
     mainCanvas.toBlob(
       (b) => {
@@ -315,9 +450,13 @@ export async function processNadirClientSide(
         else reject(new Error("Failed to export image canvas to Blob"));
       },
       "image/jpeg",
-      0.9,
+      0.98,
     );
   });
+
+  // Free main canvas backing store immediately
+  mainCanvas.width = 0;
+  mainCanvas.height = 0;
 
   if (originalBytes) {
     const newBuffer = await newBlob.arrayBuffer();
@@ -338,6 +477,7 @@ export async function getNadirProcessedUrl(
   nadirSize?: string | null,
   nadirPos?: string | null,
   logoUrl?: string | null,
+  arrowHeadingDeg?: number | null,
 ): Promise<string> {
   const typeLower = nadirType ? nadirType.toLowerCase().trim() : "none";
   if (!typeLower || typeLower === "none") {
@@ -347,13 +487,14 @@ export async function getNadirProcessedUrl(
   const sizeVal = nadirSize || "13%";
   const posVal = nadirPos || "btm";
   const logoVal = logoUrl || "";
-  const cacheKey = `${photoUrl}|${typeLower}|${sizeVal}|${posVal}|${logoVal}`;
+  const headingVal = typeof arrowHeadingDeg === "number" && !isNaN(arrowHeadingDeg) ? Math.round(arrowHeadingDeg) : 0;
+  const cacheKey = `${photoUrl}|${typeLower}|${sizeVal}|${posVal}|${logoVal}|${headingVal}`;
 
   const cached = processedUrlCache.get(cacheKey);
   if (cached) return cached;
 
   try {
-    const blob = await processNadirClientSide(photoUrl, typeLower, sizeVal, posVal, logoVal);
+    const blob = await processNadirClientSide(photoUrl, typeLower, sizeVal, posVal, logoVal, headingVal);
     const objectUrl = URL.createObjectURL(blob);
     processedUrlCache.set(cacheKey, objectUrl);
     return objectUrl;

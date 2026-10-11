@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { getSceneArrowHeading } from "@/lib/nadir-processor";
 
 // Define interface for export parameters
 export interface ExportTourParams {
@@ -30,6 +31,7 @@ export interface ExportTourParams {
     nadirSize: string,
     nadirPos: string,
     logoUrl?: string | null,
+    arrowHeadingDeg?: number | null,
   ) => Promise<Blob>;
 }
 
@@ -1218,13 +1220,15 @@ export async function exportCustomTour(
         effectiveNadirType.toLowerCase().trim() !== "none" &&
         params.processNadirFn
       ) {
+        const arrowHeading = getSceneArrowHeading(photo, photos, connections);
         onProgress?.(`Applying ${effectiveNadirType} Nadir to scene ${i + 1} of ${totalPhotos}...`, stepPct);
         imgBlob = await params.processNadirFn(
           photo.file_url,
           effectiveNadirType,
           effectiveNadirSize,
           effectiveNadirPos,
-          logoUrl
+          logoUrl,
+          arrowHeading,
         );
       } else {
         const imgRes = await fetch(photo.file_url);
