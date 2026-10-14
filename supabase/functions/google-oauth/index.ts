@@ -24,7 +24,10 @@ serve(async (req) => {
     const redirectUri = payload.redirect_uri || Deno.env.get("REDIRECT_URI");
 
     if (action === "get_auth_url") {
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri!)}&response_type=code&scope=https://www.googleapis.com/auth/streetviewpublish&access_type=offline&prompt=select_account`;
+      const scope = encodeURIComponent(
+        "https://www.googleapis.com/auth/streetviewpublish https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+      );
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri!)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account%20consent`;
       return new Response(JSON.stringify({ authUrl }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -48,6 +51,20 @@ serve(async (req) => {
 
       const expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
+      // Fetch the actual Google account email
+      let googleEmail: string | null = null;
+      try {
+        const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        if (userInfoRes.ok) {
+          const userInfo: any = await userInfoRes.json();
+          googleEmail = userInfo.email || null;
+        }
+      } catch (uiErr) {
+        console.warn("Could not fetch userinfo from Google:", uiErr);
+      }
+
       // Query existing tokens as a list to prevent crashes if duplicates exist
       const { data: tokens, error: selectError } = await supabaseClient
         .from("google_tokens")
@@ -62,6 +79,7 @@ serve(async (req) => {
         user_id,
         access_token: tokenData.access_token,
         expires_at,
+        google_email: googleEmail,
       };
 
       if (tokenData.refresh_token) {
@@ -86,7 +104,7 @@ serve(async (req) => {
 
       if (saveError) throw saveError;
 
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, google_email: googleEmail }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -106,10 +124,13 @@ serve(async (req) => {
 
       const tokenRecord = tokens && tokens.length > 0 ? tokens[0] : null;
       if (!tokenRecord) {
-        return new Response(JSON.stringify({ access_token: null }), {
+        return new Response(JSON.stringify({ access_token: null, google_email: null }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      let currentAccessToken = tokenRecord.access_token;
+      let googleEmail = tokenRecord.google_email || null;
 
       const expiresAt = new Date(tokenRecord.expires_at).getTime();
       if (Date.now() > expiresAt - 5 * 60 * 1000) {
@@ -131,6 +152,7 @@ serve(async (req) => {
             return new Response(
               JSON.stringify({
                 access_token: null,
+                google_email: googleEmail,
                 error: refreshData.error_description || "Failed to refresh token",
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -147,18 +169,16 @@ serve(async (req) => {
             .eq("user_id", user_id);
           if (updateError) throw updateError;
 
-          return new Response(JSON.stringify({ access_token: refreshData.access_token }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          currentAccessToken = refreshData.access_token;
         } catch (refreshErr: any) {
           console.error("Error refreshing token:", refreshErr);
-          return new Response(JSON.stringify({ access_token: null, error: refreshErr.message }), {
+          return new Response(JSON.stringify({ access_token: null, google_email: googleEmail, error: refreshErr.message }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
       }
 
-      return new Response(JSON.stringify({ access_token: tokenRecord.access_token }), {
+      return new Response(JSON.stringify({ access_token: currentAccessToken, google_email: googleEmail }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

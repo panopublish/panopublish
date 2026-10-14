@@ -249,6 +249,7 @@ function PublishPage() {
   const [confirm, setConfirm] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [googleEmail, setGoogleEmail] = useState<string | null>(null);
   const [islands, setIslands] = useState<any[]>([]);
   const [showNadirModal, setShowNadirModal] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -371,6 +372,9 @@ function PublishPage() {
       });
       if (!error && data?.access_token) {
         setAccessToken(data.access_token);
+        if (data.google_email) {
+          setGoogleEmail(data.google_email);
+        }
         return data.access_token;
       }
     } catch (e) {
@@ -632,6 +636,9 @@ function PublishPage() {
         console.error("Google Auth data error:", data.error);
       } else if (data?.access_token) {
         setAccessToken(data.access_token);
+        if (data.google_email) {
+          setGoogleEmail(data.google_email);
+        }
       }
     } catch (e) {
       console.error("Not connected to Google:", e);
@@ -729,6 +736,7 @@ function PublishPage() {
 
   const connectGoogle = async () => {
     try {
+      sessionStorage.setItem("google_oauth_return_to", window.location.pathname);
       const redirectUri = window.location.origin + "/auth/google/callback";
       const { data, error } = await supabase.functions.invoke("google-oauth", {
         body: { action: "get_auth_url", redirect_uri: redirectUri },
@@ -2897,17 +2905,27 @@ function PublishPage() {
         <>
           {/* Top info bar */}
           <div className="mb-4 rounded-xl border bg-card p-3 flex flex-wrap items-center justify-between gap-3 max-w-4xl mx-auto">
-            <div className="text-sm flex items-center gap-2">
-              <span className="text-muted-foreground">owner:</span>
-              <span className="font-medium">{user?.email ?? "—"}</span>
+            <div className="text-sm flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Account:</span>
+              <span className="font-medium text-xs">{user?.email ?? "—"}</span>
               {accessToken ? (
-                <span className="text-green-600 flex items-center gap-1 text-xs bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
-                  <Check className="h-3 w-3" /> Google Connected
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-emerald-700 flex items-center gap-1 text-xs bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-medium">
+                    <Check className="h-3 w-3" /> Publishing as:{" "}
+                    <strong className="font-bold underline">{googleEmail || "Google Connected"}</strong>
+                  </span>
+                  <button
+                    onClick={connectGoogle}
+                    title="Switch or re-authenticate Google Street View account"
+                    className="text-xs text-sky-700 hover:text-sky-900 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded-md border border-sky-200 cursor-pointer font-semibold transition-colors"
+                  >
+                    Switch Account
+                  </button>
+                </div>
               ) : (
                 <button
                   onClick={connectGoogle}
-                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200 cursor-pointer font-medium"
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs bg-blue-50 hover:bg-blue-100 px-2.5 py-0.5 rounded-full border border-blue-200 cursor-pointer font-bold transition-colors"
                 >
                   Connect Google Account
                 </button>
@@ -3446,9 +3464,17 @@ function PublishPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Confirm publish</DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground mt-2">
-                  You are about to publish to Google Street View under <strong>{user?.email}</strong>.
-                  Continue?
+                <DialogDescription className="text-sm text-muted-foreground mt-2 space-y-2">
+                  <div>
+                    You are about to publish to Google Street View under{" "}
+                    <strong className="text-slate-900 font-bold underline">{googleEmail || user?.email}</strong>.
+                  </div>
+                  {googleEmail && user?.email && googleEmail.toLowerCase() !== user.email.toLowerCase() && (
+                    <div className="text-xs bg-amber-50 text-amber-800 p-2.5 rounded-lg border border-amber-200 leading-relaxed">
+                      ⚠️ <strong>Note:</strong> Your PanoPublish login email is <span className="font-mono font-semibold">{user.email}</span>, but your Street View account is <strong className="font-mono font-bold underline">{googleEmail}</strong>. If you want to publish under a different Google account, click Cancel and use <strong>Switch Account</strong>.
+                    </div>
+                  )}
+                  <div>Continue?</div>
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>

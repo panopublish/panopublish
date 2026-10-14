@@ -243,6 +243,7 @@ function AdminDashboard() {
   const [referralAttributions, setReferralAttributions] = useState<ReferralAttribution[]>([]);
   const [referralCommissions, setReferralCommissions] = useState<ReferralCommission[]>([]);
   const [referralPayouts, setReferralPayouts] = useState<ReferralPayout[]>([]);
+  const [googleTokens, setGoogleTokens] = useState<{ user_id: string; google_email?: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Referral Program Admin Form States
@@ -441,7 +442,7 @@ function AdminDashboard() {
       if (token) {
         await adminEnsureReferralTables({ data: { token } }).catch(() => {});
       }
-      const [profRes, subRes, tourRes, photoRes, clientRes, couponRes, refCodeRes, refAttrRes, refCommRes, refPayRes] = await Promise.all([
+      const [profRes, subRes, tourRes, photoRes, clientRes, couponRes, refCodeRes, refAttrRes, refCommRes, refPayRes, googleTokensRes] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("subscriptions").select("*").order("created_at", { ascending: false }),
         supabase.from("tours").select("*").order("created_at", { ascending: false }),
@@ -452,6 +453,7 @@ function AdminDashboard() {
         supabase.from("referral_attributions").select("*").order("created_at", { ascending: false }),
         supabase.from("referral_commissions").select("*").order("created_at", { ascending: false }),
         supabase.from("referral_payouts").select("*").order("paid_at", { ascending: false }),
+        supabase.from("google_tokens").select("user_id, google_email"),
       ]);
 
       const profs = (profRes.data as Profile[]) ?? [];
@@ -472,6 +474,7 @@ function AdminDashboard() {
       setReferralAttributions((refAttrRes.data as ReferralAttribution[]) ?? []);
       setReferralCommissions((refCommRes.data as ReferralCommission[]) ?? []);
       setReferralPayouts((refPayRes.data as ReferralPayout[]) ?? []);
+      setGoogleTokens((googleTokensRes?.data as any) ?? []);
     } catch (e: any) {
       console.error("Failed to load admin dashboard data:", e);
       if (showSpinner) toast.error("Error loading dashboard data: " + e.message);
@@ -1918,6 +1921,25 @@ function AdminDashboard() {
                                   >
                                     {p.email}
                                   </div>
+                                  {(() => {
+                                    const gTok = googleTokens.find((g) => g.user_id === p.id);
+                                    if (!gTok) return null;
+                                    const isMismatch = gTok.google_email && p.email && gTok.google_email.toLowerCase() !== p.email.toLowerCase();
+                                    return (
+                                      <div
+                                        className={`text-[10px] rounded px-1.5 py-0.5 inline-flex items-center gap-1 font-semibold mt-1 border ${
+                                          isMismatch
+                                            ? "bg-amber-50 text-amber-900 border-amber-300"
+                                            : "bg-emerald-50 text-emerald-800 border-emerald-200"
+                                        }`}
+                                        title={`Street View publishing account: ${gTok.google_email || "Connected"}${isMismatch ? " (Differs from signup email)" : ""}`}
+                                      >
+                                        🌐 <span className="font-bold">Google:</span>
+                                        <span className="font-mono">{gTok.google_email || "Connected"}</span>
+                                        {isMismatch && <span className="text-[9px] bg-amber-200 px-1 rounded text-amber-900 font-bold">mismatch</span>}
+                                      </div>
+                                    );
+                                  })()}
                                   {p.company_name && (
                                     <div className="text-[10px] bg-slate-100 text-slate-500 rounded px-1.5 py-0.5 inline-block mt-1 font-semibold">
                                       💼 {p.company_name}
@@ -3989,6 +4011,27 @@ function AdminDashboard() {
                     {editingProfile.name || "Unnamed"}
                   </div>
                   <div className="text-xs font-mono text-slate-500">{editingProfile.email}</div>
+                  {(() => {
+                    const gTok = googleTokens.find((g) => g.user_id === editingProfile.id);
+                    if (!gTok) {
+                      return (
+                        <div className="text-[11px] text-slate-400 mt-1 font-medium">
+                          Google Street View: <span className="italic">Not connected</span>
+                        </div>
+                      );
+                    }
+                    const isMismatch = gTok.google_email && editingProfile.email && gTok.google_email.toLowerCase() !== editingProfile.email.toLowerCase();
+                    return (
+                      <div className="text-[11px] mt-1 font-medium">
+                        Google Street View: <span className="font-mono font-bold text-slate-700">{gTok.google_email || "Connected (legacy token)"}</span>
+                        {isMismatch && (
+                          <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
+                            ⚠️ Note: Connected Google account differs from login email ({editingProfile.email})
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="text-right">
                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current</div>

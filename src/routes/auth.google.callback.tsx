@@ -37,9 +37,12 @@ function GoogleAuthCallback() {
           throw new Error(fnError?.message || data?.error || "Failed to connect Google Account");
         }
 
-        toast.success("Google Account connected successfully ✓");
+        const connectedEmailMsg = data?.google_email ? ` (${data.google_email})` : "";
+        toast.success(`Google Account connected successfully${connectedEmailMsg} ✓`);
         localStorage.setItem("google_connected", "true");
-        window.location.href = "/dashboard?onboarding=success";
+        const returnTo = sessionStorage.getItem("google_oauth_return_to") || "/dashboard?onboarding=success";
+        sessionStorage.removeItem("google_oauth_return_to");
+        window.location.href = returnTo;
       } catch (err: any) {
         setError(err.message);
         toast.error("Failed to connect Google Account: " + err.message);

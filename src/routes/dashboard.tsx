@@ -291,12 +291,23 @@ function Dashboard() {
   const connectGoogle = async () => {
     setLoadingOauth(true);
     try {
+      sessionStorage.setItem("google_oauth_return_to", "/dashboard");
+      const redirectUri = window.location.origin + "/auth/google/callback";
+      const { data, error } = await supabase.functions.invoke("google-oauth", {
+        body: { action: "get_auth_url", redirect_uri: redirectUri },
+      });
+      if (!error && data?.authUrl) {
+        window.location.href = data.authUrl;
+        return;
+      }
       const clientId = getEnv("VITE_GOOGLE_CLIENT_ID");
       if (!clientId) {
         throw new Error("Missing Google Client ID in environment variables.");
       }
-      const redirectUri = window.location.origin + "/auth/google/callback";
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=https://www.googleapis.com/auth/streetviewpublish&access_type=offline&prompt=consent`;
+      const scope = encodeURIComponent(
+        "https://www.googleapis.com/auth/streetviewpublish https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
+      );
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account%20consent`;
 
       window.location.href = authUrl;
     } catch (e: any) {

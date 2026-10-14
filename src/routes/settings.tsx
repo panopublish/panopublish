@@ -190,12 +190,23 @@ function SettingsPage() {
       // 2. Fetch Google token connection
       const { data: tokenData } = await supabase
         .from("google_tokens")
-        .select("id, expires_at")
+        .select("id, expires_at, google_email")
         .eq("user_id", user.id)
         .maybeSingle();
 
       setIsGoogleConnected(!!tokenData);
-      setGoogleEmail(user.email ?? "");
+      let gEmail = (tokenData as any)?.google_email;
+      if (tokenData && !gEmail) {
+        try {
+          const { data: validData } = await supabase.functions.invoke("google-oauth", {
+            body: { action: "get_valid_token", user_id: user.id },
+          });
+          if (validData?.google_email) {
+            gEmail = validData.google_email;
+          }
+        } catch (_) {}
+      }
+      setGoogleEmail(gEmail || user.email || "");
 
       // 3. Fetch all subscriptions / billing history for this user
       const { data: subData } = await supabase
@@ -441,10 +452,21 @@ function SettingsPage() {
 
   const connectGoogle = async () => {
     try {
+      sessionStorage.setItem("google_oauth_return_to", "/settings");
+      const redirectUri = window.location.origin + "/auth/google/callback";
+      const { data, error } = await supabase.functions.invoke("google-oauth", {
+        body: { action: "get_auth_url", redirect_uri: redirectUri },
+      });
+      if (!error && data?.authUrl) {
+        window.location.href = data.authUrl;
+        return;
+      }
       const clientId = getEnv("VITE_GOOGLE_CLIENT_ID");
       if (!clientId) throw new Error("Missing VITE_GOOGLE_CLIENT_ID in environment variables.");
-      const redirectUri = window.location.origin + "/auth/google/callback";
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=https://www.googleapis.com/auth/streetviewpublish&access_type=offline&prompt=consent`;
+      const scope = encodeURIComponent(
+        "https://www.googleapis.com/auth/streetviewpublish https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
+      );
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account%20consent`;
       window.location.href = authUrl;
     } catch (e: any) {
       toast.error("Failed to start Google connection: " + e.message);
@@ -2228,12 +2250,22 @@ function SettingsPage() {
                             Account directly on Google Maps.
                           </p>
                         </div>
-                        <Button
-                          onClick={revokeGoogleAccess}
-                          className="w-full bg-red-600 hover:bg-red-700 text-white font-bold h-10 shadow cursor-pointer text-xs uppercase tracking-wider"
-                        >
-                          Revoke Google Access
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            onClick={connectGoogle}
+                            className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold h-10 shadow cursor-pointer text-xs uppercase tracking-wider"
+                          >
+                            Switch Account
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={revokeGoogleAccess}
+                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold h-10 shadow cursor-pointer text-xs uppercase tracking-wider"
+                          >
+                            Revoke Access
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-4 w-full max-w-sm">

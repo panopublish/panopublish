@@ -49,7 +49,10 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
     const redirectUri = payload.redirect_uri || `${getEnv("VITE_APP_URL") || "https://panopublish.com"}/auth/google/callback`;
 
     if (payload.action === "get_auth_url") {
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=https://www.googleapis.com/auth/streetviewpublish&access_type=offline&prompt=consent`;
+      const scope = encodeURIComponent(
+        "https://www.googleapis.com/auth/streetviewpublish https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
+      );
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account%20consent`;
       return { authUrl };
     }
 
@@ -73,6 +76,25 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
 
       const expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 
+      // Fetch the actual Google account email that authorized this session
+      let googleEmail: string | null = null;
+      try {
+        const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        if (userInfoRes.ok) {
+          const userInfo: any = await userInfoRes.json();
+          googleEmail = userInfo.email || null;
+        }
+      } catch (uiErr) {
+        console.warn("Could not fetch userinfo from Google:", uiErr);
+      }
+
+      // Ensure google_email column exists in D1 google_tokens
+      try {
+        await db.prepare("ALTER TABLE google_tokens ADD COLUMN google_email TEXT").run();
+      } catch (_) {}
+
       // Query existing tokens from D1 database
       const { results: existingTokens } = await db
         .prepare("SELECT * FROM google_tokens WHERE user_id = ?")
@@ -85,14 +107,14 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
       if (existingToken) {
         await db
           .prepare(
-            "UPDATE google_tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE user_id = ?",
+            "UPDATE google_tokens SET access_token = ?, refresh_token = ?, expires_at = ?, google_email = COALESCE(?, google_email) WHERE user_id = ?",
           )
-          .bind(tokenData.access_token, refresh_token || null, expires_at, userId)
+          .bind(tokenData.access_token, refresh_token || null, expires_at, googleEmail, userId)
           .run();
       } else {
         await db
           .prepare(
-            "INSERT INTO google_tokens (id, user_id, access_token, refresh_token, expires_at) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO google_tokens (id, user_id, access_token, refresh_token, expires_at, google_email) VALUES (?, ?, ?, ?, ?, ?)",
           )
           .bind(
             crypto.randomUUID(),
@@ -100,11 +122,12 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
             tokenData.access_token,
             refresh_token || null,
             expires_at,
+            googleEmail,
           )
           .run();
       }
 
-      return { success: true };
+      return { success: true, google_email: googleEmail };
     }
 
     if (payload.action === "get_valid_token") {
@@ -112,10 +135,13 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
         .prepare("SELECT * FROM google_tokens WHERE user_id = ?")
         .bind(userId)
         .all();
-      const tokenRecord = tokens && tokens.length > 0 ? tokens[0] : null;
+      const tokenRecord = tokens && tokens.length > 0 ? (tokens[0] as any) : null;
       if (!tokenRecord) {
-        return { access_token: null };
+        return { access_token: null, google_email: null };
       }
+
+      let currentAccessToken = tokenRecord.access_token;
+      let googleEmail = tokenRecord.google_email || null;
 
       const expiresAt = new Date(tokenRecord.expires_at).getTime();
       if (Date.now() > expiresAt - 5 * 60 * 1000) {
@@ -136,6 +162,7 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
             console.error("Failed to refresh token:", refreshData);
             return {
               access_token: null,
+              google_email: googleEmail,
               error: refreshData.error_description || "Failed to refresh token",
             };
           }
@@ -146,14 +173,36 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
             .bind(refreshData.access_token, newExpiresAt, userId)
             .run();
 
-          return { access_token: refreshData.access_token };
+          currentAccessToken = refreshData.access_token;
         } catch (refreshErr: any) {
           console.error("Error refreshing token:", refreshErr);
-          return { access_token: null, error: refreshErr.message };
+          return { access_token: null, google_email: googleEmail, error: refreshErr.message };
         }
       }
 
-      return { access_token: tokenRecord.access_token };
+      // Lazily backfill google_email if not yet stored
+      if (!googleEmail && currentAccessToken) {
+        try {
+          const uRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${currentAccessToken}` },
+          });
+          if (uRes.ok) {
+            const uData: any = await uRes.json();
+            if (uData.email) {
+              googleEmail = uData.email;
+              try {
+                await db.prepare("ALTER TABLE google_tokens ADD COLUMN google_email TEXT").run();
+              } catch (_) {}
+              await db
+                .prepare("UPDATE google_tokens SET google_email = ? WHERE user_id = ?")
+                .bind(googleEmail, userId)
+                .run();
+            }
+          }
+        } catch (_) {}
+      }
+
+      return { access_token: currentAccessToken, google_email: googleEmail };
     }
 
     if (payload.action === "disconnect") {

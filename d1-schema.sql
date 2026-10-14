@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS google_tokens (
   access_token TEXT NOT NULL,
   refresh_token TEXT,
   expires_at TEXT,
+  google_email TEXT,
   created_at TEXT DEFAULT (datetime('now'))
 );
 
