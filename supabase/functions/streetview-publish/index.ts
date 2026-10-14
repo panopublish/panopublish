@@ -316,7 +316,7 @@ serve(async (req) => {
       // Step 3: Upload bytes to Google
       const uploadRes = await fetch(uploadUrl, {
         method: "POST",
-        body: processedBuffer,
+        body: processedBuffer as any,
         headers: {
           Authorization: `Bearer ${access_token}`,
           "Content-Type": "image/jpeg",
@@ -839,21 +839,28 @@ serve(async (req) => {
     if (action === "batch_delete_photos") {
       const { photo_ids } = payload;
       if (!photo_ids || !Array.isArray(photo_ids) || photo_ids.length === 0) {
-        return new Response(JSON.stringify({ success: true, deleted_count: 0 }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ success: true, deleted_count: 0, successful_ids: [], failed_ids: [] }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
+
+      const cleanPhotoIds = photo_ids
+        .map((id: any) => (typeof id === "string" ? id.trim() : ""))
+        .filter((id: string) => id.length > 0);
 
       const BATCH_SIZE = 40;
       let totalDeleted = 0;
+      const successfulIds: string[] = [];
+      const failedIds: string[] = [];
       const errors: string[] = [];
 
-      for (let i = 0; i < photo_ids.length; i += BATCH_SIZE) {
-        const batch = photo_ids.slice(i, i + BATCH_SIZE);
-        let batchSuccess = false;
+      for (let i = 0; i < cleanPhotoIds.length; i += BATCH_SIZE) {
+        const batch = cleanPhotoIds.slice(i, i + BATCH_SIZE);
+        let batchProcessed = false;
         let attempts = 0;
 
-        while (!batchSuccess && attempts < 3) {
+        while (!batchProcessed && attempts < 3) {
           attempts++;
           try {
             const res = await fetch(
@@ -879,28 +886,57 @@ serve(async (req) => {
               throw new Error(`Google batchDelete HTTP ${res.status}: ${errBody}`);
             }
 
-            totalDeleted += batch.length;
-            batchSuccess = true;
+            const resData: any = await res.json();
+            if (Array.isArray(resData?.status)) {
+              for (let idx = 0; idx < batch.length; idx++) {
+                const pid = batch[idx];
+                const st = resData.status[idx];
+                const code = st?.code ?? 0;
+                // code 0 = OK, code 5 = NOT_FOUND (already deleted on Google)
+                if (code === 0 || code === 5) {
+                  successfulIds.push(pid);
+                  totalDeleted++;
+                } else {
+                  failedIds.push(pid);
+                  const msg = st?.message || `Google error code ${code}`;
+                  errors.push(`Photo ${pid}: ${msg}`);
+                }
+              }
+            } else {
+              successfulIds.push(...batch);
+              totalDeleted += batch.length;
+            }
+
+            batchProcessed = true;
           } catch (batchErr: any) {
             console.error(`batchDelete attempt ${attempts} failed:`, batchErr);
             if (attempts >= 3) {
-              errors.push(batchErr.message);
-              // Fallback to individual deletes with throttle
+              // Fallback to individual deletes with throttle and explicit status checking
               for (const pid of batch) {
                 try {
-                  await fetch(
-                    `https://streetviewpublish.googleapis.com/v1/photo/${pid}?key=${apiKey}`,
+                  const singleRes = await fetch(
+                    `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(pid)}?key=${apiKey}`,
                     {
                       method: "DELETE",
                       headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
                     },
                   );
-                  totalDeleted++;
-                  await new Promise((r) => setTimeout(r, 250));
-                } catch (singleErr) {
-                  console.error(`Single delete fallback failed for ${pid}:`, singleErr);
+
+                  if (singleRes.ok || singleRes.status === 404) {
+                    successfulIds.push(pid);
+                    totalDeleted++;
+                  } else {
+                    failedIds.push(pid);
+                    const errText = await singleRes.text();
+                    errors.push(`Photo ${pid}: HTTP ${singleRes.status} - ${errText.slice(0, 100)}`);
+                  }
+                  await new Promise((r) => setTimeout(r, 200));
+                } catch (singleErr: any) {
+                  failedIds.push(pid);
+                  errors.push(`Photo ${pid}: ${singleErr.message}`);
                 }
               }
+              batchProcessed = true;
             } else {
               await new Promise((r) => setTimeout(r, 1000));
             }
@@ -910,8 +946,10 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          success: errors.length === 0 || totalDeleted > 0,
+          success: failedIds.length === 0,
           deleted_count: totalDeleted,
+          successful_ids: successfulIds,
+          failed_ids: failedIds,
           errors: errors.length > 0 ? errors : undefined,
         }),
         {
@@ -922,8 +960,15 @@ serve(async (req) => {
 
     if (action === "delete_photo") {
       const { streetview_photo_id } = payload;
+      if (!streetview_photo_id) {
+        return new Response(JSON.stringify({ error: "Missing streetview_photo_id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const res = await fetch(
-        `https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}`,
+        `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(streetview_photo_id)}?key=${apiKey}`,
         {
           method: "DELETE",
           headers: {
@@ -932,17 +977,96 @@ serve(async (req) => {
           },
         },
       );
-      if (!res.ok) {
+
+      if (res.ok || res.status === 404) {
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const errBody = await res.text();
+      return new Response(
+        JSON.stringify({ error: `Failed to delete photo: status ${res.status} - ${errBody}` }),
+        {
+          status: res.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    if (action === "find_and_delete_place_photos") {
+      const { place_id } = payload;
+      if (!place_id) {
+        return new Response(JSON.stringify({ error: "Missing place_id" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const allFoundPhotoIds: string[] = [];
+      let pageToken: string | undefined = undefined;
+      let pageCount = 0;
+
+      do {
+        const url = new URL("https://streetviewpublish.googleapis.com/v1/photos");
+        url.searchParams.set("key", apiKey);
+        url.searchParams.set("view", "BASIC");
+        url.searchParams.set("pageSize", "100");
+        url.searchParams.set("filter", `placeId=${place_id}`);
+        if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+        const listRes = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+        });
+
+        if (!listRes.ok) {
+          const errText = await listRes.text();
+          throw new Error(`Failed to query Google Maps for place photos: ${errText}`);
+        }
+
+        const listData: any = await listRes.json();
+        const photos = listData.photos || [];
+        for (const gp of photos) {
+          if (gp.photoId?.id) {
+            allFoundPhotoIds.push(gp.photoId.id);
+          }
+        }
+        pageToken = listData.nextPageToken;
+        pageCount++;
+      } while (pageToken && pageCount < 10);
+
+      let deleted = 0;
+      const deleteErrors: string[] = [];
+      for (const pid of allFoundPhotoIds) {
         try {
-          const data = await res.json();
-          throw new Error(data.error?.message || "Failed to delete photo");
-        } catch (_) {
-          throw new Error(`Failed to delete photo: status ${res.status}`);
+          const delRes = await fetch(
+            `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(pid)}?key=${apiKey}`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+            },
+          );
+          if (delRes.ok || delRes.status === 404) {
+            deleted++;
+          } else {
+            deleteErrors.push(`Failed to delete ${pid}: status ${delRes.status}`);
+          }
+          await new Promise((r) => setTimeout(r, 200));
+        } catch (e: any) {
+          deleteErrors.push(`Failed to delete ${pid}: ${e.message}`);
         }
       }
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      return new Response(
+        JSON.stringify({
+          success: deleteErrors.length === 0 || deleted > 0,
+          count: deleted,
+          found_count: allFoundPhotoIds.length,
+          errors: deleteErrors.length > 0 ? deleteErrors : undefined,
+          message: `Deleted ${deleted} of ${allFoundPhotoIds.length} scene(s) from Google Maps.`,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {

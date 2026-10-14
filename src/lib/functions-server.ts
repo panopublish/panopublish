@@ -182,7 +182,51 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
     if (!apiKey) throw new Error("VITE_GOOGLE_MAPS_API_KEY missing");
 
     const referer = "https://panopublish.com/";
-    const access_token = payload.access_token;
+    let access_token = payload.access_token;
+
+    const getFreshGoogleToken = async (): Promise<string | null> => {
+      try {
+        const { results: tokens } = await db
+          .prepare("SELECT * FROM google_tokens WHERE user_id = ?")
+          .bind(userId)
+          .all();
+        const tokenRecord = tokens && tokens.length > 0 ? (tokens[0] as any) : null;
+        if (!tokenRecord) return null;
+
+        const expiresAt = new Date(tokenRecord.expires_at).getTime();
+        if (Date.now() > expiresAt - 3 * 60 * 1000) {
+          if (!tokenRecord.refresh_token) return tokenRecord.access_token;
+          const clientId = getEnv("VITE_GOOGLE_CLIENT_ID");
+          const clientSecret =
+            getEnv("GOOGLE_CLIENT_SECRET") || "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";
+          const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              client_id: clientId!,
+              client_secret: clientSecret,
+              refresh_token: tokenRecord.refresh_token,
+              grant_type: "refresh_token",
+            }),
+          });
+          const refreshData: any = await refreshRes.json();
+          if (refreshRes.ok && refreshData.access_token) {
+            const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
+            await db
+              .prepare(
+                "UPDATE google_tokens SET access_token = ?, expires_at = ? WHERE user_id = ?",
+              )
+              .bind(refreshData.access_token, newExpiresAt, userId)
+              .run();
+            return refreshData.access_token;
+          }
+        }
+        return tokenRecord.access_token;
+      } catch (e) {
+        console.error("Failed to auto-refresh google token:", e);
+        return null;
+      }
+    };
 
     if (payload.action === "start_upload") {
       const startRes = await fetch(
@@ -684,22 +728,35 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
     if (payload.action === "batch_delete_photos") {
       const { photo_ids } = payload;
       if (!photo_ids || !Array.isArray(photo_ids) || photo_ids.length === 0) {
-        return { success: true, deleted_count: 0 };
+        return { success: true, deleted_count: 0, successful_ids: [], failed_ids: [] };
       }
+
+      if (!access_token) {
+        access_token = (await getFreshGoogleToken()) || access_token;
+      }
+      if (!access_token) {
+        throw new Error("Missing Google access token. Please connect your Google account.");
+      }
+
+      const cleanPhotoIds = photo_ids
+        .map((id: any) => (typeof id === "string" ? id.trim() : ""))
+        .filter((id: string) => id.length > 0);
 
       const BATCH_SIZE = 40;
       let totalDeleted = 0;
+      const successfulIds: string[] = [];
+      const failedIds: string[] = [];
       const errors: string[] = [];
 
-      for (let i = 0; i < photo_ids.length; i += BATCH_SIZE) {
-        const batch = photo_ids.slice(i, i + BATCH_SIZE);
-        let batchSuccess = false;
+      for (let i = 0; i < cleanPhotoIds.length; i += BATCH_SIZE) {
+        const batch = cleanPhotoIds.slice(i, i + BATCH_SIZE);
+        let batchProcessed = false;
         let attempts = 0;
 
-        while (!batchSuccess && attempts < 3) {
+        while (!batchProcessed && attempts < 3) {
           attempts++;
           try {
-            const res = await fetch(
+            let res = await fetch(
               `https://streetviewpublish.googleapis.com/v1/photos:batchDelete?key=${apiKey}`,
               {
                 method: "POST",
@@ -712,6 +769,26 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
               },
             );
 
+            // If token expired, refresh and retry once
+            if (res.status === 401 && attempts === 1) {
+              const fresh = await getFreshGoogleToken();
+              if (fresh && fresh !== access_token) {
+                access_token = fresh;
+                res = await fetch(
+                  `https://streetviewpublish.googleapis.com/v1/photos:batchDelete?key=${apiKey}`,
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${access_token}`,
+                      "Content-Type": "application/json",
+                      Referer: referer,
+                    },
+                    body: JSON.stringify({ photoIds: batch }),
+                  },
+                );
+              }
+            }
+
             if (res.status === 429) {
               await new Promise((r) => setTimeout(r, attempts * 1500));
               continue;
@@ -722,28 +799,80 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
               throw new Error(`Google batchDelete HTTP ${res.status}: ${errBody}`);
             }
 
-            totalDeleted += batch.length;
-            batchSuccess = true;
+            const resData: any = await res.json();
+            // Google Street View Publish API batchDelete returns { status: [Status, ...] }
+            if (Array.isArray(resData?.status)) {
+              for (let idx = 0; idx < batch.length; idx++) {
+                const pid = batch[idx];
+                const st = resData.status[idx];
+                const code = st?.code ?? 0;
+                // code 0 = OK, code 5 = NOT_FOUND (already deleted on Google)
+                if (code === 0 || code === 5) {
+                  successfulIds.push(pid);
+                  totalDeleted++;
+                } else {
+                  failedIds.push(pid);
+                  const msg = st?.message || `Google error code ${code}`;
+                  errors.push(`Photo ${pid}: ${msg}`);
+                }
+              }
+            } else {
+              // If status array is not present, all in batch succeeded
+              successfulIds.push(...batch);
+              totalDeleted += batch.length;
+            }
+
+            batchProcessed = true;
           } catch (batchErr: any) {
             console.error(`batchDelete attempt ${attempts} failed:`, batchErr);
             if (attempts >= 3) {
-              errors.push(batchErr.message);
-              // Fallback to individual deletes with throttle
+              // Fallback to individual deletes with throttle and explicit status checking
               for (const pid of batch) {
                 try {
-                  await fetch(
-                    `https://streetviewpublish.googleapis.com/v1/photo/${pid}?key=${apiKey}`,
+                  let singleRes = await fetch(
+                    `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(pid)}?key=${apiKey}`,
                     {
                       method: "DELETE",
                       headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
                     },
                   );
-                  totalDeleted++;
-                  await new Promise((r) => setTimeout(r, 250));
-                } catch (singleErr) {
-                  console.error(`Single delete fallback failed for ${pid}:`, singleErr);
+
+                  if (singleRes.status === 401) {
+                    const fresh = await getFreshGoogleToken();
+                    if (fresh && fresh !== access_token) {
+                      access_token = fresh;
+                      singleRes = await fetch(
+                        `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(pid)}?key=${apiKey}`,
+                        {
+                          method: "DELETE",
+                          headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+                        },
+                      );
+                    }
+                  }
+
+                  if (singleRes.ok || singleRes.status === 404) {
+                    successfulIds.push(pid);
+                    totalDeleted++;
+                  } else {
+                    failedIds.push(pid);
+                    const errText = await singleRes.text();
+                    let errMsg = `HTTP ${singleRes.status}`;
+                    try {
+                      const errJson = JSON.parse(errText);
+                      errMsg = errJson.error?.message || errMsg;
+                    } catch (_) {
+                      errMsg = errText.slice(0, 100) || errMsg;
+                    }
+                    errors.push(`Photo ${pid}: ${errMsg}`);
+                  }
+                  await new Promise((r) => setTimeout(r, 200));
+                } catch (singleErr: any) {
+                  failedIds.push(pid);
+                  errors.push(`Photo ${pid}: ${singleErr.message}`);
                 }
               }
+              batchProcessed = true;
             } else {
               await new Promise((r) => setTimeout(r, 1000));
             }
@@ -752,25 +881,173 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
       }
 
       return {
-        success: errors.length === 0 || totalDeleted > 0,
+        success: failedIds.length === 0,
         deleted_count: totalDeleted,
+        successful_ids: successfulIds,
+        failed_ids: failedIds,
         errors: errors.length > 0 ? errors : undefined,
       };
     }
 
     if (payload.action === "delete_photo") {
       const { streetview_photo_id } = payload;
-      const res = await fetch(
-        `https://streetviewpublish.googleapis.com/v1/photo/${streetview_photo_id}?key=${apiKey}`,
+      if (!streetview_photo_id) throw new Error("Missing streetview_photo_id");
+
+      if (!access_token) {
+        access_token = (await getFreshGoogleToken()) || access_token;
+      }
+      if (!access_token) throw new Error("Google access token required");
+
+      let res = await fetch(
+        `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(streetview_photo_id)}?key=${apiKey}`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
         },
       );
-      if (!res.ok) {
-        throw new Error(`Failed to delete photo: status ${res.status}`);
+
+      if (res.status === 401) {
+        const fresh = await getFreshGoogleToken();
+        if (fresh && fresh !== access_token) {
+          access_token = fresh;
+          res = await fetch(
+            `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(streetview_photo_id)}?key=${apiKey}`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+            },
+          );
+        }
       }
-      return { success: true };
+
+      if (res.ok || res.status === 404) {
+        return { success: true };
+      }
+
+      const errText = await res.text();
+      let errMsg = `Failed to delete photo: status ${res.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        errMsg = errJson.error?.message || errMsg;
+      } catch (_) {}
+      throw new Error(errMsg);
+    }
+
+    if (payload.action === "find_and_delete_place_photos") {
+      const { place_id } = payload;
+      if (!place_id) throw new Error("Missing place_id");
+
+      if (!access_token) {
+        access_token = (await getFreshGoogleToken()) || access_token;
+      }
+      if (!access_token) throw new Error("Google access token required");
+
+      const allFoundPhotoIds: string[] = [];
+      let pageToken: string | undefined = undefined;
+      let pageCount = 0;
+
+      do {
+        const url = new URL("https://streetviewpublish.googleapis.com/v1/photos");
+        url.searchParams.set("key", apiKey);
+        url.searchParams.set("view", "BASIC");
+        url.searchParams.set("pageSize", "100");
+        url.searchParams.set("filter", `placeId=${place_id}`);
+        if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+        const listRes = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+        });
+
+        if (!listRes.ok) {
+          const errText = await listRes.text();
+          throw new Error(`Failed to query Google Maps for place photos: ${errText}`);
+        }
+
+        const listData: any = await listRes.json();
+        const photos = listData.photos || [];
+        for (const gp of photos) {
+          if (gp.photoId?.id) {
+            allFoundPhotoIds.push(gp.photoId.id);
+          }
+        }
+        pageToken = listData.nextPageToken;
+        pageCount++;
+      } while (pageToken && pageCount < 10);
+
+      if (allFoundPhotoIds.length === 0) {
+        return {
+          success: true,
+          count: 0,
+          message: "No scenes found on Google Maps for this place under your account.",
+        };
+      }
+
+      // Delete the found photo IDs
+      let deleted = 0;
+      const deleteErrors: string[] = [];
+      for (const pid of allFoundPhotoIds) {
+        try {
+          const delRes = await fetch(
+            `https://streetviewpublish.googleapis.com/v1/photo/${encodeURIComponent(pid)}?key=${apiKey}`,
+            {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+            },
+          );
+          if (delRes.ok || delRes.status === 404) {
+            deleted++;
+          } else {
+            deleteErrors.push(`Failed to delete ${pid}: status ${delRes.status}`);
+          }
+          await new Promise((r) => setTimeout(r, 200));
+        } catch (e: any) {
+          deleteErrors.push(`Failed to delete ${pid}: ${e.message}`);
+        }
+      }
+
+      return {
+        success: deleteErrors.length === 0 || deleted > 0,
+        count: deleted,
+        found_count: allFoundPhotoIds.length,
+        errors: deleteErrors.length > 0 ? deleteErrors : undefined,
+        message: `Deleted ${deleted} of ${allFoundPhotoIds.length} scene(s) from Google Maps.`,
+      };
+    }
+
+    if (payload.action === "list_place_photos") {
+      const { place_id } = payload;
+      if (!place_id) throw new Error("Missing place_id");
+
+      if (!access_token) {
+        access_token = (await getFreshGoogleToken()) || access_token;
+      }
+      if (!access_token) throw new Error("Google access token required");
+
+      const url = new URL("https://streetviewpublish.googleapis.com/v1/photos");
+      url.searchParams.set("key", apiKey);
+      url.searchParams.set("view", "BASIC");
+      url.searchParams.set("pageSize", "100");
+      url.searchParams.set("filter", `placeId=${place_id}`);
+
+      const listRes = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${access_token}`, Referer: referer },
+      });
+
+      if (!listRes.ok) {
+        const errText = await listRes.text();
+        throw new Error(`Failed to list Google Maps photos: ${errText}`);
+      }
+
+      const listData: any = await listRes.json();
+      return {
+        success: true,
+        photos: (listData.photos || []).map((gp: any) => ({
+          photo_id: gp.photoId?.id,
+          share_link: gp.shareLink,
+          status: gp.mapsPublishStatus,
+          upload_time: gp.uploadTime,
+        })),
+      };
     }
 
     throw new Error(`Unknown streetview action: ${payload.action}`);

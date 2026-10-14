@@ -193,31 +193,91 @@ function ToursPage() {
     );
     if (!confirmed) return;
 
-    const tid = toast.loading("Deleting tour and clearing storage...");
+    const tid = toast.loading("Checking published status and preparing deletion...");
     try {
-      // 1. Fetch all associated photo records to get explicit file paths
+      // 1. Fetch all associated photo records to get explicit file paths and streetview_photo_ids
       const { data: photoRecords } = await supabase
         .from("photos")
-        .select("file_path")
+        .select("file_path, streetview_photo_id")
         .eq("tour_id", id);
 
       const filePaths = ((photoRecords || []) as { file_path?: string }[])
         .map((p) => p.file_path)
         .filter(Boolean) as string[];
 
-      // 2. Remove files and purge the entire tour prefix from Cloudflare R2 storage
+      const publishedPhotoIds = ((photoRecords || []) as { streetview_photo_id?: string }[])
+        .map((p) => p.streetview_photo_id)
+        .filter((pid): pid is string => !!pid && typeof pid === "string" && pid.trim().length > 0);
+
+      const targetTour = (tours ?? []).find((t) => t.id === id);
+
+      // 2. If tour has published scenes on Google Maps, delete them from Google Maps first
+      if (publishedPhotoIds.length > 0) {
+        toast.loading(`Deleting ${publishedPhotoIds.length} scene(s) from Google Maps...`, { id: tid });
+        try {
+          const { data: tokenData } = await supabase.functions.invoke("google-oauth", {
+            body: { action: "get_valid_token", user_id: user?.id },
+          });
+          const googleToken = tokenData?.access_token;
+          if (googleToken) {
+            const { data: delResult, error: delError } = await supabase.functions.invoke(
+              "streetview-publish",
+              {
+                body: {
+                  action: "batch_delete_photos",
+                  access_token: googleToken,
+                  photo_ids: publishedPhotoIds,
+                },
+              },
+            );
+            if (delError || (delResult && !delResult.success && delResult.deleted_count === 0)) {
+              console.warn("Google Street View deletion warning:", delError || delResult?.errors);
+            }
+          } else {
+            const proceed = window.confirm(
+              `Notice: This tour has ${publishedPhotoIds.length} scene(s) published on Google Maps, but your Google account is not connected. If you continue, the tour will be deleted from Pano Publish, but the photos may remain on Google Maps. Continue deletion anyway?`,
+            );
+            if (!proceed) {
+              toast.dismiss(tid);
+              return;
+            }
+          }
+        } catch (gErr) {
+          console.error("Error deleting photos from Google Street View:", gErr);
+        }
+      } else if (targetTour?.google_place_id && targetTour.status === "published") {
+        // Fallback: If DB photos didn't have photo IDs but tour is marked published, check Google Maps by place_id
+        try {
+          const { data: tokenData } = await supabase.functions.invoke("google-oauth", {
+            body: { action: "get_valid_token", user_id: user?.id },
+          });
+          if (tokenData?.access_token) {
+            await supabase.functions.invoke("streetview-publish", {
+              body: {
+                action: "find_and_delete_place_photos",
+                access_token: tokenData.access_token,
+                place_id: targetTour.google_place_id,
+              },
+            });
+          }
+        } catch (_) {}
+      }
+
+      toast.loading("Removing tour files and clearing database...", { id: tid });
+
+      // 3. Remove files and purge the entire tour prefix from Cloudflare R2 storage
       const prefix = user?.id ? `${user.id}/${id}/` : undefined;
       await (supabase.storage.from("tour-photos") as any).remove({
         paths: filePaths,
         prefix,
       });
 
-      // 3. Delete tour from database (cascades to photos, islands, and connections)
+      // 4. Delete tour from database (cascades to photos, islands, and connections)
       const { error } = await supabase.from("tours").delete().eq("id", id);
       if (error) throw error;
 
       // Decrement / re-sync billing_cycle_tours_used if a published tour is deleted
-      const deletedTour = (tours ?? []).find((t) => t.id === id);
+      const deletedTour = targetTour;
       if (deletedTour?.status === "published") {
         const newUsed = Math.max(0, (profile?.billing_cycle_tours_used ?? 1) - 1);
         await supabase
@@ -227,7 +287,7 @@ function ToursPage() {
         setProfile((prev) => (prev ? { ...prev, billing_cycle_tours_used: newUsed } : prev));
       }
 
-      toast.success("Tour deleted and storage cleared!", { id: tid });
+      toast.success("Tour deleted and removed from Google Maps & storage!", { id: tid });
       load();
     } catch (err: any) {
       console.error(err);

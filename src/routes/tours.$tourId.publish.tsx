@@ -1814,6 +1814,68 @@ function PublishPage() {
     }
   };
 
+  const cleanupOrphanedGoogleScenes = async () => {
+    if (!tour?.google_place_id) {
+      toast.error("This tour has no Google Place ID assigned. Cannot search for place scenes on Google Maps.");
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Scan Google Maps for any scenes uploaded under your account for "${tour.name || "this location"}" (Place ID: ${tour.google_place_id}) and remove them from Google Maps? This is helpful if previous scenes were not completely removed.`
+      )
+    )
+      return;
+
+    const tid = toast.loading("Checking Google Maps for scenes at this location...");
+    setPublishing(true);
+    try {
+      let freshToken = accessToken;
+      try {
+        const { data, error } = await supabase.functions.invoke("google-oauth", {
+          body: { action: "get_valid_token", user_id: user?.id },
+        });
+        if (!error && data?.access_token) {
+          freshToken = data.access_token;
+          setAccessToken(data.access_token);
+        }
+      } catch (e) {
+        console.error("Token refresh error:", e);
+      }
+
+      if (!freshToken) {
+        toast.error("Please connect your Google account in Step 1 first so we have permission to manage scenes on Google Maps.", { id: tid });
+        setPublishing(false);
+        return;
+      }
+
+      toast.loading("Querying Google Maps and deleting scenes for this place...", { id: tid });
+
+      const { data: result, error } = await supabase.functions.invoke("streetview-publish", {
+        body: {
+          action: "find_and_delete_place_photos",
+          access_token: freshToken,
+          place_id: tour.google_place_id,
+        },
+      });
+
+      if (error || !result?.success) {
+        throw new Error(error?.message || result?.error || (result?.errors && result.errors.join(", ")) || "Failed to clean up Google Maps scenes");
+      }
+
+      if (result.count === 0) {
+        toast.success("No scenes found on Google Maps for this place under your account.", { id: tid });
+      } else {
+        toast.success(`Successfully removed ${result.count} scene(s) from Google Maps!`, { id: tid, duration: 6000 });
+      }
+      await load();
+    } catch (err: any) {
+      toast.error("Cleanup failed: " + err.message, { id: tid });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const resetPublishing = async () => {
     if (
       !window.confirm(
@@ -1825,6 +1887,22 @@ function PublishPage() {
     const tid = toast.loading("Connecting to Google and preparing deletion...");
     setPublishing(true);
     try {
+      // 1. Fetch current photos fresh from database to ensure no stale memory state
+      const { data: dbPhotos, error: fetchErr } = await supabase
+        .from("photos")
+        .select("id, streetview_photo_id, streetview_status")
+        .eq("tour_id", tourId);
+
+      if (fetchErr) throw fetchErr;
+
+      const publishedPhotosList = ((dbPhotos || []) as any[]).filter(
+        (p) =>
+          p.streetview_photo_id &&
+          typeof p.streetview_photo_id === "string" &&
+          p.streetview_photo_id.trim().length > 0,
+      );
+      const publishedPhotoIds = publishedPhotosList.map((p) => p.streetview_photo_id.trim());
+
       let freshToken = accessToken;
       try {
         const { data, error } = await supabase.functions.invoke("google-oauth", {
@@ -1838,19 +1916,18 @@ function PublishPage() {
         console.error("Failed to refresh token before reset:", e);
       }
 
-      if (!freshToken) {
-        toast.error("Not connected to Google. Please connect your Google account first.", { id: tid });
-        setPublishing(false);
-        return;
-      }
-
-      // Collect all published photo IDs on Google Street View
-      const publishedPhotoIds = photos
-        .map((p) => p.streetview_photo_id)
-        .filter((id): id is string => !!id && typeof id === "string" && id.trim().length > 0);
-
+      // If photos exist on Google, we MUST have a valid token
       if (publishedPhotoIds.length > 0) {
-        toast.loading(`Deleting ${publishedPhotoIds.length} scenes from Google Maps...`, { id: tid });
+        if (!freshToken) {
+          toast.error(
+            "Not connected to Google. Please connect your Google account in Step 1 first so we can remove the scenes from Google Maps.",
+            { id: tid, duration: 6000 },
+          );
+          setPublishing(false);
+          return;
+        }
+
+        toast.loading(`Deleting ${publishedPhotoIds.length} scene(s) from Google Maps...`, { id: tid });
 
         const { data: delResult, error: delError } = await supabase.functions.invoke(
           "streetview-publish",
@@ -1863,10 +1940,60 @@ function PublishPage() {
           },
         );
 
-        if (delError) {
-          console.error("Batch delete API error:", delError);
-        } else if (delResult?.errors?.length) {
-          console.warn("Some photos had warnings during deletion:", delResult.errors);
+        if (delError || !delResult?.success) {
+          const errMsg =
+            delError?.message ||
+            delResult?.error ||
+            (delResult?.errors && delResult.errors.join(", ")) ||
+            "Failed to delete photos from Google Maps";
+
+          // If some succeeded and some failed
+          if (delResult?.successful_ids?.length > 0) {
+            const successSet = new Set(delResult.successful_ids);
+            const successDbIds = publishedPhotosList
+              .filter((p) => successSet.has(p.streetview_photo_id))
+              .map((p) => p.id);
+
+            if (successDbIds.length > 0) {
+              await supabase
+                .from("photos")
+                .update({
+                  streetview_photo_id: null,
+                  streetview_status: "NOT_PUBLISHED",
+                  streetview_share_link: null,
+                })
+                .in("id", successDbIds);
+            }
+
+            toast.error(
+              `Deleted ${delResult.deleted_count} scenes, but ${delResult.failed_ids?.length || 0} failed to delete from Google Maps: ${errMsg}. Failed scenes were kept in the database so you can retry deletion.`,
+              { id: tid, duration: 8000 },
+            );
+            await load();
+            return;
+          }
+
+          // If all failed
+          throw new Error(
+            `Google Maps API rejected deletion: ${errMsg}. Your tour status in Pano Publish was NOT cleared to protect your data.`,
+          );
+        }
+      } else if (tour?.google_place_id && freshToken) {
+        // Fallback: If DB photos didn't have streetview_photo_id (e.g. wiped earlier),
+        // scan and delete any photos on Google Maps matching this tour's place_id!
+        try {
+          const { data: placeDel } = await supabase.functions.invoke("streetview-publish", {
+            body: {
+              action: "find_and_delete_place_photos",
+              access_token: freshToken,
+              place_id: tour.google_place_id,
+            },
+          });
+          if (placeDel?.count > 0) {
+            console.log(`Cleaned up ${placeDel.count} orphaned place photos from Google Maps.`);
+          }
+        } catch (placeErr) {
+          console.warn("Place photos cleanup attempt:", placeErr);
         }
       }
 
@@ -1892,13 +2019,13 @@ function PublishPage() {
 
       toast.success(
         publishedPhotoIds.length > 0
-          ? `Successfully deleted ${publishedPhotoIds.length} scenes from Google Maps and reset tour!`
+          ? `Successfully deleted ${publishedPhotoIds.length} scene(s) from Google Maps and reset tour!`
           : "Tour publishing status reset successfully!",
         { id: tid },
       );
-      load();
+      await load();
     } catch (e: any) {
-      toast.error("Failed to reset publishing status: " + e.message, { id: tid });
+      toast.error("Failed to reset publishing status: " + e.message, { id: tid, duration: 7000 });
     } finally {
       setPublishing(false);
     }
@@ -3140,7 +3267,10 @@ function PublishPage() {
 
                 {/* Reset & Delete button - right-aligned for clarity */}
                 {photos.some(
-                  (p) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
+                  (p) =>
+                    p.streetview_status === "PUBLISHED" ||
+                    p.streetview_status === "PROCESSING" ||
+                    Boolean(p.streetview_photo_id),
                 ) && (
                   <Button
                     variant="outline"
@@ -3151,6 +3281,21 @@ function PublishPage() {
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                     Reset & Delete from Google
+                  </Button>
+                )}
+
+                {/* Cleanup orphaned Google Maps scenes if Place ID is present */}
+                {tour?.google_place_id && accessToken && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-slate-500 hover:text-red-600 hover:bg-red-50 text-xs flex items-center gap-1.5 h-10 px-3 rounded-xl cursor-pointer"
+                    disabled={publishing || syncingConnections}
+                    onClick={cleanupOrphanedGoogleScenes}
+                    title="Scan Google Maps for any scenes uploaded under your account for this location and remove them"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-slate-400 group-hover:text-red-500" />
+                    Clean Google Scenes for Location
                   </Button>
                 )}
               </div>

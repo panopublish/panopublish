@@ -144,6 +144,7 @@ type Photo = {
   uploaded_at: string;
   island_id: string | null;
   order_index?: number;
+  streetview_photo_id?: string | null;
 };
 
 type UploadItem = {
@@ -481,6 +482,29 @@ function TourDetail() {
     try {
       if (photosToDelete.length > 0) {
         const photoIds = photosToDelete.map((p) => p.id);
+        const svPhotoIds = photosToDelete
+          .map((p) => p.streetview_photo_id)
+          .filter((pid): pid is string => !!pid && typeof pid === "string" && pid.trim().length > 0);
+
+        if (svPhotoIds.length > 0) {
+          try {
+            const { data: tokenData } = await supabase.functions.invoke("google-oauth", {
+              body: { action: "get_valid_token", user_id: user?.id },
+            });
+            if (tokenData?.access_token) {
+              await supabase.functions.invoke("streetview-publish", {
+                body: {
+                  action: "batch_delete_photos",
+                  access_token: tokenData.access_token,
+                  photo_ids: svPhotoIds,
+                },
+              });
+            }
+          } catch (svErr) {
+            console.warn("Could not delete scenes from Google Maps:", svErr);
+          }
+        }
+
         // 1. Delete connections associated with these photos
         for (const pId of photoIds) {
           await supabase
@@ -530,6 +554,29 @@ function TourDetail() {
 
     try {
       const photoIds = unassigned.map((p) => p.id);
+      const svPhotoIds = unassigned
+        .map((p) => p.streetview_photo_id)
+        .filter((pid): pid is string => !!pid && typeof pid === "string" && pid.trim().length > 0);
+
+      if (svPhotoIds.length > 0) {
+        try {
+          const { data: tokenData } = await supabase.functions.invoke("google-oauth", {
+            body: { action: "get_valid_token", user_id: user?.id },
+          });
+          if (tokenData?.access_token) {
+            await supabase.functions.invoke("streetview-publish", {
+              body: {
+                action: "batch_delete_photos",
+                access_token: tokenData.access_token,
+                photo_ids: svPhotoIds,
+              },
+            });
+          }
+        } catch (svErr) {
+          console.warn("Could not delete scenes from Google Maps:", svErr);
+        }
+      }
+
       for (const pId of photoIds) {
         await supabase
           .from("connections")
@@ -815,6 +862,25 @@ function TourDetail() {
   const deletePhoto = async (p: Photo) => {
     if (!confirm("Delete this photo?")) return;
     try {
+      if (p.streetview_photo_id) {
+        try {
+          const { data: tokenData } = await supabase.functions.invoke("google-oauth", {
+            body: { action: "get_valid_token", user_id: user?.id },
+          });
+          if (tokenData?.access_token) {
+            await supabase.functions.invoke("streetview-publish", {
+              body: {
+                action: "delete_photo",
+                access_token: tokenData.access_token,
+                streetview_photo_id: p.streetview_photo_id,
+              },
+            });
+          }
+        } catch (svErr) {
+          console.warn("Could not delete scene from Google Maps:", svErr);
+        }
+      }
+
       await supabase.from("connections").delete().or(`from_photo_id.eq.${p.id},to_photo_id.eq.${p.id}`);
       const filesToRemove = [p.file_path, p.thumbnail_path].filter(Boolean) as string[];
       if (filesToRemove.length > 0) {
