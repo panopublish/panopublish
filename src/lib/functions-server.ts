@@ -396,10 +396,12 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
       }
 
       // Nadir / Logo processing using Jimp
-      const { nadir_type, nadir_size, nadir_pos, nadir_logo_url } = payload as any;
+      const { nadir_type, nadir_size, nadir_pos, nadir_logo_url, arrow_heading, arrowHeading } = payload as any;
       let processedBuffer = new Uint8Array(photoBuffer);
       const typeLower = nadir_type ? nadir_type.toLowerCase().trim() : "none";
       const posLower = nadir_pos ? nadir_pos.toLowerCase().trim() : "btm";
+      const headingDeg = typeof arrow_heading === "number" ? arrow_heading : (typeof arrowHeading === "number" ? arrowHeading : 0);
+      const headingRad = (((headingDeg % 360) + 360) % 360 * Math.PI) / 180;
 
       if (typeLower !== "none" && !(typeLower === "tour level" && !nadir_logo_url)) {
         try {
@@ -460,9 +462,11 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
                 const r = (distFromPole / h) * R;
 
                 for (let x = 0; x < W; x++) {
-                  const theta = (x / W) * 2 * Math.PI - Math.PI / 2;
-                  const u = Math.round(R + r * Math.cos(theta));
-                  const v = Math.round(R + r * Math.sin(theta));
+                  const angleFromArrow = isBottom
+                    ? (x / W) * 2 * Math.PI - (headingRad + Math.PI)
+                    : -(x / W) * 2 * Math.PI + (headingRad + Math.PI);
+                  const u = Math.round(R + r * Math.sin(angleFromArrow));
+                  const v = Math.round(R - r * Math.cos(angleFromArrow));
 
                   if (u >= 0 && u < D && v >= 0 && v < D && r <= R) {
                     const logoIdx = (v * D + u) * 4;

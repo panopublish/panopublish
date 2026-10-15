@@ -50,55 +50,62 @@ export function getSceneArrowHeading(
   const currentIndex = (allPhotos || []).findIndex((p) => p.id === photo.id);
   const currentOrder = photo.order_index != null ? photo.order_index : (currentIndex !== -1 ? currentIndex : 0);
 
-  // 1. Look for outgoing connection from this scene (prioritizing forward navigation)
+  // Helper to extract the resolved heading of a connection (preferring aligned heading over GPS)
+  const getConnHeading = (conn: { from_photo_id: string; to_photo_id: string; heading?: number | null }, isReverse = false): number | null => {
+    if (typeof conn.heading === "number" && !isNaN(conn.heading)) {
+      return (conn.heading + (isReverse ? 180 : 0) + 360) % 360;
+    }
+    const fromP = (allPhotos || []).find((p) => p.id === conn.from_photo_id);
+    const toP = (allPhotos || []).find((p) => p.id === conn.to_photo_id);
+    if (fromP && toP) {
+      const geoH = isReverse
+        ? calcHeading(toP.latitude, toP.longitude, fromP.latitude, fromP.longitude)
+        : calcHeading(fromP.latitude, fromP.longitude, toP.latitude, toP.longitude);
+      if (geoH !== null) return geoH;
+    }
+    return null;
+  };
+
+  // 1. Look for outgoing connections from this scene (prioritizing forward walkthrough progression)
   const outgoing = (allConns || []).filter((c) => c.from_photo_id === photo.id);
   if (outgoing.length > 0) {
-    let chosenConn = outgoing[0];
-    if (outgoing.length > 1) {
-      const forwardConn = outgoing.find((c) => {
+    // Find candidate forward connections where target is later in the tour sequence
+    const forwardCandidates = outgoing
+      .map((c) => {
         const target = (allPhotos || []).find((p) => p.id === c.to_photo_id);
         const targetIdx = (allPhotos || []).findIndex((p) => p.id === c.to_photo_id);
         const targetOrder = target?.order_index != null ? target.order_index : targetIdx;
-        return targetOrder > currentOrder;
-      });
-      if (forwardConn) chosenConn = forwardConn;
-    }
+        return { conn: c, target, diff: targetOrder - currentOrder };
+      })
+      .filter((item) => item.diff > 0)
+      .sort((a, b) => a.diff - b.diff);
 
-    const target = (allPhotos || []).find((p) => p.id === chosenConn.to_photo_id);
-    if (target) {
-      const geoH = calcHeading(photo.latitude, photo.longitude, target.latitude, target.longitude);
-      if (geoH !== null) {
-        return (geoH - photoHeading + 360) % 360;
-      }
-    }
-    if (typeof chosenConn.heading === "number" && !isNaN(chosenConn.heading)) {
-      return (chosenConn.heading - photoHeading + 360) % 360;
+    const chosenConn = forwardCandidates.length > 0 ? forwardCandidates[0].conn : outgoing[0];
+    const resolvedH = getConnHeading(chosenConn, false);
+    if (resolvedH !== null) {
+      return (resolvedH - photoHeading + 360) % 360;
     }
   }
 
-  // 2. Look for incoming connection to this scene (reverse direction by 180 degrees)
+  // 2. If no outgoing connection, check incoming connections (e.g. terminal / dead-end scene)
   const incoming = (allConns || []).filter((c) => c.to_photo_id === photo.id);
   if (incoming.length > 0) {
-    let chosenConn = incoming[0];
-    if (incoming.length > 1) {
-      const forwardConn = incoming.find((c) => {
+    // In a dead-end scene, the viewer walked in from source to this photo.
+    // The forward direction into the room is the same direction they arrived (incoming heading).
+    const incomingCandidates = incoming
+      .map((c) => {
         const source = (allPhotos || []).find((p) => p.id === c.from_photo_id);
         const sourceIdx = (allPhotos || []).findIndex((p) => p.id === c.from_photo_id);
         const sourceOrder = source?.order_index != null ? source.order_index : sourceIdx;
-        return sourceOrder > currentOrder;
-      });
-      if (forwardConn) chosenConn = forwardConn;
-    }
+        return { conn: c, source, diff: currentOrder - sourceOrder };
+      })
+      .filter((item) => item.diff > 0)
+      .sort((a, b) => a.diff - b.diff);
 
-    const source = (allPhotos || []).find((p) => p.id === chosenConn.from_photo_id);
-    if (source) {
-      const geoH = calcHeading(source.latitude, source.longitude, photo.latitude, photo.longitude);
-      if (geoH !== null) {
-        return (geoH + 180 - photoHeading + 360) % 360;
-      }
-    }
-    if (typeof chosenConn.heading === "number" && !isNaN(chosenConn.heading)) {
-      return (chosenConn.heading + 180 - photoHeading + 360) % 360;
+    const chosenConn = incomingCandidates.length > 0 ? incomingCandidates[0].conn : incoming[0];
+    const resolvedH = getConnHeading(chosenConn, false);
+    if (resolvedH !== null) {
+      return (resolvedH - photoHeading + 360) % 360;
     }
   }
 
