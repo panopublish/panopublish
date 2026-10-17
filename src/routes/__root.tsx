@@ -107,10 +107,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "p:domain_verify", content: "64fb6cfb0d9c84f5c2a5526eebfb0102" },
     ],
     links: [
+      { rel: "icon", type: "image/x-icon", href: "/favicon.ico", sizes: "48x48 32x32 16x16" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
+      { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "shortcut icon", href: "/favicon.ico" },
-      { rel: "apple-touch-icon", href: "/favicon.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "stylesheet", href: appCss },
       // Performance hints — Google Maps & Fonts preconnect
       { rel: "preconnect", href: "https://maps.googleapis.com" },
