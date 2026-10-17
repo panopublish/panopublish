@@ -8,3 +8,8 @@
 /site.webmanifest
   Content-Type: application/manifest+json
   Cache-Control: public, max-age=86400
+
+/cef590f8171a4411a0b0df4adb8725b7.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=86400
+

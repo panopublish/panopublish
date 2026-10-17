@@ -10,7 +10,10 @@
     "build:dev": "node generate-sitemap.cjs && vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "indexnow:dry-run": "node scripts/indexnow-submit.cjs --dry-run --all",
+    "indexnow:changed": "node scripts/indexnow-submit.cjs --changed",
+    "indexnow:all": "node scripts/indexnow-submit.cjs --all"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.25.5",

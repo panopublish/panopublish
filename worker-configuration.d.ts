@@ -25,6 +25,7 @@ declare namespace Cloudflare {
 		RAZORPAY_OFFER_TSRHELP_ID: string;
 		JWT_SECRET: string;
 		RESEND_API_KEY: string;
+		INDEXNOW_API_KEY?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
@@ -32,5 +33,5 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "VITE_SUPABASE_PROJECT_ID" | "VITE_SUPABASE_URL" | "VITE_SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "VITE_GOOGLE_MAPS_API_KEY" | "VITE_GOOGLE_CLIENT_ID" | "VITE_RAZORPAY_KEY_ID" | "RAZORPAY_KEY_SECRET" | "RAZORPAY_OFFER_TSRHELP_ID" | "JWT_SECRET" | "RESEND_API_KEY">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "VITE_SUPABASE_PROJECT_ID" | "VITE_SUPABASE_URL" | "VITE_SUPABASE_PUBLISHABLE_KEY" | "SUPABASE_URL" | "SUPABASE_PUBLISHABLE_KEY" | "VITE_GOOGLE_MAPS_API_KEY" | "VITE_GOOGLE_CLIENT_ID" | "VITE_RAZORPAY_KEY_ID" | "RAZORPAY_KEY_SECRET" | "RAZORPAY_OFFER_TSRHELP_ID" | "JWT_SECRET" | "RESEND_API_KEY" | "INDEXNOW_API_KEY">> {}
 }

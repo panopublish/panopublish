@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { submitToIndexNow } from "./lib/indexnow";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -254,6 +255,37 @@ export default {
         }
 
         return new Response(JSON.stringify({ success: true, deleted: deletedCount }), {
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      // Server-side IndexNow submission endpoint
+      if (url.pathname === "/api/indexnow" && request.method === "POST") {
+        const authHeader = request.headers.get("Authorization") || "";
+        const expectedSecret =
+          (env as any)?.JWT_SECRET ||
+          (env as any)?.INDEXNOW_API_KEY ||
+          process.env.INDEXNOW_API_KEY;
+        const token = authHeader.startsWith("Bearer ")
+          ? authHeader.slice(7).trim()
+          : "";
+
+        if (!token || token !== expectedSecret) {
+          return new Response(JSON.stringify({ error: "Unauthorized" }), {
+            status: 401,
+            headers: { "content-type": "application/json" },
+          });
+        }
+
+        const body = (await request.json().catch(() => ({}))) as {
+          urls?: string[];
+          dryRun?: boolean;
+        };
+        const urls = Array.isArray(body.urls) ? body.urls : [];
+        const result = await submitToIndexNow(urls, { dryRun: body.dryRun });
+
+        return new Response(JSON.stringify(result), {
+          status: result.success ? 200 : 502,
           headers: { "content-type": "application/json" },
         });
       }
