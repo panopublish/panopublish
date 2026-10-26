@@ -60,8 +60,35 @@ export function useStreetViewStatus(
         if (data?.success && !isCancelled) {
           // Before reloading, snapshot which photos were in PROCESSING so we can detect rejections
           const wasProcessingIds = new Set(processingPhotos.map((p) => p.id));
+          const prevStatusMap = new Map(processingPhotos.map((p) => [p.id, p.streetview_status]));
 
-          onPhotosUpdatedRef.current();
+          // ── Lightweight refresh: only fetch photo status columns, not the full page ──
+          // Avoids calling the heavy load() (tours + connections + islands + profiles)
+          // on every tick. Only escalate to a full reload when a real change is detected.
+          const activeTourId = processingPhotos[0]?.tour_id;
+          let hasStatusChange = false;
+
+          if (activeTourId) {
+            const { data: freshStatuses } = await supabase
+              .from("photos")
+              .select("id, streetview_status, streetview_rejection_reason, streetview_photo_id, streetview_share_link")
+              .eq("tour_id", activeTourId);
+
+            if (freshStatuses && !isCancelled) {
+              for (const fresh of freshStatuses) {
+                const prev = prevStatusMap.get(fresh.id);
+                if (prev && prev !== fresh.streetview_status) {
+                  hasStatusChange = true;
+                  break;
+                }
+              }
+            }
+          }
+
+          // Only call the full page reload if something actually changed
+          if (hasStatusChange || !activeTourId) {
+            onPhotosUpdatedRef.current();
+          }
 
           // Check if any previously-PROCESSING photo is now FAILED (Google async rejection)
           if (!isCancelled && wasProcessingIds.size > 0) {

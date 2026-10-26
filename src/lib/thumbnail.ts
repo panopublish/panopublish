@@ -7,7 +7,7 @@
  * to avoid allocating ~130MB+ uncompressed 8K RGBA buffers in RAM.
  */
 
-async function getImageHeaderDimensions(fileOrBlob: Blob): Promise<{ width: number; height: number } | null> {
+export async function getImageHeaderDimensions(fileOrBlob: Blob): Promise<{ width: number; height: number } | null> {
   try {
     const headerSlice = fileOrBlob.slice(0, 65536);
     const buffer = await headerSlice.arrayBuffer();

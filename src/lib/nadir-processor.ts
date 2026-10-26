@@ -499,8 +499,23 @@ export async function processNadirClientSide(
   return newBlob;
 }
 
-// In-memory cache for processed object URLs so that same photo is processed once per session
+// In-memory LRU cache (max 10 entries) for processed object URLs.
+// Older entries are revoked when the limit is exceeded to prevent memory leaks.
+const MAX_PREVIEW_CACHE = 10;
 const processedUrlCache = new Map<string, string>();
+const cacheInsertOrder: string[] = [];
+
+function setCachedPreviewUrl(key: string, url: string): void {
+  if (processedUrlCache.has(key)) return;
+  if (cacheInsertOrder.length >= MAX_PREVIEW_CACHE) {
+    const oldest = cacheInsertOrder.shift()!;
+    const oldUrl = processedUrlCache.get(oldest);
+    if (oldUrl) URL.revokeObjectURL(oldUrl);
+    processedUrlCache.delete(oldest);
+  }
+  processedUrlCache.set(key, url);
+  cacheInsertOrder.push(key);
+}
 
 export async function getNadirProcessedUrl(
   photoUrl: string,
@@ -527,7 +542,7 @@ export async function getNadirProcessedUrl(
   try {
     const blob = await processNadirClientSide(photoUrl, typeLower, sizeVal, posVal, logoVal, headingVal);
     const objectUrl = URL.createObjectURL(blob);
-    processedUrlCache.set(cacheKey, objectUrl);
+    setCachedPreviewUrl(cacheKey, objectUrl);
     return objectUrl;
   } catch (err) {
     console.warn("Failed to generate nadir-processed preview image:", err);

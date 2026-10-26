@@ -522,7 +522,7 @@ function normalizeTo2To1Canvas(
             }
           },
           "image/jpeg",
-          0.95
+          0.98  // Match nadir processor quality (was 0.95)
         );
       } catch (err) {
         URL.revokeObjectURL(url);

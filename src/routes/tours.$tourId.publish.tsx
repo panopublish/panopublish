@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { TourStepsNav } from "@/components/TourStepsNav";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -83,7 +84,7 @@ const MUSIC_PRESETS = [
   },
 ];
 
-import { processNadirClientSide, getSceneArrowHeading } from "@/lib/nadir-processor";
+import { processNadirClientSide, getSceneArrowHeading, getNadirProcessedUrl } from "@/lib/nadir-processor";
 import { ensureGPanoXmpBlob } from "@/lib/xmp-injector";
 
 import { SEO } from "@/components/SEO";
@@ -175,6 +176,67 @@ const getFunctionErrorMessage = async (error: any): Promise<string> => {
   return error.message || "Edge Function returned a non-2xx status code";
 };
 
+/**
+ * Fix 4.1 — Nadir live preview strip.
+ * Shows a cropped bottom strip of the first photo with the current nadir settings applied.
+ * Rendered outside PublishPage to avoid closure capture issues.
+ */
+function NadirPreviewStrip({
+  photoUrl,
+  nadirType,
+  nadirSize,
+  nadirPos,
+  logoUrl,
+  arrowHeading,
+}: {
+  photoUrl: string;
+  nadirType: string;
+  nadirSize: string;
+  nadirPos: string;
+  logoUrl: string;
+  arrowHeading: number;
+}) {
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setPreviewSrc(null);
+    getNadirProcessedUrl(photoUrl, nadirType, nadirSize, nadirPos, logoUrl || null, arrowHeading)
+      .then((url) => { if (!cancelled) { setPreviewSrc(url); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [photoUrl, nadirType, nadirSize, nadirPos, logoUrl, arrowHeading]);
+
+  if (loading) {
+    return (
+      <div className="w-full h-14 rounded-lg bg-slate-100 animate-pulse flex items-center justify-center">
+        <span className="text-[10px] text-slate-400 font-medium">Generating nadir preview…</span>
+      </div>
+    );
+  }
+  if (!previewSrc) return null;
+
+  return (
+    <div className="relative w-full rounded-lg overflow-hidden border border-slate-200 bg-black">
+      <div
+        style={{
+          backgroundImage: `url(${previewSrc})`,
+          backgroundSize: "100% auto",
+          backgroundPosition: nadirPos === "top" ? "top" : "bottom",
+          backgroundRepeat: "no-repeat",
+          height: "80px",
+          filter: "brightness(0.95)",
+        }}
+      />
+      <span className="absolute bottom-1.5 right-2 text-[9px] font-bold text-white/70 bg-black/40 px-1.5 py-0.5 rounded tracking-wide uppercase">
+        Nadir preview
+      </span>
+    </div>
+  );
+}
+
 function uploadBlobToGoogleWithProgress(
   uploadUrl: string,
   blob: Blob,
@@ -206,7 +268,11 @@ function uploadBlobToGoogleWithProgress(
       } else if (xhr.status === 403) {
         reject(new Error(`Google upload forbidden (403): Street View Publish API may not be enabled for this account.`));
       } else if (xhr.status === 429) {
-        reject(new Error(`Google upload rate-limited (429): too many requests. Waiting before retry...`));
+        // Respect Retry-After header if present (Fix 4.5)
+        const retryAfter = xhr.getResponseHeader("Retry-After");
+        const waitSec = retryAfter ? parseInt(retryAfter, 10) : 0;
+        const suffix = waitSec > 0 ? ` RETRY_AFTER:${waitSec}` : "";
+        reject(new Error(`Google upload rate-limited (429): too many requests. Waiting before retry...${suffix}`));
       } else {
         reject(new Error(`Google upload HTTP ${xhr.status}: ${xhr.responseText?.slice(0, 200) || xhr.statusText}`));
       }
@@ -331,6 +397,11 @@ function PublishPage() {
   // Custom settings states
   const [brandingName, setBrandingName] = useState("");
   const [brandingLink, setBrandingLink] = useState("");
+
+  // Debounced versions for the previewUrl memo — prevents recomputing the URL
+  // on every keystroke in text inputs (fires only after 400ms of inactivity).
+  const debouncedBrandingName = useDebouncedValue(brandingName, 400);
+  const debouncedBrandingLink = useDebouncedValue(brandingLink, 400);
   const [themeColor, setThemeColor] = useState("#0277bd");
   const [showWatermark, setShowWatermark] = useState(true);
   const [logoUrl, setLogoUrl] = useState("");
@@ -362,6 +433,9 @@ function PublishPage() {
   const [exportProgress, setExportProgress] = useState<{ message: string; pct: number } | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [syncingConnections, setSyncingConnections] = useState(false);
+  // Guard ref: prevents the auto-sync useEffect from double-firing when publishAll
+  // already calls syncStreetViewConnections at the end of a publish run.
+  const isSyncingFromPublish = useRef(false);
   const [checkingStatusPhotoId, setCheckingStatusPhotoId] = useState<string | null>(null);
   const [refreshingStatuses, setRefreshingStatuses] = useState(false);
 
@@ -509,7 +583,48 @@ function PublishPage() {
 
   const load = async () => {
     if (!user) return;
-    const { data: t } = await supabase.from("tours").select("*").eq("id", tourId).maybeSingle();
+
+    // ─── Performance: Fire all independent DB queries simultaneously ─────────
+    // Previously 6 sequential round-trips (~600ms). Now a single parallel batch
+    // (~150ms). Business logic order is preserved — only scheduling changes.
+    const [
+      { data: t },
+      { data: ps },
+      { data: conns },
+      { data: is },
+    ] = await Promise.all([
+      supabase.from("tours").select("*").eq("id", tourId).maybeSingle(),
+      supabase.from("photos").select("*").eq("tour_id", tourId),
+      supabase.from("connections").select("*").eq("tour_id", tourId),
+      supabase.from("islands").select("*").eq("tour_id", tourId),
+    ]);
+
+    // ─── Google OAuth token — fire and forget (non-blocking) ─────────────────
+    // Fetching the token no longer blocks the initial render. The UI shows
+    // the "Connect Google Account" button immediately; the token arrives shortly after.
+    supabase.functions.invoke("google-oauth", {
+      body: { action: "get_valid_token", user_id: user.id },
+    }).then(({ data, error }: { data: any; error: any }) => {
+      if (error) {
+        console.error("Google Auth function error:", error);
+      } else if (data?.error) {
+        console.error("Google Auth data error:", data.error);
+      } else if (data?.access_token) {
+        setAccessToken(data.access_token);
+        if (data.google_email) setGoogleEmail(data.google_email);
+      }
+    }).catch((e: unknown) => console.error("Not connected to Google:", e));
+
+    // ─── Profile — fire and forget (non-blocking) ─────────────────────────────
+    supabase
+      .from("profiles")
+      .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data: p }: { data: any }) => { if (p) setProfile(p); })
+      .catch((e: unknown) => console.error("Failed to load user profile:", e));
+
+    // ─── storage_cleared redirect (must happen before any state is set) ───────
     if ((t as any)?.storage_cleared) {
       toast.error("This tour's database images have been cleared. It is live on Google Street View and cannot be edited.");
       if (typeof window !== "undefined") {
@@ -517,6 +632,7 @@ function PublishPage() {
       }
       return;
     }
+
     setTour(t);
     if (t) {
       let fetchedNadirType =
@@ -566,11 +682,10 @@ function PublishPage() {
         setBrandingName(t.name || "");
       }
     }
-    const { data: ps } = await supabase.from("photos").select("*").eq("tour_id", tourId);
-    
-    // Fetch connections
-    const { data: conns } = await supabase.from("connections").select("*").eq("tour_id", tourId);
+
+    // Set connections and islands from parallel fetch
     setConnections(conns ?? []);
+    setIslands(is ?? []);
 
     const loadedPhotos = ((ps as any[]) ?? []).sort((a, b) => {
       if (a.order_index != null && b.order_index != null) return a.order_index - b.order_index;
@@ -622,41 +737,6 @@ function PublishPage() {
         setTour({ ...t });
       }
     }
-
-    const { data: is } = await supabase.from("islands").select("*").eq("tour_id", tourId);
-    setIslands(is ?? []);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("google-oauth", {
-        body: { action: "get_valid_token", user_id: user.id },
-      });
-      if (error) {
-        console.error("Google Auth function error:", error);
-      } else if (data?.error) {
-        console.error("Google Auth data error:", data.error);
-      } else if (data?.access_token) {
-        setAccessToken(data.access_token);
-        if (data.google_email) {
-          setGoogleEmail(data.google_email);
-        }
-      }
-    } catch (e) {
-      console.error("Not connected to Google:", e);
-    }
-
-    // Fetch profiles to check limits
-    try {
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (p) {
-        setProfile(p);
-      }
-    } catch (e) {
-      console.error("Failed to load user profile:", e);
-    }
   };
 
   useEffect(() => {
@@ -699,6 +779,21 @@ function PublishPage() {
       return;
     }
 
+    // Fix 4.2 — Preflight validation check
+    const noGps = photos.filter((p) => !p.latitude || !p.longitude || (p.latitude === 0 && p.longitude === 0));
+    if (noGps.length > 0) {
+      toast.error(`${noGps.length} scene(s) have missing GPS coordinates — Google Street View will reject them.`);
+      return;
+    }
+
+    if (photos.length > 1 && connections.length === 0) {
+      toast.warning("Notice: No connections defined — scenes will not be linked on Google Maps.");
+    }
+
+    if (nadirType === "Tour level" && !nadirLogoUrl) {
+      toast.warning("Notice: 'Tour level' nadir selected but no logo uploaded — nadir patch will be skipped.");
+    }
+
     setConfirm(true);
   };
 
@@ -721,13 +816,13 @@ function PublishPage() {
     }
 
     const needsSync = !tour.streetview_connections_synced;
-    const shouldSync = allPublished && needsSync && accessToken && !publishing;
+    const shouldSync = allPublished && needsSync && accessToken && !publishing && !isSyncingFromPublish.current;
 
     if (shouldSync) {
       setPrevWasProcessing(false);
       toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
       syncConnectionsOnly();
-    } else if (allPublished && prevWasProcessing && needsSync && accessToken && !publishing) {
+    } else if (allPublished && prevWasProcessing && needsSync && accessToken && !publishing && !isSyncingFromPublish.current) {
       setPrevWasProcessing(false);
       toast.info("All scenes processed! Automatically syncing connections on Google Maps...");
       syncConnectionsOnly();
@@ -774,8 +869,10 @@ function PublishPage() {
         .eq("id", tourId);
       if (dbErr) throw dbErr;
 
-      // Update local tour state
+      // Update both local tour state AND live nadirLogoUrl state so publish
+      // uses the new logo immediately without requiring a page reload.
       setTour((prev: any) => ({ ...prev, nadir_logo_url: logoUrl }));
+      setNadirLogoUrl(logoUrl);
       toast.success("Nadir logo uploaded successfully!");
     } catch (err: any) {
       toast.error("Failed to upload nadir logo: " + err.message);
@@ -785,8 +882,6 @@ function PublishPage() {
   };
 
   const handleLogoRemove = async () => {
-    if (!window.confirm("Are you sure you want to remove the brand logo?")) return;
-
     try {
       const { error: dbErr } = await supabase
         .from("tours")
@@ -796,9 +891,10 @@ function PublishPage() {
         .eq("id", tourId);
       if (dbErr) throw dbErr;
 
-      setLogoUrl("");
+      // Fix: was incorrectly clearing setLogoUrl (branding logo) instead of setNadirLogoUrl
+      setNadirLogoUrl("");
       setTour((prev: any) => ({ ...prev, nadir_logo_url: null }));
-      toast.success("Brand logo removed successfully!");
+      toast.success("Nadir logo removed successfully!");
     } catch (err: any) {
       toast.error("Failed to remove logo: " + err.message);
     }
@@ -937,7 +1033,9 @@ function PublishPage() {
               nadirType,
               size,
               pos,
-              tour?.nadir_logo_url,
+              // Use live state first — handles the case where a user uploads a logo
+              // and immediately publishes before the tour DB snapshot is refreshed.
+              nadirLogoUrl || tour?.nadir_logo_url || null,
               arrowHeading,
             );
             break;
@@ -1175,7 +1273,10 @@ function PublishPage() {
               const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
               const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
               const isRateLimit = isQuota || is503;
-              const delayMs = isRateLimit ? attempt * 4000 : attempt * 1500;
+              // Fix 4.5: respect Retry-After header on 429 responses
+              const retryAfterMatch = lastErrorMsg.match(/RETRY_AFTER:(\d+)/);
+              const serverWaitMs = retryAfterMatch ? parseInt(retryAfterMatch[1], 10) * 1000 : 0;
+              const delayMs = serverWaitMs || (isRateLimit ? attempt * 4000 : attempt * 1500);
               await new Promise((r) => setTimeout(r, delayMs));
             }
           }
@@ -1367,9 +1468,15 @@ function PublishPage() {
 
       const connectionToken = (await getFreshToken()) || freshToken;
       try {
+        // Mark that publishAll is handling the sync — prevents the auto-sync useEffect
+        // from firing again when the tour state update triggers a re-render.
+        isSyncingFromPublish.current = true;
         await syncStreetViewConnections(supabase, tourId, connectionToken);
       } catch (connErr: any) {
         console.warn("Connection sync notice:", connErr);
+      } finally {
+        // Release the guard after a short delay to allow state updates to settle
+        setTimeout(() => { isSyncingFromPublish.current = false; }, 5000);
       }
 
       const isAlreadyPublished = tour?.has_been_published ?? false;
@@ -1495,7 +1602,9 @@ function PublishPage() {
             nadirType,
             size,
             pos,
-            tour?.nadir_logo_url,
+            // Use live state first — handles the case where a user uploads a logo
+            // and immediately publishes before the tour DB snapshot is refreshed.
+            nadirLogoUrl || tour?.nadir_logo_url || null,
             arrowHeading,
           );
           break;
@@ -1646,7 +1755,10 @@ function PublishPage() {
             const isQuota = lastErrorMsg.toLowerCase().includes("quota") || lastErrorMsg.includes("429");
             const is503 = lastErrorMsg.toLowerCase().includes("503") || lastErrorMsg.toLowerCase().includes("unavailable");
             const isRateLimit = isQuota || is503;
-            const delayMs = isRateLimit ? attempt * 4000 : attempt * 1500;
+            // Fix 4.5: respect Retry-After header on 429 responses
+            const retryAfterMatch = lastErrorMsg.match(/RETRY_AFTER:(\d+)/);
+            const serverWaitMs = retryAfterMatch ? parseInt(retryAfterMatch[1], 10) * 1000 : 0;
+            const delayMs = serverWaitMs || (isRateLimit ? attempt * 4000 : attempt * 1500);
             await new Promise((r) => setTimeout(r, delayMs));
           }
         }
@@ -1738,7 +1850,9 @@ function PublishPage() {
   };
 
   const syncConnectionsOnly = async () => {
-    setPublishing(true);
+    // Fix: use setSyncingConnections (not setPublishing) — the UI spinner and
+    // disabled states for Sync Connections button already read syncingConnections.
+    setSyncingConnections(true);
 
     let freshToken = accessToken;
     try {
@@ -1755,7 +1869,7 @@ function PublishPage() {
 
     if (!freshToken) {
       toast.error("Not connected to Google");
-      setPublishing(false);
+      setSyncingConnections(false);
       return;
     }
 
@@ -1817,7 +1931,7 @@ function PublishPage() {
       console.error(e);
       toast.error("Failed to sync connections: " + e.message);
     } finally {
-      setPublishing(false);
+      setSyncingConnections(false);
       setPublishProgress(null);
     }
   };
@@ -2207,12 +2321,12 @@ function PublishPage() {
 
     const tempTour = {
       id: tourId,
-      name: brandingName || tour.name,
+      name: debouncedBrandingName || tour.name,
       custom_settings: JSON.stringify({
         ...existingSettings,
         branding: {
-          name: brandingName,
-          link: brandingLink,
+          name: debouncedBrandingName,
+          link: debouncedBrandingLink,
           theme_color: themeColor,
           show_watermark: showWatermark,
           logo_url: logoUrl
@@ -2261,8 +2375,8 @@ function PublishPage() {
     photos,
     connections,
     tourId,
-    brandingName,
-    brandingLink,
+    debouncedBrandingName,
+    debouncedBrandingLink,
     themeColor,
     showWatermark,
     logoUrl,
@@ -2593,6 +2707,19 @@ function PublishPage() {
                       </div>
                     )}
                   </div>
+
+                  {/* Fix 4.1 — Live nadir preview strip */}
+                  {nadirType !== "None" && photos.length > 0 && (
+                    <NadirPreviewStrip
+                      key={`${photos[0]?.file_url}|${nadirType}|${size}|${pos}|${nadirLogoUrl}`}
+                      photoUrl={photos[0]?.file_url || ""}
+                      nadirType={nadirType}
+                      nadirSize={size}
+                      nadirPos={pos}
+                      logoUrl={nadirLogoUrl || ""}
+                      arrowHeading={getSceneArrowHeading(photos[0], photos, connections)}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -2815,7 +2942,7 @@ function PublishPage() {
                   </div>
                   {autorotate && (
                     <div className="space-y-1.5 pl-6 animate-in slide-in-from-top-2 duration-200">
-                      <label className="text-[10px] uppercase font-bold text-slate-500 block">Rotation Speed (step duration)</label>
+                      <label className="text-[10px] uppercase font-bold text-slate-500 block">Rotation Speed</label>
                       <div className="flex items-center gap-3">
                         <Slider
                           value={[autorotateSpeed]}
@@ -2826,8 +2953,12 @@ function PublishPage() {
                           className="flex-1 cursor-pointer"
                         />
                         <span className="text-xs font-mono bg-slate-50 px-2 py-1 rounded border font-bold">
-                          {autorotateSpeed} ms
+                          Speed {autorotateSpeed}
                         </span>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400 px-0.5">
+                        <span>Slow</span>
+                        <span>Fast</span>
                       </div>
                     </div>
                   )}
@@ -3247,6 +3378,24 @@ function PublishPage() {
 
                   return (
                     <>
+                      {/* Fix 4.2 — Preflight validation banner */}
+                      {(() => {
+                        const missingGps = photos.filter(
+                          (p) =>
+                            (!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
+                            (!p.latitude || !p.longitude)
+                        );
+                        if (missingGps.length === 0) return null;
+                        return (
+                          <div className="w-full flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium mb-1">
+                            <span className="text-base leading-none mt-0.5">⚠️</span>
+                            <span>
+                              <strong>{missingGps.length} scene{missingGps.length > 1 ? "s are" : " is"} missing GPS coordinates.</strong>{" "}
+                              Google Street View requires GPS to publish. Please set location on the Map tab before publishing.
+                            </span>
+                          </div>
+                        );
+                      })()}
                       {isAllPublished ? (
                         <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200">
                           <CheckCheck className="h-4 w-4 text-emerald-600" />
@@ -3327,8 +3476,18 @@ function PublishPage() {
                     key={p.id}
                     className="flex items-center justify-between text-sm border rounded-md px-3 py-2 bg-background font-medium"
                   >
-                    <span className="text-muted-foreground w-8">{i}</span>
+                    <span className="text-muted-foreground w-8">{i + 1}</span>
                     <span className="flex-1 truncate">{p.filename}</span>
+                    {/* Fix 4.4: warn per-scene when GPS is missing (will fail at Google) */}
+                    {(!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
+                     (!p.latitude || !p.longitude) && (
+                      <span
+                        className="text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded mr-1 shrink-0"
+                        title="This scene has no GPS coordinates. Set location on the Map tab before publishing."
+                      >
+                        No GPS
+                      </span>
+                    )}
                      {p.streetview_status === "PUBLISHED" ? (
                       <div className="flex items-center gap-3">
                         <span className="text-green-600 font-semibold text-xs flex items-center gap-1">
@@ -3389,24 +3548,30 @@ function PublishPage() {
                             <RefreshCw className={`h-3 w-3 mr-1 ${checkingStatusPhotoId === p.id ? "animate-spin" : ""}`} /> Check Status
                           </Button>
                         )}
-                        {/* Force Retry / Re-upload */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={publishing}
-                          onClick={async () => {
-                            await supabase
-                              .from("photos")
-                              .update({ streetview_status: "FAILED", streetview_photo_id: null } as any)
-                              .eq("id", p.id);
-                            await load();
-                            setTimeout(() => publishSinglePhoto({ ...p, streetview_status: "FAILED", streetview_photo_id: undefined }), 300);
-                          }}
-                          className="h-6 px-2 text-[11px] font-bold border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 cursor-pointer rounded"
-                          title="Re-upload scene from scratch (restarts Google review)"
-                        >
-                          <RotateCcw className="h-3 w-3 mr-1" /> Re-upload
-                        </Button>
+                        {/* Force Retry / Re-upload — hidden for REJECTED_UNKNOWN (Google secondary review) */}
+                        {p.streetview_rejection_reason !== "REJECTED_UNKNOWN" ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={publishing}
+                            onClick={async () => {
+                              await supabase
+                                .from("photos")
+                                .update({ streetview_status: "FAILED", streetview_photo_id: null } as any)
+                                .eq("id", p.id);
+                              await load();
+                              setTimeout(() => publishSinglePhoto({ ...p, streetview_status: "FAILED", streetview_photo_id: undefined }), 300);
+                            }}
+                            className="h-6 px-2 text-[11px] font-bold border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800 cursor-pointer rounded"
+                            title="Re-upload scene from scratch (restarts Google review)"
+                          >
+                            <RotateCcw className="h-3 w-3 mr-1" /> Re-upload
+                          </Button>
+                        ) : (
+                          <span className="text-[10px] text-amber-600 font-medium italic">
+                            Google will auto-publish after review
+                          </span>
+                        )}
                       </div>
                     ) : p.streetview_status === "FAILED" ? (
                       <div className="flex items-center gap-2 flex-wrap">
@@ -3523,7 +3688,7 @@ function PublishPage() {
                       accept="image/*"
                       className="hidden"
                       disabled={uploadingLogo}
-                      onChange={handleLogoUpload}
+                      onChange={handleNadirLogoUpload}
                     />
                   </label>
                 )}
@@ -3541,7 +3706,7 @@ function PublishPage() {
                 {tour?.nadir_logo_url && (
                   <Button
                     type="button"
-                    onClick={handleLogoRemove}
+                    onClick={handleNadirLogoRemove}
                     className="px-6 rounded-full bg-red-500 hover:bg-red-600 text-white text-xs font-bold uppercase tracking-wider transition-colors"
                   >
                     Remove

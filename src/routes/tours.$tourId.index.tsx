@@ -18,7 +18,7 @@ import {
 import { StatusBadge, Status } from "@/components/StatusBadge";
 import { SceneViewerModal } from "@/components/SceneViewerModal";
 import { LazyThumbnail } from "@/components/LazyThumbnail";
-import { createPanoramaThumbnailBlob } from "@/lib/thumbnail";
+import { createPanoramaThumbnailBlob, getImageHeaderDimensions } from "@/lib/thumbnail";
 import { tourStore } from "@/lib/tour-store";
 import {
   Plus,
@@ -722,7 +722,18 @@ function TourDetail() {
 
         try {
           if (file.size > MAX_BYTES) {
-            throw new Error(`File is too large (max 50MB)`);
+            const sizeMB = (file.size / 1024 / 1024).toFixed(0);
+            throw new Error(`File "${file.name}" is too large (${sizeMB}MB). Maximum allowed is 50MB.`);
+          }
+
+          // Warn users about large files that will work but may be slow to upload and publish
+          const WARN_BYTES = 30 * 1024 * 1024; // 30MB warning threshold
+          if (file.size > WARN_BYTES) {
+            const sizeMB = (file.size / 1024 / 1024).toFixed(0);
+            toast.warning(
+              `"${file.name}" is ${sizeMB}MB — large files may take longer to upload and process on Google Street View.`,
+              { duration: 6000 }
+            );
           }
 
           const targetIsland = isCustomTour ? null : (islandId || (activeIsland !== "unassigned" ? activeIsland : null));
@@ -780,6 +791,19 @@ function TourDetail() {
 
     const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(path);
     const meta = await extractPhotoMetadata(file);
+
+    // Fix 4.4: Check aspect ratio and warn if not 360 equirectangular (2:1)
+    try {
+      const dims = await getImageHeaderDimensions(file);
+      if (dims && dims.width && dims.height && dims.width / dims.height < 1.7) {
+        toast.warning(
+          `"${file.name}" has an aspect ratio of ${(dims.width / dims.height).toFixed(2)}:1 (standard 360 is 2:1). Google Street View may reject non-panoramic photos.`,
+          { duration: 8000 },
+        );
+      }
+    } catch {
+      // Non-fatal dimension check
+    }
 
     let thumbUrl: string | null = null;
     try {
