@@ -157,14 +157,16 @@ function SettingsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      // 1. Fetch user profile
-      const { data: pData, error: pErr } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .maybeSingle();
+      // 1. Fetch independent data concurrently via Promise.all
+      const [profRes, tokenRes, subRes, codeRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        supabase.from("google_tokens").select("id, expires_at, google_email").eq("user_id", user.id).maybeSingle(),
+        supabase.from("subscriptions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("referral_codes").select("code, is_active").eq("user_id", user.id).eq("is_active", true).maybeSingle(),
+      ]);
 
-      if (pErr) throw pErr;
+      if (profRes.error) throw profRes.error;
+      const pData = profRes.data;
 
       if (pData) {
         setProfile(pData);
@@ -187,13 +189,8 @@ function SettingsPage() {
         }
       }
 
-      // 2. Fetch Google token connection
-      const { data: tokenData } = await supabase
-        .from("google_tokens")
-        .select("id, expires_at, google_email")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
+      // 2. Process Google token connection
+      const tokenData = tokenRes.data;
       setIsGoogleConnected(!!tokenData);
       let gEmail = (tokenData as any)?.google_email;
       if (tokenData && !gEmail) {
@@ -208,16 +205,10 @@ function SettingsPage() {
       }
       setGoogleEmail(gEmail || user.email || "");
 
-      // 3. Fetch all subscriptions / billing history for this user
-      const { data: subData } = await supabase
-        .from("subscriptions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-
+      // 3. Process subscriptions / billing history
+      const subData = subRes.data;
       if (subData && subData.length > 0) {
         setUserSubscriptions(subData);
-        // Find latest active plan subscription first, or any recurring plan subscription (e.g. cancelled)
         const activePlanSub = subData.find(
           (s: any) => s.status === "active" && s.plan !== "pay_as_you_go",
         );
@@ -230,16 +221,10 @@ function SettingsPage() {
         setLatestSub(null);
       }
 
-      // 4. Check Referral Partner Status (strictly admin-assigned only)
+      // 4. Process Referral Partner Status
       try {
-        const { data: codeRow } = await supabase
-          .from("referral_codes")
-          .select("code, is_active")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .maybeSingle();
-
-        if (codeRow?.code) {
+        const codeRow = codeRes.data;
+        if (codeRow?.code && pData) {
           setHasReferralAccess(true);
           setReferralCode(codeRow.code);
           setPayoutUpiId(pData.payout_upi_id ?? "");
@@ -247,28 +232,16 @@ function SettingsPage() {
           setPayoutBankAccount(pData.payout_bank_account ?? "");
           setPayoutIfsc(pData.payout_ifsc ?? "");
 
-          // Count attributions
-          const { count: attrCount } = await supabase
-            .from("referral_attributions")
-            .select("id", { count: "exact", head: true })
-            .eq("referrer_user_id", user.id);
-          setReferralsCount(attrCount || 0);
+          // Fetch attributions, commissions, and payouts in parallel
+          const [attrRes, commRes, payRes] = await Promise.all([
+            supabase.from("referral_attributions").select("id", { count: "exact", head: true }).eq("referrer_user_id", user.id),
+            supabase.from("referral_commissions").select("*").eq("referrer_user_id", user.id).order("created_at", { ascending: false }),
+            supabase.from("referral_payouts").select("*").eq("referrer_user_id", user.id).order("paid_at", { ascending: false }),
+          ]);
 
-          // Commissions list
-          const { data: commData } = await supabase
-            .from("referral_commissions")
-            .select("*")
-            .eq("referrer_user_id", user.id)
-            .order("created_at", { ascending: false });
-          setReferralCommissions(commData || []);
-
-          // Payouts list
-          const { data: payData } = await supabase
-            .from("referral_payouts")
-            .select("*")
-            .eq("referrer_user_id", user.id)
-            .order("paid_at", { ascending: false });
-          setReferralPayouts(payData || []);
+          setReferralsCount(attrRes.count || 0);
+          setReferralCommissions(commRes.data || []);
+          setReferralPayouts(payRes.data || []);
         } else {
           setHasReferralAccess(false);
           setReferralCode("");

@@ -385,21 +385,24 @@ function useGoogleMaps() {
 
     if (checkReady()) return;
 
-    const interval = setInterval(() => {
-      if (checkReady()) {
-        clearInterval(interval);
-      }
-    }, 50);
-
+    // Check if script is already present in document (e.g. from Route.head)
     const existing = document.querySelector<HTMLScriptElement>(
       "script[src*='maps.googleapis.com']",
     );
+
     if (existing) {
-      existing.addEventListener("load", () => {
-        checkReady();
-      });
-      return () => clearInterval(interval);
+      const handleLoad = () => checkReady();
+      existing.addEventListener("load", handleLoad);
+      const pollTimer = setInterval(() => {
+        if (checkReady()) clearInterval(pollTimer);
+      }, 250);
+      return () => {
+        existing.removeEventListener("load", handleLoad);
+        clearInterval(pollTimer);
+      };
     }
+
+    // Only inject if not already present anywhere
     const s = document.createElement("script");
     s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&libraries=places,geometry&loading=async`;
     s.async = true;
@@ -410,7 +413,11 @@ function useGoogleMaps() {
     };
     document.head.appendChild(s);
 
-    return () => clearInterval(interval);
+    const fallbackPoll = setInterval(() => {
+      if (checkReady()) clearInterval(fallbackPoll);
+    }, 250);
+
+    return () => clearInterval(fallbackPoll);
   }, []);
   return ready;
 }

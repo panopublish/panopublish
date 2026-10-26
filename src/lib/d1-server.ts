@@ -32,7 +32,7 @@ function checkIsAdmin(user: any) {
   return user?.email && ADMIN_EMAILS.includes(user.email);
 }
 
-let schemaEnsured = false;
+let schemaEnsured = true;
 
 async function ensureReferralSchema(db: any) {
   if (!db) return;
@@ -332,14 +332,7 @@ export const runD1Query = createServerFn({ method: "POST" })
       return { data: null, error: { message: "Cloudflare D1 Database binding 'DB' is missing" } };
     }
 
-    if (!schemaEnsured) {
-      await ensureSchema(db);
-    }
-
     const { table, action } = payload;
-    if (table && table.startsWith("referral_")) {
-      await ensureReferralSchema(db);
-    }
 
     // Build the query and parameter bindings
     let sql = "";

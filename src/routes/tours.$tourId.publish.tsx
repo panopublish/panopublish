@@ -48,6 +48,7 @@ import { useStreetViewStatus, Photo as StatusPhoto } from "@/hooks/useStreetView
 import { syncStreetViewConnections } from "@/lib/streetview";
 import { exportCustomTour, generateLivePreviewUrl } from "@/lib/custom-tour-exporter";
 import { pushTourToCustom } from "@/lib/custom-tour-converter";
+import { tourStore } from "@/lib/tour-store";
 
 const planLimit: Record<string, number> = { trial: 1, basic: 5, pro: 20, agency: 50 };
 
@@ -293,11 +294,13 @@ function PublishPage() {
   const { tourId } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [tour, setTour] = useState<any>(null);
+  const cached = tourStore.get(tourId);
+  const [photos, setPhotos] = useState<Photo[]>(() => (cached?.photos as Photo[]) || []);
+  const [tour, setTour] = useState<any>(() => cached?.tour || null);
   const [nadirType, setNadirType] = useState(() => {
     let initialType =
       (typeof window !== "undefined" ? localStorage.getItem(`tour-nadir-type-${tourId}`) : null) ||
+      (cached?.tour?.nadir_type) ||
       "Stretch Blur";
     if (initialType.toLowerCase().trim() === "none") return "None";
     if (initialType.toLowerCase().trim() === "stretch blur") return "Stretch Blur";
@@ -306,17 +309,17 @@ function PublishPage() {
   });
   const [size, setSize] = useState(
     () =>
-      (typeof window !== "undefined" ? localStorage.getItem(`tour-size-${tourId}`) : null) || "13%",
+      (typeof window !== "undefined" ? localStorage.getItem(`tour-size-${tourId}`) : null) || (cached?.tour?.nadir_size) || "13%",
   );
   const [pos, setPos] = useState(
     () =>
-      (typeof window !== "undefined" ? localStorage.getItem(`tour-pos-${tourId}`) : null) || "btm",
+      (typeof window !== "undefined" ? localStorage.getItem(`tour-pos-${tourId}`) : null) || (cached?.tour?.nadir_pos) || "btm",
   );
   const [confirm, setConfirm] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [googleEmail, setGoogleEmail] = useState<string | null>(null);
-  const [islands, setIslands] = useState<any[]>([]);
+  const [islands, setIslands] = useState<any[]>(() => cached?.islands || []);
   const [showNadirModal, setShowNadirModal] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [prevWasProcessing, setPrevWasProcessing] = useState(false);
@@ -714,6 +717,13 @@ function PublishPage() {
     } else {
       setPhotos(loadedPhotos);
     }
+
+    tourStore.set(tourId, {
+      tour: t,
+      photos: loadedPhotos,
+      connections: conns ?? [],
+      islands: is ?? [],
+    });
 
     // Self-healing check: Sync tour status based on photos (Google Street View tours only)
     if (t && t.type !== "custom" && loadedPhotos.length > 0) {

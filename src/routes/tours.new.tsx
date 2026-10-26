@@ -115,21 +115,23 @@ function CreateTour() {
     const userId = user.id;
     async function checkLimits() {
       try {
-        const { data: prof, error: profErr } = await supabase
-          .from("profiles")
-          .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
-          .eq("id", userId)
-          .single();
+        const [profRes, tourRes] = await Promise.all([
+          supabase
+            .from("profiles")
+            .select("plan, billing_cycle_tours_used, credits, trial_ends_at, created_at")
+            .eq("id", userId)
+            .maybeSingle(),
+          supabase
+            .from("tours")
+            .select("id, status, created_at, updated_at")
+            .eq("user_id", userId),
+        ]);
 
-        if (profErr) throw profErr;
+        if (profRes.error) throw profRes.error;
+        if (tourRes.error) throw tourRes.error;
 
-        const { data: userTours, error: tourErr } = await supabase
-          .from("tours")
-          .select("id, status, created_at, updated_at")
-          .eq("user_id", userId);
-
-        if (tourErr) throw tourErr;
-
+        const prof = profRes.data;
+        const userTours = tourRes.data;
         const tList = (userTours as any[]) ?? [];
         const published = tList.filter((t) => t.status === "published").length;
 

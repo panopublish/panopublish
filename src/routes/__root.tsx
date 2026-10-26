@@ -115,15 +115,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/site.webmanifest" },
       { rel: "stylesheet", href: appCss },
-      // Performance hints — Google Maps & Fonts preconnect
+      // Performance hints — Google Maps preconnect
       { rel: "preconnect", href: "https://maps.googleapis.com" },
       { rel: "preconnect", href: "https://maps.gstatic.com", crossOrigin: "anonymous" },
       { rel: "dns-prefetch", href: "https://maps.googleapis.com" },
       { rel: "dns-prefetch", href: "https://maps.gstatic.com" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "dns-prefetch", href: "https://fonts.googleapis.com" },
-      { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
     ],
   }),
   shellComponent: RootShell,

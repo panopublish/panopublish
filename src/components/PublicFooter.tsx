@@ -53,9 +53,9 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 border-b pb-12">
           {/* Brand block (2 columns on desktop) */}
           <div className="lg:col-span-2 space-y-4">
-            <a href="/">
+            <Link to="/">
               <Logo logoClassName="text-primary h-8 w-8" className="text-xl font-bold" />
-            </a>
+            </Link>
             <p className="text-sm text-muted-foreground max-w-sm">
               PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.
             </p>
@@ -123,9 +123,12 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               {serviceLinks.map((link) => (
                 <li key={link.url}>
-                  <a href={link.url} className="text-muted-foreground hover:text-primary transition-colors">
+                  <Link
+                    to={link.url as any}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
                     {link.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -139,9 +142,12 @@ export function PublicFooter() {
             <ul className="space-y-2 text-xs">
               {comparisonLinks.map((link) => (
                 <li key={link.url}>
-                  <a href={link.url} className="text-muted-foreground hover:text-primary transition-colors">
+                  <Link
+                    to={link.url as any}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
                     {link.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -154,49 +160,52 @@ export function PublicFooter() {
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <a href="/blog/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                <Link to="/blog/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
                   Blog Articles
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/case-studies/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
+                <Link to="/case-studies/" className="text-muted-foreground hover:text-primary transition-colors font-semibold">
                   Case Studies
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/faq/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/faq/" className="text-muted-foreground hover:text-primary transition-colors">
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/authors/prashant-kumar/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link
+                  to={"/authors/prashant-kumar/" as any}
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
                   Meet the Author
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/pricing/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/pricing/" className="text-muted-foreground hover:text-primary transition-colors">
                   Pricing Plans
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/contact/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/contact/" className="text-muted-foreground hover:text-primary transition-colors">
                   Contact Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/privacy/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/privacy/" className="text-muted-foreground hover:text-primary transition-colors">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/terms/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/terms/" className="text-muted-foreground hover:text-primary transition-colors">
                   Terms & Conditions
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/refund/" className="text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/refund/" className="text-muted-foreground hover:text-primary transition-colors">
                   Refund & Cancellation
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -220,9 +229,9 @@ export function PublicFooter() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-y-2.5 gap-x-6 text-xs">
             {cityLinks.map((city) => (
-              <a
+              <Link
                 key={city.url}
-                href={city.url}
+                to={city.url as any}
                 title={`Google Maps 360° Virtual Tour in ${city.name} (${city.state})`}
                 className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 py-0.5 group"
               >
@@ -233,7 +242,7 @@ export function PublicFooter() {
                 <span className="text-[10px] text-muted-foreground/60 hidden xl:inline shrink-0">
                   ({city.state})
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>

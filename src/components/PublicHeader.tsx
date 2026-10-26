@@ -27,19 +27,19 @@ export function PublicHeader() {
     <>
       <div className="bg-gradient-to-r from-primary to-[#38BDF8] text-white text-center text-xs font-semibold py-2 px-4 select-none animate-pulse">
         🚀 Start publishing today! Try PanoPublish free for 7 days. No credit card required.{" "}
-        <a
-          href="/signup/"
+        <Link
+          to="/signup/"
           className="underline hover:text-white/80 transition-colors ml-1 inline-flex items-center gap-0.5"
         >
           Sign up now <ChevronRight className="h-3 w-3" />
-        </a>
+        </Link>
       </div>
 
       <header className="sticky top-0 z-50 backdrop-blur-md bg-background/95 border-b">
         <div className="container mx-auto flex items-center justify-between px-4 py-3.5 max-w-6xl">
-          <a href="/" onClick={() => setMobileMenuOpen(false)}>
+          <Link to="/" onClick={() => setMobileMenuOpen(false)}>
             <Logo logoClassName="text-primary h-8 w-8" className="text-xl" />
-          </a>
+          </Link>
 
           {/* Desktop Navigation - Hidden on Mobile */}
           <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-muted-foreground">
@@ -55,62 +55,62 @@ export function PublicHeader() {
               </button>
               <div className="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-1 z-50">
                 <div className="bg-popover text-popover-foreground border rounded-lg shadow-xl py-2 w-64 ring-1 ring-black/5 animate-in fade-in-50 zoom-in-95">
-                  <a
-                    href="/360-virtual-tour-publishing-platform/"
+                  <Link
+                    to={"/360-virtual-tour-publishing-platform/" as any}
                     className="block px-4 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     <div className="font-semibold text-sm text-foreground">360° Virtual Tours</div>
                     <div className="text-xs text-muted-foreground">Create, brand, and host interactive tours</div>
-                  </a>
-                  <a
-                    href="/google-street-view-publishing/"
+                  </Link>
+                  <Link
+                    to={"/google-street-view-publishing/" as any}
                     className="block px-4 py-2.5 hover:bg-accent hover:text-accent-foreground transition-colors"
                   >
                     <div className="font-semibold text-sm text-foreground">Google Street View</div>
                     <div className="text-xs text-muted-foreground">Automated path linking & Maps publishing</div>
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
 
-            <a href="/pricing/" className="hover:text-primary transition-colors">
+            <Link to="/pricing/" className="hover:text-primary transition-colors">
               Pricing
-            </a>
-            <a href="/case-studies/" className="hover:text-primary transition-colors">
+            </Link>
+            <Link to="/case-studies/" className="hover:text-primary transition-colors">
               Case Studies
-            </a>
-            <a href="/blog/" className="hover:text-primary transition-colors">
+            </Link>
+            <Link to="/blog/" className="hover:text-primary transition-colors">
               Blog
-            </a>
-            <a href="/faq/" className="hover:text-primary transition-colors">
+            </Link>
+            <Link to="/faq/" className="hover:text-primary transition-colors">
               FAQ
-            </a>
-            <a href="/contact/" className="hover:text-primary transition-colors">
+            </Link>
+            <Link to="/contact/" className="hover:text-primary transition-colors">
               Contact
-            </a>
+            </Link>
           </nav>
 
           {/* Desktop Right Buttons - Hidden on Mobile */}
           <div className="hidden md:flex items-center gap-3">
-            <a href="/login/">
+            <Link to="/login/">
               <Button variant="ghost" size="sm" id="btn-nav-login">
                 Sign in
               </Button>
-            </a>
-            <a href="/signup/">
+            </Link>
+            <Link to="/signup/">
               <Button size="sm" className="shadow-elegant" id="btn-nav-signup">
                 Start Free Trial
               </Button>
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Right Controls: Compact CTA + Hamburger Menu */}
           <div className="flex md:hidden items-center gap-2">
-            <a href="/signup/">
+            <Link to="/signup/">
               <Button size="sm" className="h-8 px-3 text-xs font-bold shadow-sm">
                 Try Free
               </Button>
-            </a>
+            </Link>
             <Button
               variant="ghost"
               size="icon"
@@ -147,77 +147,77 @@ export function PublicHeader() {
                 </button>
                 {mobileProductOpen && (
                   <div className="pl-3 pr-1 py-1 space-y-1 animate-in fade-in duration-150">
-                    <a
-                      href="/360-virtual-tour-publishing-platform/"
+                    <Link
+                      to={"/360-virtual-tour-publishing-platform/" as any}
                       onClick={() => setMobileMenuOpen(false)}
                       className="block p-2.5 rounded-xl hover:bg-slate-50 transition-colors"
                     >
                       <div className="font-semibold text-sm text-foreground">360° Virtual Tours</div>
                       <div className="text-xs text-muted-foreground">Create, brand, and host interactive tours</div>
-                    </a>
-                    <a
-                      href="/google-street-view-publishing/"
+                    </Link>
+                    <Link
+                      to={"/google-street-view-publishing/" as any}
                       onClick={() => setMobileMenuOpen(false)}
                       className="block p-2.5 rounded-xl hover:bg-slate-50 transition-colors"
                     >
                       <div className="font-semibold text-sm text-foreground">Google Street View</div>
                       <div className="text-xs text-muted-foreground">Automated path linking & Maps publishing</div>
-                    </a>
+                    </Link>
                   </div>
                 )}
               </div>
 
               <div className="pt-2 space-y-1">
-                <a
-                  href="/pricing/"
+                <Link
+                  to="/pricing/"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block py-3 px-2 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-50 hover:text-primary transition-colors"
                 >
                   Pricing
-                </a>
-                <a
-                  href="/case-studies/"
+                </Link>
+                <Link
+                  to="/case-studies/"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block py-3 px-2 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-50 hover:text-primary transition-colors"
                 >
                   Case Studies
-                </a>
-                <a
-                  href="/blog/"
+                </Link>
+                <Link
+                  to="/blog/"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block py-3 px-2 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-50 hover:text-primary transition-colors"
                 >
                   Blog & Guides
-                </a>
-                <a
-                  href="/faq/"
+                </Link>
+                <Link
+                  to="/faq/"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block py-3 px-2 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-50 hover:text-primary transition-colors"
                 >
                   FAQ
-                </a>
-                <a
-                  href="/contact/"
+                </Link>
+                <Link
+                  to="/contact/"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block py-3 px-2 rounded-xl text-base font-bold text-slate-800 hover:bg-slate-50 hover:text-primary transition-colors"
                 >
                   Contact & Support
-                </a>
+                </Link>
               </div>
             </div>
 
             {/* Mobile Actions / Auth */}
             <div className="pt-6 border-t space-y-3">
-              <a href="/login/" onClick={() => setMobileMenuOpen(false)} className="block">
+              <Link to="/login/" onClick={() => setMobileMenuOpen(false)} className="block">
                 <Button variant="outline" className="w-full justify-center text-sm font-bold h-11 rounded-xl">
                   Sign in
                 </Button>
-              </a>
-              <a href="/signup/" onClick={() => setMobileMenuOpen(false)} className="block">
+              </Link>
+              <Link to="/signup/" onClick={() => setMobileMenuOpen(false)} className="block">
                 <Button className="w-full justify-center text-sm font-bold h-11 rounded-xl shadow-md">
                   Start Free 7-Day Trial
                 </Button>
-              </a>
+              </Link>
               <a
                 href={`https://wa.me/${WA_NUMBER}?text=${WA_MSG}`}
                 target="_blank"
@@ -245,11 +245,11 @@ export function PublicHeader() {
           <MessageCircle className="h-4 w-4" />
           Chat on WhatsApp
         </a>
-        <a href="/signup/" className="flex-1">
+        <Link to="/signup/" className="flex-1">
           <Button size="sm" className="w-full py-3 text-sm font-semibold" id="btn-mobile-signup">
             Start Free Trial
           </Button>
-        </a>
+        </Link>
       </div>
     </>
   );

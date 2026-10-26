@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import { getSceneArrowHeading } from "@/lib/nadir-processor";
 
 // Define interface for export parameters
@@ -1134,7 +1133,9 @@ export async function exportCustomTour(
   onProgress?: (msg: string, pct: number) => void
 ): Promise<Blob> {
   const { tour, photos, connections } = params;
-  const zip = new JSZip();
+  const JSZipModule = await import("jszip");
+  const JSZipClass = (JSZipModule as any).default || JSZipModule;
+  const zip = new JSZipClass();
   
   // Parse custom settings
   let settings: any = {};

@@ -20,6 +20,8 @@ type AuthCtx = {
   impersonatorSession: CustomSession | null;
   startImpersonation: (targetSession: CustomSession) => void;
   stopImpersonation: () => void;
+  isGoogleConnected: boolean;
+  setIsGoogleConnected: (connected: boolean) => void;
 };
 
 const Ctx = createContext<AuthCtx>({
@@ -31,6 +33,8 @@ const Ctx = createContext<AuthCtx>({
   impersonatorSession: null,
   startImpersonation: () => {},
   stopImpersonation: () => {},
+  isGoogleConnected: false,
+  setIsGoogleConnected: () => {},
 });
 
 function decodeJWT(token: string) {
@@ -51,6 +55,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSessionState] = useState<CustomSession | null>(null);
   const [impersonatorSession, setImpersonatorSessionState] = useState<CustomSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGoogleConnected, setIsGoogleConnectedState] = useState<boolean>(() => {
+    return typeof window !== "undefined" && localStorage.getItem("google_connected") === "true";
+  });
+
+  const setIsGoogleConnected = (connected: boolean) => {
+    if (connected) {
+      localStorage.setItem("google_connected", "true");
+    } else {
+      localStorage.removeItem("google_connected");
+    }
+    setIsGoogleConnectedState(connected);
+  };
 
   const setSession = (s: CustomSession | null) => {
     if (s) {
@@ -143,6 +159,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    let isMounted = true;
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      supabase
+        .from("google_tokens")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle()
+        .then(({ data }: any) => {
+          if (isMounted) {
+            setIsGoogleConnected(!!data);
+          }
+        });
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user?.id]);
+
   return (
     <Ctx.Provider
       value={{
@@ -153,8 +190,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         impersonatorSession,
         startImpersonation,
         stopImpersonation,
+        isGoogleConnected,
+        setIsGoogleConnected,
         signOut: async () => {
           localStorage.removeItem("panopublish_admin_impersonator");
+          localStorage.removeItem("google_connected");
+          setIsGoogleConnectedState(false);
           setImpersonatorSessionState(null);
           setSession(null);
           window.location.href = "/login";

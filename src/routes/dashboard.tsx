@@ -105,7 +105,7 @@ function Dashboard() {
     if (!user) return;
     (async () => {
       setLoadingData(true);
-      const [p, c, t, token, photosRes, subsRes] = await Promise.all([
+      const [p, c, t, token, photosCountRes, subsRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("plan,onboarding_dismissed,billing_cycle_tours_used,credits,trial_ends_at,created_at")
@@ -121,7 +121,7 @@ function Dashboard() {
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
         supabase.from("google_tokens").select("id").eq("user_id", user.id).maybeSingle(),
-        supabase.from("photos").select("tour_id,streetview_status,thumbnail_url,file_url").eq("user_id", user.id),
+        supabase.from("photos").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("subscriptions").select("plan,amount_inr,status").eq("user_id", user.id),
       ]);
       if (p.error) {
@@ -140,9 +140,9 @@ function Dashboard() {
         console.error("Dashboard google_tokens error:", token.error);
         toast.error("Google Tokens error: " + token.error.message);
       }
-      if (photosRes.error) {
-        console.error("Dashboard photos error:", photosRes.error);
-        toast.error("Photos error: " + photosRes.error.message);
+      if (photosCountRes.error) {
+        console.error("Dashboard photos error:", photosCountRes.error);
+        toast.error("Photos error: " + photosCountRes.error.message);
       }
 
       const userProfile = p.data ?? null;
@@ -169,12 +169,29 @@ function Dashboard() {
       }
 
       const tours = (t.data as RecentTour[]) ?? [];
-      const photos = photosRes.data ?? [];
 
-      // Self-healing check: Sync tour status based on photos
+      // Fetch photos only for top recent tours and processing tours (fast, lightweight payload)
+      const targetTourIds = Array.from(
+        new Set([
+          ...tours.slice(0, 8).map((tour) => tour.id),
+          ...tours.filter((tour) => tour.status === "processing").map((tour) => tour.id),
+        ])
+      );
+
+      let targetPhotos: any[] = [];
+      if (targetTourIds.length > 0) {
+        const photosRes = await supabase
+          .from("photos")
+          .select("tour_id,streetview_status,thumbnail_url,file_url")
+          .in("tour_id", targetTourIds);
+        targetPhotos = photosRes.data ?? [];
+      }
+
+      // Self-healing check: Sync tour status based on photos in parallel
+      const statusUpdates: Promise<any>[] = [];
       for (const tour of tours) {
         if (tour.type === "custom" || (tour as any).storage_cleared) continue; // Skip custom and cleared tours
-        const tPhotos = photos.filter((p: any) => p.tour_id === tour.id);
+        const tPhotos = targetPhotos.filter((p: any) => p.tour_id === tour.id);
         if (tPhotos.length > 0) {
           const allSubmitted = tPhotos.every(
             (p: any) => p.streetview_status === "PUBLISHED" || p.streetview_status === "PROCESSING",
@@ -189,16 +206,21 @@ function Dashboard() {
           }
 
           if (newStatus !== tour.status) {
-            await supabase.from("tours").update({ status: newStatus }).eq("id", tour.id);
             tour.status = newStatus;
+            statusUpdates.push(
+              supabase.from("tours").update({ status: newStatus }).eq("id", tour.id)
+            );
           }
         }
+      }
+      if (statusUpdates.length > 0) {
+        await Promise.all(statusUpdates);
       }
 
       const clientsCount = c.count ?? 0;
       const toursCount = tours.length;
       const publishedCount = tours.filter((x: any) => x.status === "published").length;
-      const uploadedCount = photos.length;
+      const uploadedCount = photosCountRes.count ?? 0;
 
       const allDone = clientsCount > 0 && toursCount > 0 && uploadedCount > 0 && publishedCount > 0;
       
@@ -254,9 +276,9 @@ function Dashboard() {
         }
       }
 
-      // Build quick thumbnail map
+      // Build quick thumbnail map for recent tours
       const photoMap: Record<string, string> = {};
-      photos.forEach((photo: any) => {
+      targetPhotos.forEach((photo: any) => {
         if (photo.tour_id && !photoMap[photo.tour_id]) {
           photoMap[photo.tour_id] = photo.thumbnail_url || photo.file_url || "";
         }

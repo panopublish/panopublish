@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 import { getEnv } from "@/lib/env";
 import { resolveLocationFromInput, parseMapsInput, ResolvedPlace } from "@/lib/google-places";
+import { tourStore } from "@/lib/tour-store";
 
 import { SEO } from "@/components/SEO";
 
@@ -57,12 +58,20 @@ function LocationPage() {
   const { tourId } = Route.useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [title, setTitle] = useState("");
-  const [cid, setCid] = useState("");
-  const [placeId, setPlaceId] = useState<string | null>(null);
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [address, setAddress] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
+  const cached = tourStore.get(tourId);
+  const [title, setTitle] = useState(() => cached?.tour?.name ?? "");
+  const [cid, setCid] = useState(() => cached?.tour?.cid ?? "");
+  const [placeId, setPlaceId] = useState<string | null>(() => cached?.tour?.google_place_id ?? null);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(() => {
+    if (cached?.tour?.latitude != null && cached?.tour?.longitude != null) {
+      return { lat: cached.tour.latitude, lng: cached.tour.longitude };
+    }
+    return null;
+  });
+  const [address, setAddress] = useState(() => cached?.tour?.address ?? "");
+  const [confirmed, setConfirmed] = useState(() => {
+    return cached?.tour?.latitude != null && cached?.tour?.longitude != null;
+  });
   const [saving, setSaving] = useState(false);
   const [resolving, setResolving] = useState(false);
   const acRef = useRef<HTMLInputElement>(null);
@@ -108,6 +117,7 @@ function LocationPage() {
         return;
       }
       if (data) {
+        tourStore.updateTour(tourId, data);
         setTitle(data.name ?? "");
         setAddress(data.address ?? "");
         setPlaceId(data.google_place_id ?? null);
@@ -185,6 +195,14 @@ function LocationPage() {
       toast.error(error.message);
       return;
     }
+    tourStore.updateTour(tourId, {
+      name: title,
+      address,
+      google_place_id: placeId,
+      cid: cid || null,
+      latitude: coords.lat,
+      longitude: coords.lng,
+    });
     toast.success("Location saved");
     navigate({ to: "/tours/$tourId/", params: { tourId } });
   };

@@ -120,20 +120,35 @@ function ToursPage() {
       if (tList.length > 0) {
         const ids = tList.map((t) => t.id);
 
-        const [photoRes, connRes] = await Promise.all([
+        const [photoRes, connRes, tokenRes] = await Promise.all([
           supabase
             .from("photos")
             .select("id,tour_id,thumbnail_url,streetview_status,streetview_photo_id,streetview_share_link")
             .in("tour_id", ids),
-          supabase.from("connections").select("id,tour_id").in("tour_id", ids),
+          supabase.from("connections").select("tour_id").in("tour_id", ids),
+          supabase.functions
+            .invoke("google-oauth", {
+              body: { action: "get_valid_token", user_id: user.id },
+            })
+            .catch((e: any) => ({ data: null, error: e })),
         ]);
 
         const loadedPhotos = photoRes.data ?? [];
         setPhotos(loadedPhotos);
-        setConnections(connRes.data ?? []);
+
+        // Deduplicate connection rows into a compact list of tour IDs that have connections
+        const uniqueConnectedTourIds = Array.from(
+          new Set((connRes.data ?? []).map((c: any) => c.tour_id))
+        );
+        setConnections(uniqueConnectedTourIds.map((tour_id) => ({ tour_id })));
+
+        if (tokenRes?.data?.access_token) {
+          setAccessToken(tokenRes.data.access_token);
+        }
 
         // Self-healing check: Sync tour status based on photos (Google Street View tours only)
         let hasChanges = false;
+        const tourUpdates: Promise<any>[] = [];
         for (const t of tList) {
           if (t.type === "custom" || t.storage_cleared) continue; // Skip custom and cleared tours
           const tPhotos = loadedPhotos.filter((p: any) => p.tour_id === t.id);
@@ -151,27 +166,20 @@ function ToursPage() {
             }
 
             if (newStatus !== t.status) {
-              await supabase.from("tours").update({ status: newStatus }).eq("id", t.id);
               t.status = newStatus;
               hasChanges = true;
+              tourUpdates.push(
+                supabase.from("tours").update({ status: newStatus }).eq("id", t.id)
+              );
             }
           }
+        }
+        if (tourUpdates.length > 0) {
+          await Promise.all(tourUpdates);
         }
         if (hasChanges) {
           setTours([...tList]);
         }
-      }
-
-      // Load Google access token to check status
-      try {
-        const { data, error } = await supabase.functions.invoke("google-oauth", {
-          body: { action: "get_valid_token", user_id: user.id },
-        });
-        if (!error && data?.access_token) {
-          setAccessToken(data.access_token);
-        }
-      } catch (e) {
-        console.error("Google Auth connection error:", e);
       }
     } catch (e: any) {
       console.error(e);

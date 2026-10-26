@@ -22,11 +22,22 @@ export function AppShell({
 }) {
   const { loading, user, impersonatorSession, stopImpersonation } = useAuth();
   const navigate = useNavigate();
-  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const cached = sessionStorage.getItem("user_trial_days");
+    if (cached !== null) {
+      const days = Number(cached);
+      return days >= 0 ? days : null;
+    }
+    return null;
+  });
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    const cached = sessionStorage.getItem("user_trial_days");
+    if (cached !== null) return; // Already cached for this session
+
     supabase
       .from("profiles")
       .select("plan,trial_ends_at,created_at")
@@ -41,8 +52,10 @@ export function AppShell({
             : Date.now() + 7 * 86400000;
           const ms = endsAt - Date.now();
           const days = Math.max(0, Math.min(7, Math.ceil(ms / 86400000)));
+          sessionStorage.setItem("user_trial_days", String(days));
           setTrialDaysLeft(days);
         } else {
+          sessionStorage.setItem("user_trial_days", "-1");
           setTrialDaysLeft(null);
         }
       });
@@ -51,24 +64,6 @@ export function AppShell({
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login/" });
   }, [loading, user, navigate]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    supabase
-      .from("google_tokens")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }: any) => {
-        const isConnected = !!data;
-        if (isConnected) {
-          localStorage.setItem("google_connected", "true");
-        } else {
-          localStorage.removeItem("google_connected");
-        }
-      });
-  }, [user]);
 
   // keyboard: ctrl+n new tour, ctrl+k focus search
   useEffect(() => {
