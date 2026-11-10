@@ -86,7 +86,7 @@ const MUSIC_PRESETS = [
 ];
 
 import { processNadirClientSide, getSceneArrowHeading, getNadirProcessedUrl } from "@/lib/nadir-processor";
-import { ensureGPanoXmpBlob } from "@/lib/xmp-injector";
+import { ensureGPanoXmpBlob, getJpegDimensionsFromSof } from "@/lib/xmp-injector";
 
 import { SEO } from "@/components/SEO";
 
@@ -153,10 +153,11 @@ type Photo = {
   streetview_rejection_reason?: string | null;
   streetview_share_link?: string | null;
   island_id?: string | null;
+  size_bytes?: number | null;
 };
 
-const getFunctionErrorMessage = async (error: any): Promise<string> => {
-  if (!error) return "Unknown error";
+const getFunctionErrorMessage = async (error: any): Promise<string | null> => {
+  if (!error) return null;
 
   if (error.message && error.message.includes("non-2xx status code:")) {
     try {
@@ -796,6 +797,23 @@ function PublishPage() {
       return;
     }
 
+    // Check for low-resolution camera proxy/thumbnail files (_s.jpg or <350KB)
+    const thumbnailScenes = photos.filter(
+      (p) =>
+        (!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
+        p.filename &&
+        (/_s\.(jpe?g|png)$/i.test(p.filename) ||
+         /_thumb\.(jpe?g|png)$/i.test(p.filename) ||
+         (p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024))
+    );
+    if (thumbnailScenes.length > 0) {
+      toast.error(
+        `${thumbnailScenes.length} scene(s) appear to be low-resolution camera thumbnail files (e.g. "_s.jpg" or <350KB). Google Street View requires full-resolution 360 photos (3840×1920 / 4K minimum). Please replace with the original photos before publishing.`,
+        { duration: 12000 }
+      );
+      return;
+    }
+
     if (photos.length > 1 && connections.length === 0) {
       toast.warning("Notice: No connections defined — scenes will not be linked on Google Maps.");
     }
@@ -996,7 +1014,7 @@ function PublishPage() {
       // Fetch the latest photo records from the database to skip already published/processing scenes
       const { data: dbPhotos } = await supabase
         .from("photos")
-        .select("id, streetview_status, streetview_photo_id, file_url, filename, latitude, longitude, heading, pitch, roll, island_id, capture_time, order_index, uploaded_at")
+        .select("id, streetview_status, streetview_photo_id, file_url, filename, latitude, longitude, heading, pitch, roll, island_id, capture_time, order_index, uploaded_at, size_bytes")
         .eq("tour_id", tourId);
 
       const sortedDbPhotos = ((dbPhotos as any[]) ?? []).sort((a, b) => {
@@ -1156,6 +1174,37 @@ function PublishPage() {
           continue;
         }
 
+        // Validate minimum resolution required by Google Street View Publish API (3840x1920 / 4K / ~7.5 MP)
+        let resolutionError: string | null = null;
+        try {
+          const arrBuf = await processedBlob.slice(0, 65536).arrayBuffer();
+          const dims = getJpegDimensionsFromSof(new Uint8Array(arrBuf));
+          if (dims && (dims.width < 3840 || dims.height < 1920)) {
+            const isThumbName = /_s\.(jpe?g|png)$/i.test(photo.filename || "") || /_thumb\.(jpe?g|png)$/i.test(photo.filename || "");
+            const hint = isThumbName
+              ? " This photo appears to be a camera thumbnail/proxy file (_s.jpg) instead of the original 360 photo."
+              : " Google Street View requires at least 4K (3840×1920 / 7.5+ MP).";
+            resolutionError = `Image resolution is only ${dims.width}×${dims.height} (${((dims.width * dims.height)/1000000).toFixed(1)} MP).${hint} Please replace with the original full-resolution photo.`;
+          }
+        } catch {}
+
+        if (resolutionError) {
+          failedCount++;
+          const photoName = photo.filename || photo.id || `Scene ${alreadyDone + photoIndex}`;
+          toast.error(
+            `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: ${resolutionError}`,
+            { duration: 12000 },
+          );
+          try {
+            await supabase
+              .from("photos")
+              .update({ streetview_status: "FAILED", streetview_rejection_reason: "REJECTED_TOO_SMALL" } as any)
+              .eq("id", photo.id);
+          } catch {}
+          photoIndex++;
+          continue;
+        }
+
         // 2. Upload bytes and register sphere with auto-retry, quota cooldown, and token refresh
         setPublishProgress({
           current: alreadyDone + photoIndex - 1,
@@ -1196,7 +1245,8 @@ function PublishPage() {
             );
 
             if (startError || !startData?.uploadUrl) {
-              const errMsg = (await getFunctionErrorMessage(startError)) || startData?.error || "Failed to start upload";
+              const edgeErrMsg = startError ? await getFunctionErrorMessage(startError) : null;
+              const errMsg = startData?.error || edgeErrMsg || "Failed to start upload";
               throw new Error(errMsg);
             }
 
@@ -1240,8 +1290,8 @@ function PublishPage() {
             );
 
             if (createError) {
-              const errMsg = await getFunctionErrorMessage(createError);
-              throw new Error(errMsg);
+              const edgeErrMsg = await getFunctionErrorMessage(createError);
+              throw new Error(edgeErrMsg || "Failed to create photo");
             }
 
             if (createData?.error || createData?.success === false) {
@@ -1257,6 +1307,14 @@ function PublishPage() {
                 `Scene ${alreadyDone + photoIndex} attempt ${attempt} error:`,
                 lastErrorMsg,
               );
+            }
+            // Stop retry immediately for permanent rejections (e.g. 403 Forbidden or Resolution Too Small)
+            if (
+              lastErrorMsg.includes("403") ||
+              lastErrorMsg.includes("RESOLUTION_TOO_SMALL") ||
+              lastErrorMsg.toLowerCase().includes("too small")
+            ) {
+              break;
             }
             // Auto-heal: on any upload or processing rejection, force re-normalize and re-inject XMP.
             // We trigger this on attempt 1 for known 360 errors, and on attempt 2+ for any error
@@ -1296,13 +1354,20 @@ function PublishPage() {
           failedCount++;
           const photoName = photo.filename || photo.id || `Scene ${alreadyDone + photoIndex}`;
           console.error(
-            `Scene ${alreadyDone + photoIndex} ("${photoName}") permanently failed after 6 attempts:`,
+            `Scene ${alreadyDone + photoIndex} ("${photoName}") permanently failed after attempts:`,
             lastErrorMsg,
           );
 
           // Build a human-readable, targeted error message based on the failure type
           let errorMsg: string;
-          if (lastErrorMsg.toLowerCase().includes("not a 360 photo") || lastErrorMsg.toLowerCase().includes("equirectangular")) {
+          if (
+            lastErrorMsg.includes("RESOLUTION_TOO_SMALL") ||
+            lastErrorMsg.toLowerCase().includes("too small") ||
+            lastErrorMsg.toLowerCase().includes("resolution")
+          ) {
+            const cleanMsg = lastErrorMsg.replace(/^RESOLUTION_TOO_SMALL:\s*/, "");
+            errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: ${cleanMsg}`;
+          } else if (lastErrorMsg.toLowerCase().includes("not a 360 photo") || lastErrorMsg.toLowerCase().includes("equirectangular")) {
             errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Google rejected this image — it is not an equirectangular 360° photo (requires 2:1 aspect ratio). Please remove or replace this scene.`;
           } else if (lastErrorMsg.includes("UPLOAD_TIMEOUT")) {
             errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: Upload timed out. The file is likely too large or your connection is too slow. Try compressing the image and re-uploading.`;
@@ -1322,7 +1387,10 @@ function PublishPage() {
           try {
             await supabase
               .from("photos")
-              .update({ streetview_status: "FAILED" } as any)
+              .update({
+                streetview_status: "FAILED",
+                streetview_rejection_reason: lastErrorMsg.includes("RESOLUTION_TOO_SMALL") ? "REJECTED_TOO_SMALL" : undefined
+              } as any)
               .eq("id", photo.id);
           } catch {}
         } else {
@@ -1649,6 +1717,21 @@ function PublishPage() {
         console.warn(`Could not inject XMP for single scene:`, xmpErr);
       }
 
+      // Validate minimum resolution required by Google Street View Publish API (3840x1920 / 4K / ~7.5 MP)
+      try {
+        const arrBuf = await processedBlob.slice(0, 65536).arrayBuffer();
+        const dims = getJpegDimensionsFromSof(new Uint8Array(arrBuf));
+        if (dims && (dims.width < 3840 || dims.height < 1920)) {
+          const isThumbName = /_s\.(jpe?g|png)$/i.test(photoToPublish.filename || "") || /_thumb\.(jpe?g|png)$/i.test(photoToPublish.filename || "");
+          const hint = isThumbName
+            ? " This photo appears to be a camera thumbnail/proxy file (_s.jpg) instead of the original 360 photo."
+            : " Google Street View requires at least 4K (3840×1920 / 7.5+ MP).";
+          throw new Error(`RESOLUTION_TOO_SMALL: Image resolution is only ${dims.width}×${dims.height} (${((dims.width * dims.height)/1000000).toFixed(1)} MP).${hint} Please replace with the original full-resolution photo.`);
+        }
+      } catch (dimErr: any) {
+        if (dimErr.message?.startsWith("RESOLUTION_TOO_SMALL")) throw dimErr;
+      }
+
       setPublishProgress({
         current: 0,
         total: 1,
@@ -1686,7 +1769,8 @@ function PublishPage() {
           );
 
           if (startError || !startData?.uploadUrl) {
-            const errMsg = (await getFunctionErrorMessage(startError)) || startData?.error || "Failed to start upload";
+            const edgeErrMsg = startError ? await getFunctionErrorMessage(startError) : null;
+            const errMsg = startData?.error || edgeErrMsg || "Failed to start upload";
             throw new Error(errMsg);
           }
 
@@ -1729,8 +1813,8 @@ function PublishPage() {
           );
 
           if (createError) {
-            const errMsg = await getFunctionErrorMessage(createError);
-            throw new Error(errMsg);
+            const edgeErrMsg = await getFunctionErrorMessage(createError);
+            throw new Error(edgeErrMsg || "Failed to create photo");
           }
 
           if (createData?.error || createData?.success === false) {
@@ -1741,6 +1825,14 @@ function PublishPage() {
           break;
         } catch (uploadErr: any) {
           lastErrorMsg = uploadErr.message || "Upload error";
+          // Stop retry immediately for permanent rejections
+          if (
+            lastErrorMsg.includes("403") ||
+            lastErrorMsg.includes("RESOLUTION_TOO_SMALL") ||
+            lastErrorMsg.toLowerCase().includes("too small")
+          ) {
+            break;
+          }
           // Auto-heal: re-normalize and re-inject XMP on any retry attempt.
           // This covers both upload-time rejection and async processing rejection by Google.
           const should360HealSingle =
@@ -1831,7 +1923,14 @@ function PublishPage() {
       console.error("Single scene publish error:", e);
       const msg = e.message || "";
       let errorMsg: string;
-      if (msg.toLowerCase().includes("not a 360 photo") || msg.toLowerCase().includes("equirectangular")) {
+      if (
+        msg.includes("RESOLUTION_TOO_SMALL") ||
+        msg.toLowerCase().includes("too small") ||
+        msg.toLowerCase().includes("resolution")
+      ) {
+        const cleanMsg = msg.replace(/^RESOLUTION_TOO_SMALL:\s*/, "");
+        errorMsg = `Failed to publish "${photoToPublish.filename || "scene"}": ${cleanMsg}`;
+      } else if (msg.toLowerCase().includes("not a 360 photo") || msg.toLowerCase().includes("equirectangular")) {
         errorMsg = `Google rejected "${photoToPublish.filename || "scene"}": Not an equirectangular 360° photo (requires 2:1 aspect ratio). Please replace this image.`;
       } else if (msg.includes("UPLOAD_TIMEOUT")) {
         errorMsg = `Upload timed out for "${photoToPublish.filename || "scene"}". The file may be too large or your connection too slow. Try compressing and re-uploading.`;
@@ -1850,7 +1949,10 @@ function PublishPage() {
       try {
         await supabase
           .from("photos")
-          .update({ streetview_status: "FAILED" } as any)
+          .update({
+            streetview_status: "FAILED",
+            streetview_rejection_reason: msg.includes("RESOLUTION_TOO_SMALL") ? "REJECTED_TOO_SMALL" : undefined
+          } as any)
           .eq("id", photoToPublish.id);
       } catch {}
     } finally {
@@ -3388,7 +3490,7 @@ function PublishPage() {
 
                   return (
                     <>
-                      {/* Fix 4.2 — Preflight validation banner */}
+                      {/* Fix 4.2 — Preflight validation banner: Missing GPS */}
                       {(() => {
                         const missingGps = photos.filter(
                           (p) =>
@@ -3402,6 +3504,28 @@ function PublishPage() {
                             <span>
                               <strong>{missingGps.length} scene{missingGps.length > 1 ? "s are" : " is"} missing GPS coordinates.</strong>{" "}
                               Google Street View requires GPS to publish. Please set location on the Map tab before publishing.
+                            </span>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Preflight validation banner: Low-resolution thumbnails */}
+                      {(() => {
+                        const lowRes = photos.filter(
+                          (p) =>
+                            (!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
+                            p.filename &&
+                            (/_s\.(jpe?g|png)$/i.test(p.filename) ||
+                             /_thumb\.(jpe?g|png)$/i.test(p.filename) ||
+                             (p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024))
+                        );
+                        if (lowRes.length === 0) return null;
+                        return (
+                          <div className="w-full flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-medium mb-1">
+                            <span className="text-base leading-none mt-0.5">⚠️</span>
+                            <span>
+                              <strong>{lowRes.length} scene{lowRes.length > 1 ? "s appear" : " appears"} to be low-resolution thumbnail files (ending in "_s.jpg" or &lt;350KB).</strong>{" "}
+                              Google Street View requires full-resolution 360 photos (3840×1920 / 4K minimum). Please replace with the original photos before publishing.
                             </span>
                           </div>
                         );
@@ -3496,6 +3620,17 @@ function PublishPage() {
                         title="This scene has no GPS coordinates. Set location on the Map tab before publishing."
                       >
                         No GPS
+                      </span>
+                    )}
+                    {/* Warn per-scene when image appears to be a low-res thumbnail proxy */}
+                    {(!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
+                     p.filename &&
+                     (/_s\.(jpe?g|png)$/i.test(p.filename) || (p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024)) && (
+                      <span
+                        className="text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded mr-1 shrink-0"
+                        title="This scene appears to be a low-resolution thumbnail (_s.jpg). Google Street View requires full-resolution 360 photos (3840×1920 minimum)."
+                      >
+                        Low Res (_s.jpg)
                       </span>
                     )}
                      {p.streetview_status === "PUBLISHED" ? (

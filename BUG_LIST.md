@@ -218,6 +218,136 @@ In [`src/routes/tours.$tourId.index.tsx`](file:///d:/Pano%20Publish/src/routes/t
 
 ---
 
+## Issue #5: Google Maps Autocomplete Crash on Choose Location Page (`Cannot read properties of undefined (reading 'Autocomplete')`)
+
+- **Status**: Open / Backlogged
+- **Severity**: High (Confuses users into believing business confirmation failed)
+- **Impacted Route**: `/tours/$tourId/location` ([`src/routes/tours.$tourId.location.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.location.tsx))
+- **Affects**: All users setting or resolving a business location via Place ID, CID, or Maps URL
+- **Workaround**: Ignore the toast error; the business coordinates and details are still confirmed and can be saved by clicking "Save".
+
+---
+
+### 1. Description & Symptoms
+
+1. User enters a Place ID (e.g. `ChIJY-sl1c1PXjkRbDRpaTT2-cY`), CID, or URL on the Choose Location page and clicks "Find".
+2. The business resolves successfully: the green checkmark appears with Place ID & CID, the business name updates in the Title input, and the interactive Google Map preview card displays.
+3. Immediately afterwards, a red error toast pops up: `"Cannot read properties of undefined (reading 'Autocomplete')"`.
+4. Users believe the business selection was rejected or failed due to the alarming error notification.
+
+---
+
+### 2. Root Cause Analysis
+
+1. **Unnecessary Effect Dependency on `[title]`**:
+   - In [`src/routes/tours.$tourId.location.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.location.tsx#L140-L174), the `useEffect` that initializes the Google Places Autocomplete widget declares `[title]` in its dependency array.
+   - When `handleResolveLocation` resolves the place, it calls `setTitle(resolved.name)`.
+   - Updating `title` forces the Autocomplete `useEffect` to unmount and re-run.
+
+2. **Async Script Loading Race Condition (`loading=async`)**:
+   - Google Maps is loaded via `<script src="...&libraries=places&loading=async">`.
+   - When `loadGoogleMaps` resolves its promise on `script.onload`, the core Maps library is available, but the `places` library is loaded dynamically in the background.
+   - On the re-render triggered by `title`, `loadGoogleMaps` returns immediately, but `window.google.maps.places` is `undefined`.
+   - The effect directly executes `ac = new window.google.maps.places.Autocomplete(acRef.current, ...)` without guarding `window.google.maps.places?.Autocomplete`.
+   - This throws an unhandled `TypeError: Cannot read properties of undefined (reading 'Autocomplete')`.
+   - The `.catch((e) => toast.error(e.message))` catches the exception and renders it as an alarming error toast.
+
+---
+
+### 3. Comprehensive Implementation Solution
+
+#### Step 1: Remove `title` from Dependency Array
+In [`src/routes/tours.$tourId.location.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.location.tsx#L174):
+- Change the Autocomplete `useEffect` dependency array from `[title]` to `[]` (mount only), preventing redundant re-instantiations when title updates.
+
+#### Step 2: Safe Initialization Guard & Polling / Dynamic Import
+In [`src/routes/tours.$tourId.location.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.location.tsx#L140-L170):
+- Verify `(window as any).google?.maps?.places?.Autocomplete` before calling constructor.
+- Support `google.maps.importLibrary("places")` or a safe 50ms interval check (identical to the pattern in [`tours.new.tsx`](file:///d:/Pano%20Publish/src/routes/tours.new.tsx#L314-L319)).
+- Wrap constructor in `try { ... } catch (err) { console.warn(...) }` instead of bubbling fatal toast errors to the user.
+
+#### Step 3: Fix `loadGoogleMaps` for Already-Loaded Scripts
+In [`src/routes/tours.$tourId.location.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.location.tsx#L37-L55):
+- Check for existing `script[src*='maps.googleapis.com']`.
+- If the script element is already loaded, resolve immediately instead of attaching an `addEventListener("load")` that will never trigger.
+
+---
+
+## Issue #6: Nadir Logo Upload Failure & Missing Drag-and-Drop in Publish Modal
+
+- **Status**: Open / Backlogged
+- **Severity**: High (Blocks users from branding or patching their 360 nadir prior to Google Street View publishing)
+- **Impacted Route**: `/tours/$tourId/publish` ([`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx))
+- **Affects**: Users attempting to upload custom Nadir logos in the Publish tab
+- **Workaround**: Users can currently only use "Stretch Blur" or "None", as custom nadir upload fails or drops are ignored.
+
+---
+
+### 1. Description & Symptoms
+
+1. In the **Publish to Google** page, user clicks to upload or change Nadir logo, opening the modal: *"Upload your Nadir by dragging and dropping it below. 2000px x 2000px PNG recommended"*.
+2. **Dragging and dropping does nothing**: When the user drags an image onto the dashed circle, the file is not accepted; the browser may attempt to open the raw image file or ignore the drop entirely.
+3. **Clicking the circle is finicky**: Inside Radix UI `Dialog`, clicking the icon or label text may fail to open the native OS file selection window.
+4. **Nadir Type remains "None"**: Even if an image URL is saved to `nadir_logo_url`, the tour's `nadir_type` setting stays `"None"`, meaning the nadir patch is omitted during Google Street View publishing and preview.
+5. **State Variable Mismatch**: The dropzone text and disabled prop check `uploadingLogo` (branding logo state) instead of `uploadingNadirLogo`.
+
+---
+
+### 2. Root Cause Analysis
+
+1. **Missing Drag-and-Drop Event Listeners**:
+   - In [`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx#L3691-L3704), the circular drop zone is a `<label>` containing an SVG and a hidden `<input type="file" />`.
+   - There are **no `onDragOver` or `onDrop` handlers**. HTML5 drag and drop requires `e.preventDefault()` on dragover and custom drop file extraction.
+
+2. **UI State Variable Mismatch**:
+   - Lines 3694 & 3700 check `uploadingLogo`:
+     ```tsx
+     {uploadingLogo ? "Uploading..." : "Click or drag logo to upload"}
+     disabled={uploadingLogo}
+     ```
+   - However, `handleNadirLogoUpload` (line 917) manages `uploadingNadirLogo`. Because of this variable mismatch, the UI never shows the "Uploading..." state or disables the button while uploading.
+
+3. **Nadir Type Desynchronization**:
+   - When a user uploads a Nadir logo, `handleNadirLogoUpload` updates `nadir_logo_url` in the database, but does **not** update `nadir_type` to `"Tour level"` or trigger `saveNadirSettings("Tour level", size, pos)`.
+   - As a result, the tour remains configured with `nadir_type: "None"`, causing the nadir generator to skip the patch entirely.
+
+4. **Storage RLS Risk on Uninitialized Auth State**:
+   - In [`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx#L919), path is constructed as `${user?.id}/${tourId}/custom-nadir-logo-...`.
+   - If `user?.id` is undefined during initial session restoration, the path begins with `undefined/...`, which immediately violates Supabase Storage RLS (`auth.uid()::text = (storage.foldername(name))[1]`) and causes an upload rejection.
+
+---
+
+### 3. Comprehensive Implementation Solution
+
+#### Step 1: Implement Full HTML5 Drag-and-Drop & Explicit Click Ref
+In [`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx#L3691-L3704):
+- Add a file input ref (`nadirFileInputRef = useRef<HTMLInputElement>(null)`).
+- Implement `onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}`.
+- Implement `onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}`.
+- Implement `onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); const file = e.dataTransfer.files?.[0]; if (file) uploadNadirFile(file); }}`.
+- Add an explicit `onClick={() => nadirFileInputRef.current?.click()}` to guarantee the file picker opens across all desktop browsers and Radix Dialog overlays.
+
+#### Step 2: Unify Upload Function & Fix State Flags
+In [`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx#L913-L945):
+- Extract a unified `uploadNadirFile(file: File)` handler shared by both the input `onChange` and the dropzone `onDrop`.
+- Verify `user?.id` exists before starting upload; prompt error if unauthenticated.
+- Bind `uploadingNadirLogo` to both the upload text (`uploadingNadirLogo ? "Uploading..." : ...`) and `disabled={uploadingNadirLogo}`.
+
+#### Step 3: Auto-switch `nadir_type` to "Tour level"
+In [`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx#L930-L940):
+- When a logo is successfully uploaded, automatically update the tour's `nadir_type` to `"Tour level"`:
+  ```ts
+  setNadirType("Tour level");
+  await saveNadirSettings("Tour level", size, pos);
+  ```
+- This ensures the Nadir preview strip and publish pipeline immediately reflect and render the newly uploaded logo.
+
+#### Step 4: Allow Replacing Logo When One Already Exists
+In [`src/routes/tours.$tourId.publish.tsx`](file:///d:/Pano%20Publish/src/routes/tours.$tourId.publish.tsx#L3680-L3689):
+- Add a "Change Logo" overlay button or click action on the preview circle so users can swap their nadir image without needing to click "Remove" first.
+
+---
+
 ## Architectural Note: Cloudflare Workers Paid Plan Evaluation
 
 - **Decision**: **DO NOT purchase Workers Paid ($5/mo) for frontend speed/CWV optimization.**

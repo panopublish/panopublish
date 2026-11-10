@@ -792,14 +792,23 @@ function TourDetail() {
     const { data: pub } = supabase.storage.from("tour-photos").getPublicUrl(path);
     const meta = await extractPhotoMetadata(file);
 
-    // Fix 4.4: Check aspect ratio and warn if not 360 equirectangular (2:1)
+    // Check aspect ratio and minimum resolution for Google Street View (2:1 aspect ratio, 3840x1920 / 4K minimum)
     try {
       const dims = await getImageHeaderDimensions(file);
-      if (dims && dims.width && dims.height && dims.width / dims.height < 1.7) {
-        toast.warning(
-          `"${file.name}" has an aspect ratio of ${(dims.width / dims.height).toFixed(2)}:1 (standard 360 is 2:1). Google Street View may reject non-panoramic photos.`,
-          { duration: 8000 },
-        );
+      if (dims && dims.width && dims.height) {
+        if (dims.width / dims.height < 1.7) {
+          toast.warning(
+            `"${file.name}" has an aspect ratio of ${(dims.width / dims.height).toFixed(2)}:1 (standard 360 is 2:1). Google Street View may reject non-panoramic photos.`,
+            { duration: 8000 },
+          );
+        } else if (dims.width < 3840 || dims.height < 1920) {
+          const mp = ((dims.width * dims.height) / 1000000).toFixed(1);
+          const isThumbName = /_s\.(jpe?g|png)$/i.test(file.name) || /_thumb\.(jpe?g|png)$/i.test(file.name);
+          toast.warning(
+            `"${file.name}" is only ${dims.width}×${dims.height} (${mp} MP). Google Street View requires at least 4K (3840×1920, 7.5+ MP).${isThumbName ? " This appears to be a camera thumbnail/preview file (_s.jpg) instead of the original 360 photo." : " Google may reject low-resolution photos."}`,
+            { duration: 10000 },
+          );
+        }
       }
     } catch {
       // Non-fatal dimension check
