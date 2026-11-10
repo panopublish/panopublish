@@ -52,7 +52,7 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
       const scope = encodeURIComponent(
         "https://www.googleapis.com/auth/streetviewpublish https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
       );
-      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account%20consent`;
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=select_account%20consent&include_granted_scopes=true`;
       return { authUrl };
     }
 
@@ -73,6 +73,14 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
       });
       const tokenData: any = await tokenRes.json();
       if (!tokenRes.ok) throw new Error(tokenData.error_description || "Failed to exchange code");
+
+      // Verify that the user granted the required streetviewpublish scope
+      const grantedScope = tokenData.scope || "";
+      if (grantedScope && !grantedScope.includes("streetviewpublish")) {
+        throw new Error(
+          "Permission missing: You must check the box for 'See, edit, configure, and delete your Google Street View photos' on Google's permission screen to allow PanoPublish to publish tours."
+        );
+      }
 
       const expires_at = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
 

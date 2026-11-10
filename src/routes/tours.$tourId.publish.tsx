@@ -1287,11 +1287,13 @@ function PublishPage() {
                 lastErrorMsg,
               );
             }
-            // Stop retry immediately for permanent rejections (e.g. 403 Forbidden or Resolution Too Small)
+            // Stop retry immediately for permanent rejections (e.g. 403 Forbidden, Scope error, or Resolution Too Small)
             if (
               lastErrorMsg.includes("403") ||
               lastErrorMsg.includes("RESOLUTION_TOO_SMALL") ||
-              lastErrorMsg.toLowerCase().includes("too small")
+              lastErrorMsg.toLowerCase().includes("too small") ||
+              lastErrorMsg.toLowerCase().includes("insufficient") ||
+              lastErrorMsg.toLowerCase().includes("scope")
             ) {
               break;
             }
@@ -1339,7 +1341,14 @@ function PublishPage() {
 
           // Build a human-readable, targeted error message based on the failure type
           let errorMsg: string;
-          if (
+          const isScopeError =
+            lastErrorMsg.toLowerCase().includes("insufficient authentication scopes") ||
+            lastErrorMsg.toLowerCase().includes("insufficient") ||
+            lastErrorMsg.toLowerCase().includes("scope");
+
+          if (isScopeError) {
+            errorMsg = `Google Street View Permission Missing: The connected Google account (${googleEmail || "Google"}) was authorized without Street View publishing access. Please click "Switch Account" above to reconnect, and make sure the box for "See, edit, configure, and delete your Google Street View photos" is checked.`;
+          } else if (
             lastErrorMsg.includes("RESOLUTION_TOO_SMALL") ||
             lastErrorMsg.toLowerCase().includes("too small") ||
             lastErrorMsg.toLowerCase().includes("resolution")
@@ -1362,7 +1371,7 @@ function PublishPage() {
             errorMsg = `Scene ${alreadyDone + photoIndex} ("${photoName}") failed: ${lastErrorMsg}`;
           }
 
-          toast.error(errorMsg, { duration: 12000 });
+          toast.error(errorMsg, { duration: 15000 });
           try {
             await supabase
               .from("photos")
@@ -1372,6 +1381,12 @@ function PublishPage() {
               } as any)
               .eq("id", photo.id);
           } catch {}
+
+          if (isScopeError) {
+            setPublishProgress(null);
+            setPublishing(false);
+            break;
+          }
         } else {
           // 4. Update the stored photo with the processed Nadir image so tour preview shows it permanently
           if (nadirType && nadirType.toLowerCase().trim() !== "none") {
@@ -1899,6 +1914,12 @@ function PublishPage() {
       const msg = e.message || "";
       let errorMsg: string;
       if (
+        msg.toLowerCase().includes("insufficient authentication scopes") ||
+        msg.toLowerCase().includes("insufficient") ||
+        msg.toLowerCase().includes("scope")
+      ) {
+        errorMsg = `Google Street View Permission Missing: Please click "Switch Account" above to reconnect Google, and ensure the checkbox for "See, edit, configure, and delete your Google Street View photos" is checked.`;
+      } else if (
         msg.includes("RESOLUTION_TOO_SMALL") ||
         msg.toLowerCase().includes("too small") ||
         msg.toLowerCase().includes("resolution")
