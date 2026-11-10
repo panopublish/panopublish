@@ -803,9 +803,8 @@ function TourDetail() {
           );
         } else if (dims.width < 3840 || dims.height < 1920) {
           const mp = ((dims.width * dims.height) / 1000000).toFixed(1);
-          const isThumbName = /_s\.(jpe?g|png)$/i.test(file.name) || /_thumb\.(jpe?g|png)$/i.test(file.name);
           toast.warning(
-            `"${file.name}" is only ${dims.width}×${dims.height} (${mp} MP). Google Street View requires at least 4K (3840×1920, 7.5+ MP).${isThumbName ? " This appears to be a camera thumbnail/preview file (_s.jpg) instead of the original 360 photo." : " Google may reject low-resolution photos."}`,
+            `"${file.name}" is only ${dims.width}×${dims.height} (${mp} MP). Google Street View requires at least 4K (3840×1920, 7.5+ MP). Google may reject low-resolution photos.`,
             { duration: 10000 },
           );
         }
