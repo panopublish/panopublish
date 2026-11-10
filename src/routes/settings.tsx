@@ -710,26 +710,28 @@ function SettingsPage() {
   const cancelSubscription = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to cancel your current subscription? Your account will return to the Trial tier.",
+        "Are you sure you want to cancel your current subscription? Recurring billing will be stopped in Razorpay, and you will retain access to your plan benefits until the end of your current billing period.",
       )
     )
       return;
-    const tid = toast.loading("Processing cancellation...");
+    const tid = toast.loading("Processing cancellation with Razorpay...");
     try {
-      const { error } = await supabase.from("profiles").upsert({
-        id: user?.id,
-        email: user?.email,
-        plan: "trial",
-      } as any);
+      const { data, error } = await supabase.functions.invoke("razorpay", {
+        body: {
+          action: "cancel_subscription",
+          user_id: user?.id,
+          cancel_at_cycle_end: true,
+        },
+      });
 
-      if (error) throw error;
+      if (error || (data && !data.success)) {
+        throw new Error(error?.message || data?.error || "Failed to cancel subscription");
+      }
 
-      await supabase
-        .from("subscriptions")
-        .update({ status: "cancelled" })
-        .eq("user_id", user?.id);
-
-      toast.success("Subscription cancelled successfully.", { id: tid });
+      toast.success(
+        data?.message || "Subscription cancelled successfully. Recurring billing has stopped.",
+        { id: tid }
+      );
       loadProfile();
     } catch (err: any) {
       toast.error("Failed to cancel subscription: " + err.message, { id: tid });

@@ -1562,6 +1562,135 @@ export const handleRazorpayServerFn = createServerFn({ method: "POST" })
         return { success: true };
       }
 
+      // ── Cancel Subscription ─────────────────────────────────────────────
+      if (payload.action === "cancel_subscription") {
+        const { user_id, token, cancel_at_cycle_end = true } = payload;
+        let effectiveUserId = user_id;
+        if (!effectiveUserId && token) {
+          try {
+            effectiveUserId = await getUserIdFromToken(token);
+          } catch (_) {}
+        }
+
+        if (!effectiveUserId) {
+          throw new Error("Missing user_id for subscription cancellation");
+        }
+
+        const db = getBinding("DB");
+        let activeSub: any = null;
+        if (db) {
+          activeSub = await db
+            .prepare(
+              "SELECT id, razorpay_subscription_id, plan, end_date FROM subscriptions WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1"
+            )
+            .bind(effectiveUserId)
+            .first();
+        }
+
+        const rzpSubId = activeSub?.razorpay_subscription_id || payload.razorpay_subscription_id;
+
+        // Cancel recurring mandate on Razorpay if valid subscription id
+        if (rzpSubId && typeof rzpSubId === "string" && rzpSubId.startsWith("sub_")) {
+          const cancelBody = {
+            cancel_at_cycle_end: cancel_at_cycle_end ? 1 : 0,
+          };
+          const rzpRes = await fetch(
+            `https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(rzpSubId)}/cancel`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: authHeader,
+              },
+              body: JSON.stringify(cancelBody),
+            }
+          );
+
+          const rzpData: any = await rzpRes.json().catch(() => ({}));
+          if (!rzpRes.ok) {
+            const desc = (rzpData?.error?.description || "").toLowerCase();
+            const isAlreadyCancelled =
+              desc.includes("cancelled") ||
+              desc.includes("completed") ||
+              desc.includes("not found");
+            if (!isAlreadyCancelled) {
+              throw new Error(rzpData?.error?.description || "Failed to cancel subscription with Razorpay");
+            }
+          }
+        }
+
+        if (db) {
+          // Mark subscriptions row as cancelled
+          await db
+            .prepare(
+              "UPDATE subscriptions SET status = 'cancelled' WHERE user_id = ? AND status = 'active'"
+            )
+            .bind(effectiveUserId)
+            .run();
+
+          // If immediate cancellation was requested, revert profile to trial
+          if (!cancel_at_cycle_end) {
+            await db
+              .prepare("UPDATE profiles SET plan = 'trial' WHERE id = ?")
+              .bind(effectiveUserId)
+              .run();
+          }
+        }
+
+        return {
+          success: true,
+          message: cancel_at_cycle_end
+            ? "Your recurring billing has been stopped in Razorpay. You retain access until the end of your billing cycle."
+            : "Subscription cancelled successfully.",
+        };
+      }
+
+      // ── Handle Webhook Events (Renewals & Cancellations) ────────────────
+      if (payload.action === "webhook") {
+        const event = payload.event;
+        const subEntity = payload.payload?.subscription?.entity;
+        const subscriptionId = subEntity?.id;
+        const db = getBinding("DB");
+
+        if (db && subscriptionId) {
+          if (event === "subscription.charged") {
+            const subRow: any = await db
+              .prepare(
+                "SELECT user_id, plan, amount_inr FROM subscriptions WHERE razorpay_subscription_id = ? LIMIT 1"
+              )
+              .bind(subscriptionId)
+              .first();
+
+            if (subRow?.user_id) {
+              const planLower = (subRow.plan || "pro").toLowerCase();
+              const basePlanLimits: Record<string, number> = { basic: 5, pro: 20, agency: 50 };
+              const baseCredits = basePlanLimits[planLower] ?? 20;
+              const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
+
+              await db
+                .prepare(
+                  "UPDATE profiles SET plan = ?, credits = ?, billing_cycle_tours_used = 0, trial_ends_at = ? WHERE id = ?"
+                )
+                .bind(planLower, baseCredits, periodEndIso, subRow.user_id)
+                .run();
+
+              await db
+                .prepare(
+                  "UPDATE subscriptions SET status = 'active', end_date = ? WHERE razorpay_subscription_id = ?"
+                )
+                .bind(periodEndIso, subscriptionId)
+                .run();
+            }
+          } else if (event === "subscription.cancelled") {
+            await db
+              .prepare("UPDATE subscriptions SET status = 'cancelled' WHERE razorpay_subscription_id = ?")
+              .bind(subscriptionId)
+              .run();
+          }
+        }
+        return { success: true };
+      }
+
       throw new Error(`Unknown razorpay action: ${payload.action}`);
     } catch (err: any) {
       console.error("Razorpay Server Function error:", err);

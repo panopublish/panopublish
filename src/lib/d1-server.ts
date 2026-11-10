@@ -33,6 +33,7 @@ function checkIsAdmin(user: any) {
 }
 
 let schemaEnsured = true;
+let gajendraProEnsured = false;
 
 async function ensureReferralSchema(db: any) {
   if (!db) return;
@@ -332,6 +333,66 @@ export const runD1Query = createServerFn({ method: "POST" })
       return { data: null, error: { message: "Cloudflare D1 Database binding 'DB' is missing" } };
     }
 
+    // Auto-heal / Grant Pro plan to Gajendra Singh for 1 month starting today (2026-11-10 to 2026-12-10)
+    if (!gajendraProEnsured && db) {
+      gajendraProEnsured = true;
+      try {
+        const targetExpiry = "2026-12-10T23:59:59.000Z";
+        const gUser: any = await db
+          .prepare(
+            "SELECT id, plan, credits, trial_ends_at FROM profiles WHERE LOWER(email) = 'shootin360.officials@gmail.com' LIMIT 1"
+          )
+          .first();
+
+        if (
+          gUser &&
+          (gUser.plan !== "pro" ||
+            !gUser.trial_ends_at ||
+            gUser.trial_ends_at < targetExpiry ||
+            (gUser.credits ?? 0) < 20)
+        ) {
+          await db
+            .prepare(
+              "UPDATE profiles SET plan = 'pro', credits = 20, billing_cycle_tours_used = 0, trial_ends_at = ? WHERE id = ?"
+            )
+            .bind(targetExpiry, gUser.id)
+            .run();
+
+          const activeSub: any = await db
+            .prepare(
+              "SELECT id FROM subscriptions WHERE user_id = ? AND status = 'active' LIMIT 1"
+            )
+            .bind(gUser.id)
+            .first();
+
+          if (!activeSub) {
+            await db
+              .prepare(`
+                INSERT INTO subscriptions (id, user_id, plan, status, razorpay_subscription_id, start_date, end_date, amount_inr, created_at)
+                VALUES (?, ?, 'pro', 'active', ?, '2026-11-10T00:00:00.000Z', ?, 1499, '2026-11-10T00:00:00.000Z')
+              `)
+              .bind(
+                crypto.randomUUID(),
+                gUser.id,
+                `admin_pro_grant_${gUser.id.slice(0, 8)}`,
+                targetExpiry
+              )
+              .run();
+          } else {
+            await db
+              .prepare(
+                "UPDATE subscriptions SET plan = 'pro', status = 'active', end_date = ? WHERE user_id = ?"
+              )
+              .bind(targetExpiry, gUser.id)
+              .run();
+          }
+          console.log(`[SUBSCRIPTION FIX] Granted Pro plan to Gajendra Singh (shootin360.officials@gmail.com) until ${targetExpiry}`);
+        }
+      } catch (err) {
+        console.warn("Failed to ensure Pro plan for Gajendra:", err);
+      }
+    }
+
     const { table, action } = payload;
 
     // Build the query and parameter bindings
@@ -594,6 +655,30 @@ export const runD1Query = createServerFn({ method: "POST" })
       // Auto-populate TSRHELP promo for referred users if not yet redeemed
       if (table === "profiles") {
         for (const row of processedResults) {
+          // Guarantee Gajendra Singh reflects Pro with 20 credits and 1 month validity
+          if (row.email && row.email.toLowerCase() === "shootin360.officials@gmail.com") {
+            const targetExpiry = "2026-12-10T23:59:59.000Z";
+            if (
+              row.plan !== "pro" ||
+              !row.trial_ends_at ||
+              row.trial_ends_at < targetExpiry ||
+              (row.credits ?? 0) < 20
+            ) {
+              row.plan = "pro";
+              row.credits = 20;
+              row.billing_cycle_tours_used = 0;
+              row.trial_ends_at = targetExpiry;
+              try {
+                db.prepare(
+                  "UPDATE profiles SET plan = 'pro', credits = 20, billing_cycle_tours_used = 0, trial_ends_at = ? WHERE id = ?"
+                )
+                  .bind(targetExpiry, row.id)
+                  .run()
+                  .catch(() => {});
+              } catch (_) {}
+            }
+          }
+
           if ((!row.applied_promo || row.applied_promo === "") && !row.promo_discount_redeemed) {
             const is360 = row.email && row.email.toLowerCase() === "360digitalsstudio@gmail.com";
             let isReferredByTsr = is360;

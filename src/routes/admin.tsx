@@ -1492,23 +1492,28 @@ function AdminDashboard() {
       if (error) {
         toast.error("Failed to update profile: " + error.message);
       } else {
-        // Record subscription in subscriptions table if plan changed to paid
-        if (profileForm.plan !== editingProfile.plan && isPaidPlan) {
-          const planPrices: Record<string, number> = { basic: 499, pro: 1499, agency: 2999 };
-          try {
-            await supabase
-              .from("subscriptions")
-              .insert({
-                id: crypto.randomUUID(),
-                user_id: editingProfile.id,
-                plan: profileForm.plan,
-                status: "active",
-                razorpay_subscription_id: `admin_grant_${editingProfile.id.slice(0, 8)}`,
-                start_date: nowIso,
-                end_date: periodEndIso,
-                amount_inr: planPrices[profileForm.plan] || 0,
-              });
-          } catch (_) {}
+        // Record subscription in subscriptions table if plan changed to paid or user has no active subscription
+        if (isPaidPlan) {
+          const userSubs = subscriptions.filter(
+            (s) => s.user_id === editingProfile.id && s.status === "active"
+          );
+          if (profileForm.plan !== editingProfile.plan || userSubs.length === 0) {
+            const planPrices: Record<string, number> = { basic: 499, pro: 1499, agency: 2999 };
+            try {
+              await supabase
+                .from("subscriptions")
+                .insert({
+                  id: crypto.randomUUID(),
+                  user_id: editingProfile.id,
+                  plan: profileForm.plan,
+                  status: "active",
+                  razorpay_subscription_id: `admin_grant_${editingProfile.id.slice(0, 8)}`,
+                  start_date: nowIso,
+                  end_date: periodEndIso,
+                  amount_inr: planPrices[profileForm.plan] || 0,
+                });
+            } catch (_) {}
+          }
         }
 
         toast.success("User plan and credits updated successfully!");

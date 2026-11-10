@@ -233,14 +233,33 @@ serve(async (req) => {
           .maybeSingle();
 
         if (subRow?.user_id) {
-          // Reset the billing cycle tours used count on renewal
+          const planLower = (subRow.plan || "pro").toLowerCase();
+          const basePlanLimits: Record<string, number> = { basic: 5, pro: 20, agency: 50 };
+          const baseCredits = basePlanLimits[planLower] ?? 20;
+          const periodEndIso = new Date(Date.now() + 30 * 86400000).toISOString();
+
+          // Reset the billing cycle tours used count, restore plan, and extend validity on renewal
           await supabaseClient
             .from("profiles")
-            .update({ billing_cycle_tours_used: 0 })
+            .update({
+              plan: planLower,
+              credits: baseCredits,
+              billing_cycle_tours_used: 0,
+              trial_ends_at: periodEndIso,
+            })
             .eq("id", subRow.user_id);
 
+          // Update subscription record to active with new end_date
+          await supabaseClient
+            .from("subscriptions")
+            .update({
+              status: "active",
+              end_date: periodEndIso,
+            })
+            .eq("razorpay_subscription_id", subscriptionId);
+
           console.log(
-            `Successfully renewed subscription and reset tour count for subscription ${subscriptionId}, user ${subRow.user_id}`,
+            `Successfully renewed ${planLower} subscription, restored credits (${baseCredits}), and reset tour count for subscription ${subscriptionId}, user ${subRow.user_id}`,
           );
 
           // Calculate and log lifetime 25% recurring referral commission
@@ -549,6 +568,74 @@ serve(async (req) => {
           success: true,
           new_credits: newCredits,
           added_credits: count,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    if (action === "cancel_subscription") {
+      const { user_id, cancel_at_cycle_end = true } = payload;
+      if (!user_id) throw new Error("Missing user_id for cancellation");
+
+      // Fetch active subscription
+      const { data: subRow } = await supabaseClient
+        .from("subscriptions")
+        .select("id, razorpay_subscription_id, plan")
+        .eq("user_id", user_id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const rzpSubId = subRow?.razorpay_subscription_id || payload.razorpay_subscription_id;
+
+      if (rzpSubId && typeof rzpSubId === "string" && rzpSubId.startsWith("sub_")) {
+        const cancelRes = await fetch(
+          `https://api.razorpay.com/v1/subscriptions/${encodeURIComponent(rzpSubId)}/cancel`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              cancel_at_cycle_end: cancel_at_cycle_end ? 1 : 0,
+            }),
+          },
+        );
+
+        const cancelData = await cancelRes.json().catch(() => ({}));
+        if (!cancelRes.ok) {
+          const desc = (cancelData?.error?.description || "").toLowerCase();
+          const isAlreadyCancelled =
+            desc.includes("cancelled") ||
+            desc.includes("completed") ||
+            desc.includes("not found");
+          if (!isAlreadyCancelled) {
+            throw new Error(cancelData?.error?.description || "Failed to cancel Razorpay subscription");
+          }
+        }
+      }
+
+      // Mark subscription cancelled
+      await supabaseClient
+        .from("subscriptions")
+        .update({ status: "cancelled" })
+        .eq("user_id", user_id);
+
+      if (!cancel_at_cycle_end) {
+        await supabaseClient
+          .from("profiles")
+          .update({ plan: "trial" })
+          .eq("id", user_id);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: cancel_at_cycle_end
+            ? "Your recurring billing has been stopped in Razorpay. You retain access until the end of your billing cycle."
+            : "Subscription cancelled successfully.",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
