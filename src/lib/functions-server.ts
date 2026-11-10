@@ -217,6 +217,50 @@ export const handleGoogleOauthServerFn = createServerFn({ method: "POST" })
   }
 });
 
+function parseCaptureTimeSeconds(captureTime: any): number {
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (!captureTime) return nowSec - 60;
+  let sec = 0;
+  if (typeof captureTime === "number" && !isNaN(captureTime) && captureTime > 0) {
+    sec = captureTime > 1e11 ? Math.floor(captureTime / 1000) : Math.floor(captureTime);
+  } else {
+    let str = String(captureTime).trim();
+    // Handle EXIF format: "2026:11:10 10:40:41" -> "2026-11-10T10:40:41"
+    if (/^\d{4}:\d{2}:\d{2}/.test(str)) {
+      str = str.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3").replace(" ", "T");
+    }
+    const ms = new Date(str).getTime();
+    sec = (!isNaN(ms) && ms > 0) ? Math.floor(ms / 1000) : nowSec - 60;
+  }
+  // Google Street View requirements: must not be in future, must not be older than 2005 (e.g. uninitialized camera clock 1970-01-01)
+  if (sec > nowSec) {
+    sec = nowSec - 60;
+  }
+  if (sec < 1104537600) {
+    sec = nowSec - 60;
+  }
+  return sec;
+}
+
+function extractGoogleErrorMessage(data: any): string {
+  if (!data?.error) return "Failed to create photo";
+  let msg = data.error.message || data.error.status || "Failed to create photo";
+  if (data.error.details && Array.isArray(data.error.details)) {
+    for (const d of data.error.details) {
+      if (d.fieldViolations && Array.isArray(d.fieldViolations) && d.fieldViolations.length > 0) {
+        const violations = d.fieldViolations
+          .map((v: any) => `${v.field ? v.field + ": " : ""}${v.description}`)
+          .join("; ");
+        if (violations) return `${msg} (${violations})`;
+      }
+      if (d.description) {
+        return `${msg} (${d.description})`;
+      }
+    }
+  }
+  return msg;
+}
+
 export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async (ctx: any) => {
@@ -323,14 +367,12 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           name: level.name.toUpperCase().slice(0, 3),
         };
       }
-      if (captureTime) {
-        body.captureTime = { seconds: Math.floor(new Date(captureTime).getTime() / 1000) };
-      }
+      body.captureTime = { seconds: parseCaptureTimeSeconds(captureTime) };
       if (placeId) {
         body.places = [{ placeId }];
       }
 
-      const createRes = await fetch(
+      let createRes = await fetch(
         `https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`,
         {
           method: "POST",
@@ -342,8 +384,35 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           body: JSON.stringify(body),
         },
       );
-      const createData: any = await createRes.json();
-      if (!createRes.ok) throw new Error(createData.error?.message || "Failed to create photo");
+      let createData: any = await createRes.json();
+
+      // If failed due to placeId or places rejection, retry once without placeId
+      if (
+        !createRes.ok &&
+        body.places &&
+        (createData.error?.message?.toLowerCase()?.includes("place") || createRes.status === 400)
+      ) {
+        console.warn("Retrying photo create without placeId:", createData.error?.message);
+        delete body.places;
+        createRes = await fetch(
+          `https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+              "Content-Type": "application/json",
+              Referer: referer,
+            },
+            body: JSON.stringify(body),
+          },
+        );
+        createData = await createRes.json();
+      }
+
+      if (!createRes.ok) {
+        const errorDesc = extractGoogleErrorMessage(createData);
+        throw new Error(errorDesc);
+      }
 
       if (supabase_photo_id) {
         await db
@@ -553,14 +622,12 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           name: payload.level.name.toUpperCase().slice(0, 3),
         };
       }
-      if (captureTime) {
-        body.captureTime = { seconds: Math.floor(new Date(captureTime).getTime() / 1000) };
-      }
+      body.captureTime = { seconds: parseCaptureTimeSeconds(captureTime) };
       if (placeId) {
         body.places = [{ placeId }];
       }
 
-      const createRes = await fetch(
+      let createRes = await fetch(
         `https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`,
         {
           method: "POST",
@@ -572,8 +639,35 @@ export const handleStreetViewPublishServerFn = createServerFn({ method: "POST" }
           body: JSON.stringify(body),
         },
       );
-      const createData: any = await createRes.json();
-      if (!createRes.ok) throw new Error(createData.error?.message || "Failed to create photo");
+      let createData: any = await createRes.json();
+
+      // If failed due to placeId or places rejection, retry once without placeId
+      if (
+        !createRes.ok &&
+        body.places &&
+        (createData.error?.message?.toLowerCase()?.includes("place") || createRes.status === 400)
+      ) {
+        console.warn("Retrying photo create without placeId:", createData.error?.message);
+        delete body.places;
+        createRes = await fetch(
+          `https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${access_token}`,
+              "Content-Type": "application/json",
+              Referer: referer,
+            },
+            body: JSON.stringify(body),
+          },
+        );
+        createData = await createRes.json();
+      }
+
+      if (!createRes.ok) {
+        const errorDesc = extractGoogleErrorMessage(createData);
+        throw new Error(errorDesc);
+      }
 
       if (supabase_photo_id) {
         await db

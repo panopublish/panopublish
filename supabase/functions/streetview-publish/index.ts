@@ -2,6 +2,48 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+function parseCaptureTimeSeconds(captureTime: any): number {
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (!captureTime) return nowSec - 60;
+  let sec = 0;
+  if (typeof captureTime === "number" && !isNaN(captureTime) && captureTime > 0) {
+    sec = captureTime > 1e11 ? Math.floor(captureTime / 1000) : Math.floor(captureTime);
+  } else {
+    let str = String(captureTime).trim();
+    if (/^\d{4}:\d{2}:\d{2}/.test(str)) {
+      str = str.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3").replace(" ", "T");
+    }
+    const ms = new Date(str).getTime();
+    sec = (!isNaN(ms) && ms > 0) ? Math.floor(ms / 1000) : nowSec - 60;
+  }
+  if (sec > nowSec) {
+    sec = nowSec - 60;
+  }
+  if (sec < 1104537600) {
+    sec = nowSec - 60;
+  }
+  return sec;
+}
+
+function extractGoogleErrorMessage(data: any): string {
+  if (!data?.error) return "Failed to create photo";
+  let msg = data.error.message || data.error.status || "Failed to create photo";
+  if (data.error.details && Array.isArray(data.error.details)) {
+    for (const d of data.error.details) {
+      if (d.fieldViolations && Array.isArray(d.fieldViolations) && d.fieldViolations.length > 0) {
+        const violations = d.fieldViolations
+          .map((v: any) => `${v.field ? v.field + ": " : ""}${v.description}`)
+          .join("; ");
+        if (violations) return `${msg} (${violations})`;
+      }
+      if (d.description) {
+        return `${msg} (${d.description})`;
+      }
+    }
+  }
+  return msg;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -89,14 +131,12 @@ serve(async (req) => {
           name: level.name.toString().toUpperCase().slice(0, 3),
         };
       }
-      if (captureTime) {
-        body.captureTime = { seconds: Math.floor(new Date(captureTime).getTime() / 1000) };
-      }
+      body.captureTime = { seconds: parseCaptureTimeSeconds(captureTime) };
       if (placeId) {
         body.places = [{ placeId }];
       }
 
-      const res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`, {
+      let res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${access_token}`,
@@ -105,8 +145,32 @@ serve(async (req) => {
         },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "Failed to create photo");
+      let data = await res.json();
+
+      // If failed due to placeId or places rejection, retry once without placeId
+      if (
+        !res.ok &&
+        body.places &&
+        (data.error?.message?.toLowerCase()?.includes("place") || res.status === 400)
+      ) {
+        console.warn("Retrying photo create without placeId:", data.error?.message);
+        delete body.places;
+        res = await fetch(`https://streetviewpublish.googleapis.com/v1/photo?key=${apiKey}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+            Referer: referer,
+          },
+          body: JSON.stringify(body),
+        });
+        data = await res.json();
+      }
+
+      if (!res.ok) {
+        const errorDesc = extractGoogleErrorMessage(data);
+        throw new Error(errorDesc);
+      }
 
       if (supabase_photo_id) {
         const { error } = await supabaseClient

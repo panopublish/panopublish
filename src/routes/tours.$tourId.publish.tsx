@@ -797,18 +797,19 @@ function PublishPage() {
       return;
     }
 
-    // Check for low-resolution camera proxy/thumbnail files (_s.jpg or <350KB)
+    // Check for low-resolution camera proxy/thumbnail files (<350KB or explicit _thumb)
+    // Note: PanoX V3 camera names stitched 5.7K photos with suffix "_np_s.jpg", where "_s" = "Stitched" and files are 5MB+.
+    // Only flag if file size is small (< 350KB), or name ends in _thumb, or name ends in _s AND size is < 500KB.
     const thumbnailScenes = photos.filter(
       (p) =>
         (!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
-        p.filename &&
-        (/_s\.(jpe?g|png)$/i.test(p.filename) ||
-         /_thumb\.(jpe?g|png)$/i.test(p.filename) ||
-         (p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024))
+        ((p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024) ||
+         (p.filename && /_thumb\.(jpe?g|png)$/i.test(p.filename)) ||
+         (p.filename && /_s\.(jpe?g|png)$/i.test(p.filename) && p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 500 * 1024))
     );
     if (thumbnailScenes.length > 0) {
       toast.error(
-        `${thumbnailScenes.length} scene(s) appear to be low-resolution camera thumbnail files (e.g. "_s.jpg" or <350KB). Google Street View requires full-resolution 360 photos (3840×1920 / 4K minimum). Please replace with the original photos before publishing.`,
+        `${thumbnailScenes.length} scene(s) appear to be low-resolution thumbnail files (<350KB). Google Street View requires full-resolution 360 photos (3840×1920 / 4K minimum). Please replace with the original photos before publishing.`,
         { duration: 12000 }
       );
       return;
@@ -1180,9 +1181,9 @@ function PublishPage() {
           const arrBuf = await processedBlob.slice(0, 65536).arrayBuffer();
           const dims = getJpegDimensionsFromSof(new Uint8Array(arrBuf));
           if (dims && (dims.width < 3840 || dims.height < 1920)) {
-            const isThumbName = /_s\.(jpe?g|png)$/i.test(photo.filename || "") || /_thumb\.(jpe?g|png)$/i.test(photo.filename || "");
-            const hint = isThumbName
-              ? " This photo appears to be a camera thumbnail/proxy file (_s.jpg) instead of the original 360 photo."
+            const isThumb = dims.width <= 1024;
+            const hint = isThumb
+              ? " This photo appears to be a low-resolution thumbnail preview instead of the original 360 photo."
               : " Google Street View requires at least 4K (3840×1920 / 7.5+ MP).";
             resolutionError = `Image resolution is only ${dims.width}×${dims.height} (${((dims.width * dims.height)/1000000).toFixed(1)} MP).${hint} Please replace with the original full-resolution photo.`;
           }
@@ -1722,9 +1723,9 @@ function PublishPage() {
         const arrBuf = await processedBlob.slice(0, 65536).arrayBuffer();
         const dims = getJpegDimensionsFromSof(new Uint8Array(arrBuf));
         if (dims && (dims.width < 3840 || dims.height < 1920)) {
-          const isThumbName = /_s\.(jpe?g|png)$/i.test(photoToPublish.filename || "") || /_thumb\.(jpe?g|png)$/i.test(photoToPublish.filename || "");
-          const hint = isThumbName
-            ? " This photo appears to be a camera thumbnail/proxy file (_s.jpg) instead of the original 360 photo."
+          const isThumb = dims.width <= 1024;
+          const hint = isThumb
+            ? " This photo appears to be a low-resolution thumbnail preview instead of the original 360 photo."
             : " Google Street View requires at least 4K (3840×1920 / 7.5+ MP).";
           throw new Error(`RESOLUTION_TOO_SMALL: Image resolution is only ${dims.width}×${dims.height} (${((dims.width * dims.height)/1000000).toFixed(1)} MP).${hint} Please replace with the original full-resolution photo.`);
         }
@@ -3514,17 +3515,16 @@ function PublishPage() {
                         const lowRes = photos.filter(
                           (p) =>
                             (!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
-                            p.filename &&
-                            (/_s\.(jpe?g|png)$/i.test(p.filename) ||
-                             /_thumb\.(jpe?g|png)$/i.test(p.filename) ||
-                             (p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024))
+                            ((p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024) ||
+                             (p.filename && /_thumb\.(jpe?g|png)$/i.test(p.filename)) ||
+                             (p.filename && /_s\.(jpe?g|png)$/i.test(p.filename) && p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 500 * 1024))
                         );
                         if (lowRes.length === 0) return null;
                         return (
                           <div className="w-full flex items-start gap-2 px-3 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs font-medium mb-1">
                             <span className="text-base leading-none mt-0.5">⚠️</span>
                             <span>
-                              <strong>{lowRes.length} scene{lowRes.length > 1 ? "s appear" : " appears"} to be low-resolution thumbnail files (ending in "_s.jpg" or &lt;350KB).</strong>{" "}
+                              <strong>{lowRes.length} scene{lowRes.length > 1 ? "s appear" : " appears"} to be low-resolution thumbnail files (&lt;350KB).</strong>{" "}
                               Google Street View requires full-resolution 360 photos (3840×1920 / 4K minimum). Please replace with the original photos before publishing.
                             </span>
                           </div>
@@ -3624,13 +3624,14 @@ function PublishPage() {
                     )}
                     {/* Warn per-scene when image appears to be a low-res thumbnail proxy */}
                     {(!p.streetview_status || p.streetview_status === "NOT_PUBLISHED" || p.streetview_status === "FAILED") &&
-                     p.filename &&
-                     (/_s\.(jpe?g|png)$/i.test(p.filename) || (p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024)) && (
+                     ((p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 350 * 1024) ||
+                      (p.filename && /_thumb\.(jpe?g|png)$/i.test(p.filename)) ||
+                      (p.filename && /_s\.(jpe?g|png)$/i.test(p.filename) && p.size_bytes != null && p.size_bytes > 0 && p.size_bytes < 500 * 1024)) && (
                       <span
                         className="text-[10px] font-bold bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded mr-1 shrink-0"
-                        title="This scene appears to be a low-resolution thumbnail (_s.jpg). Google Street View requires full-resolution 360 photos (3840×1920 minimum)."
+                        title="This scene appears to be a low-resolution thumbnail. Google Street View requires full-resolution 360 photos (3840×1920 minimum)."
                       >
-                        Low Res (_s.jpg)
+                        Low Res (&lt;350KB)
                       </span>
                     )}
                      {p.streetview_status === "PUBLISHED" ? (
