@@ -25,6 +25,7 @@ import { useState } from "react";
 import { waLink } from "@/lib/format";
 import { HyderabadTourLanding } from "@/components/HyderabadTourLanding";
 import { CityTourLanding } from "@/components/CityTourLanding";
+import { StickyTrialBanner } from "@/components/StickyTrialBanner";
 
 export const Route = createFileRoute("/$slug")({
   loader: async ({ params }) => {
@@ -77,41 +78,49 @@ function SeoPage() {
 
   // Helper to generate dynamic schema
   const getPageSchema = () => {
-    if (page.type === "service") {
+    if (page.type === "service" || page.type === "comparison") {
       return {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         "name": "PanoPublish",
-        "operatingSystem": "Web",
+        "operatingSystem": "Web Browser",
         "applicationCategory": "BusinessApplication",
-        "applicationSubCategory": "Virtual Tour Software",
+        "applicationSubCategory": "Google Street View & 360 Virtual Tour Software",
         "url": "https://panopublish.com/",
-        "description": "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
+        "description": "PanoPublish is a professional 360° virtual tour and Google Street View publishing platform for photographers, agencies, and Google 360 tour businesses.",
         "inLanguage": "en-IN",
-        "offers": {
-          "@type": "Offer",
-          "price": "499.00",
-          "priceCurrency": "INR",
-          "billingIncrement": "P1M"
-        }
-      };
-    } else if (page.type === "comparison") {
-      return {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "PanoPublish",
-        "operatingSystem": "Web",
-        "applicationCategory": "BusinessApplication",
-        "applicationSubCategory": "Virtual Tour Software",
-        "url": "https://panopublish.com/",
-        "description": "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
-        "inLanguage": "en-IN",
-        "offers": {
-          "@type": "Offer",
-          "price": "499.00",
-          "priceCurrency": "INR",
-          "billingIncrement": "P1M"
-        }
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "128",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Basic Plan",
+            "price": "499.00",
+            "priceCurrency": "INR",
+            "billingIncrement": "P1M",
+            "url": "https://panopublish.com/pricing/"
+          },
+          {
+            "@type": "Offer",
+            "name": "Pro Plan",
+            "price": "1499.00",
+            "priceCurrency": "INR",
+            "billingIncrement": "P1M",
+            "url": "https://panopublish.com/pricing/"
+          }
+        ],
+        "featureList": [
+          "Direct Google Street View API Publishing",
+          "Automated EXIF GPS & Compass Yaw Ingestion",
+          "Browser Nadir Tripod Blur & Custom PNG Logo Disk",
+          "Multi-floor Level & Island Virtual Walkthroughs",
+          "Unlimited Google Maps Uploads with Zero Per-Tour Export Fees"
+        ]
       };
     }
     return undefined;
@@ -556,6 +565,7 @@ function SeoPage() {
       </main>
 
       <PublicFooter />
+      <StickyTrialBanner />
     </div>
   );
 }

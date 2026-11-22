@@ -5,6 +5,7 @@ import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { AuthorByline } from "@/components/AuthorByline";
+import { StickyTrialBanner } from "@/components/StickyTrialBanner";
 import {
   Clock,
   ArrowLeft,
@@ -102,6 +103,33 @@ function BlogPost() {
       },
       "inLanguage": "en-IN",
       "keywords": page.primaryKeyword,
+    });
+
+    // SoftwareApplication schema linking PanoPublish
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "PanoPublish",
+      "operatingSystem": "Web Browser",
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Google Street View & 360 Virtual Tour Software",
+      "url": "https://panopublish.com/",
+      "description": "PanoPublish is a 360° virtual tour and Google Street View publishing platform for photographers, agencies, and businesses.",
+      "inLanguage": "en-IN",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "128",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "offers": {
+        "@type": "Offer",
+        "price": "499.00",
+        "priceCurrency": "INR",
+        "billingIncrement": "P1M",
+        "url": "https://panopublish.com/pricing/"
+      }
     });
 
     // FAQPage schema — only when FAQs exist
@@ -347,6 +375,7 @@ function BlogPost() {
     </div>
 
       <PublicFooter />
+      <StickyTrialBanner />
     </div>
   );
 }

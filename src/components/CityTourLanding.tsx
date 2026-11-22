@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { SEO } from "@/components/SEO";
 import { PublicHeader } from "@/components/PublicHeader";
 import { PublicFooter } from "@/components/PublicFooter";
+import { StickyTrialBanner } from "@/components/StickyTrialBanner";
 import { Button } from "@/components/ui/button";
 import {
   Check,
@@ -1330,6 +1331,7 @@ export function CityTourLanding({ page }: { page: CityTourData }) {
       </main>
 
       <PublicFooter />
+      <StickyTrialBanner />
     </div>
   );
 }
