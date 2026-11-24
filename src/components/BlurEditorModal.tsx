@@ -605,12 +605,14 @@ export function BlurEditorModal({
       const fullW = originalImg.width;
       const fullH = originalImg.height;
 
-      // 1. Create full-resolution blurred image
+      // 1. Create full-resolution blurred image with high-fidelity color space
       const fullBlurredCanvas = document.createElement("canvas");
       fullBlurredCanvas.width = fullW;
       fullBlurredCanvas.height = fullH;
-      const fullBlurredCtx = fullBlurredCanvas.getContext("2d");
+      const fullBlurredCtx = fullBlurredCanvas.getContext("2d", { colorSpace: "srgb" });
       if (!fullBlurredCtx) throw new Error("Could not get canvas context");
+      fullBlurredCtx.imageSmoothingEnabled = true;
+      fullBlurredCtx.imageSmoothingQuality = "high";
 
       // Scale blur radius proportionally for full resolution
       const scaleFactor = fullW / maskCanvas.width;
@@ -620,12 +622,14 @@ export function BlurEditorModal({
       fullBlurredCtx.drawImage(originalImg, 0, 0, fullW, fullH);
       fullBlurredCtx.filter = "none";
 
-      // 2. Create full-resolution mask canvas
+      // 2. Create full-resolution mask canvas with high-precision bicubic smoothing
       const fullMaskCanvas = document.createElement("canvas");
       fullMaskCanvas.width = fullW;
       fullMaskCanvas.height = fullH;
-      const fullMaskCtx = fullMaskCanvas.getContext("2d");
+      const fullMaskCtx = fullMaskCanvas.getContext("2d", { colorSpace: "srgb" });
       if (fullMaskCtx) {
+        fullMaskCtx.imageSmoothingEnabled = true;
+        fullMaskCtx.imageSmoothingQuality = "high";
         fullMaskCtx.drawImage(maskCanvas, 0, 0, fullW, fullH);
       }
 
@@ -633,16 +637,20 @@ export function BlurEditorModal({
       const fullFinalCanvas = document.createElement("canvas");
       fullFinalCanvas.width = fullW;
       fullFinalCanvas.height = fullH;
-      const fullFinalCtx = fullFinalCanvas.getContext("2d");
+      const fullFinalCtx = fullFinalCanvas.getContext("2d", { colorSpace: "srgb" });
       if (!fullFinalCtx) throw new Error("Could not get final canvas context");
+      fullFinalCtx.imageSmoothingEnabled = true;
+      fullFinalCtx.imageSmoothingQuality = "high";
 
       fullFinalCtx.drawImage(originalImg, 0, 0, fullW, fullH);
 
       const tempCanvas = document.createElement("canvas");
       tempCanvas.width = fullW;
       tempCanvas.height = fullH;
-      const tempCtx = tempCanvas.getContext("2d");
+      const tempCtx = tempCanvas.getContext("2d", { colorSpace: "srgb" });
       if (tempCtx) {
+        tempCtx.imageSmoothingEnabled = true;
+        tempCtx.imageSmoothingQuality = "high";
         tempCtx.drawImage(fullBlurredCanvas, 0, 0);
         tempCtx.globalCompositeOperation = "destination-in";
         tempCtx.drawImage(fullMaskCanvas, 0, 0);
@@ -651,7 +659,7 @@ export function BlurEditorModal({
         fullFinalCtx.drawImage(tempCanvas, 0, 0);
       }
 
-      // 4. Export JPEG Blob
+      // 4. Export JPEG Blob at absolute maximum quality (1.00)
       fullFinalCanvas.toBlob(
         async (newBlob) => {
           if (!newBlob) {
@@ -671,7 +679,7 @@ export function BlurEditorModal({
           }
         },
         "image/jpeg",
-        0.95,
+        1.0,
       );
     } catch (err: any) {
       toast.error("Error preparing image export: " + err.message);

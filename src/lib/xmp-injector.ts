@@ -489,19 +489,29 @@ function normalizeTo2To1Canvas(
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(blob);
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       try {
+        if ("decode" in img) {
+          try {
+            await img.decode();
+          } catch {
+            // decode failure fallback
+          }
+        }
+
         const targetWidth = Math.max(srcWidth, srcHeight * 2);
         const targetHeight = Math.round(targetWidth / 2);
 
         const canvas = document.createElement("canvas");
         canvas.width = targetWidth;
         canvas.height = targetHeight;
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", { colorSpace: "srgb" });
         if (!ctx) {
           URL.revokeObjectURL(url);
           return resolve(blob);
         }
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
 
         // Fill background with clean black (equirectangular poles are black by convention)
         ctx.fillStyle = "#000000";
@@ -522,7 +532,7 @@ function normalizeTo2To1Canvas(
             }
           },
           "image/jpeg",
-          0.98  // Match nadir processor quality (was 0.95)
+          1.0  // Absolute maximum JPEG quality (lossless quantization)
         );
       } catch (err) {
         URL.revokeObjectURL(url);

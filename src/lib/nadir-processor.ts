@@ -8,7 +8,16 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
+    img.onload = async () => {
+      try {
+        if ("decode" in img) {
+          await img.decode();
+        }
+      } catch {
+        // Fallback if decode() is unsupported or fails
+      }
+      resolve(img);
+    };
     img.onerror = () => reject(new Error(`Failed to load image from URL: ${url}`));
     img.src = url;
   });
@@ -275,8 +284,10 @@ export async function processNadirClientSide(
   const mainCanvas = document.createElement("canvas");
   mainCanvas.width = W;
   mainCanvas.height = H;
-  const mainCtx = mainCanvas.getContext("2d");
+  const mainCtx = mainCanvas.getContext("2d", { colorSpace: "srgb" });
   if (!mainCtx) throw new Error("Could not get main canvas context");
+  mainCtx.imageSmoothingEnabled = true;
+  mainCtx.imageSmoothingQuality = "high";
   mainCtx.drawImage(img, 0, 0);
 
   const isTourLevelWithoutLogo = typeLower === "tour level" && !logoUrl;
@@ -289,12 +300,14 @@ export async function processNadirClientSide(
     const yStart = isBottom ? H - h : 0;
 
     if (typeLower === "blur" || typeLower === "stretch blur") {
-      // 1. Extract band
+      // 1. Extract band with high-fidelity color space
       const bandCanvas = document.createElement("canvas");
       bandCanvas.width = W;
       bandCanvas.height = h;
-      const bandCtx = bandCanvas.getContext("2d");
+      const bandCtx = bandCanvas.getContext("2d", { colorSpace: "srgb" });
       if (!bandCtx) throw new Error("Could not get band canvas context");
+      bandCtx.imageSmoothingEnabled = true;
+      bandCtx.imageSmoothingQuality = "high";
       bandCtx.drawImage(mainCanvas, 0, yStart, W, h, 0, 0, W, h);
 
       // 2. Stretch boundary pixels
@@ -332,8 +345,10 @@ export async function processNadirClientSide(
       const paddedCanvas = document.createElement("canvas");
       paddedCanvas.width = W;
       paddedCanvas.height = h + 2 * padding;
-      const paddedCtx = paddedCanvas.getContext("2d");
+      const paddedCtx = paddedCanvas.getContext("2d", { colorSpace: "srgb" });
       if (!paddedCtx) throw new Error("Could not get padded canvas context");
+      paddedCtx.imageSmoothingEnabled = true;
+      paddedCtx.imageSmoothingQuality = "high";
 
       if (isBottom) {
         const safeYStart = Math.max(0, yStart - padding);
@@ -379,8 +394,10 @@ export async function processNadirClientSide(
       const blurCanvas = document.createElement("canvas");
       blurCanvas.width = W;
       blurCanvas.height = h + 2 * padding;
-      const blurCtx = blurCanvas.getContext("2d");
+      const blurCtx = blurCanvas.getContext("2d", { colorSpace: "srgb" });
       if (!blurCtx) throw new Error("Could not get blur canvas context");
+      blurCtx.imageSmoothingEnabled = true;
+      blurCtx.imageSmoothingQuality = "high";
       blurCtx.filter = `blur(${radius}px)`;
       blurCtx.drawImage(paddedCanvas, 0, 0);
 
@@ -399,8 +416,10 @@ export async function processNadirClientSide(
       const logoCanvas = document.createElement("canvas");
       logoCanvas.width = D;
       logoCanvas.height = D;
-      const logoCtx = logoCanvas.getContext("2d");
+      const logoCtx = logoCanvas.getContext("2d", { colorSpace: "srgb" });
       if (!logoCtx) throw new Error("Could not get logo canvas context");
+      logoCtx.imageSmoothingEnabled = true;
+      logoCtx.imageSmoothingQuality = "high";
       logoCtx.drawImage(
         logoImg,
         ((logoImg.naturalWidth || logoImg.width) - D) / 2,
@@ -473,7 +492,7 @@ export async function processNadirClientSide(
     }
   }
 
-  // Export at maximum JPEG quality (0.98) to ensure zero compression degradation
+  // Export at absolute maximum JPEG quality (1.00) to ensure zero compression degradation
   const newBlob = await new Promise<Blob>((resolve, reject) => {
     mainCanvas.toBlob(
       (b) => {
@@ -481,7 +500,7 @@ export async function processNadirClientSide(
         else reject(new Error("Failed to export image canvas to Blob"));
       },
       "image/jpeg",
-      0.98,
+      1.0,
     );
   });
 
