@@ -1443,14 +1443,27 @@ function AdminDashboard() {
 
   // Open Edit Profile Dialog
   const handleOpenEditProfile = (p: Profile) => {
+    const isTrialUser = (p.plan ?? "trial") === "trial";
+    const isTrialExpired =
+      isTrialUser &&
+      ((p.trial_ends_at && new Date(p.trial_ends_at).getTime() < Date.now()) ||
+        (p.created_at && Date.now() - new Date(p.created_at).getTime() > 7 * 86400000));
+    const isPaidPlanExpired =
+      !isTrialUser &&
+      !!p.trial_ends_at &&
+      new Date(p.trial_ends_at).getTime() < Date.now();
+    const isPlanExpired = isTrialExpired || isPaidPlanExpired;
+
     const basePlanLimit = planLimits[p.plan] ?? 1;
-    const currentExtraCredits = Math.max(0, (p.credits ?? basePlanLimit) - basePlanLimit);
+    const currentExtraCredits = isPlanExpired
+      ? 0
+      : Math.max(0, (p.credits ?? basePlanLimit) - basePlanLimit);
 
     setEditingProfile(p);
     setProfileForm({
       plan: p.plan,
       extraCredits: currentExtraCredits,
-      billingCycleToursUsed: p.billing_cycle_tours_used ?? 0,
+      billingCycleToursUsed: isPlanExpired ? 0 : (p.billing_cycle_tours_used ?? 0),
     });
   };
 
@@ -4051,7 +4064,17 @@ function AdminDashboard() {
                 <Label className="text-xs font-bold text-slate-600">Subscription Plan</Label>
                 <Select
                   value={profileForm.plan}
-                  onValueChange={(val) => setProfileForm((prev) => ({ ...prev, plan: val }))}
+                  onValueChange={(val) =>
+                    setProfileForm((prev) => ({
+                      ...prev,
+                      plan: val,
+                      extraCredits: val !== editingProfile?.plan ? 0 : prev.extraCredits,
+                      billingCycleToursUsed:
+                        val !== editingProfile?.plan && val !== "trial"
+                          ? 0
+                          : prev.billingCycleToursUsed,
+                    }))
+                  }
                 >
                   <SelectTrigger className="rounded-xl border-slate-200">
                     <SelectValue />
